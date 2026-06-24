@@ -8,6 +8,7 @@ import {
 
 export class StubCrmMemberClient {
   private nextPhoneSuffix = 9000;
+  private nextEmailSuffix = 9000;
 
   existingPhone(): string {
     return existingCrmMember.phone;
@@ -21,6 +22,12 @@ export class StubCrmMemberClient {
     const phone = `646733${this.nextPhoneSuffix}`;
     this.nextPhoneSuffix += 1;
     return phone;
+  }
+
+  nextUniqueEmail(): string {
+    const email = `crm.member.${this.nextEmailSuffix}@example.test`;
+    this.nextEmailSuffix += 1;
+    return email;
   }
 
   cloudMemberSearchPhone(): string {

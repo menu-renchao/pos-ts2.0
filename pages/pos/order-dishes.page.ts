@@ -52,6 +52,9 @@ export class OrderDishesPage extends PageObject {
   private readonly saveOrderButton: Locator;
   private readonly sendKitchenButton: Locator;
   private readonly settleButton: Locator;
+  private readonly settleCashButton: Locator;
+  private readonly settleSwitchMemberButton: Locator;
+  private readonly settleApplyMemberButton: Locator;
   private readonly splitCombineButton: Locator;
   private readonly splitEvenButton: Locator;
   private readonly subOptions: Locator;
@@ -113,6 +116,9 @@ export class OrderDishesPage extends PageObject {
     this.saveOrderButton = page.getByTestId('order-save');
     this.sendKitchenButton = page.getByTestId('order-send-kitchen');
     this.settleButton = page.getByTestId('order-settle');
+    this.settleCashButton = page.getByTestId('settle-cash');
+    this.settleSwitchMemberButton = page.getByTestId('settle-switch-member');
+    this.settleApplyMemberButton = page.getByTestId('settle-apply-member');
     this.splitCombineButton = page.getByTestId('split-combine');
     this.splitEvenButton = page.getByTestId('split-even');
     this.subOptions = page.getByTestId('order-sub-option');
@@ -185,6 +191,18 @@ export class OrderDishesPage extends PageObject {
   async clickSettle(): Promise<void> {
     await step('点击点单页面支付按钮', async () => {
       await this.settleButton.click();
+    });
+  }
+
+  async clickSettlementSwitchMember(): Promise<void> {
+    await step('点击结算页 Switch Member', async () => {
+      await this.settleSwitchMemberButton.click();
+    });
+  }
+
+  async applySettlementMember(): Promise<void> {
+    await step('确认结算页会员选择', async () => {
+      await this.settleApplyMemberButton.click();
     });
   }
 
@@ -391,7 +409,7 @@ export class OrderDishesPage extends PageObject {
 
   async settleByCash(): Promise<void> {
     await step('现金完成当前订单付款', async () => {
-      await this.page.getByTestId('settle-cash').click();
+      await this.settleCashButton.click();
     });
   }
 

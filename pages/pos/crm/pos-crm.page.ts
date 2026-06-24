@@ -9,6 +9,7 @@ export class PosCrmPage extends PageObject {
   private readonly joinFirstNameInput: Locator;
   private readonly joinLastNameInput: Locator;
   private readonly joinMemberButton: Locator;
+  private readonly joinMemberEmailInput: Locator;
   private readonly joinMemberError: Locator;
   private readonly joinMemberPhoneInput: Locator;
   private readonly joinMemberRegistrationBox: Locator;
@@ -17,6 +18,8 @@ export class PosCrmPage extends PageObject {
   private readonly memberListPermissionInput: Locator;
   private readonly memberListPermissionSubmitButton: Locator;
   private readonly memberListSearchInput: Locator;
+  private readonly memberSearchNameResult: Locator;
+  private readonly memberSearchPointResult: Locator;
   private readonly memberSearchPhoneResult: Locator;
   private readonly memberName: Locator;
   private readonly memberOption: Locator;
@@ -24,6 +27,7 @@ export class PosCrmPage extends PageObject {
   private readonly pointBalance: Locator;
   private readonly redeemButton: Locator;
   private readonly redeemDiscountButton: Locator;
+  private readonly redeemCreditButton: Locator;
   private readonly redeemItemButton: Locator;
   private readonly redeemItemOptionButton: Locator;
   private readonly redeemPanel: Locator;
@@ -38,6 +42,7 @@ export class PosCrmPage extends PageObject {
     this.joinFirstNameInput = page.getByTestId('join-member-first-name');
     this.joinLastNameInput = page.getByTestId('join-member-last-name');
     this.joinMemberButton = page.getByTestId('home-join-member');
+    this.joinMemberEmailInput = page.getByTestId('join-member-email');
     this.joinMemberError = page.getByTestId('join-member-error');
     this.joinMemberPhoneInput = page.getByTestId('join-member-phone');
     this.joinMemberRegistrationBox = page.getByTestId('join-member-registration');
@@ -46,12 +51,15 @@ export class PosCrmPage extends PageObject {
     this.memberListPermissionInput = page.getByTestId('member-list-permission-password');
     this.memberListPermissionSubmitButton = page.getByTestId('member-list-permission-submit');
     this.memberListSearchInput = page.getByTestId('crm-member-list-search');
+    this.memberSearchNameResult = page.getByTestId('crm-member-search-name-result');
+    this.memberSearchPointResult = page.getByTestId('crm-member-search-point-result');
     this.memberSearchPhoneResult = page.getByTestId('crm-member-search-phone-result');
     this.memberName = page.getByTestId('crm-member-name');
     this.memberOption = page.getByTestId('crm-member-option');
     this.redeemMemberSearchInput = page.getByTestId('crm-member-search');
     this.pointBalance = page.getByTestId('crm-point-balance');
     this.redeemButton = page.getByTestId('crm-redeem');
+    this.redeemCreditButton = page.getByTestId('crm-redeem-credit');
     this.redeemDiscountButton = page.getByTestId('crm-redeem-discount');
     this.redeemItemButton = page.getByTestId('crm-redeem-item');
     this.redeemItemOptionButton = page.getByTestId('crm-redeem-item-option');
@@ -90,6 +98,12 @@ export class PosCrmPage extends PageObject {
   async fillJoinMemberPhone(phone: string): Promise<void> {
     await step(`填写 Join Member 电话 ${phone}`, async () => {
       await this.joinMemberPhoneInput.fill(phone);
+    });
+  }
+
+  async fillJoinMemberEmail(email: string): Promise<void> {
+    await step(`填写 Join Member Email ${email}`, async () => {
+      await this.joinMemberEmailInput.fill(email);
     });
   }
 
@@ -136,6 +150,32 @@ export class PosCrmPage extends PageObject {
     return step('读取 CRM Member List Email 搜索结果', async () =>
       ((await this.page.getByTestId('crm-member-search-email-result').textContent()) ?? '').trim(),
     );
+  }
+
+  async readMemberSearchNameResult(): Promise<string> {
+    return step('读取 CRM Member List 姓名搜索结果', async () =>
+      ((await this.memberSearchNameResult.textContent()) ?? '').trim(),
+    );
+  }
+
+  async readMemberSearchPointResult(): Promise<string> {
+    return step('读取 CRM Member List 积分搜索结果', async () =>
+      ((await this.memberSearchPointResult.textContent()) ?? '').trim(),
+    );
+  }
+
+  async readRedeemEditDisabledControlClasses(): Promise<{
+    removeMember: string;
+    redeemItem: string;
+    redeemDiscount: string;
+    redeemCredit: string;
+  }> {
+    return step('读取 Redeem 编辑限制控件 class', async () => ({
+      removeMember: (await this.redeemRemoveMemberButton.getAttribute('class')) ?? '',
+      redeemItem: (await this.redeemItemButton.getAttribute('class')) ?? '',
+      redeemDiscount: (await this.redeemDiscountButton.getAttribute('class')) ?? '',
+      redeemCredit: (await this.redeemCreditButton.getAttribute('class')) ?? '',
+    }));
   }
 
   async searchRedeemMemberByPhone(phone: string): Promise<string> {

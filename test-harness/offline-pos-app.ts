@@ -63,6 +63,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       </section>
       <section data-testid="crm-member-list" hidden>
         <input data-testid="crm-member-list-search" />
+        <div data-testid="crm-member-search-name-result"></div>
+        <div data-testid="crm-member-search-point-result"></div>
         <div data-testid="crm-member-search-phone-result"></div>
         <div data-testid="crm-member-search-email-result"></div>
       </section>
@@ -95,6 +97,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <button data-testid="order-exit">Exit Order</button>
       <button data-testid="order-settle">Settle</button>
       <button data-testid="settle-cash">Cash</button>
+      <button data-testid="settle-switch-member">Switch Member</button>
+      <button data-testid="settle-apply-member">Apply Member</button>
       <button data-testid="crm-redeem">Redeem</button>
       <section data-testid="crm-redeem-panel" hidden>
         <input data-testid="crm-member-search" />
@@ -102,6 +106,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         <button data-testid="crm-redeem-add-new-loyalty">Add New Loyalty</button>
         <button data-testid="crm-remove-member">Remove Member</button>
         <button data-testid="crm-redeem-discount">10% Off</button>
+        <button data-testid="crm-redeem-credit">Redeem Credit</button>
         <button data-testid="crm-redeem-item-option">Redeem Item Option</button>
         <button data-testid="crm-redeem-item">CRM Redeem Item</button>
         <button data-testid="crm-redeem-quit">Quit Redeem</button>
@@ -283,6 +288,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let currentCrmMember = null;
       let currentCrmDiscountRate = 0;
       let currentHasRedeemItem = false;
+      let currentRedeemControlsLocked = false;
       let currentEmployeePassword = '11';
       const crmMembers = [
         { phone: '(64)673-37557', name: 'CRM Member A', points: 100 },
@@ -351,6 +357,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const orderExitButton = document.querySelector('[data-testid="order-exit"]');
       const orderSettleButton = document.querySelector('[data-testid="order-settle"]');
       const settleCashButton = document.querySelector('[data-testid="settle-cash"]');
+      const settleSwitchMemberButton = document.querySelector('[data-testid="settle-switch-member"]');
+      const settleApplyMemberButton = document.querySelector('[data-testid="settle-apply-member"]');
       const crmRedeemButton = document.querySelector('[data-testid="crm-redeem"]');
       const crmRedeemPanel = document.querySelector('[data-testid="crm-redeem-panel"]');
       const crmMemberSearchInput = document.querySelector('[data-testid="crm-member-search"]');
@@ -358,6 +366,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const crmRedeemAddNewLoyaltyButton = document.querySelector('[data-testid="crm-redeem-add-new-loyalty"]');
       const crmRemoveMemberButton = document.querySelector('[data-testid="crm-remove-member"]');
       const crmRedeemDiscountButton = document.querySelector('[data-testid="crm-redeem-discount"]');
+      const crmRedeemCreditButton = document.querySelector('[data-testid="crm-redeem-credit"]');
       const crmRedeemItemOptionButton = document.querySelector('[data-testid="crm-redeem-item-option"]');
       const crmRedeemItemButton = document.querySelector('[data-testid="crm-redeem-item"]');
       const crmRedeemQuitButton = document.querySelector('[data-testid="crm-redeem-quit"]');
@@ -499,6 +508,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const memberListPermissionSubmitButton = document.querySelector('[data-testid="member-list-permission-submit"]');
       const crmMemberList = document.querySelector('[data-testid="crm-member-list"]');
       const crmMemberListSearchInput = document.querySelector('[data-testid="crm-member-list-search"]');
+      const crmMemberSearchNameResult = document.querySelector('[data-testid="crm-member-search-name-result"]');
+      const crmMemberSearchPointResult = document.querySelector('[data-testid="crm-member-search-point-result"]');
       const crmMemberSearchPhoneResult = document.querySelector('[data-testid="crm-member-search-phone-result"]');
       const crmMemberSearchEmailResult = document.querySelector('[data-testid="crm-member-search-email-result"]');
       const openFoodCategory = document.querySelector('[data-testid="open-food-category"]');
@@ -555,6 +566,33 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         return phone || '';
       }
 
+      function phoneMatches(candidatePhone, query) {
+        const candidateDigits = normalizePhone(candidatePhone);
+        const queryDigits = normalizePhone(query);
+        return candidateDigits === queryDigits || queryDigits.endsWith(candidateDigits);
+      }
+
+      function memberDisplayName(member) {
+        return member?.name || [member?.firstName, member?.lastName].filter(Boolean).join(' ');
+      }
+
+      function memberDisplayPhone(member) {
+        if (member?.displayPhone) {
+          return member.displayPhone;
+        }
+        const digits = normalizePhone(member?.phone);
+        return digits ? '+1' + digits : '';
+      }
+
+      function findMemberListResult(query) {
+        const rawQuery = (query || '').trim();
+        return (
+          crmMembers.find((item) => phoneMatches(item.phone, rawQuery)) ||
+          registeredMembers.find((item) => phoneMatches(item.phone, rawQuery) || (item.email && item.email === rawQuery)) ||
+          null
+        );
+      }
+
       function openCrmMemberList() {
         crmMemberList.hidden = false;
         memberListPermissionPopup.hidden = true;
@@ -577,7 +615,16 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           displayPhone: phone ? '+1' + phone : '',
           firstName: joinMemberFirstNameInput.value,
           lastName: joinMemberLastNameInput.value,
+          name: [joinMemberFirstNameInput.value, joinMemberLastNameInput.value].filter(Boolean).join(' '),
+          points: 0,
         });
+        currentCrmMember = {
+          phone,
+          email,
+          name: [joinMemberFirstNameInput.value, joinMemberLastNameInput.value].filter(Boolean).join(' '),
+          points: 0,
+        };
+        renderCurrentCrmState();
         joinMemberError.textContent = '';
         joinMemberRegistration.hidden = true;
       }
@@ -636,6 +683,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       function renderCurrentCrmState() {
         crmMemberName.textContent = currentCrmMember?.name || '';
         crmPointBalance.textContent = String(currentCrmMember?.points || 0);
+        [crmRemoveMemberButton, crmRedeemItemButton, crmRedeemDiscountButton, crmRedeemCreditButton].forEach((button) => {
+          button.className = currentRedeemControlsLocked ? 'disabled' : '';
+          button.disabled = currentRedeemControlsLocked;
+        });
       }
 
       function calculateRewardDiscount(order) {
@@ -697,6 +748,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         currentCrmMember = null;
         currentCrmDiscountRate = 0;
         currentHasRedeemItem = false;
+        currentRedeemControlsLocked = false;
         orderSearchInput.value = '';
         orderSearchResult.textContent = '';
         globalOptionArea.hidden = true;
@@ -1030,9 +1082,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         }
       });
       crmMemberListSearchInput.addEventListener('input', () => {
-        const query = normalizePhone(crmMemberListSearchInput.value);
-        const member = registeredMembers.find((item) => normalizePhone(item.phone) === query);
-        crmMemberSearchPhoneResult.textContent = member?.displayPhone || '';
+        const member = findMemberListResult(crmMemberListSearchInput.value);
+        crmMemberSearchNameResult.textContent = memberDisplayName(member);
+        crmMemberSearchPointResult.textContent = member?.points === undefined ? '' : String(member.points);
+        crmMemberSearchPhoneResult.textContent = memberDisplayPhone(member);
         crmMemberSearchEmailResult.textContent = member?.email || '';
       });
       document.querySelector('[data-testid="home-togo"]').addEventListener('click', () => {
@@ -1067,6 +1120,12 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       });
       orderSettleButton.addEventListener('click', () => {
         customerInfoPopup.hidden = false;
+      });
+      settleSwitchMemberButton.addEventListener('click', () => {
+        crmRedeemPanel.hidden = false;
+      });
+      settleApplyMemberButton.addEventListener('click', () => {
+        crmRedeemPanel.hidden = true;
       });
       settleCashButton.addEventListener('click', () => {
         currentOrderStatus = 'Paid';
@@ -1267,6 +1326,17 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       recallCancelConditionButton.addEventListener('click', () => {});
       recallEditButton.addEventListener('click', () => {
         recallGuestNameInput.value = '';
+        if (selectedRecallOrder?.hasRedeemItem) {
+          currentOrderItems = [...selectedRecallOrder.items];
+          currentItemOption = selectedRecallOrder.itemOption || null;
+          currentCrmMember = selectedRecallOrder.crmMember ? { ...selectedRecallOrder.crmMember } : null;
+          currentCrmDiscountRate = selectedRecallOrder.crmDiscountRate || 0;
+          currentHasRedeemItem = Boolean(selectedRecallOrder.hasRedeemItem);
+          currentRedeemControlsLocked = true;
+          orderPage.hidden = false;
+          renderOrderAmounts();
+          renderCurrentCrmState();
+        }
       });
       recallSaveEditButton.addEventListener('click', () => {
         if (selectedRecallOrder && recallGuestNameInput.value) {

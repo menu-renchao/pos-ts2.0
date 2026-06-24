@@ -40,6 +40,35 @@ test.describe('CRM 订单会员', () => {
     expect(result.selectedMember).toBe(result.recallMember);
     expect(result.selectedPoints).toBe(result.recallPoints);
   });
+
+  test('带 Redeem Item 的订单 Recall 编辑时会员和兑换操作应被禁用', async ({ environment, page }) => {
+    const crmOrderFlow = createCrmOrderFlow(page);
+
+    const disabledControls = await crmOrderFlow.createRedeemItemOrderAndReadEditDisabledControls(environment.posHomeUrl);
+
+    expect(disabledControls.removeMember).toContain('disabled');
+    expect(disabledControls.redeemItem).toContain('disabled');
+    expect(disabledControls.redeemDiscount).toContain('disabled');
+    expect(disabledControls.redeemCredit).toContain('disabled');
+  });
+
+  test('结算页 Add New Loyalty 新建 Email 会员支付后应能在 Member List 搜到 Email', async ({ environment, page }) => {
+    const crmOrderFlow = createCrmOrderFlow(page);
+
+    const result = await crmOrderFlow.settleJoinMemberByEmailAndSearch(environment.posHomeUrl);
+
+    expect(result.searchPhoneResult).toBe('');
+    expect(result.searchEmailResult).toBe(result.createdEmail);
+  });
+
+  test('Admin Member List 查到的会员名称和积分应与点单页 Redeem 选择结果一致', async ({ environment, page }) => {
+    const crmOrderFlow = createCrmOrderFlow(page);
+
+    const result = await crmOrderFlow.compareAdminMemberLookupWithRedeemSelection(environment.posHomeUrl);
+
+    expect(result.redeemMember).toBe(result.adminMemberName);
+    expect(result.redeemPoints).toBe(result.adminPointBalance);
+  });
 });
 
 function createCrmOrderFlow(page: Page): CrmOrderFlow {

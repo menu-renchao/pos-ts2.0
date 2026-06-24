@@ -17,6 +17,8 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 | crm/test_crm_join_member.py | TestJoinMember | `test_jump_member_no_permission` | tests/crm/crm-join-member.spec.ts | `CrmMemberFlow.openMemberListWithManagerOverride` |
 | crm/test_crm_join_member.py | TestJoinMember | `test_search_by_phone_only_finds_cloud_members` | tests/crm/crm-join-member.spec.ts | `CrmMemberFlow.searchRedeemPhoneFindsCloudMemberOnly` |
 | crm/test_crm_order.py | TestCRMOrder | `test_join_member_phone` | tests/crm/crm-order.spec.ts | `CrmOrderFlow.joinMemberByPhoneFromOrderAndSearch` |
+| crm/test_crm_order.py | TestCRMOrder | `test_settle_join_member_phone` | tests/crm/crm-order.spec.ts | `CrmOrderFlow.settleJoinMemberByEmailAndSearch` |
+| crm/test_crm_order.py | TestCRMOrder | `test_order_select_phone` | tests/crm/crm-order.spec.ts | `CrmOrderFlow.compareAdminMemberLookupWithRedeemSelection` |
 
 ### Preconditions
 
@@ -41,6 +43,8 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 10. `CrmMemberFlow.openMemberListWithManagerOverride`: log in as a no-permission employee, open Admin CRM Loyalty, submit manager password, verify Member List display.
 11. `CrmMemberFlow.searchRedeemPhoneFindsCloudMemberOnly`: open Dine In, open Redeem, search the shared phone, and assert the cloud member result.
 12. `CrmOrderFlow.joinMemberByPhoneFromOrderAndSearch`: enter Dine In, open Redeem, open Add New Loyalty, create a phone-only member, save the order, open Admin CRM Loyalty, search the created phone, and read email/phone search results.
+13. `CrmOrderFlow.settleJoinMemberByEmailAndSearch`: attach a member to a Dine In order, enter settlement switch-member flow, create an email-only loyalty member, apply it, pay cash, open Admin CRM Loyalty, and search the created email.
+14. `CrmOrderFlow.compareAdminMemberLookupWithRedeemSelection`: search Admin CRM Loyalty by `+16467337557`, read name/points, enter Dine In Redeem, select `(64)673-37557`, and read selected member/points.
 
 ### Expected Assertions
 
@@ -54,6 +58,8 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 - CRM Loyalty navigation displays Member List directly for permitted users and after manager override for no-permission users.
 - Redeem phone search returns `cloud member` and excludes the local member with the same phone.
 - Redeem Add New Loyalty phone-only registration appears in Admin CRM Loyalty with empty email and `+1` phone prefix.
+- Settlement Add New Loyalty email-only registration appears in Admin CRM Loyalty with matching email and empty phone.
+- Admin CRM Loyalty member name/points match the member and point balance selected from POS order-side Redeem.
 
 ### Page Responsibilities
 
@@ -64,6 +70,8 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 - `PosCrmPage.openMemberListFromAdmin`, `PosCrmPage.submitMemberListPermissionPassword`, `PosCrmPage.isMemberListVisible`, `PosCrmPage.searchMember`, and `PosCrmPage.readMemberSearchPhoneResult` own Admin CRM Loyalty member list behavior.
 - `PosCrmPage.openRedeem` and `PosCrmPage.searchRedeemMemberByPhone` own POS order-side Redeem member lookup.
 - `PosCrmPage.openAddNewLoyaltyFromRedeem`, `PosCrmPage.readMemberSearchEmailResult`, and `PosCrmPage.readMemberSearchPhoneResult` own order-side Add New Loyalty creation and Admin CRM Loyalty lookup assertions.
+- `PosCrmPage.fillJoinMemberEmail`, `PosCrmPage.readMemberSearchNameResult`, and `PosCrmPage.readMemberSearchPointResult` own email registration and Admin member identity reads.
+- `OrderDishesPage.clickSettle`, `OrderDishesPage.clickSettlementSwitchMember`, `OrderDishesPage.applySettlementMember`, and `OrderDishesPage.settleByCash` own settlement-side member switching and cash payment.
 - `PosHomePage.logout`, `PosHomePage.inputEmployeePassword`, `PosHomePage.clickAdmin`, and `PosHomePage.clickDineIn` provide the source-equivalent navigation context.
 
 ### Client/Data Responsibilities
@@ -73,6 +81,7 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 - `StubPosOrderClient` owns the active order/member association in stub mode.
 - `StubCrmMemberClient.duplicatePhoneInput` supplies the duplicate phone used by POS-29341.
 - `StubCrmMemberClient.nextUniquePhone` supplies deterministic phone-only registration data.
+- `StubCrmMemberClient.nextUniqueEmail` supplies deterministic email-only registration data.
 - `StubCrmMemberClient.cloudMemberSearchPhone` and `StubCrmMemberClient.findCloudMemberByPhone` define the cloud-only Redeem lookup behavior.
 - `test-data/crm/members.ts` owns `duplicateJoinMemberPhone`, `existingCrmMember`, `localOnlyMember`, and `cloudOnlySearchPhone`.
 
@@ -86,6 +95,8 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 - Offline Admin CRM Loyalty displays a permission password prompt for employee password `123`, then opens Member List after password `11`.
 - Offline Redeem search returns only the cloud member when cloud and local members share the same phone.
 - Offline Redeem Add New Loyalty stores a deterministic phone-only member, and Admin CRM Loyalty search exposes empty email plus `+1` phone result.
+- Offline settlement Switch Member opens the same Add New Loyalty flow, stores email-only members, and allows Admin CRM Loyalty email search.
+- Offline Admin CRM Loyalty prefers seeded CRM reward members for reward phone lookup, so Admin name/points compare with Redeem selection.
 
 ### Live Gaps
 
@@ -101,7 +112,7 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 
 | source_file | source_class | source_test_patterns | target_specs | target_flow_methods |
 |---|---|---|---|---|
-| crm/test_crm_order.py | TestCRMOrder | `test_delivery_redeem`, `test_remove_redeem_reselect`, `test_order_redeem_item_switch`, `test_settle_redeem_free_item` | tests/crm/crm-order.spec.ts | `CrmOrderFlow.createDeliveryRedeemOrderAndReadRecallHeader`, `CrmOrderFlow.removeMemberReselectAndReadRecallHeader`, `CrmRewardFlow.applyRedeemItem`, `CrmRewardFlow.removeRedeemItem`, `CrmRewardFlow.switchRedeemItem` |
+| crm/test_crm_order.py | TestCRMOrder | `test_delivery_redeem`, `test_remove_redeem_reselect`, `test_order_edit_remove_redeem_item`, `test_order_redeem_item_switch`, `test_settle_redeem_free_item` | tests/crm/crm-order.spec.ts | `CrmOrderFlow.createDeliveryRedeemOrderAndReadRecallHeader`, `CrmOrderFlow.removeMemberReselectAndReadRecallHeader`, `CrmOrderFlow.createRedeemItemOrderAndReadEditDisabledControls`, `CrmRewardFlow.applyRedeemItem`, `CrmRewardFlow.removeRedeemItem`, `CrmRewardFlow.switchRedeemItem` |
 | crm/test_crm_order_redeem_discount.py | TestRedeemDiscount | `test_redeem_*`, `test_max_discount`, `test_reduce_item0` | tests/crm/crm-order-redeem-discount.spec.ts | `CrmRewardFlow.applyRedeemDiscount`, `CrmRewardFlow.validateRedeemPricing` |
 | crm/test_crm_paypage.py | TestCrmPayPage | `test_redeem_*`, `test_pay_page_redeem_item`, `test_semipay_page_redeem_*` | tests/crm/crm-paypage.spec.ts | `CrmSettlementFlow.applyPayPageRedeem`, `CrmSettlementFlow.applySemiPayRedeem` |
 | crm/test_crm_points_calculation.py | TestCrmPointsCalculation | `test_login_member_redeem_point`, `test_earn_points_rules_by_spent_pos_order`, `test_redeem_free_item_modify_global_option` | tests/crm/crm-points-calculation.spec.ts | `CrmPointsFlow.redeemPoints`, `CrmPointsFlow.earnPointsForOrder` |
@@ -122,6 +133,7 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 5. Read order summary and reward/point state before and after payment or void/refund.
 6. `CrmOrderFlow.createDeliveryRedeemOrderAndReadRecallHeader`: create a Delivery order with phone/name/address, attach `crmSourceRewardMember`, read selected member and points, add source-equivalent dishes, save, recall the order, and read the CRM order header.
 7. `CrmOrderFlow.removeMemberReselectAndReadRecallHeader`: create a Dine In order, attach source member, remove it, attach target member, read target member and points, save, recall, and read the CRM order header.
+8. `CrmOrderFlow.createRedeemItemOrderAndReadEditDisabledControls`: create a Delivery order, attach source member, redeem a free item, add regular dishes, save, recall, enter edit mode, reopen Redeem, and read operation control classes.
 
 ### Expected Assertions
 
@@ -131,6 +143,7 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 - Semi-pay and pay-page redemption update only the intended order/suborder context.
 - Delivery redeem Recall header preserves guest name `pos-test`, formatted guest phone `(012) 345-67890`, selected CRM member, selected points, and an address beginning with `menusifu-test`.
 - Remove/reselect redeem member persists the newly selected member and points to Recall header.
+- Recall edit for an order containing a CRM Redeem Item disables Remove Member, Redeem Item, Redeem Discount, and Redeem Credit operations.
 
 ### Page Responsibilities
 
@@ -141,6 +154,8 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 - `DeliveryPage.createDeliveryOrder` owns Delivery phone/name/address entry.
 - `PosCrmPage.openRedeem`, `PosCrmPage.selectMemberByPhone`, `PosCrmPage.removeRedeemMember`, `PosCrmPage.readRedeemOrderMember`, and `PosCrmPage.readRedeemOrderPoints` own order-side member attach, remove, reselect, and header reads.
 - `RecallPage.openRecentOrder` and `RecallPage.readCrmOrderHeaderInfo` own recalled CRM guest/member/points assertions.
+- `RecallPage.clickEdit` owns entering recalled-order edit context before POS-side Redeem restrictions are read.
+- `PosCrmPage.applyRedeemItem`, `PosCrmPage.quitRedeem`, and `PosCrmPage.readRedeemEditDisabledControlClasses` own redeem item application and disabled-state assertions.
 
 ### Client/Data Responsibilities
 
@@ -151,6 +166,7 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 - `StubCrmRewardClient.findMemberByPhone` validates seeded source and target member identities before UI selection.
 - `test-data/pos/delivery.ts` owns `deliveryOrderInfoSample`.
 - `test-data/crm/members.ts` owns `crmSourceRewardMember` and `crmTargetRewardMember`.
+- `test-data/pos/dishes.ts` owns `crmRedeemItemDish`.
 
 ### Stub Behavior
 
@@ -159,6 +175,7 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 - Stub mode does not call live CRM reward APIs.
 - Offline Delivery order save persists guest phone/address on the order, and Recall formats phone with source-equivalent spacing.
 - Offline Redeem member removal clears the active member so the reselected member is the only member saved on the order.
+- Offline Recall edit of an order with a redeem item reopens the order context and marks member/redeem controls as disabled.
 
 ### Live Gaps
 
