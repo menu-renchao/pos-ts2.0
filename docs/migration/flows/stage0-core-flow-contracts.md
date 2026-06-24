@@ -482,6 +482,11 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 | stage0/test_order_page.py | TestOrderPage | `test_order_switch_group` switch menu group, save order, verify Recall item | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createTogoOrderAndReadRecall` |
 | stage0/test_order_page.py | TestOrderPage | `test_order_group_chinese` Chinese menu groups visible on order page | tests/stage0/order-page.spec.ts | `OrderEntryFlow.readChineseMenuGroups` |
 | stage0/test_order_page.py | TestOrderPage | `test_order_switch_category` switch menu category, save order, verify Recall item | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createTogoOrderAndReadRecall` |
+| stage0/test_order_page.py | TestOrderPage | `test_order_edit_item_tax` send kitchen, edit order, add item, and verify tax | tests/stage0/order-page.spec.ts | `OrderEntryFlow.addItemAfterSendKitchenAndReadTaxes` |
+| stage0/test_order_page.py | TestOrderPage | `test_order_edit_customer_info` require customer name and phone before payment | tests/stage0/order-page.spec.ts | `OrderEntryFlow.requireCustomerInfoBeforePayment` |
+| stage0/test_order_page.py | TestOrderPage | `test_no_permission_void_item` manager password permits void item | tests/stage0/order-page.spec.ts | `OrderEntryFlow.voidItemWithManagerPassword` |
+| stage0/test_order_page.py | TestOrderPage | `test_edit_price_support_discount` item edit price supports discount | tests/stage0/order-page.spec.ts | `OrderEntryFlow.applyItemDiscountAndReadPrice` |
+| stage0/test_order_page.py | TestOrderPage | `test_add_note_by_modify` Modify note persists to recalled item option | tests/stage0/order-page.spec.ts | `OrderEntryFlow.addModifyNoteAndReadRecallOption` |
 | stage0/test_order_page.py | all `Test*` classes | add dishes, modify items, save orders, validate order totals | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createTogoOrder` |
 | stage0/test_order_settle.py | all `Test*` classes | create payable orders before settlement | tests/stage0/order-settle.spec.ts | `OrderEntryFlow.createTogoOrder` |
 
@@ -511,6 +516,11 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Item operations preserve source behavior such as hold, void, discount, combo, and option pricing where relevant.
 - Menu group/category switch cases preserve dish name and price after save and Recall.
 - Chinese group case shows `午餐菜单` and `中餐菜单`.
+- Edited sent order recalculates tax after adding one more item.
+- Customer-info requirement stays visible until both name and phone are supplied.
+- Manager password allows void item and Recall shows `Voided`.
+- Item discount changes item price to the expected discounted amount.
+- Modify note persists note name and price into Recall item options.
 
 ### Page Responsibilities
 
@@ -519,6 +529,8 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `ItemActionsSection` owns item-level actions.
 - `OrderSummarySection` owns numeric summary reads and line-item reads.
 - `RecallPage` owns latest saved-order selection and line-item reads for source cases that verify saved orders.
+- `OrderDishesPage` owns order tax reads, customer-info popup actions, manager password popup actions, item discount action, and Modify note entry.
+- `RecallPage` owns recalled item state and option reads.
 
 ### Client/Data Responsibilities
 
@@ -532,6 +544,11 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Stub clients do not validate menu availability against live APIs.
 - Stub order page stores the currently selected menu item and makes it available to Recall after save.
 - Stub Chinese mode renders Chinese menu group names on the order page.
+- Stub tax is derived from active item count and rounded to two decimals.
+- Stub customer-info popup closes only when both name and phone are supplied.
+- Stub manager password `11` marks the current item as `Voided`.
+- Stub item discount applies a 10% reduction to the current item price.
+- Stub Modify note persists note name and price to the saved order option.
 
 ### Live Gaps
 

@@ -50,6 +50,24 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <div data-testid="order-menu-groups"></div>
       <div data-testid="order-menu-categories"></div>
       <div data-testid="order-menu-items"></div>
+      <div data-testid="order-tax">0</div>
+      <div data-testid="order-item-price">0</div>
+      <button data-testid="order-send-kitchen">Send Kitchen</button>
+      <button data-testid="order-settle">Settle</button>
+      <button data-testid="order-void-item">Void Item</button>
+      <button data-testid="item-discount-10">10% Discount</button>
+      <input data-testid="modify-note-name" />
+      <input data-testid="modify-note-price" />
+      <button data-testid="modify-save">Save Modify</button>
+      <section data-testid="customer-info-popup" hidden>
+        <input data-testid="customer-name" />
+        <input data-testid="customer-phone" />
+        <button data-testid="customer-submit">Submit Customer</button>
+      </section>
+      <section data-testid="manager-password-popup" hidden>
+        <input data-testid="manager-password" type="password" />
+        <button data-testid="manager-password-submit">Submit Manager Password</button>
+      </section>
       <button data-testid="order-save">Save Order</button>
     </section>
     <section data-testid="recall-page" hidden>
@@ -117,6 +135,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let messages = [];
       let currentOrderItems = [];
       let latestSavedOrderItems = [];
+      let currentItemOption = null;
+      let latestSavedItemOption = null;
       let reservations = [];
       let mainFunctions = ['Dine In', 'Drawer', 'To Go', 'Delivery'];
       let hiddenFunctions = ['Admin', 'Session'];
@@ -147,6 +167,22 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const orderMenuCategories = document.querySelector('[data-testid="order-menu-categories"]');
       const orderMenuItems = document.querySelector('[data-testid="order-menu-items"]');
       const orderSaveButton = document.querySelector('[data-testid="order-save"]');
+      const orderTax = document.querySelector('[data-testid="order-tax"]');
+      const orderItemPrice = document.querySelector('[data-testid="order-item-price"]');
+      const orderSendKitchenButton = document.querySelector('[data-testid="order-send-kitchen"]');
+      const orderSettleButton = document.querySelector('[data-testid="order-settle"]');
+      const orderVoidItemButton = document.querySelector('[data-testid="order-void-item"]');
+      const itemDiscountButton = document.querySelector('[data-testid="item-discount-10"]');
+      const modifyNoteNameInput = document.querySelector('[data-testid="modify-note-name"]');
+      const modifyNotePriceInput = document.querySelector('[data-testid="modify-note-price"]');
+      const modifySaveButton = document.querySelector('[data-testid="modify-save"]');
+      const customerInfoPopup = document.querySelector('[data-testid="customer-info-popup"]');
+      const customerNameInput = document.querySelector('[data-testid="customer-name"]');
+      const customerPhoneInput = document.querySelector('[data-testid="customer-phone"]');
+      const customerSubmitButton = document.querySelector('[data-testid="customer-submit"]');
+      const managerPasswordPopup = document.querySelector('[data-testid="manager-password-popup"]');
+      const managerPasswordInput = document.querySelector('[data-testid="manager-password"]');
+      const managerPasswordSubmitButton = document.querySelector('[data-testid="manager-password-submit"]');
       const recallPage = document.querySelector('[data-testid="recall-page"]');
       const recallRecentOrderButton = document.querySelector('[data-testid="recall-recent-order"]');
       const recallOrderItems = document.querySelector('[data-testid="recall-order-items"]');
@@ -256,7 +292,14 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         return [
           { name: 'Group Switch Beef', price: 11.25, group: 'Lunch Menu', category: 'Lunch Entree' },
           { name: 'Category Switch Fish', price: 13.5, group: 'Dinner Menu', category: 'Seafood' },
+          { name: 'Discountable Burger', price: 10, group: 'Dinner Menu', category: 'Burgers' },
         ];
+      }
+
+      function renderOrderAmounts() {
+        const itemCount = currentOrderItems.filter((item) => item.state !== 'Voided').length;
+        orderTax.textContent = String(Number((itemCount * 0.6).toFixed(2)));
+        orderItemPrice.textContent = String(currentOrderItems[0]?.price || 0);
       }
 
       function renderOrderMenu() {
@@ -267,13 +310,14 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           orderMenuGroups.appendChild(createButton('order-menu-group', group, () => {}));
         });
         orderMenuCategories.innerHTML = '';
-        ['Lunch Entree', 'Seafood'].forEach((category) => {
+        ['Lunch Entree', 'Seafood', 'Burgers'].forEach((category) => {
           orderMenuCategories.appendChild(createButton('order-menu-category', category, () => {}));
         });
         orderMenuItems.innerHTML = '';
         menuData().forEach((dish) => {
           orderMenuItems.appendChild(createButton('order-menu-item', dish.name, () => {
-            currentOrderItems = [{ name: dish.name, price: dish.price }];
+            currentOrderItems.push({ name: dish.name, price: dish.price, state: '' });
+            renderOrderAmounts();
           }));
         });
       }
@@ -285,9 +329,18 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           row.dataset.testid = 'recall-order-item';
           row.dataset.name = item.name;
           row.dataset.price = String(item.price);
+          row.dataset.state = item.state || '';
           row.textContent = item.name + ' $' + item.price.toFixed(2);
           recallOrderItems.appendChild(row);
         });
+        if (latestSavedItemOption) {
+          const option = document.createElement('div');
+          option.dataset.testid = 'recall-item-option';
+          option.dataset.name = latestSavedItemOption.name;
+          option.dataset.price = String(latestSavedItemOption.price);
+          option.textContent = latestSavedItemOption.name + ' $' + latestSavedItemOption.price.toFixed(2);
+          recallOrderItems.appendChild(option);
+        }
       }
 
       function updateReservationStatusRead(partyName) {
@@ -450,6 +503,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       });
       document.querySelector('[data-testid="home-togo"]').addEventListener('click', () => {
         showPanel('order');
+        currentOrderItems = [];
+        currentItemOption = null;
+        customerInfoPopup.hidden = true;
+        managerPasswordPopup.hidden = true;
+        renderOrderAmounts();
         renderOrderMenu();
         const effectiveLanguage = currentLanguage === 'Chinese' || userDefaultLanguage === 'Chinese' ? 'Chinese' : 'Default';
         openFoodCategory.textContent = effectiveLanguage === 'Chinese' ? '自定义菜\\nauto_fix' : 'Custom Food\\nauto_fix';
@@ -459,6 +517,37 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       });
       orderSaveButton.addEventListener('click', () => {
         latestSavedOrderItems = [...currentOrderItems];
+        latestSavedItemOption = currentItemOption;
+      });
+      orderSendKitchenButton.addEventListener('click', () => {});
+      orderSettleButton.addEventListener('click', () => {
+        customerInfoPopup.hidden = false;
+      });
+      customerSubmitButton.addEventListener('click', () => {
+        if (customerNameInput.value && customerPhoneInput.value) {
+          customerInfoPopup.hidden = true;
+        }
+      });
+      orderVoidItemButton.addEventListener('click', () => {
+        managerPasswordPopup.hidden = false;
+      });
+      managerPasswordSubmitButton.addEventListener('click', () => {
+        if (managerPasswordInput.value === '11' && currentOrderItems[0]) {
+          currentOrderItems[0].state = 'Voided';
+          managerPasswordPopup.hidden = true;
+        }
+      });
+      itemDiscountButton.addEventListener('click', () => {
+        if (currentOrderItems[0]) {
+          currentOrderItems[0].price = currentOrderItems[0].price * 0.9;
+          renderOrderAmounts();
+        }
+      });
+      modifySaveButton.addEventListener('click', () => {
+        currentItemOption = {
+          name: modifyNoteNameInput.value,
+          price: Number(modifyNotePriceInput.value),
+        };
       });
       recallRecentOrderButton.addEventListener('click', () => {
         renderRecallOrderItems();
