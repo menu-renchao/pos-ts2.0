@@ -2,7 +2,7 @@ import type { AdminPage } from '../../pages/pos/admin.page.js';
 import type { PosHomePage } from '../../pages/pos/home.page.js';
 import type { OrderDishesPage } from '../../pages/pos/order-dishes.page.js';
 import type { MenuClient } from '../../clients/pos-api/menu.client.js';
-import { chineseInitialSearchDish, unitPriceDish } from '../../test-data/pos/dishes.js';
+import { chineseInitialSearchDish, quickComboBatchEditDish, unitPriceDish } from '../../test-data/pos/dishes.js';
 
 const posMenuProductLine = 'POS Menu';
 const emenuProductLine = 'Emenu Menu';
@@ -26,6 +26,12 @@ export type GlobalOptionPrinterResult = {
 export type MenuItemCountComparison = {
   pageCount: number;
   apiCount: number;
+};
+
+export type QuickComboModeResult = {
+  afterDisableQuickCombo: boolean;
+  afterEnableQuickCombo: boolean;
+  orderPageQuickCombo: boolean;
 };
 
 export class AdminMenuFlow {
@@ -127,6 +133,48 @@ export class AdminMenuFlow {
     return {
       pageCount,
       apiCount: posMenu.menuItemCount,
+    };
+  }
+
+  async batchEditQuickComboModeAndReadStates(homeUrl: string): Promise<QuickComboModeResult> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+
+    await this.adminPage.batchEditComboDisplayMode(
+      quickComboBatchEditDish.group,
+      quickComboBatchEditDish.category,
+      quickComboBatchEditDish.name,
+      false,
+    );
+    const afterDisableQuickCombo = await this.adminPage.readComboDetailQuickCombo(
+      quickComboBatchEditDish.group,
+      quickComboBatchEditDish.category,
+      quickComboBatchEditDish.name,
+    );
+
+    await this.adminPage.batchEditComboDisplayMode(
+      quickComboBatchEditDish.group,
+      quickComboBatchEditDish.category,
+      quickComboBatchEditDish.name,
+      true,
+    );
+    const afterEnableQuickCombo = await this.adminPage.readComboDetailQuickCombo(
+      quickComboBatchEditDish.group,
+      quickComboBatchEditDish.category,
+      quickComboBatchEditDish.name,
+    );
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(quickComboBatchEditDish.group);
+    await this.orderDishesPage.selectMenuCategory(quickComboBatchEditDish.category);
+    await this.orderDishesPage.addMenuItem(quickComboBatchEditDish.name);
+    const orderPageQuickCombo = await this.orderDishesPage.isCurrentQuickCombo();
+
+    return {
+      afterDisableQuickCombo,
+      afterEnableQuickCombo,
+      orderPageQuickCombo,
     };
   }
 }

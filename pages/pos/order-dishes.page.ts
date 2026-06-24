@@ -50,6 +50,7 @@ export class OrderDishesPage extends PageObject {
   private readonly openFoodKeyboardTextInput: Locator;
   private readonly orderInventoryButton: Locator;
   private readonly orderItemName: Locator;
+  private readonly orderCurrentQuickCombo: Locator;
   private readonly orderItemCount: Locator;
   private readonly orderLineItems: Locator;
   private readonly orderGuestNameInput: Locator;
@@ -154,6 +155,7 @@ export class OrderDishesPage extends PageObject {
     this.openFoodKeyboardTextInput = page.getByTestId('open-food-keyboard-text');
     this.orderInventoryButton = page.getByTestId('order-inventory');
     this.orderItemName = page.getByTestId('order-item-name');
+    this.orderCurrentQuickCombo = page.getByTestId('order-current-quick-combo');
     this.orderItemCount = page.getByTestId('order-item-count');
     this.orderLineItems = page.getByTestId('order-line-item');
     this.orderGuestNameInput = page.getByTestId('order-guest-name');
@@ -260,6 +262,12 @@ export class OrderDishesPage extends PageObject {
   async addMenuItem(itemName: string): Promise<void> {
     await step(`添加点单菜品 ${itemName}`, async () => {
       await this.menuItems.filter({ hasText: exactText(itemName) }).click();
+    });
+  }
+
+  async isCurrentQuickCombo(): Promise<boolean> {
+    return step('判断当前菜品是否为 Quick Combo', async () => {
+      return ((await this.orderCurrentQuickCombo.textContent()) ?? '').trim() === 'true';
     });
   }
 

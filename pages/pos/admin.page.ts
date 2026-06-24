@@ -48,6 +48,13 @@ export class AdminPage extends PageObject {
   private readonly globalOptionAddPrinterButton: Locator;
   private readonly globalOptionPrinterValue: Locator;
   private readonly globalOptionDeleteButton: Locator;
+  private readonly comboItemGroupInput: Locator;
+  private readonly comboItemCategoryInput: Locator;
+  private readonly comboItemNameInput: Locator;
+  private readonly comboDisplayModeSelect: Locator;
+  private readonly comboDisplayModeSaveButton: Locator;
+  private readonly comboDetailOpenButton: Locator;
+  private readonly comboDetailQuickComboValue: Locator;
   private readonly unitPriceItemGroupInput: Locator;
   private readonly unitPriceItemCategoryInput: Locator;
   private readonly unitPriceItemNameInput: Locator;
@@ -106,6 +113,13 @@ export class AdminPage extends PageObject {
     this.globalOptionAddPrinterButton = page.getByTestId('admin-global-option-add-printer');
     this.globalOptionPrinterValue = page.getByTestId('admin-global-option-printer-value');
     this.globalOptionDeleteButton = page.getByTestId('admin-global-option-delete');
+    this.comboItemGroupInput = page.getByTestId('admin-combo-item-group');
+    this.comboItemCategoryInput = page.getByTestId('admin-combo-item-category');
+    this.comboItemNameInput = page.getByTestId('admin-combo-item-name');
+    this.comboDisplayModeSelect = page.getByTestId('admin-combo-display-mode');
+    this.comboDisplayModeSaveButton = page.getByTestId('admin-combo-display-mode-save');
+    this.comboDetailOpenButton = page.getByTestId('admin-combo-detail-open');
+    this.comboDetailQuickComboValue = page.getByTestId('admin-combo-detail-quick-combo');
     this.unitPriceItemGroupInput = page.getByTestId('admin-unit-price-item-group');
     this.unitPriceItemCategoryInput = page.getByTestId('admin-unit-price-item-category');
     this.unitPriceItemNameInput = page.getByTestId('admin-unit-price-item-name');
@@ -333,6 +347,33 @@ export class AdminPage extends PageObject {
       await this.globalOptionNameInput.fill(optionName);
       await this.globalOptionSelectedNameInput.fill(optionName);
       await this.globalOptionDeleteButton.click();
+    });
+  }
+
+  async batchEditComboDisplayMode(
+    group: string,
+    category: string,
+    itemName: string,
+    quickCombo: boolean,
+  ): Promise<void> {
+    await step(`批量设置套餐 ${itemName} Quick Combo 为 ${quickCombo}`, async () => {
+      await expect(this.adminRoot).toBeVisible();
+      await this.comboItemGroupInput.fill(group);
+      await this.comboItemCategoryInput.fill(category);
+      await this.comboItemNameInput.fill(itemName);
+      await this.comboDisplayModeSelect.selectOption(quickCombo ? 'quick' : 'regular');
+      await this.comboDisplayModeSaveButton.click();
+    });
+  }
+
+  async readComboDetailQuickCombo(group: string, category: string, itemName: string): Promise<boolean> {
+    return step(`读取套餐 ${itemName} 详情 Quick Combo 状态`, async () => {
+      await expect(this.adminRoot).toBeVisible();
+      await this.comboItemGroupInput.fill(group);
+      await this.comboItemCategoryInput.fill(category);
+      await this.comboItemNameInput.fill(itemName);
+      await this.comboDetailOpenButton.click();
+      return ((await this.comboDetailQuickComboValue.textContent()) ?? '').trim() === 'true';
     });
   }
 

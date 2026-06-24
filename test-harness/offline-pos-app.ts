@@ -141,6 +141,16 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <button data-testid="admin-global-option-add-printer">Add Printer</button>
       <div data-testid="admin-global-option-printer-value"></div>
       <button data-testid="admin-global-option-delete">Delete Global Option</button>
+      <input data-testid="admin-combo-item-group" />
+      <input data-testid="admin-combo-item-category" />
+      <input data-testid="admin-combo-item-name" />
+      <select data-testid="admin-combo-display-mode">
+        <option value="quick">quick</option>
+        <option value="regular">regular</option>
+      </select>
+      <button data-testid="admin-combo-display-mode-save">Save Combo Display Mode</button>
+      <button data-testid="admin-combo-detail-open">Open Combo Detail</button>
+      <div data-testid="admin-combo-detail-quick-combo"></div>
       <button data-testid="admin-save-settings">Save Settings</button>
       <button data-testid="admin-member-list">CRM Loyalty</button>
       <section data-testid="member-list-permission-popup" hidden>
@@ -173,6 +183,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <div data-testid="order-subtotal">0</div>
       <div data-testid="order-reward">0</div>
       <div data-testid="order-item-name"></div>
+      <div data-testid="order-current-quick-combo">false</div>
       <div data-testid="order-items-list"></div>
       <div data-testid="order-item-count">0</div>
       <div data-testid="order-item-price">0</div>
@@ -532,6 +543,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const adminMenuItemCounts = {
         POS: 24,
       };
+      const adminComboModes = {
+        QuickComboTest: true,
+      };
       let adminGlobalOptions = [];
       let selectedGlobalOptionName = '';
       let adminCreatedMenuItems = [];
@@ -616,6 +630,13 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const adminGlobalOptionAddPrinterButton = document.querySelector('[data-testid="admin-global-option-add-printer"]');
       const adminGlobalOptionPrinterValue = document.querySelector('[data-testid="admin-global-option-printer-value"]');
       const adminGlobalOptionDeleteButton = document.querySelector('[data-testid="admin-global-option-delete"]');
+      const adminComboItemGroupInput = document.querySelector('[data-testid="admin-combo-item-group"]');
+      const adminComboItemCategoryInput = document.querySelector('[data-testid="admin-combo-item-category"]');
+      const adminComboItemNameInput = document.querySelector('[data-testid="admin-combo-item-name"]');
+      const adminComboDisplayModeSelect = document.querySelector('[data-testid="admin-combo-display-mode"]');
+      const adminComboDisplayModeSaveButton = document.querySelector('[data-testid="admin-combo-display-mode-save"]');
+      const adminComboDetailOpenButton = document.querySelector('[data-testid="admin-combo-detail-open"]');
+      const adminComboDetailQuickCombo = document.querySelector('[data-testid="admin-combo-detail-quick-combo"]');
       const joinMemberButton = document.querySelector('[data-testid="home-join-member"]');
       const joinMemberRegistration = document.querySelector('[data-testid="join-member-registration"]');
       const joinMemberFirstNameInput = document.querySelector('[data-testid="join-member-first-name"]');
@@ -634,6 +655,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const orderSubtotal = document.querySelector('[data-testid="order-subtotal"]');
       const orderReward = document.querySelector('[data-testid="order-reward"]');
       const orderItemName = document.querySelector('[data-testid="order-item-name"]');
+      const orderCurrentQuickCombo = document.querySelector('[data-testid="order-current-quick-combo"]');
       const orderItemsList = document.querySelector('[data-testid="order-items-list"]');
       const orderItemCount = document.querySelector('[data-testid="order-item-count"]');
       const orderItemPrice = document.querySelector('[data-testid="order-item-price"]');
@@ -935,6 +957,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         adminGlobalOptionPrinterValue.textContent = option ? option.printers.join(',') : '';
       }
 
+      function renderComboDetailQuickCombo() {
+        adminComboDetailQuickCombo.textContent = String(Boolean(adminComboModes[adminComboItemNameInput.value]));
+      }
+
       function showPanel(panel) {
         adminPage.hidden = panel !== 'admin';
         deliveryPage.hidden = panel !== 'delivery';
@@ -1197,6 +1223,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
             category: dish.category,
             group: dish.group,
             state: '',
+            quickCombo: Boolean(dish.quickCombo),
             subItems: dish.comboSubItems.map((name) => comboSubItem(name, true)),
           });
           selectedOrderItemIndex = currentOrderItems.length - 1;
@@ -1230,6 +1257,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           category: dish.category || '',
           inventorySku: dish.inventorySku || '',
           unitPriceItem: Boolean(dish.unitPriceItem),
+          quickCombo: Boolean(dish.quickCombo),
           state: '',
           sentToKitchen: false,
           inKitchenQuantity: 0,
@@ -1333,6 +1361,14 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           { name: 'combo_max', price: 20, group: 'crm_group', category: 'crm_cat', comboSubItems: ['item', 'item_option'] },
           { name: 'ComboOptionTest', price: 10, group: 'MansuperGroup', category: 'MansuperCat', comboSubItems: ['combo-no-option-item'] },
           { name: 'combo-option-item', price: 10, group: 'MansuperGroup', category: 'MansuperCat' },
+          {
+            name: 'QuickComboTest',
+            price: 15,
+            group: 'MansuperGroup',
+            category: 'MansuperCat',
+            comboSubItems: ['Vegetable Spring Roll'],
+            quickCombo: adminComboModes.QuickComboTest,
+          },
           ...adminCreatedMenuItems,
         ];
       }
@@ -1399,6 +1435,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         orderChargeLabel.textContent = currentOrderChargeLabel;
         orderChargePrice.textContent = chargeAmount ? '$' + chargeAmount.toFixed(2) : '';
         orderItemName.textContent = currentOrderItems[0] ? displayItemName(currentOrderItems[0]) : '';
+        orderCurrentQuickCombo.textContent = String(Boolean(currentOrderItems[selectedOrderItemIndex]?.quickCombo));
         orderItemCount.textContent = formatItemCount(currentOrderItems);
         orderItemPrice.textContent = String(currentOrderItems[0]?.price || 0);
         itemQuantityInput.value = String(currentOrderItems[currentOrderItems.length - 1]?.quantity || 1);
@@ -2040,6 +2077,14 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           adminGlobalOptionSelectedNameInput.value = '';
         }
         renderSelectedGlobalOptionPrinter();
+      });
+      adminComboDisplayModeSaveButton.addEventListener('click', () => {
+        adminComboModes[adminComboItemNameInput.value] = adminComboDisplayModeSelect.value === 'quick';
+        renderComboDetailQuickCombo();
+        renderOrderMenu();
+      });
+      adminComboDetailOpenButton.addEventListener('click', () => {
+        renderComboDetailQuickCombo();
       });
       saveLanguageButton.addEventListener('click', () => {
         userDefaultLanguage = languageSelect.value;

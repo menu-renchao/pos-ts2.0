@@ -61,4 +61,20 @@ test.describe('stage1 admin menu migration', () => {
     expect(count.pageCount).toBe(count.apiCount);
     expect(count.pageCount).toBeGreaterThan(0);
   });
+
+  test(
+    'POS-42064 批量设置套餐模式后后台详情和点单页应识别 Quick Combo',
+    {
+      annotation: jiraIssue('POS-42064'),
+    },
+    async ({ environment, page }) => {
+      const flow = new AdminMenuFlow(new PosHomePage(page), new AdminPage(page), new OrderDishesPage(page));
+
+      const result = await flow.batchEditQuickComboModeAndReadStates(environment.posHomeUrl);
+
+      expect(result.afterDisableQuickCombo).toBe(false);
+      expect(result.afterEnableQuickCombo).toBe(true);
+      expect(result.orderPageQuickCombo).toBe(true);
+    },
+  );
 });

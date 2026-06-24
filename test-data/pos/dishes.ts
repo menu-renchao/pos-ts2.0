@@ -240,6 +240,13 @@ export const comboNoOptionThenOptionDish = {
   optionDishPrice: 10,
 } as const;
 
+export const quickComboBatchEditDish = {
+  name: 'QuickComboTest',
+  group: 'MansuperGroup',
+  category: 'MansuperCat',
+  price: 15,
+} as const;
+
 export const defaultMenuGroup: MenuGroupSample = {
   id: 'group-migration-menu',
   name: 'Migration Menu',
