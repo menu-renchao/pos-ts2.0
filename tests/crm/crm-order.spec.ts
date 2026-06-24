@@ -99,6 +99,27 @@ test.describe('CRM 订单会员', () => {
     expect(result.redeemCreditCount).toBe(1);
     expect(result.redeemItemCount).toBe(0);
   });
+
+  test('结算页 Switch Member 后应按新会员 20% 折扣结算并更新双方积分', async ({ environment, page }) => {
+    const crmOrderFlow = createCrmOrderFlow(page);
+
+    const result = await crmOrderFlow.switchSettlementMemberApplyDiscountAndReadPoints(environment.posHomeUrl);
+
+    expect(result.orderReward).toBe(-Number((result.orderSubtotal * 0.2).toFixed(2)));
+    expect(result.orderTotal).toBe(result.settlementTotal);
+    expect(result.sourcePointsAfterPayment).toBe(result.sourcePointsBeforeSwitch);
+    expect(result.targetPointsAfterPayment).toBe(result.targetPointsBeforePayment - 15 + 20);
+  });
+
+  test('Redeem Free Item 应扣减 10 积分并在 Admin 和 Recall 保持一致', async ({ environment, page }) => {
+    const crmOrderFlow = createCrmOrderFlow(page);
+
+    const result = await crmOrderFlow.redeemFreeItemAndReadPointBalance(environment.posHomeUrl);
+
+    expect(result.pointsAfterRedeem).toBe(result.pointsBeforeRedeem - 10);
+    expect(result.adminPointsAfterRedeem).toBe(result.pointsAfterRedeem);
+    expect(result.recallPointsAfterRedeem).toBe(String(result.pointsAfterRedeem));
+  });
 });
 
 function createCrmOrderFlow(page: Page): CrmOrderFlow {

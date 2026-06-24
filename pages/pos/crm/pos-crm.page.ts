@@ -26,6 +26,7 @@ export class PosCrmPage extends PageObject {
   private readonly redeemMemberSearchInput: Locator;
   private readonly pointBalance: Locator;
   private readonly redeemButton: Locator;
+  private readonly redeemDiscount20Button: Locator;
   private readonly redeemDiscountButton: Locator;
   private readonly redeemCreditButton: Locator;
   private readonly redeemDeleteButton: Locator;
@@ -62,6 +63,7 @@ export class PosCrmPage extends PageObject {
     this.redeemButton = page.getByTestId('crm-redeem');
     this.redeemCreditButton = page.getByTestId('crm-redeem-credit');
     this.redeemDeleteButton = page.getByTestId('crm-redeem-delete');
+    this.redeemDiscount20Button = page.getByTestId('crm-redeem-discount-20');
     this.redeemDiscountButton = page.getByTestId('crm-redeem-discount');
     this.redeemItemButton = page.getByTestId('crm-redeem-item');
     this.redeemItemOptionButton = page.getByTestId('crm-redeem-item-option');
@@ -208,6 +210,10 @@ export class PosCrmPage extends PageObject {
 
   async applyRedeemDiscount(discountName: string): Promise<void> {
     await step(`兑换 CRM 折扣 ${discountName}`, async () => {
+      if (discountName === '20% Off') {
+        await this.redeemDiscount20Button.click();
+        return;
+      }
       await this.redeemDiscountButton.click();
     });
   }

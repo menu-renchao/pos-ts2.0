@@ -20,6 +20,7 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 | crm/test_crm_order.py | TestCRMOrder | `test_settle_join_member_phone` | tests/crm/crm-order.spec.ts | `CrmOrderFlow.settleJoinMemberByEmailAndSearch` |
 | crm/test_crm_order.py | TestCRMOrder | `test_order_select_phone` | tests/crm/crm-order.spec.ts | `CrmOrderFlow.compareAdminMemberLookupWithRedeemSelection` |
 | crm/test_crm_order.py | TestCRMOrder | `test_settle_select_member` | tests/crm/crm-order.spec.ts | `CrmOrderFlow.selectSettlementMemberAndReadAvailableRedeems` |
+| crm/test_crm_order.py | TestCRMOrder | `test_settle_switch_member` | tests/crm/crm-order.spec.ts | `CrmOrderFlow.switchSettlementMemberApplyDiscountAndReadPoints` |
 
 ### Preconditions
 
@@ -47,6 +48,7 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 13. `CrmOrderFlow.settleJoinMemberByEmailAndSearch`: attach a member to a Dine In order, enter settlement switch-member flow, create an email-only loyalty member, apply it, pay cash, open Admin CRM Loyalty, and search the created email.
 14. `CrmOrderFlow.compareAdminMemberLookupWithRedeemSelection`: search Admin CRM Loyalty by `+16467337557`, read name/points, enter Dine In Redeem, select `(64)673-37557`, and read selected member/points.
 15. `CrmOrderFlow.selectSettlementMemberAndReadAvailableRedeems`: create a Dine In order, enter settlement Select Member, choose the source CRM member, read displayed member/points, and count available redeem operations.
+16. `CrmOrderFlow.switchSettlementMemberApplyDiscountAndReadPoints`: attach source member, apply `10% Off`, add two dishes, enter settlement, switch to target member, record target points, apply `20% Off`, pay cash, recall the order, and compare Admin CRM Loyalty point balances for both members.
 
 ### Expected Assertions
 
@@ -63,6 +65,7 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 - Settlement Add New Loyalty email-only registration appears in Admin CRM Loyalty with matching email and empty phone.
 - Admin CRM Loyalty member name/points match the member and point balance selected from POS order-side Redeem.
 - Settlement Select Member displays the selected member/points and exposes discount and credit redemption while hiding free-item redemption.
+- Settlement Switch Member recalculates Reward Discount from the new member's 20% discount, keeps the source member points unchanged, and applies target member point deduction plus payment earning.
 
 ### Page Responsibilities
 
@@ -76,6 +79,7 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 - `PosCrmPage.fillJoinMemberEmail`, `PosCrmPage.readMemberSearchNameResult`, and `PosCrmPage.readMemberSearchPointResult` own email registration and Admin member identity reads.
 - `OrderDishesPage.clickSettle`, `OrderDishesPage.clickSettlementSwitchMember`, `OrderDishesPage.applySettlementMember`, and `OrderDishesPage.settleByCash` own settlement-side member switching and cash payment.
 - `OrderDishesPage.clickSettlementSelectMember`, `PosCrmPage.readAvailableRedeemControlCounts`, `PosCrmPage.readRedeemOrderMember`, and `PosCrmPage.readRedeemOrderPoints` own settlement Select Member verification.
+- `OrderDishesPage.readSettlementTotal`, `RecallPage.readOrderPriceSummary`, and `RecallPage.readOrderTotal` own settlement-vs-recall amount comparison.
 - `PosHomePage.logout`, `PosHomePage.inputEmployeePassword`, `PosHomePage.clickAdmin`, and `PosHomePage.clickDineIn` provide the source-equivalent navigation context.
 
 ### Client/Data Responsibilities
@@ -102,6 +106,7 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 - Offline settlement Switch Member opens the same Add New Loyalty flow, stores email-only members, and allows Admin CRM Loyalty email search.
 - Offline Admin CRM Loyalty prefers seeded CRM reward members for reward phone lookup, so Admin name/points compare with Redeem selection.
 - Offline settlement Select Member uses the Redeem panel but hides free-item redemption while leaving discount and credit redemption available.
+- Offline settlement Switch Member stores CRM member point state in shared seeded member records; applying `20% Off` deducts 15 points and cash payment earns 20 points for the active member.
 
 ### Live Gaps
 
@@ -117,7 +122,7 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 
 | source_file | source_class | source_test_patterns | target_specs | target_flow_methods |
 |---|---|---|---|---|
-| crm/test_crm_order.py | TestCRMOrder | `test_delivery_redeem`, `test_remove_redeem_reselect`, `test_order_edit_remove_redeem_item`, `test_order_redeem_item_switch`, `test_order_edit_remove_discount`, `test_settle_redeem_free_item` | tests/crm/crm-order.spec.ts | `CrmOrderFlow.createDeliveryRedeemOrderAndReadRecallHeader`, `CrmOrderFlow.removeMemberReselectAndReadRecallHeader`, `CrmOrderFlow.createRedeemItemOrderAndReadEditDisabledControls`, `CrmOrderFlow.createRedeemItemOrderAndReadSettlementSwitchMemberState`, `CrmOrderFlow.createDiscountOrderEditRemoveDiscountAndReadRecall`, `CrmRewardFlow.applyRedeemItem`, `CrmRewardFlow.removeRedeemItem`, `CrmRewardFlow.switchRedeemItem` |
+| crm/test_crm_order.py | TestCRMOrder | `test_delivery_redeem`, `test_remove_redeem_reselect`, `test_order_edit_remove_redeem_item`, `test_order_redeem_item_switch`, `test_order_edit_remove_discount`, `test_settle_redeem_free_item` | tests/crm/crm-order.spec.ts | `CrmOrderFlow.createDeliveryRedeemOrderAndReadRecallHeader`, `CrmOrderFlow.removeMemberReselectAndReadRecallHeader`, `CrmOrderFlow.createRedeemItemOrderAndReadEditDisabledControls`, `CrmOrderFlow.createRedeemItemOrderAndReadSettlementSwitchMemberState`, `CrmOrderFlow.createDiscountOrderEditRemoveDiscountAndReadRecall`, `CrmOrderFlow.redeemFreeItemAndReadPointBalance`, `CrmRewardFlow.applyRedeemItem`, `CrmRewardFlow.removeRedeemItem`, `CrmRewardFlow.switchRedeemItem` |
 | crm/test_crm_order_redeem_discount.py | TestRedeemDiscount | `test_redeem_*`, `test_max_discount`, `test_reduce_item0` | tests/crm/crm-order-redeem-discount.spec.ts | `CrmRewardFlow.applyRedeemDiscount`, `CrmRewardFlow.validateRedeemPricing` |
 | crm/test_crm_paypage.py | TestCrmPayPage | `test_redeem_*`, `test_pay_page_redeem_item`, `test_semipay_page_redeem_*` | tests/crm/crm-paypage.spec.ts | `CrmSettlementFlow.applyPayPageRedeem`, `CrmSettlementFlow.applySemiPayRedeem` |
 | crm/test_crm_points_calculation.py | TestCrmPointsCalculation | `test_login_member_redeem_point`, `test_earn_points_rules_by_spent_pos_order`, `test_redeem_free_item_modify_global_option` | tests/crm/crm-points-calculation.spec.ts | `CrmPointsFlow.redeemPoints`, `CrmPointsFlow.earnPointsForOrder` |
@@ -141,6 +146,7 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 8. `CrmOrderFlow.createRedeemItemOrderAndReadEditDisabledControls`: create a Delivery order, attach source member, redeem a free item, add regular dishes, save, recall, enter edit mode, reopen Redeem, and read operation control classes.
 9. `CrmOrderFlow.createRedeemItemOrderAndReadSettlementSwitchMemberState`: create a Dine In order, attach source member, redeem a free item, add a regular dish, enter settlement, and read Switch Member control class.
 10. `CrmOrderFlow.createDiscountOrderEditRemoveDiscountAndReadRecall`: create a Delivery order, attach source member, record points, apply `10% Off`, save, recall, confirm Reward Discount exists, edit the recalled order, delete the redeem discount, save, recall again, and read points plus Reward Discount count.
+11. `CrmOrderFlow.redeemFreeItemAndReadPointBalance`: attach source member, record point balance, redeem free item, add a dish, verify header points drop by 10, save, verify Admin CRM Loyalty points, recall the order, and verify Recall header points.
 
 ### Expected Assertions
 
@@ -153,6 +159,7 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 - Recall edit for an order containing a CRM Redeem Item disables Remove Member, Redeem Item, Redeem Discount, and Redeem Credit operations.
 - Settlement Switch Member is disabled after the order uses a CRM Redeem Item.
 - Removing a Redeem Discount from a recalled order keeps member points unchanged and removes the Reward Discount row.
+- Redeem Free Item deducts 10 points immediately and the reduced balance is visible in the order header, Admin CRM Loyalty, and Recall header.
 
 ### Page Responsibilities
 
@@ -167,6 +174,7 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 - `PosCrmPage.applyRedeemItem`, `PosCrmPage.quitRedeem`, and `PosCrmPage.readRedeemEditDisabledControlClasses` own redeem item application and disabled-state assertions.
 - `OrderDishesPage.readSettlementSwitchMemberClass` owns settlement-side Switch Member disabled-state assertions.
 - `PosCrmPage.applyRedeemDiscount`, `PosCrmPage.removeRedeemDiscount`, and `RecallPage.readRewardDiscountCount` own discount application/removal and post-recall Reward Discount checks.
+- `PosCrmPage.readHeaderPointBalance`, `PosCrmPage.applyRedeemItem`, `PosCrmPage.quitRedeem`, `PosCrmPage.readMemberSearchPointResult`, and `RecallPage.readCrmOrderHeaderInfo` own free-item point-balance assertions.
 
 ### Client/Data Responsibilities
 
@@ -189,6 +197,7 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 - Offline Recall edit of an order with a redeem item reopens the order context and marks member/redeem controls as disabled.
 - Offline settlement disables Switch Member when the current order contains a redeem item.
 - Offline recalled-order edit reopens all recalled orders, locks controls only for redeem-item orders, and persists discount deletion back to the selected recalled order.
+- Offline Redeem Free Item deducts 10 points from the shared seeded member record so POS header, Admin CRM Loyalty search, and Recall header read the same reduced balance.
 
 ### Live Gaps
 

@@ -64,6 +64,24 @@ export type SettlementRedeemAvailabilityResult = {
   readonly redeemItemCount: number;
 };
 
+export type SwitchSettlementMemberResult = {
+  readonly sourcePointsBeforeSwitch: number;
+  readonly sourcePointsAfterPayment: number;
+  readonly targetPointsBeforePayment: number;
+  readonly targetPointsAfterPayment: number;
+  readonly settlementTotal: number;
+  readonly orderTotal: number;
+  readonly orderSubtotal: number;
+  readonly orderReward: number;
+};
+
+export type RedeemFreeItemPointResult = {
+  readonly pointsBeforeRedeem: number;
+  readonly pointsAfterRedeem: number;
+  readonly adminPointsAfterRedeem: number;
+  readonly recallPointsAfterRedeem: string;
+};
+
 export class CrmOrderFlow {
   constructor(
     private readonly homePage: PosHomePage,
@@ -267,6 +285,75 @@ export class CrmOrderFlow {
       settlementMember: await this.posCrmPage.readRedeemOrderMember(),
       settlementPoints: await this.posCrmPage.readRedeemOrderPoints(),
       ...availableControls,
+    };
+  }
+
+  async switchSettlementMemberApplyDiscountAndReadPoints(homeUrl: string): Promise<SwitchSettlementMemberResult> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    this.crmRewardClient.findMemberByPhone(crmSourceRewardMember.phone);
+    this.crmRewardClient.findMemberByPhone(crmTargetRewardMember.phone);
+    await this.posCrmPage.openRedeem();
+    await this.posCrmPage.selectMemberByPhone(crmSourceRewardMember.phone);
+    const sourcePointsBeforeSwitch = Number(await this.posCrmPage.readRedeemOrderPoints());
+    await this.posCrmPage.openRedeem();
+    await this.posCrmPage.applyRedeemDiscount('10% Off');
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.clickSettle();
+    await this.orderDishesPage.clickSettlementSwitchMember();
+    await this.posCrmPage.selectMemberByPhone(crmTargetRewardMember.phone);
+    const targetPointsBeforePayment = Number(await this.posCrmPage.readRedeemOrderPoints());
+    await this.posCrmPage.applyRedeemDiscount('20% Off');
+    const settlementTotal = await this.orderDishesPage.readSettlementTotal();
+    await this.orderDishesPage.settleByCash();
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    const priceSummary = await this.recallPage.readOrderPriceSummary();
+    const orderTotal = await this.recallPage.readOrderTotal();
+    await this.homePage.clickAdmin();
+    await this.posCrmPage.openMemberListFromAdmin();
+    await this.posCrmPage.searchMember('+16467337557');
+    const sourcePointsAfterPayment = Number(await this.posCrmPage.readMemberSearchPointResult());
+    await this.posCrmPage.searchMember('+19292369168');
+    const targetPointsAfterPayment = Number(await this.posCrmPage.readMemberSearchPointResult());
+    return {
+      sourcePointsBeforeSwitch,
+      sourcePointsAfterPayment,
+      targetPointsBeforePayment,
+      targetPointsAfterPayment,
+      settlementTotal,
+      orderTotal,
+      orderSubtotal: priceSummary.subtotal,
+      orderReward: priceSummary.reward,
+    };
+  }
+
+  async redeemFreeItemAndReadPointBalance(homeUrl: string): Promise<RedeemFreeItemPointResult> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    this.crmRewardClient.findMemberByPhone(crmSourceRewardMember.phone);
+    await this.posCrmPage.openRedeem();
+    await this.posCrmPage.selectMemberByPhone(crmSourceRewardMember.phone);
+    const pointsBeforeRedeem = await this.posCrmPage.readHeaderPointBalance();
+    await this.posCrmPage.openRedeem();
+    await this.posCrmPage.applyRedeemItem(crmRedeemItemDish.name);
+    await this.posCrmPage.quitRedeem();
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    const pointsAfterRedeem = await this.posCrmPage.readHeaderPointBalance();
+    await this.orderDishesPage.saveOrder();
+    await this.homePage.clickAdmin();
+    await this.posCrmPage.openMemberListFromAdmin();
+    await this.posCrmPage.searchMember('+16467337557');
+    const adminPointsAfterRedeem = Number(await this.posCrmPage.readMemberSearchPointResult());
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    const header = await this.recallPage.readCrmOrderHeaderInfo();
+    return {
+      pointsBeforeRedeem,
+      pointsAfterRedeem,
+      adminPointsAfterRedeem,
+      recallPointsAfterRedeem: header.orderPoints,
     };
   }
 }
