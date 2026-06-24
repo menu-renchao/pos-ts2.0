@@ -2,10 +2,12 @@ import { test, expect } from '../../fixtures/base-test.js';
 import { HomeFunctionLayoutFlow } from '../../flows/pos/home-function-layout.flow.js';
 import { LanguagePreferenceFlow } from '../../flows/pos/language-preference.flow.js';
 import { PosEntryFlow } from '../../flows/pos/pos-entry.flow.js';
+import { ReservationFlow } from '../../flows/pos/reservation.flow.js';
 import { StaffClockFlow } from '../../flows/pos/staff-clock.flow.js';
 import { AdminPage } from '../../pages/pos/admin.page.js';
 import { PosHomePage } from '../../pages/pos/home.page.js';
 import { OrderDishesPage } from '../../pages/pos/order-dishes.page.js';
+import { ReservationPage } from '../../pages/pos/reservation.page.js';
 import { homeFunctions, sessionMoveError } from '../../test-data/pos/home-functions.js';
 import { languageOptions } from '../../test-data/pos/languages.js';
 import { invalidEmployeePassword, validEmployeePassword } from '../../test-data/pos/permissions.js';
@@ -130,5 +132,38 @@ test.describe('POS 首页', () => {
     expect(result.onBreakText).toContain('On Break');
     expect(result.onBreakText).toContain('from');
     expect(result.onBreakText).toMatch(/\d{1,2}:\d{2}(AM|PM)/);
+  });
+
+  test('新增预约后可更新状态为 Arrived', {
+    annotation: [jiraIssue('POS-15422')],
+  }, async ({ environment, page }) => {
+    const reservationFlow = new ReservationFlow(new PosHomePage(page), new ReservationPage(page));
+
+    const status = await reservationFlow.createReservationAndMarkArrived(environment.posHomeUrl);
+
+    expect(status).toBe('Arrived');
+  });
+
+  test('新增预约后入座应在非活跃列表展示 Seated', {
+    annotation: [jiraIssue('POS-15428')],
+  }, async ({ environment, page }) => {
+    const reservationFlow = new ReservationFlow(new PosHomePage(page), new ReservationPage(page));
+
+    const status = await reservationFlow.createReservationAndMarkSeated(environment.posHomeUrl);
+
+    expect(status).toBe('Seated');
+  });
+
+  test('预约历史可按电话号码查询', {
+    annotation: [jiraIssue('POS-15432')],
+  }, async ({ environment, page }) => {
+    const reservationFlow = new ReservationFlow(new PosHomePage(page), new ReservationPage(page));
+
+    const result = await reservationFlow.searchReservationHistoryByPhone(environment.posHomeUrl);
+
+    expect(result.historyRows.length).toBeGreaterThan(0);
+    for (const row of result.historyRows) {
+      expect(row.phone).toContain(result.phone);
+    }
   });
 });

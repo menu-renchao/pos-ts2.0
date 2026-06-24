@@ -217,6 +217,60 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 | selector | Real check in/out modal controls and status selectors must be confirmed against live DOM | Replace stub selectors with stable live selectors or request instrumentation |
 | time | Live POS may use terminal timezone or display localization | Verify time source and format during live smoke |
 
+## ReservationFlow
+
+### Source Coverage
+
+| source_file | source_class | source_test_pattern | target_spec | target_flow_method |
+|---|---|---|---|---|
+| stage0/test_main_page.py | TestMainPage | `test_reserve_and_arrive` create reservation and mark Arrived | tests/stage0/main-page.spec.ts | `ReservationFlow.createReservationAndMarkArrived` |
+| stage0/test_main_page.py | TestMainPage | `test_reserve_and_seated` create reservation and mark Seated | tests/stage0/main-page.spec.ts | `ReservationFlow.createReservationAndMarkSeated` |
+| stage0/test_main_page.py | TestMainPage | `test_search_reserve_by_phone` search reservation history by phone | tests/stage0/main-page.spec.ts | `ReservationFlow.searchReservationHistoryByPhone` |
+
+### Preconditions
+
+- POS home is opened through `PosHomePage.open`.
+- Reservation is entered through the home page Reservation button.
+- Reservation status names come from `test-data/pos/reservations.ts`.
+- Generated party names and phone numbers are unique enough for the current test context.
+
+### Steps
+
+1. Open Reservation from POS home.
+2. Add a reservation with generated party name and optional phone.
+3. For status scenarios, update the reservation status and read current status.
+4. For Seated, switch to the inactive tab before reading the status.
+5. For history search, open history, search by phone, and read all visible history rows.
+
+### Expected Assertions
+
+- Arrived scenario reads status `Arrived`.
+- Seated scenario reads status `Seated` from the inactive list.
+- Phone-history scenario returns at least one row and every visible row contains the searched phone.
+
+### Page Responsibilities
+
+- `PosHomePage` owns Reservation entry from the home page.
+- `ReservationPage` owns reservation creation, status updates, active/inactive/history navigation, search, and row reads.
+
+### Client/Data Responsibilities
+
+- `test-data/pos/reservations.ts` owns canonical reservation status values.
+- No DB/API client is required for first-round offline reservation behavior; cleanup from the Python case is represented by isolated stub state.
+
+### Stub Behavior
+
+- Stub reservations are stored in page-local memory for the current test.
+- Status updates mutate the matching reservation by party name.
+- History search filters stored reservations by phone substring.
+
+### Live Gaps
+
+| gap | reason | required before verified |
+|---|---|---|
+| selector | Real reservation form, status edit, inactive tab, and history selectors must be confirmed against live DOM | Replace stub selectors with stable live selectors or request instrumentation |
+| cleanup | Live seated reservations may create order records requiring cleanup | Add API/DB cleanup contract before live smoke |
+
 ## OrderEntryFlow
 
 ### Source Coverage

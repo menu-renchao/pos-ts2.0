@@ -9,6 +9,7 @@ export class PosHomePage extends PageObject {
   readonly togoButton: Locator;
   readonly recallButton: Locator;
   readonly adminButton: Locator;
+  readonly reservationButton: Locator;
   readonly passwordInput: Locator;
   readonly savePasswordButton: Locator;
 
@@ -40,6 +41,7 @@ export class PosHomePage extends PageObject {
     this.togoButton = page.getByTestId('home-togo');
     this.recallButton = page.getByTestId('home-recall');
     this.adminButton = page.getByTestId('home-admin');
+    this.reservationButton = page.getByTestId('home-reservation');
     this.passwordInput = page.getByTestId('employee-password');
     this.savePasswordButton = page.getByTestId('employee-password-save');
     this.backToWorkButton = page.getByTestId('clock-back-to-work');
@@ -132,6 +134,13 @@ export class PosHomePage extends PageObject {
     await step('从首页进入 To Go 点单页', async () => {
       await this.togoButton.click();
       await expect(this.orderPageRoot).toBeVisible();
+    });
+  }
+
+  async clickReservation(): Promise<void> {
+    await step('从首页进入预约页面', async () => {
+      await this.reservationButton.click();
+      await expect(this.page.getByTestId('reservation-page')).toBeVisible();
     });
   }
 

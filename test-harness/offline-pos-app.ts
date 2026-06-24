@@ -24,6 +24,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <button data-testid="home-togo">Togo</button>
       <button data-testid="home-recall">Recall</button>
       <button data-testid="home-admin">Admin</button>
+      <button data-testid="home-reservation">Reservation</button>
       <input data-testid="employee-password" type="password" />
       <button data-testid="employee-password-save">Save</button>
       <div data-testid="clock-text" role="status"></div>
@@ -43,11 +44,29 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
     <section data-testid="order-page" hidden>
       <div data-testid="open-food-category"></div>
     </section>
+    <section data-testid="reservation-page" hidden>
+      <button data-testid="reservation-active-tab">Active</button>
+      <button data-testid="reservation-inactive-tab">Inactive</button>
+      <input data-testid="reservation-party-name" />
+      <input data-testid="reservation-phone" />
+      <button data-testid="reservation-add">Add Reservation</button>
+      <input data-testid="reservation-status-party" />
+      <select data-testid="reservation-status-select">
+        <option value="Arrived">Arrived</option>
+        <option value="Seated">Seated</option>
+      </select>
+      <button data-testid="reservation-save-status">Save Status</button>
+      <div data-testid="reservation-current-status"></div>
+      <button data-testid="reservation-history">History</button>
+      <input data-testid="reservation-history-search" />
+      <div data-testid="reservation-history-list"></div>
+    </section>
     <script>
       const sessionMoveError = "Can't move this button to/from hide area";
       let currentLanguage = localStorage.getItem('currentLanguage') || 'Default';
       let userDefaultLanguage = localStorage.getItem('userDefaultLanguage') || 'Default';
       let clockState = 'off';
+      let reservations = [];
       let mainFunctions = ['Dine In', 'Drawer', 'To Go', 'Delivery'];
       let hiddenFunctions = ['Admin', 'Session'];
       let draftMainFunctions = [...mainFunctions];
@@ -73,6 +92,18 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const checkoutButton = document.querySelector('[data-testid="clock-checkout"]');
       const adminPage = document.querySelector('[data-testid="admin-page"]');
       const orderPage = document.querySelector('[data-testid="order-page"]');
+      const reservationPage = document.querySelector('[data-testid="reservation-page"]');
+      const reservationPartyInput = document.querySelector('[data-testid="reservation-party-name"]');
+      const reservationPhoneInput = document.querySelector('[data-testid="reservation-phone"]');
+      const reservationAddButton = document.querySelector('[data-testid="reservation-add"]');
+      const reservationStatusPartyInput = document.querySelector('[data-testid="reservation-status-party"]');
+      const reservationStatusSelect = document.querySelector('[data-testid="reservation-status-select"]');
+      const reservationSaveStatusButton = document.querySelector('[data-testid="reservation-save-status"]');
+      const reservationCurrentStatus = document.querySelector('[data-testid="reservation-current-status"]');
+      const reservationInactiveTab = document.querySelector('[data-testid="reservation-inactive-tab"]');
+      const reservationHistoryButton = document.querySelector('[data-testid="reservation-history"]');
+      const reservationHistorySearchInput = document.querySelector('[data-testid="reservation-history-search"]');
+      const reservationHistoryList = document.querySelector('[data-testid="reservation-history-list"]');
       const languageSelect = document.querySelector('[data-testid="user-default-language"]');
       const saveLanguageButton = document.querySelector('[data-testid="save-user-default-language"]');
       const openFoodCategory = document.querySelector('[data-testid="open-food-category"]');
@@ -99,6 +130,29 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         breakButton.hidden = clockState !== 'clocked-in';
         backToWorkButton.hidden = clockState !== 'on-break';
         checkoutButton.hidden = clockState === 'off';
+      }
+
+      function showPanel(panel) {
+        adminPage.hidden = panel !== 'admin';
+        orderPage.hidden = panel !== 'order';
+        reservationPage.hidden = panel !== 'reservation';
+      }
+
+      function updateReservationStatusRead(partyName) {
+        const reservation = reservations.find((item) => item.partyName === partyName);
+        reservationCurrentStatus.textContent = reservation?.status || '';
+      }
+
+      function renderReservationHistory(phoneQuery) {
+        reservationHistoryList.innerHTML = '';
+        reservations
+          .filter((reservation) => reservation.phone.includes(phoneQuery))
+          .forEach((reservation) => {
+            const row = document.createElement('div');
+            row.dataset.testid = 'reservation-history-row';
+            row.textContent = reservation.phone;
+            reservationHistoryList.appendChild(row);
+          });
       }
 
       function renderFunctionCards() {
@@ -235,8 +289,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         renderClockControls();
       });
       document.querySelector('[data-testid="home-admin"]').addEventListener('click', () => {
-        adminPage.hidden = false;
-        orderPage.hidden = true;
+        showPanel('admin');
       });
       saveLanguageButton.addEventListener('click', () => {
         userDefaultLanguage = languageSelect.value;
@@ -244,10 +297,40 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         renderLanguage();
       });
       document.querySelector('[data-testid="home-togo"]').addEventListener('click', () => {
-        adminPage.hidden = true;
-        orderPage.hidden = false;
+        showPanel('order');
         const effectiveLanguage = currentLanguage === 'Chinese' || userDefaultLanguage === 'Chinese' ? 'Chinese' : 'Default';
         openFoodCategory.textContent = effectiveLanguage === 'Chinese' ? '自定义菜\\nauto_fix' : 'Custom Food\\nauto_fix';
+      });
+      document.querySelector('[data-testid="home-reservation"]').addEventListener('click', () => {
+        showPanel('reservation');
+      });
+      reservationAddButton.addEventListener('click', () => {
+        reservations.push({
+          partyName: reservationPartyInput.value,
+          phone: reservationPhoneInput.value,
+          status: 'Reserved',
+        });
+      });
+      reservationSaveStatusButton.addEventListener('click', () => {
+        const reservation = reservations.find((item) => item.partyName === reservationStatusPartyInput.value);
+        if (reservation) {
+          reservation.status = reservationStatusSelect.value;
+        }
+        updateReservationStatusRead(reservationStatusPartyInput.value);
+      });
+      reservationStatusPartyInput.addEventListener('input', () => {
+        updateReservationStatusRead(reservationStatusPartyInput.value);
+      });
+      reservationInactiveTab.addEventListener('click', () => {
+        updateReservationStatusRead(reservationStatusPartyInput.value);
+      });
+      reservationHistoryButton.addEventListener('click', () => {
+        renderReservationHistory('');
+      });
+      reservationHistorySearchInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          renderReservationHistory(reservationHistorySearchInput.value);
+        }
       });
       renderFunctionCards();
       renderLanguage();
