@@ -1034,6 +1034,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 | stage1/test_admin_menu.py | TestAdminMenu | `test_batch_edit_item_properties` POS-42067/POS-42066 batch replace menu item property labels | tests/stage1/admin-menu.spec.ts | `AdminMenuFlow.batchReplaceItemPropertiesAndReadDetail` |
 | stage1/test_admin_menu.py | TestAdminMenu | `test_take_out_tax_free_enabled` item Take Out Tax Free confirmation, dine-in tax, and audit log | tests/stage1/admin-menu.spec.ts | `AdminMenuFlow.enableTakeOutTaxFreeAndReadOrderTaxAudit` |
 | stage1/test_admin_menu.py | TestAdminMenu | `test_redeem_price` item switches from regular price to benefit/member price after CRM member selection | tests/stage1/admin-menu.spec.ts | `AdminMenuFlow.orderBenefitPriceItemAndReadPrices` |
+| stage1/test_admin_menu.py | TestAdminMenu | `test_batch_edit_price` batch edits regular price and member price, then member ordering uses edited member price | tests/stage1/admin-menu.spec.ts | `AdminMenuFlow.batchEditRegularAndMemberPriceThenReadOrderPrices` |
 
 ### Preconditions
 
@@ -1053,6 +1054,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - POS-42067/POS-42066 uses a deterministic round-one label sample `Gluten-free`, `Vege`, and `Lactose-free` instead of Python's random `random.sample(list(MenuLabels), 3)`.
 - POS-37827 uses source-equivalent item `taxtest` under `Lunch` / `Chicken Lunch E`, price `8.00`, tax id `tax-takeout-free`, and tax rate `0.075`.
 - POS-37830 uses source-equivalent item `benefit` under `Lunch` / `Chicken Lunch E`, regular price `8.00`, benefit/member price `6.00`, and CRM member `(64)673-37557`.
+- POS-37832 uses source-equivalent item `taxtest` under `Lunch` / `Chicken Lunch E`, batch edited regular price `100.00`, member price `89.00`, and CRM member `(64)673-37557`.
 
 ### Steps
 
@@ -1080,6 +1082,9 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 22. Return to POS home, enter Dine In, order `taxtest`, read order tax, and compare it with `8.00 * taxRate`.
 23. For POS-37830, enter Dine In, order `benefit`, and read the current item price before any member is selected.
 24. Open Redeem, select source member `(64)673-37557`, and read the current item price again.
+25. For POS-37832, enter Admin Menu and batch edit `taxtest` with regular price `100.00` and member price `89.00`.
+26. Return to POS home, enter Dine In, order `taxtest`, and read the current item price before member selection.
+27. Open Redeem, select source member `(64)673-37557`, and read the current item price again.
 
 ### Expected Assertions
 
@@ -1097,6 +1102,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - POS-37827 verifies Dine In order tax for `taxtest` equals `8.00 * 0.075 = 0.60`, preserving that Dine In is still taxable after enabling take-out tax-free.
 - POS-37827 verifies the latest audit log has source-equivalent edit/type/category/path/display fields and old/new values mentioning take-out taxes versus take-out tax free.
 - POS-37830 verifies `benefit` shows regular price `8.00` before member selection and member price `6.00` after selecting the CRM member.
+- POS-37832 verifies `taxtest` shows edited regular price `100.00` before member selection and edited member price `89.00` after selecting the CRM member.
 
 ### Page Responsibilities
 
@@ -1120,6 +1126,9 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `OrderDishesPage.selectMenuGroup`, `OrderDishesPage.selectMenuCategory`, `OrderDishesPage.addMenuItem`, and `OrderDishesPage.readTax` own the POS-37827 Dine In tax verification path.
 - `OrderDishesPage.selectMenuGroup`, `OrderDishesPage.selectMenuCategory`, `OrderDishesPage.addMenuItem`, and `OrderDishesPage.readSelectedItemPrice` own the POS-37830 order-line price reads.
 - `PosCrmPage.openRedeem` and `PosCrmPage.selectMemberByPhone` own the POS-37830 CRM member selection path.
+- `AdminPage.batchEditItemPrices` owns the POS-37832 batch regular/member price edit action.
+- `OrderDishesPage.selectMenuGroup`, `OrderDishesPage.selectMenuCategory`, `OrderDishesPage.addMenuItem`, and `OrderDishesPage.readSelectedItemPrice` own the POS-37832 edited order-line price reads.
+- `PosCrmPage.openRedeem` and `PosCrmPage.selectMemberByPhone` own the POS-37832 CRM member selection path.
 
 ### Client/Data Responsibilities
 
@@ -1137,6 +1146,8 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `StubPosDbClient.readTaxRateById`, `StubPosDbClient.recordMenuItemTaxAudit`, and `StubPosDbClient.readLatestAuditLog` own the round-one source-equivalent `PosDBFunction` tax-rate and audit-log reads for POS-37827.
 - `test-data/pos/dishes.ts` owns `benefitPriceDish`, preserving source item `benefit`, regular price `8.00`, and benefit/member price `6.00` for POS-37830.
 - `test-data/crm/members.ts` owns `crmSourceRewardMember`, preserving source phone `(64)673-37557` for POS-37830.
+- `test-data/pos/dishes.ts` owns `takeOutTaxFreeDish`, reused as source item `taxtest` for POS-37832 batch price edit.
+- `test-data/crm/members.ts` owns `crmSourceRewardMember`, preserving source phone `(64)673-37557` for POS-37832.
 
 ### Stub Behavior
 
@@ -1157,6 +1168,8 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Stub POS DB stores the latest POS-37827 audit log in memory for the current test and returns the deterministic tax rate by tax id.
 - Offline harness includes `benefit` as a Dine In menu item with regular price `8.00` and benefit price `6.00`.
 - Offline harness applies benefit price to current order lines after CRM member selection and reverts to regular unit price when the member is removed.
+- Offline harness persists Admin batch price overrides in browser storage so a source-equivalent refresh/back-to-home path keeps edited regular and member prices.
+- Offline harness applies the edited member price to current order lines after CRM member selection and reverts to the edited regular unit price when the member is removed.
 
 ### Live Gaps
 
@@ -1168,6 +1181,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 | selector | Scale/tare/unit-price order UI selectors need live confirmation | Confirm stable selectors for unit-price input, tare display, and selected item price |
 | selector | POS-34360 Admin category edit and Admin Language Sale Item selectors need live confirmation | Confirm stable selectors for edit item Chinese name, Sale Item search, POS Name, and Kitchen Name |
 | cleanup | Source restores `hn_normal_item1` Chinese name in `finally` | Add live cleanup fixture or afterEach restore before live verification |
+| selector | POS-37832 Admin category batch price editor, member price editor, save completion, and order-line price selectors need live confirmation | Confirm stable selectors and live persistence before marking live verified |
 | selector | POS-35406 Global Option category navigation, item checkbox selection, batch edit Add Printer dialog, and printer selector need live confirmation | Confirm stable selectors and the save/refresh signal for assigned printers |
 | cleanup | POS-35406 creates a Global Option and must delete it even when printer assignment fails | Add live cleanup fixture using UI or API before live verification |
 | selector | POS-36298 Admin Menu product-line count display needs live DOM confirmation | Confirm stable selector for the POS product-line menu item count |

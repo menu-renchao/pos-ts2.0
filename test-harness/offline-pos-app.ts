@@ -160,6 +160,12 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <button data-testid="admin-property-detail-open">Open Property Detail</button>
       <div data-testid="admin-property-item-labels"></div>
       <div data-testid="admin-property-all-labels"></div>
+      <input data-testid="admin-price-item-group" />
+      <input data-testid="admin-price-item-category" />
+      <input data-testid="admin-price-item-names" />
+      <input data-testid="admin-price-values" />
+      <input data-testid="admin-price-member-values" />
+      <button data-testid="admin-price-batch-edit">Batch Edit Prices</button>
       <input data-testid="admin-tax-free-item-group" />
       <input data-testid="admin-tax-free-item-category" />
       <input data-testid="admin-tax-free-item-name" />
@@ -566,6 +572,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       };
       const adminAllMenuPropertyLabels = ['Gluten-free', 'Vege', 'Lactose-free', 'Spicy', 'Vegan'];
       const adminMenuItemProperties = {};
+      const adminMenuPriceOverrides = readStoredJson('offline-admin-menu-price-overrides', {});
       const adminTakeOutTaxFreeItems = {};
       let adminGlobalOptions = [];
       let selectedGlobalOptionName = '';
@@ -667,6 +674,12 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const adminPropertyDetailOpenButton = document.querySelector('[data-testid="admin-property-detail-open"]');
       const adminPropertyItemLabels = document.querySelector('[data-testid="admin-property-item-labels"]');
       const adminPropertyAllLabels = document.querySelector('[data-testid="admin-property-all-labels"]');
+      const adminPriceItemGroupInput = document.querySelector('[data-testid="admin-price-item-group"]');
+      const adminPriceItemCategoryInput = document.querySelector('[data-testid="admin-price-item-category"]');
+      const adminPriceItemNamesInput = document.querySelector('[data-testid="admin-price-item-names"]');
+      const adminPriceValuesInput = document.querySelector('[data-testid="admin-price-values"]');
+      const adminPriceMemberValuesInput = document.querySelector('[data-testid="admin-price-member-values"]');
+      const adminPriceBatchEditButton = document.querySelector('[data-testid="admin-price-batch-edit"]');
       const adminTaxFreeItemGroupInput = document.querySelector('[data-testid="admin-tax-free-item-group"]');
       const adminTaxFreeItemCategoryInput = document.querySelector('[data-testid="admin-tax-free-item-category"]');
       const adminTaxFreeItemNameInput = document.querySelector('[data-testid="admin-tax-free-item-name"]');
@@ -999,6 +1012,14 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
 
       function splitCsv(value) {
         return value.split(',').map((item) => item.trim()).filter(Boolean);
+      }
+
+      function readStoredJson(key, fallback) {
+        try {
+          return JSON.parse(localStorage.getItem(key) || '') || fallback;
+        } catch {
+          return fallback;
+        }
       }
 
       function adminPropertyKey(group, category, itemName) {
@@ -1397,7 +1418,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       }
 
       function menuData() {
-        return [
+        const baseItems = [
           { name: 'superman item4', price: 8, group: 'Lunch', category: 'Chicken Lunch E', inventorySku: 'INV-SUPERMAN-ITEM4' },
           { name: 'superman item1', price: 8, group: 'Lunch', category: 'Chicken Lunch E' },
           { name: 'superman item2', price: 9, group: 'Lunch', category: 'Chicken Lunch E' },
@@ -1438,6 +1459,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           },
           ...adminCreatedMenuItems,
         ];
+
+        return baseItems.map((item) => ({
+          ...item,
+          ...(adminMenuPriceOverrides[item.name] || {}),
+        }));
       }
 
       function effectiveLanguage() {
@@ -2188,6 +2214,21 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       });
       adminPropertyDetailOpenButton.addEventListener('click', () => {
         renderItemPropertyDetail();
+      });
+      adminPriceBatchEditButton.addEventListener('click', () => {
+        const priceValues = JSON.parse(adminPriceValuesInput.value || '{}');
+        const memberPriceValues = JSON.parse(adminPriceMemberValuesInput.value || '{}');
+        splitCsv(adminPriceItemNamesInput.value).forEach((itemName) => {
+          adminMenuPriceOverrides[itemName] = {
+            ...(adminMenuPriceOverrides[itemName] || {}),
+            ...(priceValues[itemName] === undefined ? {} : { price: Number(priceValues[itemName]) }),
+            ...(memberPriceValues[itemName] === undefined ? {} : { benefitPrice: Number(memberPriceValues[itemName]) }),
+            group: adminPriceItemGroupInput.value,
+            category: adminPriceItemCategoryInput.value,
+          };
+        });
+        localStorage.setItem('offline-admin-menu-price-overrides', JSON.stringify(adminMenuPriceOverrides));
+        renderOrderMenu();
       });
       adminTaxFreeSaveButton.addEventListener('click', () => {
         const key = adminPropertyKey(

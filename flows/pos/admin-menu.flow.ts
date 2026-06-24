@@ -303,4 +303,37 @@ export class AdminMenuFlow {
       afterMemberPrice,
     };
   }
+
+  async batchEditRegularAndMemberPriceThenReadOrderPrices(
+    homeUrl: string,
+    posCrmPage: PosCrmPage,
+  ): Promise<BenefitPriceResult> {
+    const editedPrice = 100;
+    const editedMemberPrice = 89;
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.batchEditItemPrices(
+      takeOutTaxFreeDish.group ?? '',
+      takeOutTaxFreeDish.category,
+      { [takeOutTaxFreeDish.name]: editedPrice },
+      { [takeOutTaxFreeDish.name]: editedMemberPrice },
+    );
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(takeOutTaxFreeDish.group ?? '');
+    await this.orderDishesPage.selectMenuCategory(takeOutTaxFreeDish.category);
+    await this.orderDishesPage.addMenuItem(takeOutTaxFreeDish.name);
+    const beforeMemberPrice = await this.orderDishesPage.readSelectedItemPrice();
+
+    await posCrmPage.openRedeem();
+    await posCrmPage.selectMemberByPhone(crmSourceRewardMember.phone);
+    const afterMemberPrice = await this.orderDishesPage.readSelectedItemPrice();
+
+    return {
+      beforeMemberPrice,
+      afterMemberPrice,
+    };
+  }
 }

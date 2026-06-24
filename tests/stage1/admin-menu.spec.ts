@@ -157,4 +157,22 @@ test.describe('stage1 admin menu migration', () => {
       expect(prices.afterMemberPrice).toBe(6);
     },
   );
+
+  test(
+    'POS-37832 批量编辑普通价和会员价后会员点菜应展示编辑后的会员价',
+    {
+      annotation: jiraIssue('POS-37832'),
+    },
+    async ({ environment, page }) => {
+      const flow = new AdminMenuFlow(new PosHomePage(page), new AdminPage(page), new OrderDishesPage(page));
+
+      const prices = await flow.batchEditRegularAndMemberPriceThenReadOrderPrices(
+        environment.posHomeUrl,
+        new PosCrmPage(page),
+      );
+
+      expect(prices.beforeMemberPrice).toBe(100);
+      expect(prices.afterMemberPrice).toBe(89);
+    },
+  );
 });

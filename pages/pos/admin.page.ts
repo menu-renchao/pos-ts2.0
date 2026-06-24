@@ -64,6 +64,12 @@ export class AdminPage extends PageObject {
   private readonly propertyDetailOpenButton: Locator;
   private readonly propertyItemLabelsValue: Locator;
   private readonly propertyAllLabelsValue: Locator;
+  private readonly priceItemGroupInput: Locator;
+  private readonly priceItemCategoryInput: Locator;
+  private readonly priceItemNamesInput: Locator;
+  private readonly priceValuesInput: Locator;
+  private readonly priceMemberValuesInput: Locator;
+  private readonly priceBatchEditButton: Locator;
   private readonly taxFreeItemGroupInput: Locator;
   private readonly taxFreeItemCategoryInput: Locator;
   private readonly taxFreeItemNameInput: Locator;
@@ -144,6 +150,12 @@ export class AdminPage extends PageObject {
     this.propertyDetailOpenButton = page.getByTestId('admin-property-detail-open');
     this.propertyItemLabelsValue = page.getByTestId('admin-property-item-labels');
     this.propertyAllLabelsValue = page.getByTestId('admin-property-all-labels');
+    this.priceItemGroupInput = page.getByTestId('admin-price-item-group');
+    this.priceItemCategoryInput = page.getByTestId('admin-price-item-category');
+    this.priceItemNamesInput = page.getByTestId('admin-price-item-names');
+    this.priceValuesInput = page.getByTestId('admin-price-values');
+    this.priceMemberValuesInput = page.getByTestId('admin-price-member-values');
+    this.priceBatchEditButton = page.getByTestId('admin-price-batch-edit');
     this.taxFreeItemGroupInput = page.getByTestId('admin-tax-free-item-group');
     this.taxFreeItemCategoryInput = page.getByTestId('admin-tax-free-item-category');
     this.taxFreeItemNameInput = page.getByTestId('admin-tax-free-item-name');
@@ -439,6 +451,24 @@ export class AdminPage extends PageObject {
       const allProperties = await this.readCommaSeparatedText(this.propertyAllLabelsValue);
 
       return { itemProperties, allProperties };
+    });
+  }
+
+  async batchEditItemPrices(
+    group: string,
+    category: string,
+    prices: Readonly<Record<string, number>>,
+    memberPrices: Readonly<Record<string, number>>,
+  ): Promise<void> {
+    await step(`批量编辑 ${Object.keys(prices).join(', ')} 的普通价和会员价`, async () => {
+      await expect(this.adminRoot).toBeVisible();
+      const itemNames = Array.from(new Set([...Object.keys(prices), ...Object.keys(memberPrices)]));
+      await this.priceItemGroupInput.fill(group);
+      await this.priceItemCategoryInput.fill(category);
+      await this.priceItemNamesInput.fill(itemNames.join(','));
+      await this.priceValuesInput.fill(JSON.stringify(prices));
+      await this.priceMemberValuesInput.fill(JSON.stringify(memberPrices));
+      await this.priceBatchEditButton.click();
     });
   }
 
