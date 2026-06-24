@@ -1,7 +1,7 @@
 import type { AdminPage } from '../../pages/pos/admin.page.js';
 import type { PosHomePage } from '../../pages/pos/home.page.js';
 import type { OrderDishesPage } from '../../pages/pos/order-dishes.page.js';
-import { unitPriceDish } from '../../test-data/pos/dishes.js';
+import { chineseInitialSearchDish, unitPriceDish } from '../../test-data/pos/dishes.js';
 
 const posMenuProductLine = 'POS Menu';
 const emenuProductLine = 'Emenu Menu';
@@ -10,6 +10,11 @@ const globalOptionGroupName = 'Global Option Group';
 export type UnitPriceItemOrderResult = {
   unitPriceInputVisible: boolean;
   itemPrice: number;
+};
+
+export type SaleItemLanguageNames = {
+  posName: string;
+  kitchenName: string;
 };
 
 export class AdminMenuFlow {
@@ -44,5 +49,20 @@ export class AdminMenuFlow {
     const itemPrice = await this.orderDishesPage.inputUnitPriceAndReadSelectedPrice(200);
 
     return { unitPriceInputVisible, itemPrice };
+  }
+
+  async modifyItemChineseNameAndReadLanguageNames(homeUrl: string): Promise<SaleItemLanguageNames> {
+    const chineseName = '普通菜1的中文菜名';
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.setItemChineseName(
+      chineseInitialSearchDish.group,
+      chineseInitialSearchDish.category,
+      chineseInitialSearchDish.name,
+      chineseName,
+    );
+
+    return this.adminPage.searchSaleItemLanguageAndReadNames(chineseName);
   }
 }

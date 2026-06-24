@@ -34,4 +34,13 @@ test.describe('stage1 admin menu migration', () => {
       expect(result.itemPrice).toBe(20);
     },
   );
+
+  test('POS-34360 修改菜品中文名后多语言 POS Name 和 Kitchen Name 应同步', async ({ environment, page }) => {
+    const flow = new AdminMenuFlow(new PosHomePage(page), new AdminPage(page), new OrderDishesPage(page));
+
+    const names = await flow.modifyItemChineseNameAndReadLanguageNames(environment.posHomeUrl);
+
+    expect(names.posName).toBe('普通菜1的中文菜名');
+    expect(names.kitchenName).toBe('普通菜1的中文菜名');
+  });
 });

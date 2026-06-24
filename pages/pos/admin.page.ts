@@ -23,6 +23,11 @@ export class AdminPage extends PageObject {
   private readonly kdsItemPosNameInput: Locator;
   private readonly kdsItemPosNameSaveButton: Locator;
   private readonly languageSelect: Locator;
+  private readonly languageSaleItemButton: Locator;
+  private readonly languageSearchInput: Locator;
+  private readonly languageSearchSubmitButton: Locator;
+  private readonly languagePosNameInput: Locator;
+  private readonly languageKitchenNameInput: Locator;
   private readonly menuSourceProductLineInput: Locator;
   private readonly menuTargetProductLineInput: Locator;
   private readonly menuGroupNameInput: Locator;
@@ -63,6 +68,11 @@ export class AdminPage extends PageObject {
     this.kdsItemPosNameInput = page.getByTestId('admin-kds-pos-name');
     this.kdsItemPosNameSaveButton = page.getByTestId('admin-kds-pos-name-save');
     this.languageSelect = page.getByTestId('user-default-language');
+    this.languageSaleItemButton = page.getByTestId('admin-language-sale-item');
+    this.languageSearchInput = page.getByTestId('admin-language-search');
+    this.languageSearchSubmitButton = page.getByTestId('admin-language-search-submit');
+    this.languagePosNameInput = page.getByTestId('admin-language-pos-name');
+    this.languageKitchenNameInput = page.getByTestId('admin-language-kitchen-name');
     this.menuSourceProductLineInput = page.getByTestId('admin-menu-source-product-line');
     this.menuTargetProductLineInput = page.getByTestId('admin-menu-target-product-line');
     this.menuGroupNameInput = page.getByTestId('admin-menu-group-name');
@@ -246,6 +256,19 @@ export class AdminPage extends PageObject {
       await this.unitPriceItemNameInput.fill(itemName);
       await this.unitPriceItemPriceInput.fill(String(price));
       await this.unitPriceItemSaveButton.click();
+    });
+  }
+
+  async searchSaleItemLanguageAndReadNames(query: string): Promise<{ posName: string; kitchenName: string }> {
+    return step(`搜索多语言 Sale Item ${query} 并读取 POS/Kitchen 名称`, async () => {
+      await expect(this.adminRoot).toBeVisible();
+      await this.languageSaleItemButton.click();
+      await this.languageSearchInput.fill(query);
+      await this.languageSearchSubmitButton.click();
+      return {
+        posName: await this.languagePosNameInput.inputValue(),
+        kitchenName: await this.languageKitchenNameInput.inputValue(),
+      };
     });
   }
 }

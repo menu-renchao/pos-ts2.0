@@ -111,6 +111,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <input data-testid="admin-item-name" />
       <input data-testid="admin-item-chinese-name" />
       <button data-testid="admin-item-chinese-name-save">Save Item Chinese Name</button>
+      <button data-testid="admin-language-sale-item">Sale Item</button>
+      <input data-testid="admin-language-search" />
+      <button data-testid="admin-language-search-submit">Search Language</button>
+      <input data-testid="admin-language-pos-name" readonly />
+      <input data-testid="admin-language-kitchen-name" readonly />
       <input data-testid="admin-menu-source-product-line" />
       <input data-testid="admin-menu-target-product-line" />
       <input data-testid="admin-menu-group-name" />
@@ -563,6 +568,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const adminItemNameInput = document.querySelector('[data-testid="admin-item-name"]');
       const adminItemChineseNameInput = document.querySelector('[data-testid="admin-item-chinese-name"]');
       const adminItemChineseNameSaveButton = document.querySelector('[data-testid="admin-item-chinese-name-save"]');
+      const adminLanguageSaleItemButton = document.querySelector('[data-testid="admin-language-sale-item"]');
+      const adminLanguageSearchInput = document.querySelector('[data-testid="admin-language-search"]');
+      const adminLanguageSearchSubmitButton = document.querySelector('[data-testid="admin-language-search-submit"]');
+      const adminLanguagePosNameInput = document.querySelector('[data-testid="admin-language-pos-name"]');
+      const adminLanguageKitchenNameInput = document.querySelector('[data-testid="admin-language-kitchen-name"]');
       const adminMenuSourceProductLineInput = document.querySelector('[data-testid="admin-menu-source-product-line"]');
       const adminMenuTargetProductLineInput = document.querySelector('[data-testid="admin-menu-target-product-line"]');
       const adminMenuGroupNameInput = document.querySelector('[data-testid="admin-menu-group-name"]');
@@ -1997,6 +2007,17 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         }
         localStorage.setItem('currentItemChineseNames', JSON.stringify(currentItemChineseNames));
         renderOrderMenu();
+      });
+      adminLanguageSaleItemButton.addEventListener('click', () => {
+        adminLanguageSearchInput.value = '';
+        adminLanguagePosNameInput.value = '';
+        adminLanguageKitchenNameInput.value = '';
+      });
+      adminLanguageSearchSubmitButton.addEventListener('click', () => {
+        const query = adminLanguageSearchInput.value;
+        const match = Object.values(currentItemChineseNames).find((config) => config.chineseName === query);
+        adminLanguagePosNameInput.value = match?.chineseName || '';
+        adminLanguageKitchenNameInput.value = match?.chineseName || '';
       });
       adminMemberListButton.addEventListener('click', () => {
         if (currentEmployeePassword === '123') {

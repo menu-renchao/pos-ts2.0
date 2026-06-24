@@ -1026,6 +1026,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 |---|---|---|---|---|
 | stage1/test_admin_menu.py | TestAdminMenu | `test_copy_global_option_to_other_product_line` POS Global Option Group copy to Emenu Menu | tests/stage1/admin-menu.spec.ts | `AdminMenuFlow.copyPosGlobalOptionGroupToEmenuAndReadCount` |
 | stage1/test_admin_menu.py | TestAdminMenu | `test_set_item_into_unit_price_item` unit-price item order preserves original price per weight | tests/stage1/admin-menu.spec.ts | `AdminMenuFlow.orderUnitPriceItemAndReadPrice` |
+| stage1/test_admin_menu.py | TestAdminMenu | `test_modify_item_chinese_name` item Chinese name syncs POS/Kitchen names in Admin Language | tests/stage1/admin-menu.spec.ts | `AdminMenuFlow.modifyItemChineseNameAndReadLanguageNames` |
 
 ### Preconditions
 
@@ -1036,6 +1037,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - The copied group is `Global Option Group`.
 - POS-33919 uses deterministic test data `unitPriceDish` instead of the source fixture's random item name.
 - POS-33919 source `MenuAPI.create_dish(..., unit_price=True)` setup is represented by `AdminPage.configureUnitPriceItem` in round-one offline mode.
+- POS-34360 uses source-equivalent seeded dish `hn_normal_item1` / `hn_cate` from `chineseInitialSearchDish`.
 
 ### Steps
 
@@ -1047,12 +1049,15 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 6. For POS-33919, configure `migration-unit-price-item` as a unit-price item with base price `10.00`.
 7. Enter Dine In, select the configured group/category, and add the unit-price item.
 8. Verify the unit-price input is visible, input `200`, and read the current item price.
+9. For POS-34360, set `hn_normal_item1` Chinese name to `普通菜1的中文菜名`.
+10. Open the Admin Language Sale Item search path, search `普通菜1的中文菜名`, and read the POS Name and Kitchen Name values.
 
 ### Expected Assertions
 
 - POS-31467 verifies the copied `Emenu Menu` / `Global Option Group` category count is greater than 0.
 - POS-33919 verifies the unit-price input exists after ordering the configured item.
 - POS-33919 verifies input `200` computes item price `20.00`, preserving original unit price `10.00` at weight `2.00`.
+- POS-34360 verifies both Admin Language POS Name and Kitchen Name equal `普通菜1的中文菜名` after the item Chinese name edit.
 
 ### Page Responsibilities
 
@@ -1062,12 +1067,15 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `AdminPage.readGroupCategoryCount` owns entering the target group and reading category count.
 - `AdminPage.configureUnitPriceItem` owns the round-one unit-price item setup.
 - `OrderDishesPage.selectMenuGroup`, `OrderDishesPage.selectMenuCategory`, `OrderDishesPage.addMenuItem`, `OrderDishesPage.isUnitPriceInputVisible`, and `OrderDishesPage.inputUnitPriceAndReadSelectedPrice` own the POS-33919 order-side verification.
+- `AdminPage.setItemChineseName` owns the POS-34360 category item edit action.
+- `AdminPage.searchSaleItemLanguageAndReadNames` owns the Admin Language Sale Item search and POS/Kitchen name reads.
 
 ### Client/Data Responsibilities
 
 - No live client is called in round one.
 - The offline POS stub owns product line/group/category state for `POS Menu` and `Emenu Menu`.
 - `test-data/pos/dishes.ts` owns `unitPriceDish` with source-equivalent base price `10.00`.
+- `test-data/pos/dishes.ts` owns `chineseInitialSearchDish` with source-equivalent `hn_normal_item1` and default Chinese name.
 - Live POS-33919 should use the real `MenuAPI`/`TaxAPI` fixture path or confirmed Admin Menu UI selectors before being marked live verified.
 
 ### Stub Behavior
@@ -1077,6 +1085,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Copying from POS to Emenu clones the source categories into the target product line.
 - Offline harness stores Admin-created unit-price items in page memory for the current test.
 - Unit-price item ordering shows a dedicated unit-price input; submitting `200` stores quantity `2.00` and recalculates price from base unit price.
+- Offline harness stores edited item Chinese names and returns the edited Chinese name as both POS Name and Kitchen Name in the Admin Language Sale Item search result.
 
 ### Live Gaps
 
@@ -1086,3 +1095,5 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 | workflow | Live copy may require confirmation dialogs or async save behavior | Add deterministic waits for copy completion and target group refresh |
 | data | POS-33919 source creates a random taxed unit-price dish through MenuAPI/TaxAPI | Reuse real API setup or define seeded deterministic menu data |
 | selector | Scale/tare/unit-price order UI selectors need live confirmation | Confirm stable selectors for unit-price input, tare display, and selected item price |
+| selector | POS-34360 Admin category edit and Admin Language Sale Item selectors need live confirmation | Confirm stable selectors for edit item Chinese name, Sale Item search, POS Name, and Kitchen Name |
+| cleanup | Source restores `hn_normal_item1` Chinese name in `finally` | Add live cleanup fixture or afterEach restore before live verification |
