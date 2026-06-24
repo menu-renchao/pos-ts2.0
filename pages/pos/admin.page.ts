@@ -2,7 +2,7 @@ import type { Locator, Page } from '@playwright/test';
 import { expect } from '@playwright/test';
 
 import { step } from '../../utils/step.js';
-import type { CombineSameItemMode, MenuMode } from '../../test-data/pos/admin-settings.js';
+import type { CombineSameItemMode, MenuMode, RoundingStrategyOption } from '../../test-data/pos/admin-settings.js';
 import { PageObject } from '../shared/page-object.js';
 
 export class AdminPage extends PageObject {
@@ -23,6 +23,7 @@ export class AdminPage extends PageObject {
   private readonly kdsItemPosNameSaveButton: Locator;
   private readonly languageSelect: Locator;
   private readonly menuModeSelect: Locator;
+  private readonly roundingStrategySelect: Locator;
   private readonly saveSettingsButton: Locator;
   private readonly saveLanguageButton: Locator;
   private readonly searchMenuSelect: Locator;
@@ -49,6 +50,7 @@ export class AdminPage extends PageObject {
     this.kdsItemPosNameSaveButton = page.getByTestId('admin-kds-pos-name-save');
     this.languageSelect = page.getByTestId('user-default-language');
     this.menuModeSelect = page.getByTestId('admin-menu-mode');
+    this.roundingStrategySelect = page.getByTestId('admin-rounding-strategy');
     this.saveSettingsButton = page.getByTestId('admin-save-settings');
     this.saveLanguageButton = page.getByTestId('save-user-default-language');
     this.searchMenuSelect = page.getByTestId('admin-search-menu');
@@ -125,6 +127,14 @@ export class AdminPage extends PageObject {
     await step(`设置菜品数量支持小数为 ${enabled ? '开启' : '关闭'}`, async () => {
       await expect(this.adminRoot).toBeVisible();
       await this.countCanBeDecimalSelect.selectOption(enabled ? 'true' : 'false');
+      await this.saveSettingsButton.click();
+    });
+  }
+
+  async setRoundingStrategy(roundingStrategy: RoundingStrategyOption): Promise<void> {
+    await step(`设置订单结算 Rounding Strategy 为 ${roundingStrategy}`, async () => {
+      await expect(this.adminRoot).toBeVisible();
+      await this.roundingStrategySelect.selectOption(roundingStrategy);
       await this.saveSettingsButton.click();
     });
   }

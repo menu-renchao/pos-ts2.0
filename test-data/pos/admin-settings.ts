@@ -8,6 +8,7 @@ export const adminSettings = {
   voidPrintedItemPermission: 'voidPrintedItemPermission',
   automaticallyRedirectAfterReduceItems: 'automaticallyRedirectAfterReduceItems',
   countCanBeDecimal: 'countCanBeDecimal',
+  roundingStrategy: 'roundingStrategy',
 } as const;
 
 export type AdminSettingName = (typeof adminSettings)[keyof typeof adminSettings];
@@ -27,3 +28,12 @@ export const combineSameItemModes = {
 } as const;
 
 export type CombineSameItemMode = (typeof combineSameItemModes)[keyof typeof combineSameItemModes];
+
+export const roundingStrategyOptions = {
+  nearest5: 'nearest_5',
+  nearest10: 'nearest_10',
+  nearest5Or10: 'nearest_5_or_10',
+  noRounding: 'no_rounding',
+} as const;
+
+export type RoundingStrategyOption = (typeof roundingStrategyOptions)[keyof typeof roundingStrategyOptions];

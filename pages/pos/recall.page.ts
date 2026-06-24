@@ -395,6 +395,10 @@ export class RecallPage extends PageObject {
     return step('读取 Recall 订单总额', async () => Number((await this.orderTotal.textContent()) ?? '0'));
   }
 
+  async readOrderTotalText(): Promise<string> {
+    return step('读取 Recall 订单总额文本', async () => ((await this.orderTotal.textContent()) ?? '').trim());
+  }
+
   async readOrderSubtotal(): Promise<number> {
     return step('读取 Recall 订单小计', async () => Number((await this.orderSubtotal.textContent()) ?? '0'));
   }

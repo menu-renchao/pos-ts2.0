@@ -93,6 +93,12 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         <option value="true">true</option>
         <option value="false">false</option>
       </select>
+      <select data-testid="admin-rounding-strategy">
+        <option value="nearest_5">nearest_5</option>
+        <option value="nearest_10">nearest_10</option>
+        <option value="nearest_5_or_10">nearest_5_or_10</option>
+        <option value="no_rounding">no_rounding</option>
+      </select>
       <input data-testid="admin-kds-item-name" />
       <input data-testid="admin-kds-pos-name" />
       <button data-testid="admin-kds-pos-name-save">Save Item POS Name</button>
@@ -155,6 +161,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <div data-testid="settle-unpaid-amount">0</div>
       <button data-testid="settle-cash">Cash</button>
       <button data-testid="settle-credit">Credit</button>
+      <button data-testid="settle-loyalty-card">Loyalty Card</button>
+      <button data-testid="settle-gift-card">Gift Card</button>
+      <button data-testid="settle-backup-card">Backup Card</button>
+      <button data-testid="settle-self-card">Self Card</button>
       <button data-testid="settle-even-pay">Even Pay</button>
       <button data-testid="settle-select-member">Select Member</button>
       <button data-testid="settle-switch-member">Switch Member</button>
@@ -201,8 +211,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <input data-testid="order-tip" />
       <div data-testid="order-tip-toast"></div>
       <button data-testid="order-charge-20">Charge 20%</button>
+      <button data-testid="order-charge-0">Charge 0%</button>
       <div data-testid="order-charge-label"></div>
       <div data-testid="order-charge-price"></div>
+      <button data-testid="order-tax-exempt">Void Item Tax</button>
       <button data-testid="split-even">Split Even</button>
       <button data-testid="split-combine">Combine Split</button>
       <button data-testid="order-open-food">Open Food</button>
@@ -420,9 +432,12 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let currentCountCanBeDecimal = localStorage.getItem('currentCountCanBeDecimal') !== 'false';
       let currentKdsCategoryRequired = localStorage.getItem('currentKdsCategoryRequired') === 'true';
       let currentKdsCategoryDiscountAllowance = localStorage.getItem('currentKdsCategoryDiscountAllowance') !== 'false';
+      let currentRoundingStrategy = localStorage.getItem('currentRoundingStrategy') || 'no_rounding';
       let currentCategoryName = '';
       let currentOrderChargeRate = 0;
       let currentOrderChargeLabel = '';
+      let currentOrderTaxVoided = false;
+      let currentSettlementTotal = null;
       let currentItemPosNames = JSON.parse(localStorage.getItem('currentItemPosNames') || '{}');
       let currentItemChineseNames = JSON.parse(localStorage.getItem('currentItemChineseNames') || '{}');
       let currentCrmMember = null;
@@ -490,6 +505,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const countCanBeDecimalSelect = document.querySelector('[data-testid="admin-count-can-be-decimal"]');
       const kdsCategoryRequiredSelect = document.querySelector('[data-testid="admin-kds-category-required"]');
       const kdsCategoryDiscountAllowanceSelect = document.querySelector('[data-testid="admin-kds-category-discount-allowance"]');
+      const roundingStrategySelect = document.querySelector('[data-testid="admin-rounding-strategy"]');
       const kdsItemNameInput = document.querySelector('[data-testid="admin-kds-item-name"]');
       const kdsItemPosNameInput = document.querySelector('[data-testid="admin-kds-pos-name"]');
       const kdsItemPosNameSaveButton = document.querySelector('[data-testid="admin-kds-pos-name-save"]');
@@ -537,7 +553,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const settleTotal = document.querySelector('[data-testid="settle-total"]');
       const settleUnpaidAmount = document.querySelector('[data-testid="settle-unpaid-amount"]');
       const settleCashButton = document.querySelector('[data-testid="settle-cash"]');
+      const settleBackupCardButton = document.querySelector('[data-testid="settle-backup-card"]');
       const settleCreditButton = document.querySelector('[data-testid="settle-credit"]');
+      const settleGiftCardButton = document.querySelector('[data-testid="settle-gift-card"]');
+      const settleLoyaltyCardButton = document.querySelector('[data-testid="settle-loyalty-card"]');
+      const settleSelfCardButton = document.querySelector('[data-testid="settle-self-card"]');
       const settleEvenPayButton = document.querySelector('[data-testid="settle-even-pay"]');
       const settleSelectMemberButton = document.querySelector('[data-testid="settle-select-member"]');
       const settleSwitchMemberButton = document.querySelector('[data-testid="settle-switch-member"]');
@@ -581,8 +601,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const orderTipInput = document.querySelector('[data-testid="order-tip"]');
       const orderTipToast = document.querySelector('[data-testid="order-tip-toast"]');
       const orderCharge20Button = document.querySelector('[data-testid="order-charge-20"]');
+      const orderChargeZeroButton = document.querySelector('[data-testid="order-charge-0"]');
       const orderChargeLabel = document.querySelector('[data-testid="order-charge-label"]');
       const orderChargePrice = document.querySelector('[data-testid="order-charge-price"]');
+      const orderTaxExemptButton = document.querySelector('[data-testid="order-tax-exempt"]');
       const splitEvenButton = document.querySelector('[data-testid="split-even"]');
       const orderOpenFoodButton = document.querySelector('[data-testid="order-open-food"]');
       const openFoodKeyboardTextInput = document.querySelector('[data-testid="open-food-keyboard-text"]');
@@ -756,6 +778,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         const effectiveLanguage = currentLanguage === 'Chinese' || userDefaultLanguage === 'Chinese' ? 'Chinese' : 'Default';
         welcomeText.textContent = effectiveLanguage === 'Chinese' ? '欢迎您' : 'Welcome';
         languageSelect.value = userDefaultLanguage;
+        roundingStrategySelect.value = currentRoundingStrategy;
       }
 
       function clockNow() {
@@ -1196,6 +1219,20 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         return roundMoney(chargeableSubtotal * currentOrderChargeRate);
       }
 
+      function roundedSettlementTotal(amount) {
+        const cents = Math.round(Number(amount || 0) * 100);
+        if (currentRoundingStrategy === 'nearest_5') {
+          return Number((Math.floor(cents / 5) * 5 / 100).toFixed(2));
+        }
+        if (currentRoundingStrategy === 'nearest_10') {
+          return Number((Math.floor(cents / 10) * 10 / 100).toFixed(2));
+        }
+        if (currentRoundingStrategy === 'nearest_5_or_10') {
+          return Number((Math.round(cents / 5) * 5 / 100).toFixed(2));
+        }
+        return Number((cents / 100).toFixed(2));
+      }
+
       function renderOrderAmounts() {
         const itemCount = currentOrderItems.filter((item) => item.state !== 'Voided').length;
         const subtotal = currentOrderItems
@@ -1208,7 +1245,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           crmDiscountMaxAmount: currentCrmDiscountMaxAmount,
           crmFixedRewardAmount: currentCrmFixedRewardAmount,
         });
-        orderTax.textContent = String(Number((itemCount * 0.6).toFixed(2)));
+        orderTax.textContent = currentOrderTaxVoided ? '0' : String(Number((itemCount * 0.6).toFixed(2)));
         orderSubtotal.textContent = currentEditableCombo() ? '$' + roundMoney(subtotal).toFixed(2) : String(roundMoney(subtotal));
         orderReward.textContent = formatRewardDiscount(rewardDiscount, currentCrmDiscountRate);
         settleTotal.textContent = String(Number((subtotal + rewardDiscount + chargeAmount).toFixed(2)));
@@ -1376,6 +1413,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         currentOrderTip = 0;
         currentOrderChargeRate = 0;
         currentOrderChargeLabel = '';
+        currentOrderTaxVoided = false;
+        currentSettlementTotal = null;
         currentSplitPartTip = null;
         currentOrderStatus = '';
         currentOrderType = 'togo';
@@ -1458,6 +1497,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           status: currentOrderStatus,
           customerName: currentCustomerName,
           subtotal: Number(orderSubtotal.textContent || '0'),
+          settlementTotal: currentSettlementTotal,
           crmMember: selectedMemberRecord(),
           crmDiscountRate: currentCrmDiscountRate,
           crmDiscountMaxAmount: currentCrmDiscountMaxAmount,
@@ -1494,6 +1534,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       }
 
       function orderTotal(order) {
+        if (order?.settlementTotal !== null && order?.settlementTotal !== undefined) {
+          return Number(Number(order.settlementTotal).toFixed(2));
+        }
         return Number(((order?.items || []).reduce((total, item) => total + Number(item.price || 0), 0) + Number(order?.tip || 0) + Number(order?.rewardDiscount || 0)).toFixed(2));
       }
 
@@ -1586,7 +1629,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         recallGuestAddress.textContent = order.guestAddress || '';
         recallOrderSubtotal.textContent = String(order.subtotal ?? orderTotal(order));
         recallOrderReward.textContent = formatRewardDiscount(order.rewardDiscount || 0, order.crmDiscountRate);
-        recallOrderTotal.textContent = String(orderTotal(order));
+        recallOrderTotal.textContent =
+          order?.settlementTotal !== null && order?.settlementTotal !== undefined
+            ? Number(orderTotal(order)).toFixed(2)
+            : String(orderTotal(order));
         recallCrmMemberName.textContent = order.crmMember?.name || '';
         recallCrmPointBalance.textContent = String(order.crmMember?.points || 0);
         recallMoveOrderButton.hidden = Boolean(order.hasRedeemItem);
@@ -1788,6 +1834,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         currentCountCanBeDecimal = countCanBeDecimalSelect.value === 'true';
         currentKdsCategoryRequired = kdsCategoryRequiredSelect.value === 'true';
         currentKdsCategoryDiscountAllowance = kdsCategoryDiscountAllowanceSelect.value !== 'false';
+        currentRoundingStrategy = roundingStrategySelect.value;
         localStorage.setItem('currentMenuMode', currentMenuMode);
         localStorage.setItem('currentSearchMenuEnabled', String(currentSearchMenuEnabled));
         localStorage.setItem('currentCombineSameItemMode', currentCombineSameItemMode);
@@ -1798,6 +1845,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         localStorage.setItem('currentCountCanBeDecimal', String(currentCountCanBeDecimal));
         localStorage.setItem('currentKdsCategoryRequired', String(currentKdsCategoryRequired));
         localStorage.setItem('currentKdsCategoryDiscountAllowance', String(currentKdsCategoryDiscountAllowance));
+        localStorage.setItem('currentRoundingStrategy', currentRoundingStrategy);
       });
       kdsItemPosNameSaveButton.addEventListener('click', () => {
         currentItemPosNames = { ...currentItemPosNames, [kdsItemNameInput.value]: kdsItemPosNameInput.value };
@@ -1878,6 +1926,15 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         currentOrderChargeLabel = 'Charge(20%)';
         renderOrderAmounts();
       });
+      orderChargeZeroButton.addEventListener('click', () => {
+        currentOrderChargeRate = 0;
+        currentOrderChargeLabel = '';
+        renderOrderAmounts();
+      });
+      orderTaxExemptButton.addEventListener('click', () => {
+        currentOrderTaxVoided = true;
+        renderOrderAmounts();
+      });
       orderExitButton.addEventListener('click', () => {
         showPanel('home');
       });
@@ -1956,23 +2013,38 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       settleEvenPayButton.addEventListener('click', () => {
         currentSemiPayMode = true;
       });
-      settleCashButton.addEventListener('click', () => {
+      function settleCurrentOrder(paymentType) {
         if (currentSemiPayMode) {
           currentOrderStatus = 'Partially Paid';
           saveCurrentOrder();
           return;
         }
         currentOrderStatus = 'Paid';
+        currentSettlementTotal = roundedSettlementTotal(Number(settleTotal.textContent || '0'));
         const member = selectedMemberRecord();
-        if (member) {
+        if (member && paymentType === 'cash') {
           member.points += earnPointsForSubtotal(Number(orderSubtotal.textContent || '0'));
           currentCrmMember = member;
         }
         saveCurrentOrder();
+      }
+      settleCashButton.addEventListener('click', () => {
+        settleCurrentOrder('cash');
       });
       settleCreditButton.addEventListener('click', () => {
-        currentOrderStatus = 'Paid';
-        saveCurrentOrder();
+        settleCurrentOrder('credit');
+      });
+      settleLoyaltyCardButton.addEventListener('click', () => {
+        settleCurrentOrder('loyalty_card');
+      });
+      settleGiftCardButton.addEventListener('click', () => {
+        settleCurrentOrder('gift_card');
+      });
+      settleBackupCardButton.addEventListener('click', () => {
+        settleCurrentOrder('backup_card');
+      });
+      settleSelfCardButton.addEventListener('click', () => {
+        settleCurrentOrder('self_card');
       });
       orderSendHoldPrintButton.addEventListener('click', () => {
         markItemsPrinted('hold');

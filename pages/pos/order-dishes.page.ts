@@ -58,6 +58,7 @@ export class OrderDishesPage extends PageObject {
   private readonly orderExitButton: Locator;
   private readonly orderModifyButton: Locator;
   private readonly orderCharge20Button: Locator;
+  private readonly orderChargeZeroButton: Locator;
   private readonly orderChargeLabel: Locator;
   private readonly orderChargePrice: Locator;
   private readonly pickupButton: Locator;
@@ -67,7 +68,11 @@ export class OrderDishesPage extends PageObject {
   private readonly sendKitchenButton: Locator;
   private readonly settleButton: Locator;
   private readonly settleCashButton: Locator;
+  private readonly settleBackupCardButton: Locator;
   private readonly settleCreditButton: Locator;
+  private readonly settleGiftCardButton: Locator;
+  private readonly settleLoyaltyCardButton: Locator;
+  private readonly settleSelfCardButton: Locator;
   private readonly settleEvenPayButton: Locator;
   private readonly settleTotal: Locator;
   private readonly settleUnpaidAmount: Locator;
@@ -150,6 +155,7 @@ export class OrderDishesPage extends PageObject {
     this.orderExitButton = page.getByTestId('order-exit');
     this.orderModifyButton = page.getByTestId('order-modify');
     this.orderCharge20Button = page.getByTestId('order-charge-20');
+    this.orderChargeZeroButton = page.getByTestId('order-charge-0');
     this.orderChargeLabel = page.getByTestId('order-charge-label');
     this.orderChargePrice = page.getByTestId('order-charge-price');
     this.pickupButton = page.getByTestId('order-pickup');
@@ -162,7 +168,11 @@ export class OrderDishesPage extends PageObject {
     this.sendKitchenButton = page.getByTestId('order-send-kitchen');
     this.settleButton = page.getByTestId('order-settle');
     this.settleCashButton = page.getByTestId('settle-cash');
+    this.settleBackupCardButton = page.getByTestId('settle-backup-card');
     this.settleCreditButton = page.getByTestId('settle-credit');
+    this.settleGiftCardButton = page.getByTestId('settle-gift-card');
+    this.settleLoyaltyCardButton = page.getByTestId('settle-loyalty-card');
+    this.settleSelfCardButton = page.getByTestId('settle-self-card');
     this.settleEvenPayButton = page.getByTestId('settle-even-pay');
     this.settleTotal = page.getByTestId('settle-total');
     this.settleUnpaidAmount = page.getByTestId('settle-unpaid-amount');
@@ -285,6 +295,12 @@ export class OrderDishesPage extends PageObject {
 
   async readTax(): Promise<number> {
     return step('读取当前订单税额', async () => Number((await this.itemTax.textContent()) ?? '0'));
+  }
+
+  async voidSelectedItemTax(): Promise<void> {
+    await step('将当前菜品税额置为 0', async () => {
+      await this.page.getByTestId('order-tax-exempt').click();
+    });
   }
 
   async clickSettle(): Promise<void> {
@@ -550,8 +566,12 @@ export class OrderDishesPage extends PageObject {
     });
   }
 
-  async applyOrderCharge(rate: '20%'): Promise<void> {
+  async applyOrderCharge(rate: '0%' | '20%'): Promise<void> {
     await step(`应用整单按比例加收 ${rate}`, async () => {
+      if (rate === '0%') {
+        await this.orderChargeZeroButton.click();
+        return;
+      }
       if (rate !== '20%') {
         throw new Error(`Unsupported offline order charge rate: ${rate}`);
       }
@@ -737,6 +757,30 @@ export class OrderDishesPage extends PageObject {
   async settleByCredit(): Promise<void> {
     await step('信用卡完成当前订单付款', async () => {
       await this.settleCreditButton.click();
+    });
+  }
+
+  async settleByLoyaltyCard(): Promise<void> {
+    await step('会员卡完成当前订单付款', async () => {
+      await this.settleLoyaltyCardButton.click();
+    });
+  }
+
+  async settleByGiftCard(): Promise<void> {
+    await step('礼品卡完成当前订单付款', async () => {
+      await this.settleGiftCardButton.click();
+    });
+  }
+
+  async settleByBackupCard(): Promise<void> {
+    await step('备用卡完成当前订单付款', async () => {
+      await this.settleBackupCardButton.click();
+    });
+  }
+
+  async settleBySelfCard(): Promise<void> {
+    await step('自助卡完成当前订单付款', async () => {
+      await this.settleSelfCardButton.click();
     });
   }
 
