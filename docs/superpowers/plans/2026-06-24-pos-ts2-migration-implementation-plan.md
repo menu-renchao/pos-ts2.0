@@ -4,7 +4,7 @@
 
 **Goal:** Build a clean Playwright + TypeScript migration of the selected `crm/stage0/stage1/stage2/stage3/stage4` Python POS regression cases, including their required pages, flows, API clients, DB adapters, fixtures, utilities, and test data.
 
-**Architecture:** The migration uses a vertical-slice strategy. Each slice lands only the files needed by the source tests being migrated, while shared contracts live in typed `clients/`, `fixtures/`, `test-data/`, and `utils/` modules. The first round is offline-safe: API and DB dependencies are represented as typed adapters with deterministic stub implementations and do not connect to real environments.
+**Architecture:** The migration uses a source-test-row-driven vertical-slice strategy. Each migrated row in `docs/migration/source-to-target-map.md` must land the exact target spec, page methods, flow methods, client/data dependencies, assertions, and flow contract needed by that Python `def test_*`; no page, flow, or client file may exist only as an empty technical shell. The first round is offline-safe but still executable: migrated specs must run under a deterministic Playwright offline harness with stub clients, while API and DB dependencies are represented as typed adapters that do not connect to real environments.
 
 **Tech Stack:** Playwright Test, TypeScript, Node.js, ESLint, tsx, native Playwright fixtures, typed test-data modules, offline stub clients.
 
@@ -25,7 +25,113 @@ Do not migrate `stage5`, `__pycache__`, pytest cache files, debug outputs, or so
 
 ---
 
+## Migration Completeness Preconditions
+
+These preconditions must be completed before starting or resuming business-case migration. They are intentionally separate from scaffold work because they define how completeness is measured.
+
+### Coverage Matrix
+
+- Maintain: `docs/migration/source-to-target-map.md`
+- Every active Python `def test_*` in `crm/stage0/stage1/stage2/stage3/stage4` must have one row.
+- Rows must include `source_file`, `source_class`, `source_test`, `source_line`, Jira key when present, source title when present, and planned `target_spec`.
+- A row cannot move to `migrated` unless `target_spec`, `target_test_title`, `pages`, `flows`, `clients`, `test_data`, and `assertions` describe the migrated behavior.
+- A row cannot move to `verified` unless the target spec has traceable assertions and the flow contract is complete.
+- A row can use `live-gap` only when `gap_reason` explicitly identifies the missing selector, data, API, DB, external-device, or environment dependency.
+- Rows must be updated at the same time as the target implementation. Do not batch-fill matrix fields after writing code.
+- Rows must name concrete methods, not only files. Use entries such as `OrderDishesPage.addMenuItem`, `OrderEntryFlow.createTogoOrder`, and `StubOrderClient.createOrder`.
+- Rows must keep the source Jira key searchable in the target spec file when `jira_key` is present.
+
+### Executable Offline Behavior
+
+- A migrated row must produce a test that can execute in first-round offline mode. `test:list` is not enough.
+- Offline mode must use Playwright execution plus deterministic stub clients and an offline POS DOM harness. It must not connect to POS, CRM, cloud APIs, databases, printers, KDS devices, payment devices, or external displays.
+- Target specs must call the flow method named in the matrix row and assert the source business outcome. They must not pass through `expect(true)`, empty tests, fixture-construction-only checks, or title-only `test.skip`.
+- If a source behavior cannot execute offline because the required DOM contract, device, API, DB, or data setup is unknown, keep that row as `live-gap` with a concrete `gap_reason`; do not mark it `migrated` or `verified`.
+- A row can move to `verified` only after its target test executes under the offline harness and its assertions validate the business result.
+
+### Migration Audit
+
+- Maintain: `tools/migration-audit.mjs`
+- Test: `tools/migration-audit.test.mjs`
+- Run before every slice handoff:
+
+```powershell
+npm run audit:migration
+```
+
+Expected:
+
+- Audit tool tests pass.
+- Source tests and mapped tests counts match.
+- No duplicate source rows.
+- No Jira mismatch.
+- Migrated and verified rows include `target_spec`, `target_test_title`, `pages`, `flows`, `clients`, `test_data`, and `assertions`.
+- Every migrated or verified `target_spec` exists.
+- Every migrated or verified `target_spec` contains at least the matrix-listed target test title.
+- Every migrated or verified row with a Jira key has that key in the target spec.
+- Every migrated or verified `flows` method exists in `flows/**/*.ts`.
+- Every migrated or verified `pages` method exists in `pages/**/*.ts`.
+- Every migrated or verified `clients` or `test_data` reference resolves to an existing file or exported method.
+- Every migrated or verified flow method is covered by one contract document under `docs/migration/flows/`.
+- No page, flow, or client shell file is allowed when no migrated spec imports or references it.
+- No migrated or verified target test may be skipped, empty, assertion-free, or limited to `expect(true)`.
+- Every migrated or verified target spec must call the matrix-listed flow method.
+- Every migrated or verified target test must be executable by `npm run test:offline`.
+- No `live-gap` row without `gap_reason`.
+
+Run strict audit only when the selected migration scope is expected to be fully verified:
+
+```powershell
+npm run audit:migration -- --strict
+```
+
+Expected in strict mode: every mapped row is `verified`.
+
+### Flow Contracts
+
+- Maintain: `docs/migration/flows/README.md`
+- Maintain one flow-contract document per migrated slice or flow family.
+- Required contract files before business migration starts:
+  - `docs/migration/flows/stage0-core-flow-contracts.md`
+  - `docs/migration/flows/crm-flow-contracts.md`
+  - `docs/migration/flows/stage1-flow-contracts.md`
+  - `docs/migration/flows/stage2-flow-contracts.md`
+  - `docs/migration/flows/stage3-flow-contracts.md`
+  - `docs/migration/flows/stage4-flow-contracts.md`
+- Before migrating a spec, identify every flow it uses and update the corresponding contract with:
+  - source coverage,
+  - preconditions,
+  - business-level steps,
+  - expected assertions,
+  - page responsibilities,
+  - client/data responsibilities,
+  - stub behavior,
+  - live gaps.
+- Do not mark a matrix row `verified` if its target flow lacks a contract.
+- Do not introduce a flow method until at least one matrix row names that exact method.
+- Do not introduce a page method until at least one flow or spec needs that exact method.
+- Do not introduce a client/data method until at least one flow or spec needs that exact method.
+
+### Matrix-Driven Implementation Order
+
+Every business migration task must use this row loop. This loop overrides any broad directory-level checklist in later tasks.
+
+1. Select one small batch of source rows from `docs/migration/source-to-target-map.md`. Prefer one Python source file, or fewer when the file contains unrelated business paths.
+2. Read the source Python method body and its directly used page/API/DB helpers.
+3. Update the row's flow contract with source coverage, preconditions, business steps, expected assertions, page responsibilities, client/data responsibilities, stub behavior, and live gaps.
+4. Add or update test data and client stub methods required by that row.
+5. Add or update page methods required by that row. Do not add methods only because they may be useful later.
+6. Add or update the flow method named in the matrix row. The method must orchestrate the business path and return values that the spec can assert.
+7. Add or update the target spec test. The spec must use the flow method, preserve the Jira key and Chinese title when present, and assert the source behavior.
+8. Update the matrix row to `migrated` only after the target spec, page, flow, client/data, and assertion cells are concrete.
+9. Run `npm run typecheck`, `npm run unit`, `npm run test:list`, `npm run test:offline`, and `npm run audit:migration`.
+10. Move the row to `verified` only when the commands pass and the row has no known live-only blocker. Use `live-gap` with `gap_reason` when a real selector, data, API, DB, external device, or environment dependency blocks verification.
+
+---
+
 ## File Structure To Create
+
+This section is an allowed destination catalog, not permission to pre-create every file. Create a listed file only when the current matrix row requires concrete methods, data, or tests in that file.
 
 ### Project Root
 
@@ -92,10 +198,18 @@ Do not migrate `stage5`, `__pycache__`, pytest cache files, debug outputs, or so
 
 - Create: `fixtures/environment.ts` - offline environment config.
 - Create: `fixtures/base-test.ts` - base Playwright test with pages, flows, and clients.
+- Create: `fixtures/offline-pos-harness.ts` - deterministic offline POS DOM and route setup for first-round executable tests.
 - Create: `fixtures/client-fixtures.ts` - stub client wiring.
 - Create: `fixtures/page-fixtures.ts` - page object wiring.
 - Create: `fixtures/flow-fixtures.ts` - flow wiring.
 - Test: `fixtures/fixture-construction.test.ts`
+
+### Offline Test Harness
+
+- Create: `test-harness/offline-pos-app.ts` - serves the minimal DOM states required by migrated rows using the same stable selector contracts expected by page objects.
+- Create: `test-harness/offline-pos-state.ts` - in-memory order, customer, inventory, payment, report, and device-display state used by offline specs.
+- Create: `test-harness/offline-pos-events.ts` - deterministic event helpers for business transitions such as save order, send kitchen, pay, recall, refund, call number, and report generation.
+- Test: `test-harness/offline-pos-state.test.ts`
 
 ### Pages
 
@@ -215,6 +329,99 @@ Expected: no output.
 
 ---
 
+## Task 0: Strengthen Migration Audit Gate After Scaffold
+
+Execute this task immediately after Task 1 creates `package.json` and before any business-case migration starts.
+
+**Files:**
+- Modify: `tools/migration-audit.mjs`
+- Modify: `tools/migration-audit.test.mjs`
+- Modify: `package.json`
+
+- [ ] **Step 1: Add `audit:migration` script**
+
+`package.json` must include:
+
+```json
+{
+  "scripts": {
+    "audit:migration": "node --test tools\\migration-audit.test.mjs && node tools\\migration-audit.mjs"
+  }
+}
+```
+
+- [ ] **Step 2: Add strict row validation tests**
+
+Extend `tools/migration-audit.test.mjs` with tests that fail when a `migrated` or `verified` row is missing any of these fields:
+
+```text
+target_spec
+target_test_title
+pages
+flows
+clients
+test_data
+assertions
+```
+
+Expected failure text must identify the source row and the missing field.
+
+- [ ] **Step 3: Add target spec title and Jira validation tests**
+
+Extend `tools/migration-audit.test.mjs` with tests for:
+
+- `target_spec` file missing.
+- `target_test_title` not found in the target spec.
+- `jira_key` not found in the target spec when the source row has a Jira key.
+
+- [ ] **Step 4: Add page, flow, client, and test-data reference validation tests**
+
+Extend `tools/migration-audit.test.mjs` with tests for:
+
+- A matrix `flows` method such as `OrderEntryFlow.createTogoOrder` not exported or implemented in `flows/**/*.ts`.
+- A matrix `pages` method such as `OrderDishesPage.addMenuItem` not implemented in `pages/**/*.ts`.
+- A matrix `clients` reference not backed by a matching client file or exported method.
+- A matrix `test_data` reference not backed by an existing `test-data/**/*.ts` file.
+- A matrix `target_test_title` not present in a runnable `test(...)` declaration.
+- A migrated or verified target spec that does not call the matrix-listed flow method.
+- A migrated or verified target spec that uses `test.skip`, has no assertion, or only asserts `expect(true)`.
+
+- [ ] **Step 5: Add flow contract coverage validation tests**
+
+Extend `tools/migration-audit.test.mjs` with tests that fail when a migrated or verified row names a flow method that does not appear in any file under `docs/migration/flows/`.
+
+- [ ] **Step 6: Add empty shell validation tests**
+
+Extend `tools/migration-audit.test.mjs` with tests that fail when a file under `pages/`, `flows/`, or `clients/` exports a class or interface that is not referenced by any migrated or verified matrix row and not imported by any target spec.
+
+- [ ] **Step 7: Implement audit checks**
+
+Modify `tools/migration-audit.mjs` so every failing test from Steps 2-6 passes. Keep the audit deterministic and filesystem-only; it must not connect to POS, CRM, cloud APIs, databases, or browsers.
+
+- [ ] **Step 8: Verify audit gate**
+
+Run:
+
+```powershell
+npm run audit:migration
+```
+
+Expected:
+
+- Audit unit tests pass.
+- The current not-started matrix passes non-strict audit.
+- Any future `migrated` or `verified` row without concrete spec/page/flow/client/data/assertion/contract evidence fails.
+- Any future `migrated` or `verified` row without an executable offline target test fails audit before slice handoff.
+
+- [ ] **Step 9: Commit audit gate**
+
+```powershell
+git add package.json tools/migration-audit.mjs tools/migration-audit.test.mjs
+git commit -m "chore: strengthen migration coverage audit"
+```
+
+---
+
 ## Task 1: Project Scaffold
 
 **Files:**
@@ -235,13 +442,16 @@ Expected: no output.
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "playwright test",
-    "test:list": "playwright test --list",
-    "unit": "node --test \"**/*.test.ts\"",
+    "test:list": "playwright test --list --pass-with-no-tests",
+    "test:offline": "cross-env POS_TEST_MODE=offline CLIENT_MODE=stub playwright test --pass-with-no-tests",
+    "unit": "tsx --test \"**/*.test.ts\" && node --test tools\\migration-audit.test.mjs",
+    "audit:migration": "node --test tools\\migration-audit.test.mjs && node tools\\migration-audit.mjs",
     "lint": "eslint . --ext .ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.45.0",
     "@types/node": "^20.14.0",
+    "cross-env": "^7.0.3",
     "@typescript-eslint/eslint-plugin": "^7.13.0",
     "@typescript-eslint/parser": "^7.13.0",
     "eslint": "^8.57.0",
@@ -335,7 +545,9 @@ The first migration round is code-level only. Tests, fixtures, clients, and flow
 
 - `npm run typecheck`
 - `npm run test:list`
+- `npm run test:offline`
 - `npm run unit`
+- `npm run audit:migration`
 ```
 
 - [ ] **Step 6: Verify scaffold**
@@ -345,14 +557,20 @@ Run:
 ```powershell
 npm install
 npm run typecheck
+npm run unit
 npm run test:list
+npm run test:offline
+npm run audit:migration
 ```
 
 Expected:
 
 - `npm install` completes.
 - `npm run typecheck` exits 0 with the scaffold files included by `tsconfig.json`.
+- `npm run unit` exits 0, including `tools/migration-audit.test.mjs`.
 - `npm run test:list` exits 0 and may list no tests until specs are added.
+- `npm run test:offline` exits 0. It may run no specs before business migration starts, but after a row is marked `migrated` it must execute that target test.
+- `npm run audit:migration` exits 0 with 100% source-row mapping and no migrated/verified contract violations.
 
 - [ ] **Step 7: Commit scaffold**
 
@@ -881,10 +1099,106 @@ git commit -m "chore: add offline clients and fixtures"
 
 ---
 
+## Task 4A: Offline Executable POS Harness
+
+Execute this task before Task 5 and before any matrix row is marked `migrated`.
+
+**Files:**
+- Create: `test-harness/offline-pos-state.ts`
+- Create: `test-harness/offline-pos-app.ts`
+- Create: `test-harness/offline-pos-events.ts`
+- Test: `test-harness/offline-pos-state.test.ts`
+- Create: `fixtures/offline-pos-harness.ts`
+- Modify: `fixtures/base-test.ts`
+
+- [ ] **Step 1: Create offline state model**
+
+Create `test-harness/offline-pos-state.ts` with typed in-memory state for:
+
+- employee context,
+- orders,
+- order items,
+- customers or members,
+- inventory balances,
+- payments,
+- recall records,
+- report totals,
+- device-display queues such as KDS, CDS, caller, and paging.
+
+The state model must expose explicit mutation methods such as `createOrder`, `addItem`, `sendKitchen`, `payOrder`, `voidItem`, `refundOrder`, `callOrder`, and `completeOrder`. Do not use an untyped object bag.
+
+- [ ] **Step 2: Add offline state unit tests**
+
+Create `test-harness/offline-pos-state.test.ts` to verify at least:
+
+- creating an order returns a stable order id,
+- adding an item changes subtotal and total,
+- paying an order changes paid status,
+- inventory mutations change stock quantity,
+- caller or paging transitions update order status.
+
+- [ ] **Step 3: Create offline DOM app**
+
+Create `test-harness/offline-pos-app.ts` to render deterministic HTML for the POS surfaces required by migrated rows. The DOM must expose the same stable selector contract that page objects use, preferably `data-testid`.
+
+The harness must support page states for:
+
+- POS home,
+- order entry,
+- settlement,
+- recall,
+- admin/settings,
+- inventory,
+- CRM member/order flows,
+- KDS/CDS/caller/paging/report surfaces as they become required by matrix rows.
+
+Do not add a surface until a migrated matrix row requires it.
+
+- [ ] **Step 4: Create offline event helpers**
+
+Create `test-harness/offline-pos-events.ts` to map DOM actions to state transitions. Business transitions must call the state model methods from Step 1 so the target spec can assert actual state changes, not only element visibility.
+
+- [ ] **Step 5: Wire offline harness fixture**
+
+Create `fixtures/offline-pos-harness.ts` and wire it into `fixtures/base-test.ts` so when `POS_TEST_MODE=offline`:
+
+- `page.goto(environment.posHomeUrl)` resolves to the offline harness,
+- POS routes and static resources are fulfilled locally,
+- stub clients and harness state share deterministic data,
+- no network call leaves the test process.
+
+- [ ] **Step 6: Verify offline harness**
+
+Run:
+
+```powershell
+npm run typecheck
+npm run unit
+npm run test:offline
+npm run audit:migration
+```
+
+Expected:
+
+- TypeScript exits 0.
+- Offline state unit tests pass.
+- Playwright offline execution exits 0.
+- Migration audit still passes with current `not-started` rows.
+
+- [ ] **Step 7: Commit offline harness**
+
+```powershell
+git add test-harness fixtures
+git commit -m "chore: add offline POS execution harness"
+```
+
+---
+
 ## Task 5: Core POS Page Objects And Flows
 
 **Files:**
-- Create the POS page and flow files needed by `stage0` first.
+- Create only shared page infrastructure and the first POS page/flow methods required by selected `stage0` matrix rows.
+- Do not pre-create order, recall, settlement, admin, or inventory page/flow files unless the current matrix row names concrete methods in those files.
 
 - [ ] **Step 1: Create shared page object base**
 
@@ -976,9 +1290,17 @@ export class PosEntryFlow {
 }
 ```
 
-- [ ] **Step 4: Add order, recall, settlement, admin, and inventory pages and flows**
+- [ ] **Step 4: Add only matrix-required page and flow methods**
 
-Create each file listed for `pages/pos/order-dishes`, `pages/pos/recall`, `pages/pos/settlement`, `pages/pos/admin`, `pages/pos/inventory`, and related flows. Follow the same rule as `PosHomePage`: locators are centralized fields or private locator factories, page methods are single-page actions or reads, and cross-page intent belongs in a flow.
+Use the Matrix-Driven Implementation Order before adding any additional POS page or flow file:
+
+1. Pick the next `stage0` matrix row.
+2. Fill the row's intended `pages` and `flows` cells with concrete method names.
+3. Add only the page methods named in that row.
+4. Add only the flow method named in that row.
+5. Add or update the flow contract section that covers the method.
+
+Follow the same rule as `PosHomePage`: locators are centralized fields or private locator factories, page methods are single-page actions or reads, and cross-page intent belongs in a flow. If a file would contain no method referenced by a migrated row, do not create it.
 
 - [ ] **Step 5: Wire page and flow fixtures**
 
@@ -1027,16 +1349,19 @@ Run:
 
 ```powershell
 npm run typecheck
+npm run unit
 npm run test:list
+npm run test:offline
+npm run audit:migration
 ```
 
-Expected: both commands exit 0.
+Expected: all commands exit 0, offline Playwright execution passes for any migrated rows, and `npm run audit:migration` reports no migrated row with missing page, flow, client/data, assertion, or flow-contract references.
 
-- [ ] **Step 7: Commit core POS pages and flows**
+- [ ] **Step 7: Commit first required POS page and flow methods**
 
 ```powershell
 git add pages flows fixtures
-git commit -m "chore: add core POS page and flow layer"
+git commit -m "chore: add first required POS page and flow methods"
 ```
 
 ---
@@ -1124,6 +1449,8 @@ Run:
 npm run typecheck
 npm run test:list
 npm run unit
+npm run test:offline
+npm run audit:migration
 ```
 
 Expected:
@@ -1131,6 +1458,8 @@ Expected:
 - TypeScript exits 0.
 - Playwright lists the stage0 specs.
 - Unit tests pass.
+- Offline Playwright execution passes for stage0 rows moved to `migrated` or `verified`.
+- Migration audit passes and rejects any incomplete migrated row.
 
 - [ ] **Step 6: Commit stage0**
 
@@ -1201,9 +1530,11 @@ Run:
 npm run typecheck
 npm run test:list
 npm run unit
+npm run test:offline
+npm run audit:migration
 ```
 
-Expected: all commands exit 0 and Playwright lists CRM specs.
+Expected: all commands exit 0, Playwright lists CRM specs, offline Playwright execution passes for CRM rows moved to `migrated` or `verified`, and migration audit passes.
 
 - [ ] **Step 4: Commit CRM slice**
 
@@ -1270,9 +1601,11 @@ Run:
 npm run typecheck
 npm run test:list
 npm run unit
+npm run test:offline
+npm run audit:migration
 ```
 
-Expected: all commands exit 0 and Playwright lists stage1 specs.
+Expected: all commands exit 0, Playwright lists stage1 specs, offline Playwright execution passes for stage1 rows moved to `migrated` or `verified`, and migration audit passes.
 
 - [ ] **Step 4: Commit stage1**
 
@@ -1338,9 +1671,11 @@ Run:
 npm run typecheck
 npm run test:list
 npm run unit
+npm run test:offline
+npm run audit:migration
 ```
 
-Expected: all commands exit 0 and Playwright lists stage2 specs.
+Expected: all commands exit 0, Playwright lists stage2 specs, offline Playwright execution passes for stage2 rows moved to `migrated` or `verified`, and migration audit passes.
 
 - [ ] **Step 5: Commit stage2**
 
@@ -1412,9 +1747,11 @@ Run:
 npm run typecheck
 npm run test:list
 npm run unit
+npm run test:offline
+npm run audit:migration
 ```
 
-Expected: all commands exit 0 and Playwright lists stage3 specs.
+Expected: all commands exit 0, Playwright lists stage3 specs, offline Playwright execution passes for stage3 rows moved to `migrated` or `verified`, and migration audit passes.
 
 - [ ] **Step 4: Commit stage3**
 
@@ -1455,9 +1792,11 @@ Run:
 npm run typecheck
 npm run test:list
 npm run unit
+npm run test:offline
+npm run audit:migration
 ```
 
-Expected: all commands exit 0 and Playwright lists stage4 specs.
+Expected: all commands exit 0, Playwright lists stage4 specs, offline Playwright execution passes for stage4 rows moved to `migrated` or `verified`, and migration audit passes.
 
 - [ ] **Step 3: Commit stage4**
 
@@ -1503,11 +1842,43 @@ Run:
 npm run typecheck
 npm run unit
 npm run test:list
+npm run test:offline
+npm run audit:migration
 ```
 
-Expected: all commands exit 0.
+Expected:
 
-- [ ] **Step 4: Commit audit fixes**
+- TypeScript exits 0.
+- Unit tests exit 0.
+- Playwright discovers all migrated specs.
+- Offline Playwright execution passes for every migrated or verified row.
+- Non-strict migration audit exits 0.
+
+- [ ] **Step 4: Check no empty technical shell files remain**
+
+Run:
+
+```powershell
+npm run audit:migration
+```
+
+Expected:
+
+- No page, flow, or client file exists without a migrated spec or matrix row reference.
+- No matrix row is marked `migrated` or `verified` with only file names and no concrete method names.
+- No target spec exists only to satisfy Playwright discovery without preserving source behavior.
+
+- [ ] **Step 5: Run strict audit when live gaps are zero**
+
+Run this only when the first-round offline migration has no remaining `live-gap` rows, or during the later live smoke completion round:
+
+```powershell
+npm run audit:migration -- --strict
+```
+
+Expected: every mapped row is `verified`; skipped, selector-blocked, data-blocked, API-blocked, DB-blocked, external-device-blocked, or environment-blocked rows must not be hidden as migrated behavior.
+
+- [ ] **Step 6: Commit audit fixes**
 
 If audit changes were needed:
 
@@ -1524,7 +1895,7 @@ git status -sb
 
 Expected: clean working tree.
 
-- [ ] **Step 5: Push completed migration branch**
+- [ ] **Step 7: Push completed migration branch**
 
 ```powershell
 git push
@@ -1537,7 +1908,13 @@ Expected: remote `main` or the active migration branch receives all migration co
 ## Execution Notes
 
 - Use one fresh implementation pass per task.
+- Do not start Task 5 before Task 4A provides the offline execution harness.
 - Do not start Task 7 before Task 6 verifies cleanly.
+- Do not start any business implementation until Task 0 audit-gate strengthening is committed.
+- Migrate by source matrix row, not by creating every file listed in the project structure.
+- A spec is not complete until it asserts the source behavior named in the matrix row and calls a concrete flow method.
+- A migrated spec is not complete until it runs successfully through `npm run test:offline`.
+- A flow is not complete until its contract documents preconditions, business steps, expected assertions, page/client/data responsibilities, stub behavior, and live gaps.
 - When a source test requires a new method, add that method to the smallest correct page, flow, client, or test-data file.
 - Prefer deleting unused migration scaffolding over keeping speculative files.
 - Keep commits aligned with tasks so review can inspect scaffold, utilities, data, clients, fixtures, and each migrated stage separately.
