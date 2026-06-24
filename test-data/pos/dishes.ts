@@ -152,6 +152,17 @@ export const requiredKdsDish: DishSample = {
   taxRate: 0.0825,
 };
 
+export const posNameDisplayDish: DishSample = {
+  id: 'dish-pos-name-test',
+  name: 'Pos Name Test',
+  price: 10,
+  category: 'KDS',
+  group: 'Lunch',
+  taxRate: 0.0825,
+};
+
+export const posNameDisplayValue = 'migration-pos-name';
+
 export const defaultMenuGroup: MenuGroupSample = {
   id: 'group-migration-menu',
   name: 'Migration Menu',
@@ -167,5 +178,6 @@ export const defaultMenuGroup: MenuGroupSample = {
     itemOptionDish,
     numberedNameConflictDish,
     requiredKdsDish,
+    posNameDisplayDish,
   ],
 };

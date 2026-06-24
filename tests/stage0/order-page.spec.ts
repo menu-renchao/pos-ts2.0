@@ -896,4 +896,20 @@ test.describe('POS 点单页面', () => {
     expect(result.chargeLabel).toBe('Charge(20%)');
     expect(result.chargePrice).toBe('$2.00');
   });
+
+  test('POS-42097 点单页 Category 应展示配置的 POS Name 且点单后显示原菜名', {
+    annotation: [jiraIssue('POS-42097')],
+  }, async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.configureKdsItemPosNameAndReadOrderPageName(environment.posHomeUrl);
+
+    expect(result.posNameVisible).toBe(true);
+    expect(result.orderedItemName).toBe('Pos Name Test');
+  });
 });

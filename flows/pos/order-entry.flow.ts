@@ -12,6 +12,8 @@ import {
   categorySwitchDish,
   menuModeSearchItems,
   numberedNameConflictDish,
+  posNameDisplayDish,
+  posNameDisplayValue,
   requiredKdsDish,
 } from '../../test-data/pos/dishes.js';
 import { deliveryOrderInfoSample } from '../../test-data/pos/delivery.js';
@@ -146,6 +148,11 @@ export type RequiredCategorySaveResult = {
 export type PercentChargeResult = {
   chargeLabel: string;
   chargePrice: string;
+};
+
+export type PosNameDisplayResult = {
+  posNameVisible: boolean;
+  orderedItemName: string;
 };
 
 export type SameItemCombineResult = {
@@ -767,6 +774,27 @@ export class OrderEntryFlow {
     await this.adminPage.setKdsCategoryDiscountAllowance(true);
     await this.homePage.refresh();
     return { chargeLabel, chargePrice };
+  }
+
+  async configureKdsItemPosNameAndReadOrderPageName(homeUrl: string): Promise<PosNameDisplayResult> {
+    if (!this.adminPage) {
+      throw new Error('AdminPage is required for item POS Name setup');
+    }
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.setKdsItemPosName(posNameDisplayDish.name, posNameDisplayValue);
+    await this.homePage.refresh();
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(posNameDisplayDish.group);
+    await this.orderDishesPage.selectMenuCategory(posNameDisplayDish.category);
+    const posNameVisible = await this.orderDishesPage.isMenuItemVisible(posNameDisplayValue);
+    await this.orderDishesPage.addMenuItem(posNameDisplayValue);
+    const orderedItemName = await this.orderDishesPage.readFirstItemName();
+    await this.orderDishesPage.exitOrderPage();
+    await this.homePage.clickAdmin();
+    await this.adminPage.setKdsItemPosName(posNameDisplayDish.name, '');
+    await this.homePage.refresh();
+    return { posNameVisible, orderedItemName };
   }
 
   async createThreeSameItemsWithoutAutoCombine(homeUrl: string): Promise<SameItemCombineResult> {

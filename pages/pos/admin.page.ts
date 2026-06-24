@@ -13,6 +13,9 @@ export class AdminPage extends PageObject {
   private readonly defaultKeyboardSelect: Locator;
   private readonly kdsCategoryRequiredSelect: Locator;
   private readonly kdsCategoryDiscountAllowanceSelect: Locator;
+  private readonly kdsItemNameInput: Locator;
+  private readonly kdsItemPosNameInput: Locator;
+  private readonly kdsItemPosNameSaveButton: Locator;
   private readonly languageSelect: Locator;
   private readonly menuModeSelect: Locator;
   private readonly saveSettingsButton: Locator;
@@ -31,6 +34,9 @@ export class AdminPage extends PageObject {
     this.defaultKeyboardSelect = page.getByTestId('admin-default-keyboard');
     this.kdsCategoryRequiredSelect = page.getByTestId('admin-kds-category-required');
     this.kdsCategoryDiscountAllowanceSelect = page.getByTestId('admin-kds-category-discount-allowance');
+    this.kdsItemNameInput = page.getByTestId('admin-kds-item-name');
+    this.kdsItemPosNameInput = page.getByTestId('admin-kds-pos-name');
+    this.kdsItemPosNameSaveButton = page.getByTestId('admin-kds-pos-name-save');
     this.languageSelect = page.getByTestId('user-default-language');
     this.menuModeSelect = page.getByTestId('admin-menu-mode');
     this.saveSettingsButton = page.getByTestId('admin-save-settings');
@@ -126,6 +132,15 @@ export class AdminPage extends PageObject {
       await expect(this.adminRoot).toBeVisible();
       await this.kdsCategoryDiscountAllowanceSelect.selectOption(enabled ? 'true' : 'false');
       await this.saveSettingsButton.click();
+    });
+  }
+
+  async setKdsItemPosName(itemName: string, posName: string): Promise<void> {
+    await step(`设置 KDS 菜品 ${itemName} 的 POS Name`, async () => {
+      await expect(this.adminRoot).toBeVisible();
+      await this.kdsItemNameInput.fill(itemName);
+      await this.kdsItemPosNameInput.fill(posName);
+      await this.kdsItemPosNameSaveButton.click();
     });
   }
 }

@@ -93,6 +93,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         <option value="true">true</option>
         <option value="false">false</option>
       </select>
+      <input data-testid="admin-kds-item-name" />
+      <input data-testid="admin-kds-pos-name" />
+      <button data-testid="admin-kds-pos-name-save">Save Item POS Name</button>
       <button data-testid="admin-save-settings">Save Settings</button>
       <button data-testid="admin-member-list">CRM Loyalty</button>
       <section data-testid="member-list-permission-popup" hidden>
@@ -403,6 +406,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let currentCategoryName = '';
       let currentOrderChargeRate = 0;
       let currentOrderChargeLabel = '';
+      let currentItemPosNames = JSON.parse(localStorage.getItem('currentItemPosNames') || '{}');
       let currentCrmMember = null;
       let currentCrmDiscountRate = 0;
       let currentCrmDiscountMaxAmount = null;
@@ -466,6 +470,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const countCanBeDecimalSelect = document.querySelector('[data-testid="admin-count-can-be-decimal"]');
       const kdsCategoryRequiredSelect = document.querySelector('[data-testid="admin-kds-category-required"]');
       const kdsCategoryDiscountAllowanceSelect = document.querySelector('[data-testid="admin-kds-category-discount-allowance"]');
+      const kdsItemNameInput = document.querySelector('[data-testid="admin-kds-item-name"]');
+      const kdsItemPosNameInput = document.querySelector('[data-testid="admin-kds-pos-name"]');
+      const kdsItemPosNameSaveButton = document.querySelector('[data-testid="admin-kds-pos-name-save"]');
       const joinMemberButton = document.querySelector('[data-testid="home-join-member"]');
       const joinMemberRegistration = document.querySelector('[data-testid="join-member-registration"]');
       const joinMemberFirstNameInput = document.querySelector('[data-testid="join-member-first-name"]');
@@ -1034,7 +1041,12 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           { name: 'Item Option Seafood', price: 12.75, group: 'Dinner Menu', category: 'Item Options' },
           { name: 'AA', number: 'AA', price: 10, group: 'Dinner Menu', category: 'Chicken Lunch E' },
           { name: 'Mongolian Chicken', price: 10, group: 'Lunch', category: 'KDS' },
+          { name: 'Pos Name Test', price: 10, group: 'Lunch', category: 'KDS' },
         ];
+      }
+
+      function menuDisplayName(dish) {
+        return currentItemPosNames[dish.name] || dish.posName || dish.name;
       }
 
       function currentChargeAmount(subtotal) {
@@ -1202,7 +1214,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         });
         orderMenuItems.innerHTML = '';
         menuData().forEach((dish) => {
-          orderMenuItems.appendChild(createButton('order-menu-item', dish.name, () => {
+          orderMenuItems.appendChild(createButton('order-menu-item', menuDisplayName(dish), () => {
             addDishToCurrentOrder(dish);
           }));
         });
@@ -1629,6 +1641,14 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         localStorage.setItem('currentCountCanBeDecimal', String(currentCountCanBeDecimal));
         localStorage.setItem('currentKdsCategoryRequired', String(currentKdsCategoryRequired));
         localStorage.setItem('currentKdsCategoryDiscountAllowance', String(currentKdsCategoryDiscountAllowance));
+      });
+      kdsItemPosNameSaveButton.addEventListener('click', () => {
+        currentItemPosNames = { ...currentItemPosNames, [kdsItemNameInput.value]: kdsItemPosNameInput.value };
+        if (!kdsItemPosNameInput.value) {
+          delete currentItemPosNames[kdsItemNameInput.value];
+        }
+        localStorage.setItem('currentItemPosNames', JSON.stringify(currentItemPosNames));
+        renderOrderMenu();
       });
       adminMemberListButton.addEventListener('click', () => {
         if (currentEmployeePassword === '123') {

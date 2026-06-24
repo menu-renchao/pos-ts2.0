@@ -538,6 +538,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 | stage0/test_order_page.py | TestOrderPage | `test_staff_without_note_edit_sub_item` staff without NOTE permission must manager-authorize before adding combo sub-item note | tests/stage0/order-page.spec.ts | `OrderEntryFlow.addComboSubItemNoteWithManagerAuthorization` |
 | stage0/test_order_page.py | TestOrderPage | `test_category_required` required KDS category blocks save, keeps order page open, and auto-navigates to KDS until a KDS item is added | tests/stage0/order-page.spec.ts | `OrderEntryFlow.requireKdsCategoryBeforeSave` |
 | stage0/test_order_page.py | TestOrderPage | `test_category_not_required_percent_charge` KDS category without discount restriction participates in 20% whole-order charge | tests/stage0/order-page.spec.ts | `OrderEntryFlow.applyPercentChargeWhenKdsDiscountAllowanceDisabled` |
+| stage0/test_order_page.py | TestOrderPage | `test_order_page_show_name` menu category displays configured POS Name while the ordered item line keeps the original item name | tests/stage0/order-page.spec.ts | `OrderEntryFlow.configureKdsItemPosNameAndReadOrderPageName` |
 | stage0/test_order_page.py | all `Test*` classes | add dishes, modify items, save orders, validate order totals | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createTogoOrder` |
 | stage0/test_order_settle.py | all `Test*` classes | create payable orders before settlement | tests/stage0/order-settle.spec.ts | `OrderEntryFlow.createTogoOrder` |
 
@@ -581,6 +582,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 28. For combo sub-item NOTE permission behavior, remove NOTE permission from staff `1`, log out, log in with password `123`, enter Dine In, add the source-equivalent combo, open the first sub-item, click Edit Note, read the permission prompt, submit manager password `11`, enter `子菜的备注信息`, read the saved sub-item note, and restore NOTE permission.
 29. For required KDS category behavior, set Lunch/KDS Required on in Admin, enter Dine In, add a non-KDS source-equivalent item, attempt Save, read the current category and URL, add `Mongolian Chicken` from KDS, Save again, read URL, and restore KDS Required off.
 30. For KDS category percent charge behavior, set Lunch/KDS category discount restriction off in Admin, enter Dine In, add `Mongolian Chicken` from KDS, apply `20%` whole-order charge, read charge label and price, then restore the category setting.
+31. For KDS item POS Name display behavior, set the Lunch/KDS item `Pos Name Test` POS Name in Admin, refresh, enter Dine In, switch to Lunch/KDS, verify the menu displays the POS Name, order by that visible POS Name, read the ordered item name, and restore the POS Name setting.
 
 ### Expected Assertions
 
@@ -637,6 +639,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Combo sub-item NOTE permission flow verifies staff `1` without NOTE permission sees `You do not have permission NOTE, please enter the password!`, manager password authorizes the action, and the sub-item note text becomes `子菜的备注信息`.
 - Required KDS category flow verifies the first Save leaves the browser on `orderDishes`, automatically sets current category to `KDS`, and after adding `Mongolian Chicken` a second Save leaves `orderDishes`.
 - KDS category percent charge flow verifies the charge line label is `Charge(20%)` and the price is `$2.00` for the source-equivalent `$10` KDS dish when category discount restriction is off.
+- KDS item POS Name display flow verifies the configured POS Name is visible in the KDS menu category while the resulting order line displays the source item name `Pos Name Test`.
 
 ### Page Responsibilities
 
@@ -659,13 +662,14 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `OrderDishesPage` owns Combo sub-item selection, Combo sub-item Edit Note permission prompt reads, sub-item note input, and sub-item note reads.
 - `OrderDishesPage` owns current category name reads and page URL reads used by required-category save behavior.
 - `OrderDishesPage` owns whole-order percent charge application plus charge label and amount reads.
+- `OrderDishesPage` owns menu-item visibility checks by displayed POS Name and ordered-line item name reads.
 - `OrderDishesPage` owns reduce action, option/list visibility reads, menu-item visibility reads, decimal quantity input, and item-count reads.
 - `OrderDishesPage` owns decimal order subtotal reads used as source-equivalent item/order totals before split or combine.
 - `OrderDishesPage` owns order-line quantity/price reads for decimal disabled and Global Option split-line assertions.
 - `OrderDishesPage` owns Global Option priced Add behavior for the decimal combined-item path.
 - `PosHomePage` owns the custom Delivery entry point, and `RecallPage` owns Recall Print/Reprint state and offline print output count reads.
 - `OrderDishesPage.exitOrderPage` owns direct order-page exit behavior, and `PosHomePage.readWelcomeText` owns the home-return assertion for Delivery exit.
-- `AdminPage` owns Search Menu enable/disable persistence, staff Void Printed Item permission, staff NOTE permission, KDS Category Required setting, KDS Category discount restriction setting, same-item combine mode, separate-same-item setting behavior, Automatically Redirect After Reduce Items, and Count Can Be Decimal.
+- `AdminPage` owns Search Menu enable/disable persistence, staff Void Printed Item permission, staff NOTE permission, KDS Category Required setting, KDS Category discount restriction setting, KDS item POS Name setting, same-item combine mode, separate-same-item setting behavior, Automatically Redirect After Reduce Items, and Count Can Be Decimal.
 - `RecallPage` owns recalled item state, option reads, suborder tip reads, split-order combine action, order status reads, order selection, guest-name edit, customer-name reads, order total reads, split panel entry, even/item/seat/amount/drag split actions, split save/confirm/unsplit actions, suborder settlement/payment actions, suborder status reads, parent-card background reads, and split price reads.
 - `RecallPage` owns Recall subtotal reads for source cases that verify post-save subtotal instead of the active order page.
 - `RecallPage` owns Recall item-count reads, recalled tip reads, and post-credit large-tip entry/toast reads.
@@ -678,6 +682,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `test-data/pos/dishes.ts` owns POS/EMENU search-item names and the stable non-combo dish used to enter Global Option Modify flows.
 - `test-data/pos/dishes.ts` owns `numberedNameConflictDish`, whose source-equivalent name and number are both `AA` for POS-36255 search de-duplication.
 - `test-data/pos/dishes.ts` owns `requiredKdsDish` as the source-equivalent KDS `$10` `Mongolian Chicken` required to satisfy POS-42060 and POS-42958.
+- `test-data/pos/dishes.ts` owns `posNameDisplayDish` and `posNameDisplayValue` as the source-equivalent KDS item/POS Name pair for POS-42097.
 - `test-data/pos/dishes.ts` owns `groupSwitchDish`, `categorySwitchDish`, and `categoryOptionDish` as the POS-33600 source-equivalent special-price decimal quantity dishes.
 - `test-data/pos/dishes.ts` owns `pricedGlobalOption` as the source-equivalent Global Option price used by POS-35660.
 - `test-data/pos/dishes.ts` owns the default POS Search Menu item `Broccoli Garlic Sauce`.
@@ -743,6 +748,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Stub staff NOTE permission state persists in browser-local state; staff password `123` without NOTE permission triggers the source NOTE permission prompt on Combo sub-item Edit Note, and manager password `11` authorizes sub-item note entry.
 - Stub KDS Category Required setting persists in browser-local state; when enabled, saving an order without any active KDS item sets the current category to `KDS`, keeps URL on `orderDishes`, and blocks save until a KDS item is added.
 - Stub KDS Category discount restriction setting persists in browser-local state; when the setting is off, a KDS item participates in whole-order percent charge calculation, so `Charge(20%)` on `$10` `Mongolian Chicken` renders `$2.00`.
+- Stub KDS item POS Name setting persists in browser-local state; menu buttons render the configured POS Name, but clicking that button adds the original dish name to the order line.
 - Stub same-item combine mode `dont-combine` keeps each repeated dish as its own order line even when separate-same-item is disabled.
 - Stub same-item combine mode `auto-same-status` combines only same-status unsent lines, so a sent-kitchen line and a newly added unsent line stay separate.
 - Stub same-item combine mode `include-kitchen` combines the newly added same dish into the sent-kitchen line, keeps the source `(1In Kitchen)` marker, quantity `2`, and red color `rgba(113, 9, 9, 1)`.
