@@ -498,6 +498,11 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 | stage0/test_order_page.py | TestOrderPage | `test_order_item_option` item-level option selection saves the same item to Recall | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createOptionOrderAndReadRecall` |
 | stage0/test_order_page.py | TestOrderPage | `test_order_item_no_option` item-level option omitted saves the base item to Recall | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createOptionOrderAndReadRecall` |
 | stage0/test_order_page.py | TestOrderPage | `test_order_item_sub_option` item-level option with sub-option saves the same item to Recall | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createOptionOrderAndReadRecall` |
+| stage0/test_order_page.py | TestOrderPage | `test_even_split_two` even split creates two suborders with half total each | tests/stage0/order-page.spec.ts | `OrderEntryFlow.splitOrderEvenlyAndReadSummary` |
+| stage0/test_order_page.py | TestOrderPage | `test_add_split_by_item` item split creates suborders matching item prices | tests/stage0/order-page.spec.ts | `OrderEntryFlow.splitOrderByItemAndReadSummary` |
+| stage0/test_order_page.py | TestOrderPage | `test_add_split_by_seat` seat split creates suborders matching item prices | tests/stage0/order-page.spec.ts | `OrderEntryFlow.splitDineInOrderBySeatAndReadSummary` |
+| stage0/test_order_page.py | TestOrderPage | `test_add_split_by_amount` amount split creates suborders matching entered amounts | tests/stage0/order-page.spec.ts | `OrderEntryFlow.splitOrderByAmountAndReadSummary` |
+| stage0/test_order_page.py | TestOrderPage | `test_cancel_split` unsplit restores the original order total | tests/stage0/order-page.spec.ts | `OrderEntryFlow.cancelEvenSplitAndReadTotals` |
 | stage0/test_order_page.py | all `Test*` classes | add dishes, modify items, save orders, validate order totals | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createTogoOrder` |
 | stage0/test_order_settle.py | all `Test*` classes | create payable orders before settlement | tests/stage0/order-settle.spec.ts | `OrderEntryFlow.createTogoOrder` |
 
@@ -537,6 +542,10 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Pickup guest-name edit flow leaves the latest no-name order blank while the previous edited order shows `(ren)`.
 - Option-order flows preserve source behavior by comparing the order-page returned item name and price with the single recalled item after save.
 - Chinese category option flow switches UI language before ordering and still preserves the same recalled item name and price.
+- Even split returns two child orders whose amount equals the original total divided by two.
+- Item split and seat split return two child orders whose amounts match the selected item amounts.
+- Amount split returns child-order amounts equal to the source-entered amounts `2` and `8.6`.
+- Cancel split removes split child orders and preserves the original order total.
 
 ### Page Responsibilities
 
@@ -548,7 +557,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `OrderDishesPage` owns order tax reads, customer-info popup actions, manager password popup actions, item discount action, and Modify note entry.
 - `OrderDishesPage` owns tip input, split-even action, Open Food no-tax entry, cash payment action, and Pickup info submission.
 - `OrderDishesPage` owns option and sub-option selection plus current ordered-item name/price reads.
-- `RecallPage` owns recalled item state, option reads, suborder tip reads, split-order combine action, order status reads, order selection, guest-name edit, and customer-name reads.
+- `RecallPage` owns recalled item state, option reads, suborder tip reads, split-order combine action, order status reads, order selection, guest-name edit, customer-name reads, order total reads, split panel entry, even/item/seat/amount split actions, split save/confirm/unsplit actions, and split price reads.
 
 ### Client/Data Responsibilities
 
@@ -574,6 +583,12 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Stub Pickup order creation stores multiple orders in one browser page session so editing the previous order does not mutate the latest order.
 - Stub order menu renders category-level and item-level option sample dishes plus Chinese category sample dishes.
 - Stub option and sub-option controls are deterministic UI actions; first-round assertions validate the source-observed item name/price preservation rather than live option-pricing internals.
+- Stub Recall computes order total from saved item prices plus tip.
+- Stub split state records draft and saved split-order prices in the selected recalled order.
+- Stub even split divides the source total by two without rounding so it matches the source `float(total) / float(num)` assertion.
+- Stub item and seat split use the first two saved item prices as child-order prices.
+- Stub amount split reads typed amount inputs and stores them as child-order prices after the source-equivalent save and confirmation path.
+- Stub unsplit clears saved child-order prices while keeping the recalled order total unchanged.
 
 ### Live Gaps
 

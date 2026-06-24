@@ -36,6 +36,24 @@ export type OptionOrderRecallResult = {
   recalledItems: RecalledOrderItem[];
 };
 
+export type EvenSplitSummary = {
+  originalTotal: number;
+  splitOrderCount: number;
+  splitOrderPrices: number[];
+};
+
+export type ItemSplitSummary = {
+  splitOrderCount: number;
+  splitItemPrices: number[];
+  splitOrderPrices: number[];
+};
+
+export type CancelSplitSummary = {
+  originalTotal: number;
+  splitOrderCountBeforeCancel: number;
+  totalAfterCancel: number;
+};
+
 export class OrderEntryFlow {
   constructor(
     private readonly homePage: PosHomePage,
@@ -177,6 +195,66 @@ export class OrderEntryFlow {
     return { orderedItem, recalledItems };
   }
 
+  async splitOrderEvenlyAndReadSummary(homeUrl: string, count: number): Promise<EvenSplitSummary> {
+    await this.openOrderAndAddDish(homeUrl, groupSwitchDish);
+    await this.orderDishesPage.saveOrder();
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    const originalTotal = await this.recallPage.readOrderTotal();
+    await this.recallPage.openSplitOrder();
+    await this.recallPage.splitEvenly(count);
+    await this.recallPage.saveSplit();
+    const splitOrderPrices = await this.recallPage.readSplitOrderPrices();
+    return { originalTotal, splitOrderCount: splitOrderPrices.length, splitOrderPrices };
+  }
+
+  async splitOrderByItemAndReadSummary(homeUrl: string): Promise<ItemSplitSummary> {
+    await this.openOrderAndAddTwoDishes(homeUrl, false);
+    await this.recallPage.openSplitOrder();
+    await this.recallPage.splitByItem();
+    const splitItemPrices = await this.recallPage.readSplitItemPrices();
+    await this.recallPage.saveSplit();
+    const splitOrderPrices = await this.recallPage.readSplitOrderPrices();
+    return { splitOrderCount: splitOrderPrices.length, splitItemPrices, splitOrderPrices };
+  }
+
+  async splitDineInOrderBySeatAndReadSummary(homeUrl: string): Promise<ItemSplitSummary> {
+    await this.openOrderAndAddTwoDishes(homeUrl, true);
+    await this.recallPage.openSplitOrder();
+    await this.recallPage.splitBySeat();
+    const splitItemPrices = await this.recallPage.readSplitItemPrices();
+    await this.recallPage.saveSplit();
+    const splitOrderPrices = await this.recallPage.readSplitOrderPrices();
+    return { splitOrderCount: splitOrderPrices.length, splitItemPrices, splitOrderPrices };
+  }
+
+  async splitOrderByAmountAndReadSummary(homeUrl: string, amounts: readonly number[]): Promise<ItemSplitSummary> {
+    await this.openOrderAndAddDish(homeUrl, groupSwitchDish);
+    await this.orderDishesPage.saveOrder();
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.openSplitOrder();
+    await this.recallPage.splitByAmounts(amounts);
+    const splitItemPrices = await this.recallPage.readSplitItemPrices();
+    await this.recallPage.saveSplit();
+    await this.recallPage.saveSplitAmountCreate();
+    const splitOrderPrices = await this.recallPage.readSplitOrderPrices();
+    return { splitOrderCount: splitOrderPrices.length, splitItemPrices, splitOrderPrices };
+  }
+
+  async cancelEvenSplitAndReadTotals(homeUrl: string, count: number): Promise<CancelSplitSummary> {
+    const splitSummary = await this.splitOrderEvenlyAndReadSummary(homeUrl, count);
+    await this.recallPage.openSplitOrder();
+    await this.recallPage.unsplit();
+    await this.recallPage.saveSplit();
+    const totalAfterCancel = await this.recallPage.readOrderTotal();
+    return {
+      originalTotal: splitSummary.originalTotal,
+      splitOrderCountBeforeCancel: splitSummary.splitOrderCount,
+      totalAfterCancel,
+    };
+  }
+
   private async openOrderAndAddDish(homeUrl: string, dish: DishSample): Promise<void> {
     await this.homePage.open(homeUrl);
     await this.homePage.clickTogo();
@@ -191,6 +269,24 @@ export class OrderEntryFlow {
     await this.orderDishesPage.selectMenuGroup(dish.group);
     await this.orderDishesPage.selectMenuCategory(dish.category);
     await this.orderDishesPage.addMenuItem(dish.name);
+  }
+
+  private async openOrderAndAddTwoDishes(homeUrl: string, isDineIn: boolean): Promise<void> {
+    await this.homePage.open(homeUrl);
+    if (isDineIn) {
+      await this.homePage.clickDineIn();
+    } else {
+      await this.homePage.clickTogo();
+    }
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.selectMenuGroup(categorySwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(categorySwitchDish.category);
+    await this.orderDishesPage.addMenuItem(categorySwitchDish.name);
+    await this.orderDishesPage.saveOrder();
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
   }
 
   private async createPickupOrder(): Promise<void> {

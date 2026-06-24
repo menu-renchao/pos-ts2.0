@@ -20,14 +20,26 @@ export class RecallPage extends PageObject {
   private readonly recalledOptions: Locator;
   private readonly recallItems: Locator;
   private readonly recallRoot: Locator;
+  private readonly addSubOrderButton: Locator;
+  private readonly amountInputs: Locator;
   private readonly combinedTipButton: Locator;
   private readonly customerName: Locator;
   private readonly editButton: Locator;
+  private readonly evenSplitButton: Locator;
   private readonly guestNameInput: Locator;
+  private readonly itemSplitButton: Locator;
+  private readonly orderTotal: Locator;
   private readonly orderStatus: Locator;
   private readonly orderTip: Locator;
   private readonly previousOrderButton: Locator;
   private readonly saveEditButton: Locator;
+  private readonly saveSplitAmountButton: Locator;
+  private readonly saveSplitButton: Locator;
+  private readonly seatSplitButton: Locator;
+  private readonly splitButton: Locator;
+  private readonly splitItemPrices: Locator;
+  private readonly splitOrderPrices: Locator;
+  private readonly unsplitButton: Locator;
   private readonly subOrderButton: Locator;
 
   constructor(page: Page) {
@@ -36,14 +48,26 @@ export class RecallPage extends PageObject {
     this.recalledOptions = page.getByTestId('recall-item-option');
     this.recallItems = page.getByTestId('recall-order-item');
     this.recallRoot = page.getByTestId('recall-page');
+    this.addSubOrderButton = page.getByTestId('split-add-suborder');
+    this.amountInputs = page.getByTestId('split-amount-input');
     this.combinedTipButton = page.getByTestId('recall-combine-split');
     this.customerName = page.getByTestId('recall-customer-name');
     this.editButton = page.getByTestId('recall-edit');
+    this.evenSplitButton = page.getByTestId('split-even-order');
     this.guestNameInput = page.getByTestId('recall-guest-name');
+    this.itemSplitButton = page.getByTestId('split-by-item');
+    this.orderTotal = page.getByTestId('recall-order-total');
     this.orderStatus = page.getByTestId('recall-order-status');
     this.orderTip = page.getByTestId('recall-order-tip');
     this.previousOrderButton = page.getByTestId('recall-previous-order');
     this.saveEditButton = page.getByTestId('recall-save-edit');
+    this.saveSplitAmountButton = page.getByTestId('split-save-amount');
+    this.saveSplitButton = page.getByTestId('split-save');
+    this.seatSplitButton = page.getByTestId('split-by-seat');
+    this.splitButton = page.getByTestId('recall-split');
+    this.splitItemPrices = page.getByTestId('split-item-price');
+    this.splitOrderPrices = page.getByTestId('split-order-price');
+    this.unsplitButton = page.getByTestId('split-unsplit');
     this.subOrderButton = page.getByTestId('recall-sub-order');
   }
 
@@ -142,5 +166,74 @@ export class RecallPage extends PageObject {
       const text = ((await this.customerName.textContent()) ?? '').trim();
       return text || null;
     });
+  }
+
+  async readOrderTotal(): Promise<number> {
+    return step('读取 Recall 订单总额', async () => Number((await this.orderTotal.textContent()) ?? '0'));
+  }
+
+  async openSplitOrder(): Promise<void> {
+    await step('打开 Recall 分单面板', async () => {
+      await this.splitButton.click();
+    });
+  }
+
+  async splitEvenly(count: number): Promise<void> {
+    await step(`在 Recall 平分订单为 ${count} 份`, async () => {
+      await this.evenSplitButton.click();
+    });
+  }
+
+  async splitByItem(): Promise<void> {
+    await step('在 Recall 按菜品分单', async () => {
+      await this.itemSplitButton.click();
+    });
+  }
+
+  async splitBySeat(): Promise<void> {
+    await step('在 Recall 按座位分单', async () => {
+      await this.seatSplitButton.click();
+    });
+  }
+
+  async splitByAmounts(amounts: readonly number[]): Promise<void> {
+    await step(`在 Recall 按金额分单 ${amounts.join(', ')}`, async () => {
+      for (const [index, amount] of amounts.entries()) {
+        if (index > 0) {
+          await this.addSubOrderButton.click();
+        }
+        await this.amountInputs.nth(index).fill(String(amount));
+      }
+    });
+  }
+
+  async saveSplit(): Promise<void> {
+    await step('保存 Recall 分单', async () => {
+      await this.saveSplitButton.click();
+    });
+  }
+
+  async saveSplitAmountCreate(): Promise<void> {
+    await step('确认按金额创建子单', async () => {
+      await this.saveSplitAmountButton.click();
+    });
+  }
+
+  async unsplit(): Promise<void> {
+    await step('撤销 Recall 分单', async () => {
+      await this.unsplitButton.click();
+    });
+  }
+
+  async readSplitOrderPrices(): Promise<number[]> {
+    return step('读取 Recall 子单金额列表', async () =>
+      (await this.splitOrderPrices.allTextContents()).map((price) => Number(price)),
+    );
+  }
+
+  async readSplitItemPrices(): Promise<number[]> {
+    return step('读取 Recall 分单菜品金额列表', async () =>
+      (await this.splitItemPrices.allTextContents()).map((price) => Number(price)),
+    );
   }
 }

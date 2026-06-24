@@ -290,4 +290,69 @@ test.describe('POS 点单页面', () => {
     expect(result.recalledItems[0]?.name).toBe(result.orderedItem.name);
     expect(result.recalledItems[0]?.price).toBe(result.orderedItem.price);
   });
+
+  test('Recall 平分订单为两份时子单数量和金额应正确', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.splitOrderEvenlyAndReadSummary(environment.posHomeUrl, 2);
+
+    expect(result.splitOrderCount).toBe(2);
+    expect(result.splitOrderPrices).toEqual([result.originalTotal / 2, result.originalTotal / 2]);
+  });
+
+  test('Recall 按菜分单时每个子单金额应等于对应菜品金额', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.splitOrderByItemAndReadSummary(environment.posHomeUrl);
+
+    expect(result.splitOrderCount).toBe(2);
+    expect(result.splitOrderPrices).toEqual(result.splitItemPrices);
+  });
+
+  test('Dine In 按座位分单时每个子单金额应等于对应菜品金额', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.splitDineInOrderBySeatAndReadSummary(environment.posHomeUrl);
+
+    expect(result.splitOrderCount).toBe(2);
+    expect(result.splitOrderPrices).toEqual(result.splitItemPrices);
+  });
+
+  test('Recall 按金额自定义分单时子单金额应等于输入金额', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.splitOrderByAmountAndReadSummary(environment.posHomeUrl, [2, 8.6]);
+
+    expect(result.splitOrderCount).toBe(2);
+    expect(result.splitOrderPrices).toEqual([2, 8.6]);
+  });
+
+  test('Recall 取消已平分订单后订单总额应恢复原值', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.cancelEvenSplitAndReadTotals(environment.posHomeUrl, 2);
+
+    expect(result.splitOrderCountBeforeCancel).toBe(2);
+    expect(result.totalAfterCancel).toBe(result.originalTotal);
+  });
 });

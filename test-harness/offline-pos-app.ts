@@ -95,7 +95,22 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <div data-testid="recall-order-tip"></div>
       <div data-testid="recall-order-status"></div>
       <div data-testid="recall-customer-name"></div>
+      <div data-testid="recall-order-total"></div>
       <div data-testid="recall-order-items"></div>
+      <section data-testid="split-panel" hidden>
+        <button data-testid="split-even-order">Even Split</button>
+        <button data-testid="split-by-item">Split By Item</button>
+        <button data-testid="split-by-seat">Split By Seat</button>
+        <button data-testid="split-add-suborder">Add Suborder</button>
+        <input data-testid="split-amount-input" />
+        <input data-testid="split-amount-input" />
+        <button data-testid="split-save">Save Split</button>
+        <button data-testid="split-save-amount">Save Amount Split</button>
+        <button data-testid="split-unsplit">Unsplit</button>
+        <div data-testid="split-item-prices"></div>
+        <div data-testid="split-order-prices"></div>
+      </section>
+      <button data-testid="recall-split">Split</button>
     </section>
     <section data-testid="report-password-panel" hidden>
       <input data-testid="report-password" type="password" />
@@ -166,6 +181,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let currentCustomerName = null;
       let savedOrders = [];
       let selectedRecallOrder = null;
+      let draftSplitPrices = [];
+      let draftSplitItemPrices = [];
       let reservations = [];
       let mainFunctions = ['Dine In', 'Drawer', 'To Go', 'Delivery'];
       let hiddenFunctions = ['Admin', 'Session'];
@@ -234,7 +251,20 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const recallOrderTip = document.querySelector('[data-testid="recall-order-tip"]');
       const recallOrderStatus = document.querySelector('[data-testid="recall-order-status"]');
       const recallCustomerName = document.querySelector('[data-testid="recall-customer-name"]');
+      const recallOrderTotal = document.querySelector('[data-testid="recall-order-total"]');
       const recallOrderItems = document.querySelector('[data-testid="recall-order-items"]');
+      const recallSplitButton = document.querySelector('[data-testid="recall-split"]');
+      const splitPanel = document.querySelector('[data-testid="split-panel"]');
+      const splitEvenOrderButton = document.querySelector('[data-testid="split-even-order"]');
+      const splitByItemButton = document.querySelector('[data-testid="split-by-item"]');
+      const splitBySeatButton = document.querySelector('[data-testid="split-by-seat"]');
+      const splitAmountInputs = document.querySelectorAll('[data-testid="split-amount-input"]');
+      const splitAddSuborderButton = document.querySelector('[data-testid="split-add-suborder"]');
+      const splitSaveButton = document.querySelector('[data-testid="split-save"]');
+      const splitSaveAmountButton = document.querySelector('[data-testid="split-save-amount"]');
+      const splitUnsplitButton = document.querySelector('[data-testid="split-unsplit"]');
+      const splitItemPrices = document.querySelector('[data-testid="split-item-prices"]');
+      const splitOrderPrices = document.querySelector('[data-testid="split-order-prices"]');
       const reportPasswordPanel = document.querySelector('[data-testid="report-password-panel"]');
       const reportPasswordInput = document.querySelector('[data-testid="report-password"]');
       const reportPasswordSaveButton = document.querySelector('[data-testid="report-password-save"]');
@@ -411,6 +441,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           splitTip: currentSplitPartTip,
           status: currentOrderStatus,
           customerName: currentCustomerName,
+          splitOrderPrices: [],
         };
         savedOrders.push(order);
         latestSavedOrderItems = [...order.items];
@@ -426,6 +457,30 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         renderRecallOrderItems();
       }
 
+      function orderTotal(order) {
+        return Number(((order?.items || []).reduce((total, item) => total + Number(item.price || 0), 0) + Number(order?.tip || 0)).toFixed(2));
+      }
+
+      function renderSplitPrices(prices) {
+        splitOrderPrices.innerHTML = '';
+        prices.forEach((price) => {
+          const row = document.createElement('div');
+          row.dataset.testid = 'split-order-price';
+          row.textContent = String(price);
+          splitOrderPrices.appendChild(row);
+        });
+      }
+
+      function renderSplitItemPrices(prices) {
+        splitItemPrices.innerHTML = '';
+        prices.forEach((price) => {
+          const row = document.createElement('div');
+          row.dataset.testid = 'split-item-price';
+          row.textContent = String(price);
+          splitItemPrices.appendChild(row);
+        });
+      }
+
       function renderRecallOrderItems() {
         recallOrderItems.innerHTML = '';
         const order = selectedRecallOrder || {
@@ -438,6 +493,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         recallOrderTip.textContent = String(order.tip || 0);
         recallOrderStatus.textContent = order.status || '';
         recallCustomerName.textContent = order.customerName || '';
+        recallOrderTotal.textContent = String(orderTotal(order));
+        renderSplitPrices(order.splitOrderPrices || []);
+        renderSplitItemPrices(draftSplitItemPrices);
         order.items.forEach((item) => {
           const row = document.createElement('div');
           row.dataset.testid = 'recall-order-item';
@@ -707,6 +765,61 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           selectedRecallOrder.customerName = '(' + recallGuestNameInput.value + ')';
           recallCustomerName.textContent = selectedRecallOrder.customerName;
         }
+      });
+      recallSplitButton.addEventListener('click', () => {
+        splitPanel.hidden = false;
+        draftSplitPrices = [...(selectedRecallOrder?.splitOrderPrices || [])];
+        draftSplitItemPrices = [];
+        renderSplitPrices(draftSplitPrices);
+        renderSplitItemPrices(draftSplitItemPrices);
+      });
+      splitEvenOrderButton.addEventListener('click', () => {
+        const total = orderTotal(selectedRecallOrder);
+        draftSplitPrices = [total / 2, total / 2];
+        draftSplitItemPrices = [];
+        renderSplitPrices(draftSplitPrices);
+        renderSplitItemPrices(draftSplitItemPrices);
+      });
+      splitByItemButton.addEventListener('click', () => {
+        draftSplitItemPrices = (selectedRecallOrder?.items || []).slice(0, 2).map((item) => Number(item.price));
+        draftSplitPrices = [...draftSplitItemPrices];
+        renderSplitItemPrices(draftSplitItemPrices);
+        renderSplitPrices(draftSplitPrices);
+      });
+      splitBySeatButton.addEventListener('click', () => {
+        draftSplitItemPrices = (selectedRecallOrder?.items || []).slice(0, 2).map((item) => Number(item.price));
+        draftSplitPrices = [...draftSplitItemPrices];
+        renderSplitItemPrices(draftSplitItemPrices);
+        renderSplitPrices(draftSplitPrices);
+      });
+      splitAddSuborderButton.addEventListener('click', () => {});
+      splitSaveButton.addEventListener('click', () => {
+        if (selectedRecallOrder) {
+          selectedRecallOrder.splitOrderPrices = [...draftSplitPrices];
+        }
+        renderRecallOrderItems();
+      });
+      splitSaveAmountButton.addEventListener('click', () => {
+        renderRecallOrderItems();
+      });
+      splitUnsplitButton.addEventListener('click', () => {
+        draftSplitPrices = [];
+        draftSplitItemPrices = [];
+        if (selectedRecallOrder) {
+          selectedRecallOrder.splitOrderPrices = [];
+        }
+        renderSplitPrices(draftSplitPrices);
+        renderSplitItemPrices(draftSplitItemPrices);
+      });
+      splitAmountInputs.forEach((input) => {
+        input.addEventListener('input', () => {
+          draftSplitPrices = Array.from(splitAmountInputs)
+            .map((amountInput) => Number(amountInput.value || '0'))
+            .filter((price) => price > 0);
+          draftSplitItemPrices = [...draftSplitPrices];
+          renderSplitPrices(draftSplitPrices);
+          renderSplitItemPrices(draftSplitItemPrices);
+        });
       });
       document.querySelector('[data-testid="home-reservation"]').addEventListener('click', () => {
         showPanel('reservation');
