@@ -16,6 +16,7 @@ import {
   posNameDisplayDish,
   posNameDisplayValue,
   requiredKdsDish,
+  splitDiscountDishes,
 } from '../../test-data/pos/dishes.js';
 import { deliveryOrderInfoSample } from '../../test-data/pos/delivery.js';
 import { languageOptions } from '../../test-data/pos/languages.js';
@@ -450,6 +451,30 @@ export class OrderEntryFlow {
     const secondSubOrderStatus = await this.recallPage.readOrderStatus();
     const parentOrderBackground = await this.recallPage.readParentOrderBackground();
     return { firstSubOrderStatus, secondSubOrderStatus, parentOrderBackground };
+  }
+
+  async readFirstDragSplitSubOrderDiscountWholePrice(homeUrl: string): Promise<string> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    const firstDish = splitDiscountDishes[0];
+    if (!firstDish) {
+      throw new Error('splitDiscountDishes must contain at least one source dish');
+    }
+    const additionalDishes = splitDiscountDishes.slice(1);
+    await this.orderDishesPage.selectMenuGroup(firstDish.group);
+    await this.orderDishesPage.selectMenuCategory(firstDish.category);
+    await this.orderDishesPage.addMenuItem(firstDish.name);
+    for (const dish of additionalDishes) {
+      await this.orderDishesPage.addMenuItem(dish.name);
+    }
+    await this.orderDishesPage.saveOrder();
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.openSplitOrder();
+    await this.recallPage.splitByDrag();
+    await this.recallPage.openSubOrder(1);
+    await this.recallPage.clickEdit();
+    return this.orderDishesPage.openDiscountAndReadWholeOrderPrice();
   }
 
   async createChineseOpenFoodWithMultiLanguageKeyboard(homeUrl: string): Promise<string> {

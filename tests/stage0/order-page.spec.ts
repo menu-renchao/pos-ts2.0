@@ -386,6 +386,20 @@ test.describe('POS 点单页面', () => {
     expect(result.parentOrderBackground).toBe('rgba(33, 150, 243, 1)');
   });
 
+  test('POS-36254 按菜分单后编辑子单折扣界面应展示子单整单金额', {
+    annotation: [jiraIssue('POS-36254')],
+  }, async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const wholeOrderPrice = await orderEntryFlow.readFirstDragSplitSubOrderDiscountWholePrice(environment.posHomeUrl);
+
+    expect(wholeOrderPrice).toBe('8.00');
+  });
+
   test('Open Food 多语言键盘输入中文后应生成中文菜名', async ({ environment, page }) => {
     const orderEntryFlow = new OrderEntryFlow(
       new PosHomePage(page),

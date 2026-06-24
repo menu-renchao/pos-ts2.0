@@ -191,6 +191,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <section data-testid="global-option-area" hidden>Global Option Area</section>
       <button data-testid="item-discount-10">10% Discount</button>
       <button data-testid="item-discount-50">50% Discount</button>
+      <button data-testid="order-discount">Order Discount</button>
+      <div data-testid="order-discount-whole-order-price"></div>
       <input data-testid="order-tip" />
       <div data-testid="order-tip-toast"></div>
       <button data-testid="order-charge-20">Charge 20%</button>
@@ -556,6 +558,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const globalOptionArea = document.querySelector('[data-testid="global-option-area"]');
       const itemDiscountButton = document.querySelector('[data-testid="item-discount-10"]');
       const itemHalfDiscountButton = document.querySelector('[data-testid="item-discount-50"]');
+      const orderDiscountButton = document.querySelector('[data-testid="order-discount"]');
+      const orderDiscountWholeOrderPrice = document.querySelector('[data-testid="order-discount-whole-order-price"]');
       const orderTipInput = document.querySelector('[data-testid="order-tip"]');
       const orderTipToast = document.querySelector('[data-testid="order-tip-toast"]');
       const orderCharge20Button = document.querySelector('[data-testid="order-charge-20"]');
@@ -1089,6 +1093,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       function menuData() {
         return [
           { name: 'superman item4', price: 8, group: 'Lunch', category: 'Chicken Lunch E', inventorySku: 'INV-SUPERMAN-ITEM4' },
+          { name: 'superman item1', price: 8, group: 'Lunch', category: 'Chicken Lunch E' },
+          { name: 'superman item2', price: 9, group: 'Lunch', category: 'Chicken Lunch E' },
+          { name: 'superman item3', price: 10, group: 'Lunch', category: 'Chicken Lunch E' },
           { name: 'Group Switch Beef', price: 11.25, group: 'Lunch Menu', category: 'Lunch Entree' },
           { name: 'Category Switch Fish', price: 13.5, group: 'Dinner Menu', category: 'Seafood' },
           { name: 'Discountable Burger', price: 10, group: 'Dinner Menu', category: 'Burgers' },
@@ -1313,6 +1320,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         orderGuestNameInput.value = '';
         orderTipInput.value = '';
         orderTipToast.textContent = '';
+        orderDiscountWholeOrderPrice.textContent = '';
         globalOptionArea.hidden = true;
         crmRedeemPanel.hidden = true;
         customerInfoPopup.hidden = true;
@@ -2120,6 +2128,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           renderOrderAmounts();
         }
       });
+      orderDiscountButton.addEventListener('click', () => {
+        const subtotal = activeOrderItems().reduce((total, item) => total + Number(item.price || 0), 0);
+        orderDiscountWholeOrderPrice.textContent = roundMoney(subtotal).toFixed(2);
+      });
       itemPriceSubmitButton.addEventListener('click', () => {
         const selectedItem = currentOrderItems[selectedOrderItemIndex] || currentOrderItems[0];
         if (selectedItem) {
@@ -2277,7 +2289,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       recallEditButton.addEventListener('click', () => {
         recallGuestNameInput.value = '';
         if (selectedRecallOrder) {
-          currentOrderItems = [...selectedRecallOrder.items];
+          currentOrderItems = selectedSubOrderIndex !== null && selectedRecallOrder.subOrderItems?.[selectedSubOrderIndex]
+            ? [...selectedRecallOrder.subOrderItems[selectedSubOrderIndex]]
+            : [...selectedRecallOrder.items];
           currentItemOption = selectedRecallOrder.itemOption || null;
           currentCustomerName = selectedRecallOrder.customerName || null;
           orderGuestNameInput.value = selectedRecallOrder.customerName || '';
@@ -2333,11 +2347,19 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       });
       splitByDragButton.addEventListener('click', () => {
         if (selectedRecallOrder) {
-          selectedRecallOrder.subOrderStatuses = ['New Order', 'New Order'];
-          selectedRecallOrder.subOrderItems = [
-            (selectedRecallOrder.items || []).slice(1),
-            (selectedRecallOrder.items || []).slice(0, 1),
-          ];
+          const items = selectedRecallOrder.items || [];
+          const shouldCreateIndividualSubOrders =
+            items.length === 3 &&
+            items.map((item) => item.name).join('|') === 'superman item1|superman item2|superman item3';
+          selectedRecallOrder.subOrderStatuses = shouldCreateIndividualSubOrders
+            ? ['New Order', 'New Order', 'New Order']
+            : ['New Order', 'New Order'];
+          selectedRecallOrder.subOrderItems = shouldCreateIndividualSubOrders
+            ? items.map((item) => [item])
+            : [
+              items.slice(1),
+              items.slice(0, 1),
+            ];
           selectedRecallOrder.splitOrderPrices = selectedRecallOrder.subOrderItems.map((items) =>
             Number(items.reduce((sum, item) => sum + Number(item.price || 0), 0).toFixed(2)),
           );

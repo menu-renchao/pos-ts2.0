@@ -10,6 +10,33 @@ export const inventoryTrackedDish: DishSample = {
   taxRate: 0.0825,
 };
 
+export const splitDiscountDishes: readonly DishSample[] = [
+  {
+    id: 'dish-superman-item1',
+    name: 'superman item1',
+    price: 8,
+    category: 'Chicken Lunch E',
+    group: 'Lunch',
+    taxRate: 0.0825,
+  },
+  {
+    id: 'dish-superman-item2',
+    name: 'superman item2',
+    price: 9,
+    category: 'Chicken Lunch E',
+    group: 'Lunch',
+    taxRate: 0.0825,
+  },
+  {
+    id: 'dish-superman-item3',
+    name: 'superman item3',
+    price: 10,
+    category: 'Chicken Lunch E',
+    group: 'Lunch',
+    taxRate: 0.0825,
+  },
+] as const;
+
 export const openFoodDish: DishSample = {
   id: 'dish-open-food',
   name: 'Open Food',
@@ -178,6 +205,7 @@ export const defaultMenuGroup: MenuGroupSample = {
   id: 'group-migration-menu',
   name: 'Migration Menu',
   dishes: [
+    ...splitDiscountDishes,
     inventoryTrackedDish,
     openFoodDish,
     discountableDish,

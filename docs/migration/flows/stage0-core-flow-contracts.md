@@ -540,6 +540,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 | stage0/test_order_page.py | TestOrderPage | `test_category_not_required_percent_charge` KDS category without discount restriction participates in 20% whole-order charge | tests/stage0/order-page.spec.ts | `OrderEntryFlow.applyPercentChargeWhenKdsDiscountAllowanceDisabled` |
 | stage0/test_order_page.py | TestOrderPage | `test_order_page_show_name` menu category displays configured POS Name while the ordered item line keeps the original item name | tests/stage0/order-page.spec.ts | `OrderEntryFlow.configureKdsItemPosNameAndReadOrderPageName` |
 | stage0/test_order_page.py | TestOrderPage | `test_batch_edit_combo_mode` adjustable combo sub-item supports edit price while fixed sub-item does not | tests/stage0/order-page.spec.ts | `OrderEntryFlow.editQuickComboSubItemPriceAndReadSubtotal` |
+| stage0/test_order_page.py | TestOrderPage | `test_split_by_item_subitem_discount` drag-split child order discount panel shows the child whole-order amount | tests/stage0/order-page.spec.ts | `OrderEntryFlow.readFirstDragSplitSubOrderDiscountWholePrice` |
 | stage0/test_order_page.py | all `Test*` classes | add dishes, modify items, save orders, validate order totals | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createTogoOrder` |
 | stage0/test_order_settle.py | all `Test*` classes | create payable orders before settlement | tests/stage0/order-settle.spec.ts | `OrderEntryFlow.createTogoOrder` |
 
@@ -585,6 +586,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 30. For KDS category percent charge behavior, set Lunch/KDS category discount restriction off in Admin, enter Dine In, add `Mongolian Chicken` from KDS, apply `20%` whole-order charge, read charge label and price, then restore the category setting.
 31. For KDS item POS Name display behavior, set the Lunch/KDS item `Pos Name Test` POS Name in Admin, refresh, enter Dine In, switch to Lunch/KDS, verify the menu displays the POS Name, order by that visible POS Name, read the ordered item name, and restore the POS Name setting.
 32. For editable combo sub-item price behavior, enter Dine In, switch to `MansuperGroup`/`MansuperCat`, order `EditPriceCombo`, read subtotal, select adjustable sub-item `ITEM1`, edit price with source input `1200`, read subtotal again, select fixed sub-item `ITEM3`, and verify edit price is unavailable.
+33. For split child-order discount behavior, enter Dine In, add `superman item1`, `superman item2`, and `superman item3` from `Lunch`/`Chicken Lunch E`, save, open Recall, drag-split into child orders, open child order 1, edit it, open the discount panel, and read the discount panel whole-order amount.
 
 ### Expected Assertions
 
@@ -643,6 +645,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - KDS category percent charge flow verifies the charge line label is `Charge(20%)` and the price is `$2.00` for the source-equivalent `$10` KDS dish when category discount restriction is off.
 - KDS item POS Name display flow verifies the configured POS Name is visible in the KDS menu category while the resulting order line displays the source item name `Pos Name Test`.
 - Editable combo sub-item price flow verifies `EditPriceCombo` subtotal changes from `$30.20` to `$40.20` after editing adjustable `ITEM1`, and fixed `ITEM3` does not expose edit price.
+- Split child-order discount flow verifies the first drag-split child order opens the discount panel with whole-order price `8.00`, matching `superman item1`.
 
 ### Page Responsibilities
 
@@ -664,6 +667,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `OrderDishesPage` owns Hold/Delay print actions, printed-item void/reduce permission prompt reads, manager password submission, order line-count reads, first-line quantity/name/color reads, and same-dish add actions.
 - `OrderDishesPage` owns Combo sub-item selection, Combo sub-item Edit Note permission prompt reads, sub-item note input, and sub-item note reads.
 - `OrderDishesPage` owns Quick Combo ordering, combo sub-item selection, combo sub-item price editing, combo subtotal text reads, and fixed-sub-item edit-price availability reads.
+- `OrderDishesPage` owns opening the whole-order discount panel and reading its whole-order amount for split child-order edit paths.
 - `OrderDishesPage` owns current category name reads and page URL reads used by required-category save behavior.
 - `OrderDishesPage` owns whole-order percent charge application plus charge label and amount reads.
 - `OrderDishesPage` owns menu-item visibility checks by displayed POS Name and ordered-line item name reads.
@@ -688,6 +692,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `test-data/pos/dishes.ts` owns `requiredKdsDish` as the source-equivalent KDS `$10` `Mongolian Chicken` required to satisfy POS-42060 and POS-42958.
 - `test-data/pos/dishes.ts` owns `posNameDisplayDish` and `posNameDisplayValue` as the source-equivalent KDS item/POS Name pair for POS-42097.
 - `test-data/pos/dishes.ts` owns `editableComboDish` as the source-equivalent `EditPriceCombo` setup for POS-42061.
+- `test-data/pos/dishes.ts` owns `splitDiscountDishes` as the source-equivalent `superman item1`/`superman item2`/`superman item3` set for POS-36254.
 - `test-data/pos/dishes.ts` owns `groupSwitchDish`, `categorySwitchDish`, and `categoryOptionDish` as the POS-33600 source-equivalent special-price decimal quantity dishes.
 - `test-data/pos/dishes.ts` owns `pricedGlobalOption` as the source-equivalent Global Option price used by POS-35660.
 - `test-data/pos/dishes.ts` owns the default POS Search Menu item `Broccoli Garlic Sauce`.
@@ -755,6 +760,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Stub KDS Category discount restriction setting persists in browser-local state; when the setting is off, a KDS item participates in whole-order percent charge calculation, so `Charge(20%)` on `$10` `Mongolian Chicken` renders `$2.00`.
 - Stub KDS item POS Name setting persists in browser-local state; menu buttons render the configured POS Name, but clicking that button adds the original dish name to the order line.
 - Stub editable combo creates `EditPriceCombo` with adjustable `ITEM1` and `ITEM2`, fixed `ITEM3`, initial subtotal `$30.20`, and editing adjustable `ITEM1` with the source price input updates subtotal to `$40.20` while fixed `ITEM3` disables edit price.
+- Stub drag split creates three individual child orders for the source `superman item1`/`superman item2`/`superman item3` path; Recall child-order edit loads only the selected child items, so the discount panel whole-order amount for child order 1 is `8.00`.
 - Stub same-item combine mode `dont-combine` keeps each repeated dish as its own order line even when separate-same-item is disabled.
 - Stub same-item combine mode `auto-same-status` combines only same-status unsent lines, so a sent-kitchen line and a newly added unsent line stay separate.
 - Stub same-item combine mode `include-kitchen` combines the newly added same dish into the sent-kitchen line, keeps the source `(1In Kitchen)` marker, quantity `2`, and red color `rgba(113, 9, 9, 1)`.

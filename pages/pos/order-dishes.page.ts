@@ -53,6 +53,8 @@ export class OrderDishesPage extends PageObject {
   private readonly orderGuestNameInput: Locator;
   private readonly orderOptions: Locator;
   private readonly orderReward: Locator;
+  private readonly orderDiscountButton: Locator;
+  private readonly orderDiscountWholeOrderPrice: Locator;
   private readonly orderExitButton: Locator;
   private readonly orderModifyButton: Locator;
   private readonly orderCharge20Button: Locator;
@@ -142,6 +144,8 @@ export class OrderDishesPage extends PageObject {
     this.orderGuestNameInput = page.getByTestId('order-guest-name');
     this.orderOptions = page.getByTestId('order-option');
     this.orderReward = page.getByTestId('order-reward');
+    this.orderDiscountButton = page.getByTestId('order-discount');
+    this.orderDiscountWholeOrderPrice = page.getByTestId('order-discount-whole-order-price');
     this.orderExitButton = page.getByTestId('order-exit');
     this.orderModifyButton = page.getByTestId('order-modify');
     this.orderCharge20Button = page.getByTestId('order-charge-20');
@@ -550,6 +554,13 @@ export class OrderDishesPage extends PageObject {
         throw new Error(`Unsupported offline order charge rate: ${rate}`);
       }
       await this.orderCharge20Button.click();
+    });
+  }
+
+  async openDiscountAndReadWholeOrderPrice(): Promise<string> {
+    return step('打开折扣界面并读取整单金额', async () => {
+      await this.orderDiscountButton.click();
+      return ((await this.orderDiscountWholeOrderPrice.textContent()) ?? '').trim();
     });
   }
 
