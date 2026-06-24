@@ -45,6 +45,7 @@ export class OrderDishesPage extends PageObject {
   private readonly openFoodKeyboardTextInput: Locator;
   private readonly orderItemName: Locator;
   private readonly orderOptions: Locator;
+  private readonly orderReward: Locator;
   private readonly orderExitButton: Locator;
   private readonly orderModifyButton: Locator;
   private readonly pickupButton: Locator;
@@ -65,6 +66,7 @@ export class OrderDishesPage extends PageObject {
   private readonly searchInput: Locator;
   private readonly searchResult: Locator;
   private readonly tipInput: Locator;
+  private readonly reduceItemButton: Locator;
   private readonly voidItemButton: Locator;
   private readonly comboItemButton: Locator;
   private readonly comboOptionReduceButton: Locator;
@@ -109,6 +111,7 @@ export class OrderDishesPage extends PageObject {
     this.openFoodKeyboardTextInput = page.getByTestId('open-food-keyboard-text');
     this.orderItemName = page.getByTestId('order-item-name');
     this.orderOptions = page.getByTestId('order-option');
+    this.orderReward = page.getByTestId('order-reward');
     this.orderExitButton = page.getByTestId('order-exit');
     this.orderModifyButton = page.getByTestId('order-modify');
     this.pickupButton = page.getByTestId('order-pickup');
@@ -131,6 +134,7 @@ export class OrderDishesPage extends PageObject {
     this.searchInput = page.getByTestId('order-search');
     this.searchResult = page.getByTestId('order-search-result');
     this.tipInput = page.getByTestId('order-tip');
+    this.reduceItemButton = page.getByTestId('order-reduce-item');
     this.voidItemButton = page.getByTestId('order-void-item');
     this.comboItemButton = page.getByTestId('order-combo-item');
     this.comboOptionReduceButton = page.getByTestId('combo-option-reduce');
@@ -301,6 +305,16 @@ export class OrderDishesPage extends PageObject {
 
   async readSubtotal(): Promise<number> {
     return step('读取当前订单小计', async () => Number((await this.subtotal.textContent()) ?? '0'));
+  }
+
+  async readRewardText(): Promise<string> {
+    return step('读取当前订单 Reward Discount 文案', async () => ((await this.orderReward.textContent()) ?? '').trim());
+  }
+
+  async reduceFirstItemToZero(): Promise<void> {
+    await step('将当前订单首个菜品数量减少为 0', async () => {
+      await this.reduceItemButton.click();
+    });
   }
 
   async searchMenuItem(keyword: string): Promise<void> {

@@ -123,7 +123,10 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 | source_file | source_class | source_test_patterns | target_specs | target_flow_methods |
 |---|---|---|---|---|
 | crm/test_crm_order.py | TestCRMOrder | `test_delivery_redeem`, `test_remove_redeem_reselect`, `test_order_edit_remove_redeem_item`, `test_order_redeem_item_switch`, `test_order_edit_remove_discount`, `test_settle_redeem_free_item` | tests/crm/crm-order.spec.ts | `CrmOrderFlow.createDeliveryRedeemOrderAndReadRecallHeader`, `CrmOrderFlow.removeMemberReselectAndReadRecallHeader`, `CrmOrderFlow.createRedeemItemOrderAndReadEditDisabledControls`, `CrmOrderFlow.createRedeemItemOrderAndReadSettlementSwitchMemberState`, `CrmOrderFlow.createDiscountOrderEditRemoveDiscountAndReadRecall`, `CrmOrderFlow.redeemFreeItemAndReadPointBalance`, `CrmRewardFlow.applyRedeemItem`, `CrmRewardFlow.removeRedeemItem`, `CrmRewardFlow.switchRedeemItem` |
-| crm/test_crm_order_redeem_discount.py | TestRedeemDiscount | `test_redeem_*`, `test_max_discount`, `test_reduce_item0` | tests/crm/crm-order-redeem-discount.spec.ts | `CrmRewardFlow.applyRedeemDiscount`, `CrmRewardFlow.validateRedeemPricing` |
+| crm/test_crm_order_redeem_discount.py | TestRedeemDiscount | `test_redeem_discount` | tests/crm/crm-order-redeem-discount.spec.ts | `CrmOrderRedeemDiscountFlow.applyPercentageDiscountAndReadRecallReward` |
+| crm/test_crm_order_redeem_discount.py | TestRedeemDiscount | `test_redeem_discount_options` | tests/crm/crm-order-redeem-discount.spec.ts | `CrmOrderRedeemDiscountFlow.readAvailablePercentageDiscountsForHighPointMember` |
+| crm/test_crm_order_redeem_discount.py | TestRedeemDiscount | `test_max_discount` | tests/crm/crm-order-redeem-discount.spec.ts | `CrmOrderRedeemDiscountFlow.applyMaxCappedPercentageDiscountAndReadRecallReward` |
+| crm/test_crm_order_redeem_discount.py | TestRedeemDiscount | `test_reduce_item0` | tests/crm/crm-order-redeem-discount.spec.ts | `CrmOrderRedeemDiscountFlow.applyDiscountThenReduceItemsToZeroAndReadReward` |
 | crm/test_crm_paypage.py | TestCrmPayPage | `test_redeem_*`, `test_pay_page_redeem_item`, `test_semipay_page_redeem_*` | tests/crm/crm-paypage.spec.ts | `CrmSettlementFlow.applyPayPageRedeem`, `CrmSettlementFlow.applySemiPayRedeem` |
 | crm/test_crm_points_calculation.py | TestCrmPointsCalculation | `test_login_member_redeem_point`, `test_earn_points_rules_by_spent_pos_order`, `test_redeem_free_item_modify_global_option` | tests/crm/crm-points-calculation.spec.ts | `CrmPointsFlow.redeemPoints`, `CrmPointsFlow.earnPointsForOrder` |
 
@@ -147,6 +150,10 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 9. `CrmOrderFlow.createRedeemItemOrderAndReadSettlementSwitchMemberState`: create a Dine In order, attach source member, redeem a free item, add a regular dish, enter settlement, and read Switch Member control class.
 10. `CrmOrderFlow.createDiscountOrderEditRemoveDiscountAndReadRecall`: create a Delivery order, attach source member, record points, apply `10% Off`, save, recall, confirm Reward Discount exists, edit the recalled order, delete the redeem discount, save, recall again, and read points plus Reward Discount count.
 11. `CrmOrderFlow.redeemFreeItemAndReadPointBalance`: attach source member, record point balance, redeem free item, add a dish, verify header points drop by 10, save, verify Admin CRM Loyalty points, recall the order, and verify Recall header points.
+12. `CrmOrderRedeemDiscountFlow.applyPercentageDiscountAndReadRecallReward`: create a Dine In order, attach `crmSourceRewardMember`, add `groupSwitchDish`, apply `10% Off`, save, recall the order, and read subtotal plus Reward Discount.
+13. `CrmOrderRedeemDiscountFlow.readAvailablePercentageDiscountsForHighPointMember`: create a Dine In order, attach `crmHighPointRewardMember`, add a dish, reopen Redeem, and read all visible percentage discount options.
+14. `CrmOrderRedeemDiscountFlow.applyMaxCappedPercentageDiscountAndReadRecallReward`: create a Dine In order, attach `crmSourceRewardMember`, add `groupSwitchDish`, apply `30% Off` with `crmMaxDiscountRewardSetting.maxDiscountAmount`, save, recall, and read subtotal plus Reward Discount.
+15. `CrmOrderRedeemDiscountFlow.applyDiscountThenReduceItemsToZeroAndReadReward`: create a Dine In order, attach `crmSourceRewardMember`, apply `10% Off`, add `groupSwitchDish`, read subtotal and current Reward Discount, reduce the item to zero, and read the Reward Discount display text.
 
 ### Expected Assertions
 
@@ -160,6 +167,10 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 - Settlement Switch Member is disabled after the order uses a CRM Redeem Item.
 - Removing a Redeem Discount from a recalled order keeps member points unchanged and removes the Reward Discount row.
 - Redeem Free Item deducts 10 points immediately and the reduced balance is visible in the order header, Admin CRM Loyalty, and Recall header.
+- POS-29552 verifies recalled Reward Discount equals negative `subtotal * 0.1` rounded to two decimals.
+- POS-29547 verifies a high-point member can see at least `10% Off` and `20% Off` discount rules.
+- POS-29554 verifies a `30% Off` rule with maximum discount amount caps the recalled Reward Discount at `-1.00`.
+- POS-29561 verifies the current order Reward Discount recalculates to the source-equivalent text `-0.00` after the only item is reduced to zero.
 
 ### Page Responsibilities
 
@@ -175,6 +186,9 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 - `OrderDishesPage.readSettlementSwitchMemberClass` owns settlement-side Switch Member disabled-state assertions.
 - `PosCrmPage.applyRedeemDiscount`, `PosCrmPage.removeRedeemDiscount`, and `RecallPage.readRewardDiscountCount` own discount application/removal and post-recall Reward Discount checks.
 - `PosCrmPage.readHeaderPointBalance`, `PosCrmPage.applyRedeemItem`, `PosCrmPage.quitRedeem`, `PosCrmPage.readMemberSearchPointResult`, and `RecallPage.readCrmOrderHeaderInfo` own free-item point-balance assertions.
+- `PosCrmPage.readRedeemDiscountOptions` owns the Redeem Discount option list used by POS-29547.
+- `OrderDishesPage.readSubtotal`, `OrderDishesPage.readRewardText`, and `OrderDishesPage.reduceFirstItemToZero` own the current-order price recalculation checks used by POS-29561.
+- `RecallPage.readOrderPriceSummary` owns recalled-order subtotal and Reward Discount reads for POS-29552 and POS-29554.
 
 ### Client/Data Responsibilities
 
@@ -186,6 +200,9 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 - `test-data/pos/delivery.ts` owns `deliveryOrderInfoSample`.
 - `test-data/crm/members.ts` owns `crmSourceRewardMember` and `crmTargetRewardMember`.
 - `test-data/pos/dishes.ts` owns `crmRedeemItemDish`.
+- `test-data/crm/members.ts` owns `crmHighPointRewardMember`, `crmRewardSettings`, and `crmMaxDiscountRewardSetting`.
+- `test-data/pos/dishes.ts` owns `groupSwitchDish` for percentage discount subtotal calculations.
+- `StubCrmRewardClient.calculateDiscount` supports optional maximum discount caps for source CRM loyalty reward rules.
 
 ### Stub Behavior
 
@@ -198,6 +215,9 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 - Offline settlement disables Switch Member when the current order contains a redeem item.
 - Offline recalled-order edit reopens all recalled orders, locks controls only for redeem-item orders, and persists discount deletion back to the selected recalled order.
 - Offline Redeem Free Item deducts 10 points from the shared seeded member record so POS header, Admin CRM Loyalty search, and Recall header read the same reduced balance.
+- Offline Redeem Discount options expose deterministic `10% Off` and `20% Off` entries for a high-point member.
+- Offline `30% Off` stores `crmDiscountMaxAmount = 1` on the order so recalled Reward Discount is capped at `-1.00`.
+- Offline current-order Reward Discount is rendered separately from numeric order state so reducing the only item to zero preserves the source UI text `-0.00`.
 
 ### Live Gaps
 

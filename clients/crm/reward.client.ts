@@ -53,8 +53,9 @@ export class StubCrmRewardClient {
     };
   }
 
-  calculateDiscount(subtotal: number, discountRate: number = crmRewardSettings.discountRate): number {
-    return -roundMoney(subtotal * discountRate);
+  calculateDiscount(subtotal: number, discountRate: number = crmRewardSettings.discountRate, maxAmount?: number): number {
+    const discount = roundMoney(subtotal * discountRate);
+    return -roundMoney(maxAmount === undefined ? discount : Math.min(discount, maxAmount));
   }
 
   canMoveOrder(order: Pick<CrmRewardOrderState, 'hasRedeemItem'>): boolean {

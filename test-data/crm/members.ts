@@ -30,15 +30,32 @@ export const crmTargetRewardMember: CrmRewardMemberSample = {
   points: 80,
 };
 
+export const crmHighPointRewardMember: CrmRewardMemberSample = {
+  ...defaultCrmMember,
+  memberId: 'member-pos-29547-high-points',
+  phone: '2505223015',
+  firstName: 'CRM',
+  lastName: 'High Points',
+  displayName: 'CRM High Points',
+  points: 300,
+};
+
 export const crmRewardMembers: readonly CrmRewardMemberSample[] = [
   crmSourceRewardMember,
   crmTargetRewardMember,
+  crmHighPointRewardMember,
 ] as const;
 
 export const crmRewardSettings = {
   discountName: '10% Off',
   discountRate: 0.1,
   pointsPerPaidOrder: 10,
+} as const;
+
+export const crmMaxDiscountRewardSetting = {
+  discountName: '30% Off',
+  discountRate: 0.3,
+  maxDiscountAmount: 1,
 } as const;
 
 export type CrmMemberRecord = {

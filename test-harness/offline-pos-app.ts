@@ -84,6 +84,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <div data-testid="order-menu-items"></div>
       <div data-testid="order-tax">0</div>
       <div data-testid="order-subtotal">0</div>
+      <div data-testid="order-reward">0</div>
       <div data-testid="order-item-name"></div>
       <div data-testid="order-item-price">0</div>
       <input data-testid="order-search" />
@@ -108,8 +109,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         <button data-testid="crm-redeem-add-new-loyalty">Add New Loyalty</button>
         <button data-testid="crm-remove-member">Remove Member</button>
         <button data-testid="crm-redeem-delete">Delete Redeem</button>
+        <div data-testid="crm-redeem-discount-option">10% Off</div>
+        <div data-testid="crm-redeem-discount-option">20% Off</div>
         <button data-testid="crm-redeem-discount">10% Off</button>
         <button data-testid="crm-redeem-discount-20">20% Off</button>
+        <button data-testid="crm-redeem-discount-30">30% Off</button>
         <button data-testid="crm-redeem-credit">Redeem Credit</button>
         <button data-testid="crm-redeem-item-option">Redeem Item Option</button>
         <button data-testid="crm-redeem-item">CRM Redeem Item</button>
@@ -120,6 +124,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       </section>
       <div data-testid="crm-member-name"></div>
       <div data-testid="crm-point-balance">0</div>
+      <button data-testid="order-reduce-item">Reduce Item</button>
       <button data-testid="order-void-item">Void Item</button>
       <button data-testid="order-modify">Modify</button>
       <button data-testid="global-option-no">Global Option No</button>
@@ -291,6 +296,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let currentMenuMode = localStorage.getItem('currentMenuMode') || 'POS';
       let currentCrmMember = null;
       let currentCrmDiscountRate = 0;
+      let currentCrmDiscountMaxAmount = null;
       let currentHasRedeemItem = false;
       let currentRedeemControlsLocked = false;
       let currentSettlementSelectMode = false;
@@ -299,6 +305,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const crmMembers = [
         { phone: '(64)673-37557', name: 'CRM Member A', points: 100 },
         { phone: '(92)923-69168', name: 'CRM Member B', points: 80 },
+        { phone: '2505223015', name: 'CRM High Points', points: 300 },
         { phone: '(93)422-11234', name: 'cloud member', points: 100, source: 'cloud' },
         { phone: '(93)422-11234', name: 'local member', points: 100, source: 'local' },
       ];
@@ -350,6 +357,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const orderSaveButton = document.querySelector('[data-testid="order-save"]');
       const orderTax = document.querySelector('[data-testid="order-tax"]');
       const orderSubtotal = document.querySelector('[data-testid="order-subtotal"]');
+      const orderReward = document.querySelector('[data-testid="order-reward"]');
       const orderItemName = document.querySelector('[data-testid="order-item-name"]');
       const orderItemPrice = document.querySelector('[data-testid="order-item-price"]');
       const orderSearchInput = document.querySelector('[data-testid="order-search"]');
@@ -376,6 +384,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const crmRedeemDeleteButton = document.querySelector('[data-testid="crm-redeem-delete"]');
       const crmRedeemDiscountButton = document.querySelector('[data-testid="crm-redeem-discount"]');
       const crmRedeemDiscount20Button = document.querySelector('[data-testid="crm-redeem-discount-20"]');
+      const crmRedeemDiscount30Button = document.querySelector('[data-testid="crm-redeem-discount-30"]');
       const crmRedeemCreditButton = document.querySelector('[data-testid="crm-redeem-credit"]');
       const crmRedeemItemOptionButton = document.querySelector('[data-testid="crm-redeem-item-option"]');
       const crmRedeemItemButton = document.querySelector('[data-testid="crm-redeem-item"]');
@@ -385,6 +394,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const crmSplitSaveButton = document.querySelector('[data-testid="crm-split-save"]');
       const crmMemberName = document.querySelector('[data-testid="crm-member-name"]');
       const crmPointBalance = document.querySelector('[data-testid="crm-point-balance"]');
+      const orderReduceItemButton = document.querySelector('[data-testid="order-reduce-item"]');
       const orderVoidItemButton = document.querySelector('[data-testid="order-void-item"]');
       const orderModifyButton = document.querySelector('[data-testid="order-modify"]');
       const globalOptionNoButton = document.querySelector('[data-testid="global-option-no"]');
@@ -689,9 +699,15 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         const subtotal = currentOrderItems
           .filter((item) => item.state !== 'Voided')
           .reduce((total, item) => total + Number(item.price || 0), 0);
+        const rewardDiscount = calculateRewardDiscount({
+          subtotal,
+          crmDiscountRate: currentCrmDiscountRate,
+          crmDiscountMaxAmount: currentCrmDiscountMaxAmount,
+        });
         orderTax.textContent = String(Number((itemCount * 0.6).toFixed(2)));
         orderSubtotal.textContent = String(Number(subtotal.toFixed(2)));
-        settleTotal.textContent = String(Number((subtotal + calculateRewardDiscount({ subtotal, crmDiscountRate: currentCrmDiscountRate })).toFixed(2)));
+        orderReward.textContent = formatRewardDiscount(rewardDiscount, currentCrmDiscountRate);
+        settleTotal.textContent = String(Number((subtotal + rewardDiscount).toFixed(2)));
         orderItemName.textContent = currentOrderItems[0]?.name || '';
         orderItemPrice.textContent = String(currentOrderItems[0]?.price || 0);
         comboOptionCount.textContent = String(currentComboOptionCount);
@@ -711,7 +727,16 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       }
 
       function calculateRewardDiscount(order) {
-        return Number((Number(order?.subtotal || 0) * Number(order?.crmDiscountRate || 0) * -1).toFixed(2));
+        const discount = Number((Number(order?.subtotal || 0) * Number(order?.crmDiscountRate || 0)).toFixed(2));
+        const cappedDiscount = order?.crmDiscountMaxAmount == null ? discount : Math.min(discount, Number(order.crmDiscountMaxAmount));
+        return Number((cappedDiscount * -1).toFixed(2));
+      }
+
+      function formatRewardDiscount(amount, discountRate) {
+        if (Number(amount) === 0 && Number(discountRate || 0) > 0) {
+          return '-0.00';
+        }
+        return Number(amount || 0).toFixed(2);
       }
 
       function renderDeliveryInfoRows() {
@@ -768,6 +793,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         currentGlobalOptionCount = 0;
         currentCrmMember = null;
         currentCrmDiscountRate = 0;
+        currentCrmDiscountMaxAmount = null;
         currentHasRedeemItem = false;
         currentRedeemControlsLocked = false;
         currentSettlementSelectMode = false;
@@ -792,6 +818,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           currentEditingOrder.itemOption = currentItemOption;
           currentEditingOrder.crmMember = currentCrmMember ? { ...currentCrmMember } : null;
           currentEditingOrder.crmDiscountRate = currentCrmDiscountRate;
+          currentEditingOrder.crmDiscountMaxAmount = currentCrmDiscountMaxAmount;
           currentEditingOrder.hasRedeemItem = currentHasRedeemItem;
           currentEditingOrder.rewardDiscount = calculateRewardDiscount(currentEditingOrder);
           currentEditingOrder = null;
@@ -809,6 +836,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           subtotal: Number(orderSubtotal.textContent || '0'),
           crmMember: selectedMemberRecord(),
           crmDiscountRate: currentCrmDiscountRate,
+          crmDiscountMaxAmount: currentCrmDiscountMaxAmount,
           hasRedeemItem: currentHasRedeemItem,
           rewardDiscount: 0,
           guestPhone: currentDeliveryInfoRows[0] || '',
@@ -899,7 +927,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         recallGuestPhone.textContent = formatRecallPhone(order.guestPhone || '');
         recallGuestAddress.textContent = order.guestAddress || '';
         recallOrderSubtotal.textContent = String(order.subtotal ?? orderTotal(order));
-        recallOrderReward.textContent = String(order.rewardDiscount || 0);
+        recallOrderReward.textContent = formatRewardDiscount(order.rewardDiscount || 0, order.crmDiscountRate);
         recallOrderTotal.textContent = String(orderTotal(order));
         recallCrmMemberName.textContent = order.crmMember?.name || '';
         recallCrmPointBalance.textContent = String(order.crmMember?.points || 0);
@@ -1203,15 +1231,18 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       });
       crmRedeemDiscountButton.addEventListener('click', () => {
         currentCrmDiscountRate = 0.1;
+        currentCrmDiscountMaxAmount = null;
         renderOrderAmounts();
         if (selectedRecallOrder) {
           selectedRecallOrder.crmDiscountRate = currentCrmDiscountRate;
+          selectedRecallOrder.crmDiscountMaxAmount = currentCrmDiscountMaxAmount;
           selectedRecallOrder.rewardDiscount = calculateRewardDiscount(selectedRecallOrder);
           renderRecallOrderItems();
         }
       });
       crmRedeemDiscount20Button.addEventListener('click', () => {
         currentCrmDiscountRate = 0.2;
+        currentCrmDiscountMaxAmount = null;
         const member = selectedMemberRecord();
         if (member) {
           member.points -= 15;
@@ -1220,6 +1251,19 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         }
         if (selectedRecallOrder) {
           selectedRecallOrder.crmDiscountRate = currentCrmDiscountRate;
+          selectedRecallOrder.crmDiscountMaxAmount = currentCrmDiscountMaxAmount;
+          selectedRecallOrder.rewardDiscount = calculateRewardDiscount(selectedRecallOrder);
+          renderRecallOrderItems();
+        }
+        renderOrderAmounts();
+      });
+      crmRedeemDiscount30Button.addEventListener('click', () => {
+        currentCrmDiscountRate = 0.3;
+        currentCrmDiscountMaxAmount = 1;
+        renderOrderAmounts();
+        if (selectedRecallOrder) {
+          selectedRecallOrder.crmDiscountRate = currentCrmDiscountRate;
+          selectedRecallOrder.crmDiscountMaxAmount = currentCrmDiscountMaxAmount;
           selectedRecallOrder.rewardDiscount = calculateRewardDiscount(selectedRecallOrder);
           renderRecallOrderItems();
         }
@@ -1227,9 +1271,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       });
       crmRedeemDeleteButton.addEventListener('click', () => {
         currentCrmDiscountRate = 0;
+        currentCrmDiscountMaxAmount = null;
         renderOrderAmounts();
         if (selectedRecallOrder) {
           selectedRecallOrder.crmDiscountRate = 0;
+          selectedRecallOrder.crmDiscountMaxAmount = null;
           selectedRecallOrder.rewardDiscount = 0;
           renderRecallOrderItems();
         }
@@ -1287,6 +1333,12 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       });
       orderVoidItemButton.addEventListener('click', () => {
         managerPasswordPopup.hidden = false;
+      });
+      orderReduceItemButton.addEventListener('click', () => {
+        if (currentOrderItems[0]) {
+          currentOrderItems[0].price = 0;
+          renderOrderAmounts();
+        }
       });
       orderModifyButton.addEventListener('click', () => {
         globalOptionArea.hidden = false;
@@ -1412,6 +1464,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           currentItemOption = selectedRecallOrder.itemOption || null;
           currentCrmMember = selectedRecallOrder.crmMember ? { ...selectedRecallOrder.crmMember } : null;
           currentCrmDiscountRate = selectedRecallOrder.crmDiscountRate || 0;
+          currentCrmDiscountMaxAmount = selectedRecallOrder.crmDiscountMaxAmount ?? null;
           currentHasRedeemItem = Boolean(selectedRecallOrder.hasRedeemItem);
           currentRedeemControlsLocked = Boolean(selectedRecallOrder.hasRedeemItem);
           currentSettlementSelectMode = false;
