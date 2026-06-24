@@ -48,6 +48,7 @@ export class OrderDishesPage extends PageObject {
   private readonly orderInventoryButton: Locator;
   private readonly orderItemName: Locator;
   private readonly orderItemCount: Locator;
+  private readonly orderLineItems: Locator;
   private readonly orderGuestNameInput: Locator;
   private readonly orderOptions: Locator;
   private readonly orderReward: Locator;
@@ -124,6 +125,7 @@ export class OrderDishesPage extends PageObject {
     this.orderInventoryButton = page.getByTestId('order-inventory');
     this.orderItemName = page.getByTestId('order-item-name');
     this.orderItemCount = page.getByTestId('order-item-count');
+    this.orderLineItems = page.getByTestId('order-line-item');
     this.orderGuestNameInput = page.getByTestId('order-guest-name');
     this.orderOptions = page.getByTestId('order-option');
     this.orderReward = page.getByTestId('order-reward');
@@ -226,6 +228,18 @@ export class OrderDishesPage extends PageObject {
     });
   }
 
+  async semiSendHoldPrint(): Promise<void> {
+    await step('Hold 打印当前订单菜品', async () => {
+      await this.page.getByTestId('order-send-hold-print').click();
+    });
+  }
+
+  async semiSendDelayPrint(): Promise<void> {
+    await step('Delay 打印当前订单菜品', async () => {
+      await this.page.getByTestId('order-send-delay-print').click();
+    });
+  }
+
   async readTax(): Promise<number> {
     return step('读取当前订单税额', async () => Number((await this.itemTax.textContent()) ?? '0'));
   }
@@ -287,6 +301,22 @@ export class OrderDishesPage extends PageObject {
   async voidSelectedItem(): Promise<void> {
     await step('尝试删除当前点单菜品', async () => {
       await this.voidItemButton.click();
+    });
+  }
+
+  async voidSelectedItemAndReadToast(): Promise<string> {
+    return step('尝试删除当前点单菜品并读取权限提示', async () => {
+      await this.voidItemButton.click();
+      return ((await this.tipToast.textContent()) ?? '').trim();
+    });
+  }
+
+  async changeSelectedItemQuantityAndReadToast(quantity: number): Promise<string> {
+    return step(`修改当前菜品数量为 ${quantity} 并读取权限提示`, async () => {
+      await this.itemQuantityInput.fill(String(quantity));
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      await this.itemQuantitySubmitButton.click();
+      return ((await this.tipToast.textContent()) ?? '').trim();
     });
   }
 
@@ -465,6 +495,22 @@ export class OrderDishesPage extends PageObject {
 
   async readItemCount(): Promise<string> {
     return step('读取点单菜品总数量', async () => ((await this.orderItemCount.textContent()) ?? '').trim());
+  }
+
+  async readOrderLineCount(): Promise<number> {
+    return step('读取点单菜品行数', async () => this.orderLineItems.count());
+  }
+
+  async readFirstItemQuantity(): Promise<string> {
+    return step('读取点单首行菜品数量', async () => (await this.orderLineItems.first().getAttribute('data-quantity')) ?? '');
+  }
+
+  async readFirstItemName(): Promise<string> {
+    return step('读取点单首行菜品名称', async () => ((await this.orderLineItems.first().textContent()) ?? '').trim());
+  }
+
+  async readFirstItemColor(): Promise<string> {
+    return step('读取点单首行菜品颜色', async () => (await this.orderLineItems.first().getAttribute('data-color')) ?? '');
   }
 
   async fillGuestName(name: string): Promise<void> {

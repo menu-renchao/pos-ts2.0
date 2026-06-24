@@ -518,6 +518,11 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 | stage0/test_order_page.py | TestOrderPage | `test_item_count` integer item count persists after save and Recall | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createOrderWithIntegerItemCountAndReadRecall` |
 | stage0/test_order_page.py | TestOrderPage | `test_order_big_tip` pre-save large tip warning and Recall tip persistence | tests/stage0/order-page.spec.ts | `OrderEntryFlow.addLargeTipBeforeSaveAndReadRecall` |
 | stage0/test_order_page.py | TestOrderPage | `test_order_after_big_tip` post-credit large tip warning and tip persistence | tests/stage0/order-page.spec.ts | `OrderEntryFlow.addLargeTipAfterCreditPaymentAndReadRecall` |
+| stage0/test_order_page.py | TestOrderPage | `test_staff_without_void_printed_item_void_hold` no-permission staff deletes Hold printed item after manager password | tests/stage0/order-page.spec.ts | `OrderEntryFlow.deleteHeldPrintedItemWithManagerPassword` |
+| stage0/test_order_page.py | TestOrderPage | `test_staff_without_void_printed_item_void_delay` no-permission staff reduces Delay printed item to zero after manager password | tests/stage0/order-page.spec.ts | `OrderEntryFlow.deleteDelayedPrintedItemWithManagerPassword` |
+| stage0/test_order_page.py | TestOrderPage | `test_combine_same_item_dont_automatically_combine` same dish does not combine when Dont Combine is configured | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createThreeSameItemsWithoutAutoCombine` |
+| stage0/test_order_page.py | TestOrderPage | `test_combine_same_item_automatically_combine` same dish with different kitchen status stays on separate lines | tests/stage0/order-page.spec.ts | `OrderEntryFlow.addSameItemAfterKitchenWithSameStatusCombine` |
+| stage0/test_order_page.py | TestOrderPage | `test_combine_same_item_combine_include_in_kitchen` same dish combines into sent kitchen line with quantity, In Kitchen marker, and red color | tests/stage0/order-page.spec.ts | `OrderEntryFlow.addSameItemAfterKitchenWithIncludeKitchenCombine` |
 | stage0/test_order_page.py | all `Test*` classes | add dishes, modify items, save orders, validate order totals | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createTogoOrder` |
 | stage0/test_order_settle.py | all `Test*` classes | create payable orders before settlement | tests/stage0/order-settle.spec.ts | `OrderEntryFlow.createTogoOrder` |
 
@@ -543,6 +548,11 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 10. For integer item count behavior, add two source-equivalent items, change the latest item quantity to `3`, read the order-page count as `4`, save, open Recall, and read the recalled count as `4`.
 11. For pre-save large-tip behavior, add a To Go item, compute the source integer-cent tip as `floor(total * 100 / 2) + 100`, add the tip, read the over-50-percent warning, save, open Recall, and read the persisted tip.
 12. For post-credit large-tip behavior, create and credit-pay a To Go order, open Recall, compute the source integer-cent tip from the recalled total, add the tip after payment, read the over-50-percent warning, and read the persisted tip.
+13. For no-permission Hold printed item deletion, remove Void Printed Item permission from staff `1`, log in with password `123`, create a Dine In order with two dishes, Hold-print the order, Recall edit it, attempt void, read the permission prompt, submit manager password, save, Recall edit again, and read remaining item line count.
+14. For no-permission Delay printed item deletion, use the same staff setup, Delay-print the order, Recall edit it, change the printed item quantity to `0`, read the permission prompt, submit manager password, save, Recall edit again, and read remaining item line count.
+15. For Dont Combine same-item behavior, set combine mode to Dont Combine and separate same item off, add the same dish three times, read order line count, save, then restore same-item settings.
+16. For Auto Combine same-status behavior, set combine mode to Auto Same Status and separate same item off, send the first same dish to kitchen, Recall edit, add the same dish again, read order line count, save, then restore settings.
+17. For Include Kitchen combine behavior, set combine mode to Include Kitchen and separate same item off, send the first same dish to kitchen, Recall edit, add the same dish again, then read line count, first-line quantity, first-line name, and first-line color.
 
 ### Expected Assertions
 
@@ -581,6 +591,11 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Item-count flow verifies the active order count and recalled order count both equal `4` after adding one item plus another item with quantity `3`.
 - Pre-save large-tip flow verifies the warning text `The tip is more than 50% of the meal. Confirm to add?` and the recalled tip value computed from the source integer-cent formula.
 - Post-credit large-tip flow verifies the same large-tip warning after credit payment and the recalled tip value after adding the tip from Recall.
+- Hold printed item deletion verifies the no-permission staff sees `You do not have permission to delete printed dish, please enter the password` and manager authorization leaves one item line after save and Recall edit.
+- Delay printed item deletion verifies reducing a printed item to `0` shows the same no-permission prompt and manager authorization leaves one item line after save and Recall edit.
+- Dont Combine mode verifies adding the same dish three times creates three visible order lines.
+- Auto Same Status mode verifies a sent-kitchen line and a newly added unsent line are not combined, leaving two visible order lines.
+- Include Kitchen mode verifies the sent-kitchen and newly added same dish combine into one visible line with quantity `2`, name containing `(1In Kitchen)`, and color `rgba(113, 9, 9, 1)`.
 
 ### Page Responsibilities
 
@@ -598,7 +613,8 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `OrderDishesPage` owns Open Food keyboard input, item special-price input, 50% discount action, Delivery Info reads, combo add/reduce actions, and combo option-count reads.
 - `OrderDishesPage` owns menu search input, search result reads, search clear, order-page exit, Global Option Modify entry, Add/Count/Reduce actions, Modify-area visibility reads, and Global Option count reads.
 - `OrderDishesPage` owns guest-name input, Search Menu class reads, item-count reads, source integer-cent tip entry, large-tip toast reads, and credit-payment action for order-page paths.
-- `AdminPage` owns Search Menu enable/disable persistence for source setting behavior.
+- `OrderDishesPage` owns Hold/Delay print actions, printed-item void/reduce permission prompt reads, manager password submission, order line-count reads, first-line quantity/name/color reads, and same-dish add actions.
+- `AdminPage` owns Search Menu enable/disable persistence, staff Void Printed Item permission, same-item combine mode, and separate-same-item setting behavior.
 - `RecallPage` owns recalled item state, option reads, suborder tip reads, split-order combine action, order status reads, order selection, guest-name edit, customer-name reads, order total reads, split panel entry, even/item/seat/amount/drag split actions, split save/confirm/unsplit actions, suborder settlement/payment actions, suborder status reads, parent-card background reads, and split price reads.
 - `RecallPage` owns Recall subtotal reads for source cases that verify post-save subtotal instead of the active order page.
 - `RecallPage` owns Recall item-count reads, recalled tip reads, and post-credit large-tip entry/toast reads.
@@ -609,7 +625,8 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `test-data/pos/dishes.ts` owns category-level and item-level option order samples, including Chinese category and optional sub-option variants.
 - `test-data/pos/dishes.ts` owns POS/EMENU search-item names and the stable non-combo dish used to enter Global Option Modify flows.
 - `test-data/pos/dishes.ts` owns the default POS Search Menu item `Broccoli Garlic Sauce`.
-- `test-data/pos/admin-settings.ts` owns canonical POS menu mode and Search Menu setting values.
+- `test-data/pos/admin-settings.ts` owns canonical POS menu mode, Search Menu, same-item combine mode, separate-same-item, and permission setting values.
+- `test-data/pos/permissions.ts` owns the source-equivalent staff `1` password `123` and manager password `11`.
 - `test-data/pos/delivery.ts` owns the Delivery customer/address/note sample used by the Delivery order Info assertion.
 - `test-data/pos/languages.ts` owns canonical language and keyboard-related values reused by language and Open Food paths.
 - `test-data/pos/payments.ts` owns expected payment/tender values reused by settlement.
@@ -655,6 +672,12 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Stub item count sums non-voided item quantities and renders the same count on the active order page and Recall.
 - Stub large-tip handling accepts the source integer-cent value, converts it to dollars for persisted tip text, and renders the source warning when the tip exceeds 50% of the meal total.
 - Stub credit payment saves the order as paid, after which Recall can add and persist a post-credit tip.
+- Stub staff permission state persists in browser-local state; staff password `123` without Void Printed Item permission triggers the source permission prompt for sent/printed items.
+- Stub Hold and Delay print actions mark active items as sent-to-kitchen printed items and save the order for Recall editing.
+- Stub manager password `11` authorizes the pending printed-item delete and removes the target line, leaving the remaining line visible after save and Recall edit.
+- Stub same-item combine mode `dont-combine` keeps each repeated dish as its own order line even when separate-same-item is disabled.
+- Stub same-item combine mode `auto-same-status` combines only same-status unsent lines, so a sent-kitchen line and a newly added unsent line stay separate.
+- Stub same-item combine mode `include-kitchen` combines the newly added same dish into the sent-kitchen line, keeps the source `(1In Kitchen)` marker, quantity `2`, and red color `rgba(113, 9, 9, 1)`.
 
 ### Live Gaps
 

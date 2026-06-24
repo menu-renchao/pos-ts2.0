@@ -59,6 +59,19 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         <option value="true">true</option>
         <option value="false">false</option>
       </select>
+      <select data-testid="admin-combine-same-item">
+        <option value="dont-combine">dont-combine</option>
+        <option value="auto-same-status">auto-same-status</option>
+        <option value="include-kitchen">include-kitchen</option>
+      </select>
+      <select data-testid="admin-separate-same-item">
+        <option value="true">true</option>
+        <option value="false">false</option>
+      </select>
+      <select data-testid="admin-staff-void-printed-item">
+        <option value="true">true</option>
+        <option value="false">false</option>
+      </select>
       <button data-testid="admin-save-settings">Save Settings</button>
       <button data-testid="admin-member-list">CRM Loyalty</button>
       <section data-testid="member-list-permission-popup" hidden>
@@ -90,6 +103,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <div data-testid="order-subtotal">0</div>
       <div data-testid="order-reward">0</div>
       <div data-testid="order-item-name"></div>
+      <div data-testid="order-items-list"></div>
       <div data-testid="order-item-count">0</div>
       <div data-testid="order-item-price">0</div>
       <input data-testid="order-guest-name" />
@@ -103,6 +117,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <div data-testid="order-options"></div>
       <div data-testid="order-sub-options"></div>
       <button data-testid="order-send-kitchen">Send Kitchen</button>
+      <button data-testid="order-send-hold-print">Hold Print</button>
+      <button data-testid="order-send-delay-print">Delay Print</button>
       <button data-testid="order-exit">Exit Order</button>
       <button data-testid="order-settle">Settle</button>
       <div data-testid="settle-total">0</div>
@@ -343,6 +359,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let currentGlobalOptionCount = 0;
       let currentMenuMode = localStorage.getItem('currentMenuMode') || 'POS';
       let currentSearchMenuEnabled = localStorage.getItem('currentSearchMenuEnabled') !== 'false';
+      let currentCombineSameItemMode = localStorage.getItem('currentCombineSameItemMode') || 'dont-combine';
+      let currentSeparateSameItem = localStorage.getItem('currentSeparateSameItem') !== 'false';
+      let currentStaffCanVoidPrintedItem = localStorage.getItem('currentStaffCanVoidPrintedItem') !== 'false';
       let currentCrmMember = null;
       let currentCrmDiscountRate = 0;
       let currentCrmDiscountMaxAmount = null;
@@ -373,6 +392,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let draftSplitPrices = [];
       let draftSplitItemPrices = [];
       let selectedSubOrderIndex = null;
+      let pendingPrintedDeleteIndex = null;
       let reservations = [];
       let mainFunctions = ['Dine In', 'Drawer', 'To Go', 'Delivery'];
       let hiddenFunctions = ['Admin', 'Session'];
@@ -398,6 +418,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const backToWorkButton = document.querySelector('[data-testid="clock-back-to-work"]');
       const checkoutButton = document.querySelector('[data-testid="clock-checkout"]');
       const adminPage = document.querySelector('[data-testid="admin-page"]');
+      const combineSameItemSelect = document.querySelector('[data-testid="admin-combine-same-item"]');
       const joinMemberButton = document.querySelector('[data-testid="home-join-member"]');
       const joinMemberRegistration = document.querySelector('[data-testid="join-member-registration"]');
       const joinMemberFirstNameInput = document.querySelector('[data-testid="join-member-first-name"]');
@@ -415,6 +436,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const orderSubtotal = document.querySelector('[data-testid="order-subtotal"]');
       const orderReward = document.querySelector('[data-testid="order-reward"]');
       const orderItemName = document.querySelector('[data-testid="order-item-name"]');
+      const orderItemsList = document.querySelector('[data-testid="order-items-list"]');
       const orderItemCount = document.querySelector('[data-testid="order-item-count"]');
       const orderItemPrice = document.querySelector('[data-testid="order-item-price"]');
       const orderGuestNameInput = document.querySelector('[data-testid="order-guest-name"]');
@@ -428,6 +450,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const orderOptions = document.querySelector('[data-testid="order-options"]');
       const orderSubOptions = document.querySelector('[data-testid="order-sub-options"]');
       const orderSendKitchenButton = document.querySelector('[data-testid="order-send-kitchen"]');
+      const orderSendHoldPrintButton = document.querySelector('[data-testid="order-send-hold-print"]');
+      const orderSendDelayPrintButton = document.querySelector('[data-testid="order-send-delay-print"]');
       const orderExitButton = document.querySelector('[data-testid="order-exit"]');
       const orderSettleButton = document.querySelector('[data-testid="order-settle"]');
       const settleTotal = document.querySelector('[data-testid="settle-total"]');
@@ -606,6 +630,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const reservationHistoryButton = document.querySelector('[data-testid="reservation-history"]');
       const reservationHistorySearchInput = document.querySelector('[data-testid="reservation-history-search"]');
       const reservationHistoryList = document.querySelector('[data-testid="reservation-history-list"]');
+      const separateSameItemSelect = document.querySelector('[data-testid="admin-separate-same-item"]');
+      const staffVoidPrintedItemSelect = document.querySelector('[data-testid="admin-staff-void-printed-item"]');
       const languageSelect = document.querySelector('[data-testid="user-default-language"]');
       const saveLanguageButton = document.querySelector('[data-testid="save-user-default-language"]');
       const menuModeSelect = document.querySelector('[data-testid="admin-menu-mode"]');
@@ -807,6 +833,81 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         return tipAmount > Number(total || 0) * 0.5 ? 'The tip is more than 50% of the meal. Confirm to add?' : '';
       }
 
+      function displayItemName(item) {
+        if (item.inKitchenQuantity) {
+          return '(' + item.inKitchenQuantity + 'In Kitchen) ' + item.name;
+        }
+        return item.name || '';
+      }
+
+      function itemLineColor(item) {
+        return item.inKitchenQuantity ? 'rgba(113, 9, 9, 1)' : '';
+      }
+
+      function activeOrderItems() {
+        return currentOrderItems.filter((item) => item.state !== 'Voided' && Number(item.quantity || 0) > 0);
+      }
+
+      function addDishToCurrentOrder(dish) {
+        const sameNameItems = currentOrderItems.filter((item) => item.name === dish.name && item.state !== 'Voided');
+        const combineWithKitchen = currentCombineSameItemMode === 'include-kitchen' && !currentSeparateSameItem;
+        const combineSameStatus = currentCombineSameItemMode === 'auto-same-status' && !currentSeparateSameItem;
+        let target = null;
+        if (combineWithKitchen) {
+          target = sameNameItems[0] || null;
+        } else if (combineSameStatus) {
+          target = sameNameItems.find((item) => Boolean(item.sentToKitchen) === false) || null;
+        }
+        if (target) {
+          target.quantity = Number(target.quantity || 1) + 1;
+          target.price = Number((Number(target.unitPrice || dish.price || 0) * target.quantity).toFixed(2));
+          renderOrderAmounts();
+          return;
+        }
+        currentOrderItems.push({
+          name: dish.name,
+          price: dish.price,
+          unitPrice: dish.price,
+          quantity: 1,
+          inventorySku: dish.inventorySku || '',
+          state: '',
+          sentToKitchen: false,
+          inKitchenQuantity: 0,
+        });
+        renderOrderAmounts();
+      }
+
+      function markItemsPrinted(printType) {
+        currentOrderItems.forEach((item) => {
+          if (item.state !== 'Voided' && Number(item.quantity || 0) > 0) {
+            item.printType = printType;
+            item.sentToKitchen = true;
+            item.inKitchenQuantity = Number(item.quantity || 1);
+          }
+        });
+      }
+
+      function shouldRequirePrintedItemPassword(item) {
+        return Boolean(item?.sentToKitchen) && !currentStaffCanVoidPrintedItem && currentEmployeePassword === '123';
+      }
+
+      function deleteOrderItemAt(index) {
+        if (index == null || index < 0 || !currentOrderItems[index]) {
+          return;
+        }
+        currentOrderItems.splice(index, 1);
+        pendingPrintedDeleteIndex = null;
+        orderTipToast.textContent = '';
+        managerPasswordPopup.hidden = true;
+        renderOrderAmounts();
+      }
+
+      function requestPrintedItemPassword(index) {
+        pendingPrintedDeleteIndex = index;
+        orderTipToast.textContent = 'You do not have permission to delete printed dish, please enter the password';
+        managerPasswordPopup.hidden = false;
+      }
+
       function firstTrackedInventoryItem(items) {
         return (items || []).find((item) => item.inventorySku && item.state !== 'Voided') || null;
       }
@@ -879,13 +980,27 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         orderReward.textContent = formatRewardDiscount(rewardDiscount, currentCrmDiscountRate);
         settleTotal.textContent = String(Number((subtotal + rewardDiscount).toFixed(2)));
         settleUnpaidAmount.textContent = String(calculatePayPageUnpaidAmount(subtotal, rewardDiscount, itemCount));
-        orderItemName.textContent = currentOrderItems[0]?.name || '';
+        orderItemName.textContent = currentOrderItems[0] ? displayItemName(currentOrderItems[0]) : '';
         orderItemCount.textContent = formatItemCount(currentOrderItems);
         orderItemPrice.textContent = String(currentOrderItems[0]?.price || 0);
         itemQuantityInput.value = String(currentOrderItems[currentOrderItems.length - 1]?.quantity || 1);
+        renderOrderItemRows();
         comboOptionCount.textContent = String(currentComboOptionCount);
         globalOptionListCountValue.textContent = String(currentGlobalOptionCount);
         orderSearchInput.className = currentSearchMenuEnabled ? 'iptgrp' : 'iptgrp hide';
+      }
+
+      function renderOrderItemRows() {
+        orderItemsList.innerHTML = '';
+        activeOrderItems().forEach((item) => {
+          const row = document.createElement('div');
+          row.dataset.testid = 'order-line-item';
+          row.dataset.quantity = String(item.quantity || 1);
+          row.dataset.color = itemLineColor(item);
+          row.style.color = itemLineColor(item);
+          row.textContent = displayItemName(item);
+          orderItemsList.appendChild(row);
+        });
       }
 
       function renderCurrentCrmState() {
@@ -988,15 +1103,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         orderMenuItems.innerHTML = '';
         menuData().forEach((dish) => {
           orderMenuItems.appendChild(createButton('order-menu-item', dish.name, () => {
-            currentOrderItems.push({
-              name: dish.name,
-              price: dish.price,
-              unitPrice: dish.price,
-              quantity: 1,
-              inventorySku: dish.inventorySku || '',
-              state: '',
-            });
-            renderOrderAmounts();
+            addDishToCurrentOrder(dish);
           }));
         });
         renderOptionControls();
@@ -1023,6 +1130,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         currentRedeemControlsLocked = false;
         currentSettlementSelectMode = false;
         currentEditingOrder = null;
+        pendingPrintedDeleteIndex = null;
         orderSearchInput.value = '';
         orderSearchResult.textContent = '';
         orderSaveAlert.textContent = '';
@@ -1379,8 +1487,14 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       saveSettingsButton.addEventListener('click', () => {
         currentMenuMode = menuModeSelect.value;
         currentSearchMenuEnabled = searchMenuSelect.value !== 'false';
+        currentCombineSameItemMode = combineSameItemSelect.value;
+        currentSeparateSameItem = separateSameItemSelect.value !== 'false';
+        currentStaffCanVoidPrintedItem = staffVoidPrintedItemSelect.value !== 'false';
         localStorage.setItem('currentMenuMode', currentMenuMode);
         localStorage.setItem('currentSearchMenuEnabled', String(currentSearchMenuEnabled));
+        localStorage.setItem('currentCombineSameItemMode', currentCombineSameItemMode);
+        localStorage.setItem('currentSeparateSameItem', String(currentSeparateSameItem));
+        localStorage.setItem('currentStaffCanVoidPrintedItem', String(currentStaffCanVoidPrintedItem));
       });
       adminMemberListButton.addEventListener('click', () => {
         if (currentEmployeePassword === '123') {
@@ -1424,10 +1538,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         saveCurrentOrder();
       });
       orderSendKitchenButton.addEventListener('click', () => {
+        markItemsPrinted('kitchen');
         currentOrderStatus = 'Sent';
-        if (trackedInventoryQuantity(currentOrderItems) > 0) {
-          saveCurrentOrder();
-        }
+        saveCurrentOrder();
       });
       orderExitButton.addEventListener('click', () => {
         showPanel('home');
@@ -1504,6 +1617,16 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       });
       settleCreditButton.addEventListener('click', () => {
         currentOrderStatus = 'Paid';
+        saveCurrentOrder();
+      });
+      orderSendHoldPrintButton.addEventListener('click', () => {
+        markItemsPrinted('hold');
+        currentOrderStatus = 'New Order';
+        saveCurrentOrder();
+      });
+      orderSendDelayPrintButton.addEventListener('click', () => {
+        markItemsPrinted('delay');
+        currentOrderStatus = 'New Order';
         saveCurrentOrder();
       });
       crmRedeemButton.addEventListener('click', () => {
@@ -1656,6 +1779,12 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         }
       });
       orderVoidItemButton.addEventListener('click', () => {
+        const targetIndex = currentOrderItems.findIndex((item) => item.state !== 'Voided' && Number(item.quantity || 0) > 0);
+        const targetItem = currentOrderItems[targetIndex];
+        if (shouldRequirePrintedItemPassword(targetItem)) {
+          requestPrintedItemPassword(targetIndex);
+          return;
+        }
         managerPasswordPopup.hidden = false;
       });
       orderReduceItemButton.addEventListener('click', () => {
@@ -1703,6 +1832,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         renderOrderAmounts();
       });
       managerPasswordSubmitButton.addEventListener('click', () => {
+        if (managerPasswordInput.value === '11' && pendingPrintedDeleteIndex != null) {
+          deleteOrderItemAt(pendingPrintedDeleteIndex);
+          return;
+        }
         if (managerPasswordInput.value === '11' && currentOrderItems[0]) {
           currentOrderItems[0].state = 'Voided';
           managerPasswordPopup.hidden = true;
@@ -1731,6 +1864,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         const selectedItem = currentOrderItems[currentOrderItems.length - 1];
         if (selectedItem) {
           const quantity = Number(itemQuantityInput.value || '1');
+          if (quantity === 0 && shouldRequirePrintedItemPassword(selectedItem)) {
+            requestPrintedItemPassword(currentOrderItems.length - 1);
+            return;
+          }
           selectedItem.quantity = quantity;
           selectedItem.price = Number((Number(selectedItem.unitPrice || selectedItem.price || 0) * quantity).toFixed(2));
           renderOrderAmounts();
@@ -2051,6 +2188,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       renderFunctionCards();
       renderLanguage();
       searchMenuSelect.value = String(currentSearchMenuEnabled);
+      combineSameItemSelect.value = currentCombineSameItemMode;
+      separateSameItemSelect.value = String(currentSeparateSameItem);
+      staffVoidPrintedItemSelect.value = String(currentStaffCanVoidPrintedItem);
       renderClockControls();
     </script>
   </body>

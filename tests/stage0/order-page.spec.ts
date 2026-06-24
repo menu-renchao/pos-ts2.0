@@ -564,4 +564,84 @@ test.describe('POS 点单页面', () => {
     expect(result.tipToast).toBe('The tip is more than 50% of the meal. Confirm to add?');
     expect(result.recallTip).toBe(result.expectedTip);
   });
+
+  test('POS-34873 无 Void Printed Item 权限时删除 Hold 打印菜需经理密码且删除成功', {
+    annotation: [jiraIssue('POS-34873')],
+  }, async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.deleteHeldPrintedItemWithManagerPassword(environment.posHomeUrl);
+
+    expect(result.permissionToast).toContain('You do not have permission to delete printed dish, please enter the password');
+    expect(result.itemLineCountAfterDelete).toBe(1);
+  });
+
+  test('POS-35325 无 Void Printed Item 权限时减少 Delay 打印菜到 0 需经理密码且删除成功', {
+    annotation: [jiraIssue('POS-35325')],
+  }, async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.deleteDelayedPrintedItemWithManagerPassword(environment.posHomeUrl);
+
+    expect(result.permissionToast).toContain('You do not have permission to delete printed dish, please enter the password');
+    expect(result.itemLineCountAfterDelete).toBe(1);
+  });
+
+  test('POS-34895 不自动合并相同菜时连续点同一菜应展示三行', {
+    annotation: [jiraIssue('POS-34895')],
+  }, async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.createThreeSameItemsWithoutAutoCombine(environment.posHomeUrl);
+
+    expect(result.itemLineCount).toBe(3);
+  });
+
+  test('POS-34903 自动合并相同状态菜时已送厨菜和新加菜应分两行', {
+    annotation: [jiraIssue('POS-34903')],
+  }, async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.addSameItemAfterKitchenWithSameStatusCombine(environment.posHomeUrl);
+
+    expect(result.itemLineCount).toBe(2);
+  });
+
+  test('POS-34910 合并包含已送厨相同菜时应展示一行数量 2 和 In Kitchen 标记', {
+    annotation: [jiraIssue('POS-34910')],
+  }, async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.addSameItemAfterKitchenWithIncludeKitchenCombine(environment.posHomeUrl);
+
+    expect(result.itemLineCount).toBe(1);
+    expect(result.firstItemQuantity).toBe('2');
+    expect(result.firstItemName).toContain('(1In Kitchen)');
+    expect(result.firstItemColor).toContain('rgba(113, 9, 9, 1)');
+  });
 });

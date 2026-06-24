@@ -4,6 +4,8 @@ export const adminSettings = {
   allowBatchUnpaidOrder: 'allowBatchUnpaidOrder',
   fastFoodMode: 'fastFoodMode',
   menuMode: 'menuMode',
+  combineSameItem: 'combineSameItem',
+  voidPrintedItemPermission: 'voidPrintedItemPermission',
 } as const;
 
 export type AdminSettingName = (typeof adminSettings)[keyof typeof adminSettings];
@@ -15,3 +17,11 @@ export const menuModes = {
 } as const;
 
 export type MenuMode = (typeof menuModes)[keyof typeof menuModes];
+
+export const combineSameItemModes = {
+  dontCombine: 'dont-combine',
+  autoSameStatus: 'auto-same-status',
+  includeKitchen: 'include-kitchen',
+} as const;
+
+export type CombineSameItemMode = (typeof combineSameItemModes)[keyof typeof combineSameItemModes];

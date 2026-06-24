@@ -4,7 +4,7 @@ import type { DeliveryPage } from '../../pages/pos/delivery.page.js';
 import type { OrderDishesPage } from '../../pages/pos/order-dishes.page.js';
 import type { RecalledItemOption, RecalledOrderItem, RecallPage } from '../../pages/pos/recall.page.js';
 import type { DishSample, OptionOrderSample } from '../../test-data/pos/domain-types.js';
-import { menuModes } from '../../test-data/pos/admin-settings.js';
+import { combineSameItemModes, menuModes } from '../../test-data/pos/admin-settings.js';
 import {
   discountableDish,
   groupSwitchDish,
@@ -13,6 +13,7 @@ import {
 } from '../../test-data/pos/dishes.js';
 import { deliveryOrderInfoSample } from '../../test-data/pos/delivery.js';
 import { languageOptions } from '../../test-data/pos/languages.js';
+import { staffSamples, validEmployeePassword } from '../../test-data/pos/permissions.js';
 
 export type OrderTaxEditResult = {
   beforeEditTax: number;
@@ -115,6 +116,18 @@ export type LargeTipResult = {
   tipToast: string;
   expectedTip: string;
   recallTip: string;
+};
+
+export type VoidPrintedItemPermissionResult = {
+  permissionToast: string;
+  itemLineCountAfterDelete: number;
+};
+
+export type SameItemCombineResult = {
+  itemLineCount: number;
+  firstItemQuantity?: string;
+  firstItemName?: string;
+  firstItemColor?: string;
 };
 
 export class OrderEntryFlow {
@@ -558,6 +571,84 @@ export class OrderEntryFlow {
     return { tipToast, expectedTip, recallTip };
   }
 
+  async deleteHeldPrintedItemWithManagerPassword(homeUrl: string): Promise<VoidPrintedItemPermissionResult> {
+    await this.openDineInOrderAsNoVoidPrintedStaff(homeUrl);
+    await this.orderDishesPage.semiSendHoldPrint();
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.clickEdit();
+    const permissionToast = await this.orderDishesPage.voidSelectedItemAndReadToast();
+    await this.orderDishesPage.submitManagerPassword(validEmployeePassword);
+    await this.orderDishesPage.saveOrder();
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.clickEdit();
+    const itemLineCountAfterDelete = await this.orderDishesPage.readOrderLineCount();
+    return { permissionToast, itemLineCountAfterDelete };
+  }
+
+  async deleteDelayedPrintedItemWithManagerPassword(homeUrl: string): Promise<VoidPrintedItemPermissionResult> {
+    await this.openDineInOrderAsNoVoidPrintedStaff(homeUrl);
+    await this.orderDishesPage.semiSendDelayPrint();
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.clickEdit();
+    const permissionToast = await this.orderDishesPage.changeSelectedItemQuantityAndReadToast(0);
+    await this.orderDishesPage.submitManagerPassword(validEmployeePassword);
+    await this.orderDishesPage.saveOrder();
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.clickEdit();
+    const itemLineCountAfterDelete = await this.orderDishesPage.readOrderLineCount();
+    return { permissionToast, itemLineCountAfterDelete };
+  }
+
+  async createThreeSameItemsWithoutAutoCombine(homeUrl: string): Promise<SameItemCombineResult> {
+    await this.configureSameItemCombine(homeUrl, combineSameItemModes.dontCombine);
+    await this.homePage.refresh();
+    await this.homePage.clickDineIn();
+    await this.addSameDishTimes(3);
+    const itemLineCount = await this.orderDishesPage.readOrderLineCount();
+    await this.orderDishesPage.saveOrder();
+    await this.restoreSameItemSettings();
+    return { itemLineCount };
+  }
+
+  async addSameItemAfterKitchenWithSameStatusCombine(homeUrl: string): Promise<SameItemCombineResult> {
+    await this.configureSameItemCombine(homeUrl, combineSameItemModes.autoSameStatus);
+    await this.homePage.refresh();
+    await this.homePage.clickDineIn();
+    await this.addSameDishTimes(1);
+    await this.orderDishesPage.sendAllToKitchen();
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.clickEdit();
+    await this.addSameDishTimes(1);
+    const itemLineCount = await this.orderDishesPage.readOrderLineCount();
+    await this.orderDishesPage.saveOrder();
+    await this.restoreSameItemSettings();
+    return { itemLineCount };
+  }
+
+  async addSameItemAfterKitchenWithIncludeKitchenCombine(homeUrl: string): Promise<SameItemCombineResult> {
+    await this.configureSameItemCombine(homeUrl, combineSameItemModes.includeKitchen);
+    await this.homePage.refresh();
+    await this.homePage.clickDineIn();
+    await this.addSameDishTimes(1);
+    await this.orderDishesPage.sendAllToKitchen();
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.clickEdit();
+    await this.addSameDishTimes(1);
+    const itemLineCount = await this.orderDishesPage.readOrderLineCount();
+    const firstItemQuantity = await this.orderDishesPage.readFirstItemQuantity();
+    const firstItemName = await this.orderDishesPage.readFirstItemName();
+    const firstItemColor = await this.orderDishesPage.readFirstItemColor();
+    await this.orderDishesPage.saveOrder();
+    await this.restoreSameItemSettings();
+    return { itemLineCount, firstItemQuantity, firstItemName, firstItemColor };
+  }
+
   private async openOrderAndAddDish(homeUrl: string, dish: DishSample): Promise<void> {
     await this.homePage.open(homeUrl);
     await this.homePage.clickTogo();
@@ -572,6 +663,51 @@ export class OrderEntryFlow {
     await this.orderDishesPage.selectMenuGroup(dish.group);
     await this.orderDishesPage.selectMenuCategory(dish.category);
     await this.orderDishesPage.addMenuItem(dish.name);
+  }
+
+  private async openDineInOrderAsNoVoidPrintedStaff(homeUrl: string): Promise<void> {
+    if (!this.adminPage) {
+      throw new Error('AdminPage is required for staff permission setup');
+    }
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.setStaffVoidPrintedItemPermission(false);
+    await this.homePage.refresh();
+    await this.homePage.logout();
+    await this.homePage.inputEmployeePassword(staffSamples.noVoidPrintedItem.password);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.selectMenuGroup(categorySwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(categorySwitchDish.category);
+    await this.orderDishesPage.addMenuItem(categorySwitchDish.name);
+  }
+
+  private async configureSameItemCombine(homeUrl: string, mode: (typeof combineSameItemModes)[keyof typeof combineSameItemModes]): Promise<void> {
+    if (!this.adminPage) {
+      throw new Error('AdminPage is required for same item combine setup');
+    }
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.setCombineSameItem(mode, false);
+  }
+
+  private async restoreSameItemSettings(): Promise<void> {
+    if (!this.adminPage) {
+      return;
+    }
+    await this.homePage.clickAdmin();
+    await this.adminPage.setCombineSameItem(combineSameItemModes.dontCombine, true);
+    await this.homePage.refresh();
+  }
+
+  private async addSameDishTimes(times: number): Promise<void> {
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    for (let index = 0; index < times; index += 1) {
+      await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    }
   }
 
   private async openOrderAndAddTwoDishes(homeUrl: string, isDineIn: boolean): Promise<void> {
