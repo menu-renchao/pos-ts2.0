@@ -256,6 +256,16 @@ export const batchPropertyMenuItems = {
 
 export const requiredMenuPropertyLabels = ['Gluten-free', 'Vege', 'Lactose-free'] as const;
 
+export const takeOutTaxFreeDish: DishSample & { taxId: string } = {
+  id: 'dish-takeout-tax-free',
+  name: 'taxtest',
+  price: 8,
+  category: 'Chicken Lunch E',
+  group: 'Lunch',
+  taxId: 'tax-takeout-free',
+  taxRate: 0.075,
+};
+
 export const weightQuickComboDish = {
   name: 'weight combo',
   group: 'MansuperGroup',
@@ -284,6 +294,7 @@ export const defaultMenuGroup: MenuGroupSample = {
     requiredKdsDish,
     posNameDisplayDish,
     unitPriceDish,
+    takeOutTaxFreeDish,
     {
       id: 'dish-combo-max',
       name: comboMaxModifyDish.name,

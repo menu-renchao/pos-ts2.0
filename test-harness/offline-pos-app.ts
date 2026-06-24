@@ -160,6 +160,15 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <button data-testid="admin-property-detail-open">Open Property Detail</button>
       <div data-testid="admin-property-item-labels"></div>
       <div data-testid="admin-property-all-labels"></div>
+      <input data-testid="admin-tax-free-item-group" />
+      <input data-testid="admin-tax-free-item-category" />
+      <input data-testid="admin-tax-free-item-name" />
+      <select data-testid="admin-tax-free-enabled">
+        <option value="true">true</option>
+        <option value="false">false</option>
+      </select>
+      <button data-testid="admin-tax-free-save">Save Take Out Tax Free</button>
+      <div data-testid="admin-tax-free-confirmation"></div>
       <button data-testid="admin-save-settings">Save Settings</button>
       <button data-testid="admin-member-list">CRM Loyalty</button>
       <section data-testid="member-list-permission-popup" hidden>
@@ -557,6 +566,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       };
       const adminAllMenuPropertyLabels = ['Gluten-free', 'Vege', 'Lactose-free', 'Spicy', 'Vegan'];
       const adminMenuItemProperties = {};
+      const adminTakeOutTaxFreeItems = {};
       let adminGlobalOptions = [];
       let selectedGlobalOptionName = '';
       let adminCreatedMenuItems = [];
@@ -657,6 +667,12 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const adminPropertyDetailOpenButton = document.querySelector('[data-testid="admin-property-detail-open"]');
       const adminPropertyItemLabels = document.querySelector('[data-testid="admin-property-item-labels"]');
       const adminPropertyAllLabels = document.querySelector('[data-testid="admin-property-all-labels"]');
+      const adminTaxFreeItemGroupInput = document.querySelector('[data-testid="admin-tax-free-item-group"]');
+      const adminTaxFreeItemCategoryInput = document.querySelector('[data-testid="admin-tax-free-item-category"]');
+      const adminTaxFreeItemNameInput = document.querySelector('[data-testid="admin-tax-free-item-name"]');
+      const adminTaxFreeEnabledSelect = document.querySelector('[data-testid="admin-tax-free-enabled"]');
+      const adminTaxFreeSaveButton = document.querySelector('[data-testid="admin-tax-free-save"]');
+      const adminTaxFreeConfirmation = document.querySelector('[data-testid="admin-tax-free-confirmation"]');
       const joinMemberButton = document.querySelector('[data-testid="home-join-member"]');
       const joinMemberRegistration = document.querySelector('[data-testid="join-member-registration"]');
       const joinMemberFirstNameInput = document.querySelector('[data-testid="join-member-first-name"]');
@@ -1294,6 +1310,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           quantity: 1,
           category: dish.category || '',
           inventorySku: dish.inventorySku || '',
+          taxRate: dish.taxRate,
           unitPriceItem: Boolean(dish.unitPriceItem),
           quickCombo: Boolean(dish.quickCombo),
           state: '',
@@ -1384,6 +1401,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           { name: 'superman item1', price: 8, group: 'Lunch', category: 'Chicken Lunch E' },
           { name: 'superman item2', price: 9, group: 'Lunch', category: 'Chicken Lunch E' },
           { name: 'superman item3', price: 10, group: 'Lunch', category: 'Chicken Lunch E' },
+          { name: 'taxtest', price: 8, group: 'Lunch', category: 'Chicken Lunch E', taxRate: 0.075 },
           { name: 'Group Switch Beef', price: 11.25, group: 'Lunch Menu', category: 'Lunch Entree' },
           { name: 'Category Switch Fish', price: 13.5, group: 'Dinner Menu', category: 'Seafood' },
           { name: 'Discountable Burger', price: 10, group: 'Dinner Menu', category: 'Burgers' },
@@ -1458,6 +1476,16 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         return Number((cents / 100).toFixed(2));
       }
 
+      function currentOrderTaxAmount() {
+        return activeOrderItems().reduce((total, item) => {
+          if (item.taxRate !== undefined) {
+            return total + Number(item.price || 0) * Number(item.taxRate || 0);
+          }
+
+          return total + 0.6;
+        }, 0);
+      }
+
       function renderOrderAmounts() {
         const itemCount = currentOrderItems.filter((item) => item.state !== 'Voided').length;
         const subtotal = currentOrderItems
@@ -1470,7 +1498,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           crmDiscountMaxAmount: currentCrmDiscountMaxAmount,
           crmFixedRewardAmount: currentCrmFixedRewardAmount,
         });
-        orderTax.textContent = currentOrderTaxVoided ? '0' : String(Number((itemCount * 0.6).toFixed(2)));
+        orderTax.textContent = currentOrderTaxVoided ? '0' : String(Number(currentOrderTaxAmount().toFixed(2)));
         orderSubtotal.textContent = currentEditableCombo() ? '$' + roundMoney(subtotal).toFixed(2) : String(roundMoney(subtotal));
         orderReward.textContent = formatRewardDiscount(rewardDiscount, currentCrmDiscountRate);
         const settlementAmount = roundMoney(subtotal + rewardDiscount + chargeAmount + currentOrderTip);
@@ -2147,6 +2175,17 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       });
       adminPropertyDetailOpenButton.addEventListener('click', () => {
         renderItemPropertyDetail();
+      });
+      adminTaxFreeSaveButton.addEventListener('click', () => {
+        const key = adminPropertyKey(
+          adminTaxFreeItemGroupInput.value,
+          adminTaxFreeItemCategoryInput.value,
+          adminTaxFreeItemNameInput.value,
+        );
+        adminTakeOutTaxFreeItems[key] = adminTaxFreeEnabledSelect.value === 'true';
+        adminTaxFreeConfirmation.textContent = adminTaxFreeEnabledSelect.value === 'true'
+          ? 'No tax will apply to the Item when take out.Are you sure you want to save?'
+          : '';
       });
       saveLanguageButton.addEventListener('click', () => {
         userDefaultLanguage = languageSelect.value;

@@ -2,12 +2,14 @@ import type { AdminPage } from '../../pages/pos/admin.page.js';
 import type { PosHomePage } from '../../pages/pos/home.page.js';
 import type { OrderDishesPage } from '../../pages/pos/order-dishes.page.js';
 import type { RecallPage } from '../../pages/pos/recall.page.js';
+import type { PosAuditLog, PosDbClient } from '../../clients/db/pos-db.client.js';
 import type { MenuClient } from '../../clients/pos-api/menu.client.js';
 import {
   batchPropertyMenuItems,
   chineseInitialSearchDish,
   quickComboBatchEditDish,
   requiredMenuPropertyLabels,
+  takeOutTaxFreeDish,
   unitPriceDish,
   weightQuickComboDish,
 } from '../../test-data/pos/dishes.js';
@@ -46,6 +48,13 @@ export type BatchItemPropertyResult = {
   selectedLabels: string[];
   itemProperties: string[];
   allProperties: string[];
+};
+
+export type TakeOutTaxFreeAuditResult = {
+  confirmationMessage: string;
+  orderTax: number;
+  expectedTax: number;
+  auditLog: PosAuditLog;
 };
 
 export class AdminMenuFlow {
@@ -234,6 +243,38 @@ export class AdminMenuFlow {
       selectedLabels,
       itemProperties: detail.itemProperties,
       allProperties: detail.allProperties,
+    };
+  }
+
+  async enableTakeOutTaxFreeAndReadOrderTaxAudit(
+    homeUrl: string,
+    posDbClient: PosDbClient,
+  ): Promise<TakeOutTaxFreeAuditResult> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    const confirmationMessage = await this.adminPage.saveItemTakeOutTaxFree(
+      takeOutTaxFreeDish.group ?? '',
+      takeOutTaxFreeDish.category,
+      takeOutTaxFreeDish.name,
+      true,
+    );
+    await posDbClient.recordMenuItemTaxAudit(takeOutTaxFreeDish.name);
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(takeOutTaxFreeDish.group ?? '');
+    await this.orderDishesPage.selectMenuCategory(takeOutTaxFreeDish.category);
+    await this.orderDishesPage.addMenuItem(takeOutTaxFreeDish.name);
+
+    const orderTax = await this.orderDishesPage.readTax();
+    const taxRate = await posDbClient.readTaxRateById(takeOutTaxFreeDish.taxId);
+    const auditLog = await posDbClient.readLatestAuditLog();
+
+    return {
+      confirmationMessage,
+      orderTax,
+      expectedTax: Number((takeOutTaxFreeDish.price * taxRate).toFixed(2)),
+      auditLog,
     };
   }
 }

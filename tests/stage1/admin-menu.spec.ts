@@ -115,4 +115,30 @@ test.describe('stage1 admin menu migration', () => {
       );
     },
   );
+
+  test(
+    'POS-37827 菜品启用 Take Out Tax Free 后应确认提示并记录税务 Audit Log',
+    {
+      annotation: jiraIssue('POS-37827'),
+    },
+    async ({ environment, page, posDbClient }) => {
+      const flow = new AdminMenuFlow(new PosHomePage(page), new AdminPage(page), new OrderDishesPage(page));
+
+      const result = await flow.enableTakeOutTaxFreeAndReadOrderTaxAudit(environment.posHomeUrl, posDbClient);
+
+      expect(result.confirmationMessage).toBe(
+        'No tax will apply to the Item when take out.Are you sure you want to save?',
+      );
+      expect(result.orderTax).toBe(result.expectedTax);
+      expect(result.auditLog).toMatchObject({
+        operateType: 'Edit',
+        operateItem: 'Edit Menu Item Tax',
+        operateCategory: 'Tax',
+        operatePath: 'Menu-Menu',
+        displayName: 'Edit Menu Item Tax',
+      });
+      expect(result.auditLog.oldValue).toContain('take out orders taxes');
+      expect(result.auditLog.newValue).toContain('take out orders tax free');
+    },
+  );
 });

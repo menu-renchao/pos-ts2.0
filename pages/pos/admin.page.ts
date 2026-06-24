@@ -64,6 +64,12 @@ export class AdminPage extends PageObject {
   private readonly propertyDetailOpenButton: Locator;
   private readonly propertyItemLabelsValue: Locator;
   private readonly propertyAllLabelsValue: Locator;
+  private readonly taxFreeItemGroupInput: Locator;
+  private readonly taxFreeItemCategoryInput: Locator;
+  private readonly taxFreeItemNameInput: Locator;
+  private readonly taxFreeEnabledSelect: Locator;
+  private readonly taxFreeSaveButton: Locator;
+  private readonly taxFreeConfirmationMessage: Locator;
   private readonly unitPriceItemGroupInput: Locator;
   private readonly unitPriceItemCategoryInput: Locator;
   private readonly unitPriceItemNameInput: Locator;
@@ -138,6 +144,12 @@ export class AdminPage extends PageObject {
     this.propertyDetailOpenButton = page.getByTestId('admin-property-detail-open');
     this.propertyItemLabelsValue = page.getByTestId('admin-property-item-labels');
     this.propertyAllLabelsValue = page.getByTestId('admin-property-all-labels');
+    this.taxFreeItemGroupInput = page.getByTestId('admin-tax-free-item-group');
+    this.taxFreeItemCategoryInput = page.getByTestId('admin-tax-free-item-category');
+    this.taxFreeItemNameInput = page.getByTestId('admin-tax-free-item-name');
+    this.taxFreeEnabledSelect = page.getByTestId('admin-tax-free-enabled');
+    this.taxFreeSaveButton = page.getByTestId('admin-tax-free-save');
+    this.taxFreeConfirmationMessage = page.getByTestId('admin-tax-free-confirmation');
     this.unitPriceItemGroupInput = page.getByTestId('admin-unit-price-item-group');
     this.unitPriceItemCategoryInput = page.getByTestId('admin-unit-price-item-category');
     this.unitPriceItemNameInput = page.getByTestId('admin-unit-price-item-name');
@@ -427,6 +439,18 @@ export class AdminPage extends PageObject {
       const allProperties = await this.readCommaSeparatedText(this.propertyAllLabelsValue);
 
       return { itemProperties, allProperties };
+    });
+  }
+
+  async saveItemTakeOutTaxFree(group: string, category: string, itemName: string, enabled: boolean): Promise<string> {
+    return step(`设置菜品 ${itemName} Take Out Tax Free 为 ${enabled}`, async () => {
+      await expect(this.adminRoot).toBeVisible();
+      await this.taxFreeItemGroupInput.fill(group);
+      await this.taxFreeItemCategoryInput.fill(category);
+      await this.taxFreeItemNameInput.fill(itemName);
+      await this.taxFreeEnabledSelect.selectOption(enabled ? 'true' : 'false');
+      await this.taxFreeSaveButton.click();
+      return ((await this.taxFreeConfirmationMessage.textContent()) ?? '').trim();
     });
   }
 

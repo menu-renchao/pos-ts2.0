@@ -1032,6 +1032,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 | stage1/test_admin_menu.py | TestAdminMenu | `test_batch_edit_combo_mode` POS-42064 batch edit quick combo display mode and order it | tests/stage1/admin-menu.spec.ts | `AdminMenuFlow.batchEditQuickComboModeAndReadStates` |
 | stage1/test_admin_menu.py | TestAdminMenu | `test_batch_edit_combo_mode` POS-44624 weighted quick combo saves and recalls main combo name | tests/stage1/admin-menu.spec.ts | `AdminMenuFlow.orderWeightedQuickComboAndReadRecallItems` |
 | stage1/test_admin_menu.py | TestAdminMenu | `test_batch_edit_item_properties` POS-42067/POS-42066 batch replace menu item property labels | tests/stage1/admin-menu.spec.ts | `AdminMenuFlow.batchReplaceItemPropertiesAndReadDetail` |
+| stage1/test_admin_menu.py | TestAdminMenu | `test_take_out_tax_free_enabled` item Take Out Tax Free confirmation, dine-in tax, and audit log | tests/stage1/admin-menu.spec.ts | `AdminMenuFlow.enableTakeOutTaxFreeAndReadOrderTaxAudit` |
 
 ### Preconditions
 
@@ -1049,6 +1050,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - POS-44624 uses source-equivalent weighted quick combo `weight combo`, weight `100`, section `rcs2`, and sub item `Vegetable Spring Roll`.
 - POS-42067/POS-42066 uses source-equivalent items `superman item1`, `superman item2`, and `superman item3` under `Lunch` / `Chicken Lunch E`.
 - POS-42067/POS-42066 uses a deterministic round-one label sample `Gluten-free`, `Vege`, and `Lactose-free` instead of Python's random `random.sample(list(MenuLabels), 3)`.
+- POS-37827 uses source-equivalent item `taxtest` under `Lunch` / `Chicken Lunch E`, price `8.00`, tax id `tax-takeout-free`, and tax rate `0.075`.
 
 ### Steps
 
@@ -1071,6 +1073,9 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 17. For POS-44624, enter Dine In, select `MansuperGroup` / `MansuperCat`, order weighted quick combo `weight combo`, save the order, enter Recall, open the recent order, and read the recalled item names.
 18. For POS-42067/POS-42066, enter Admin Menu and batch replace property labels on `superman item1`, `superman item2`, and `superman item3` using source-equivalent `OperateType.CHANGE_TO`.
 19. Open the detail view for `superman item2`, read the item's current property labels, and read all available property labels.
+20. For POS-37827, open Admin Menu item detail for `taxtest`, enable Take Out Tax Free, save, and read the confirmation message.
+21. Record and read the source-equivalent tax audit log through the typed POS DB adapter.
+22. Return to POS home, enter Dine In, order `taxtest`, read order tax, and compare it with `8.00 * taxRate`.
 
 ### Expected Assertions
 
@@ -1084,6 +1089,9 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - POS-44624 verifies the Recall ordered item list is exactly `["weight combo"]` after saving the weighted quick combo order.
 - POS-42067/POS-42066 verifies the detail-page property label set for `superman item2` exactly equals the selected labels.
 - POS-42067/POS-42066 verifies the all-property label list includes `Gluten-free`, `Vege`, and `Lactose-free`.
+- POS-37827 verifies the Take Out Tax Free save confirmation is exactly `No tax will apply to the Item when take out.Are you sure you want to save?`.
+- POS-37827 verifies Dine In order tax for `taxtest` equals `8.00 * 0.075 = 0.60`, preserving that Dine In is still taxable after enabling take-out tax-free.
+- POS-37827 verifies the latest audit log has source-equivalent edit/type/category/path/display fields and old/new values mentioning take-out taxes versus take-out tax free.
 
 ### Page Responsibilities
 
@@ -1103,6 +1111,8 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `RecallPage.openRecentOrder` and `RecallPage.readAllOrderItems` own the POS-44624 Recall verification path.
 - `AdminPage.batchReplaceItemPropertyLabels` owns the POS-42067/POS-42066 batch replacement action for selected menu items.
 - `AdminPage.readItemPropertyDetail` owns the POS-42067/POS-42066 item-detail property reads and all-property reads.
+- `AdminPage.saveItemTakeOutTaxFree` owns the POS-37827 item-detail tax-free edit and confirmation read.
+- `OrderDishesPage.selectMenuGroup`, `OrderDishesPage.selectMenuCategory`, `OrderDishesPage.addMenuItem`, and `OrderDishesPage.readTax` own the POS-37827 Dine In tax verification path.
 
 ### Client/Data Responsibilities
 
@@ -1116,6 +1126,8 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `test-data/pos/dishes.ts` owns `quickComboBatchEditDish`, preserving the source item name, group, and category for POS-42064.
 - `test-data/pos/dishes.ts` owns `weightQuickComboDish`, preserving the source item name, group, category, weight, and sub item for POS-44624.
 - `test-data/pos/dishes.ts` owns `batchPropertyMenuItems` and `requiredMenuPropertyLabels`, preserving the source selected items and core labels for POS-42067/POS-42066.
+- `test-data/pos/dishes.ts` owns `takeOutTaxFreeDish`, preserving source item `taxtest`, price `8.00`, category, group, tax id, and deterministic tax rate for POS-37827.
+- `StubPosDbClient.readTaxRateById`, `StubPosDbClient.recordMenuItemTaxAudit`, and `StubPosDbClient.readLatestAuditLog` own the round-one source-equivalent `PosDBFunction` tax-rate and audit-log reads for POS-37827.
 
 ### Stub Behavior
 
@@ -1131,6 +1143,9 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Offline harness includes `weight combo` as a quick combo menu item with sub item `Vegetable Spring Roll`; saving the order stores the main combo line so Recall returns `weight combo`.
 - Offline harness stores property labels by `group|category|item` and replaces the full label list for every selected item when the batch property edit is submitted.
 - Offline harness returns all available property labels from a deterministic label catalog containing `Gluten-free`, `Vege`, and `Lactose-free`.
+- Offline harness renders Admin Take Out Tax Free controls and returns the source confirmation string when enabled.
+- Offline harness includes `taxtest` as a taxable Dine In menu item with tax rate `0.075`; order tax rendering uses explicit item tax rates when present.
+- Stub POS DB stores the latest POS-37827 audit log in memory for the current test and returns the deterministic tax rate by tax id.
 
 ### Live Gaps
 
@@ -1152,3 +1167,6 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 | data | POS-44624 source fixture creates `weight combo` from `combo_weight.json` when missing | Add live setup through MenuAPI or a seeded weighted quick-combo fixture before live smoke |
 | selector | POS-42067/POS-42066 batch property edit dialog, selected item list, item detail property labels, and all-property label selectors need live DOM confirmation | Confirm stable selectors or request `data-testid` |
 | data | POS-42067/POS-42066 depends on `Lunch` / `Chicken Lunch E` containing `superman item1`, `superman item2`, and `superman item3` | Add live setup through MenuAPI or a seeded menu fixture before live smoke |
+| selector | POS-37827 item detail tax selector, Take Out Tax Free checkbox, save confirmation dialog, and order tax selector need live DOM confirmation | Confirm stable selectors or request `data-testid` |
+| data | POS-37827 source creates `taxtest` with a random live tax via MenuAPI/TaxAPI and deletes it afterward | Add live setup/cleanup through typed MenuAPI and TaxAPI adapters before live smoke |
+| DB | POS-37827 verifies latest audit log through POS DB | Add live POS DB adapter contract and tenant-safe audit-log filter before live smoke |

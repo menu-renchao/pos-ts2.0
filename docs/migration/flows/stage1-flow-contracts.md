@@ -8,7 +8,7 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 
 | source_file | source_class | source_test_patterns | target_specs | target_flow_methods |
 |---|---|---|---|---|
-| stage1/test_admin_menu.py | TestAdminMenu | global options, item language/name, item count, combo mode, weighted combo, batch item properties, tax-free, member price, batch price, multilingual display | tests/stage1/admin-menu.spec.ts | `AdminMenuFlow.copyPosGlobalOptionGroupToEmenuAndReadCount`, `AdminMenuFlow.orderUnitPriceItemAndReadPrice`, `AdminMenuFlow.modifyItemChineseNameAndReadLanguageNames`, `AdminMenuFlow.addPrintersToGlobalOptionAndReadPrinters`, `AdminMenuFlow.readPosMenuItemCountFromPageAndApi`, `AdminMenuFlow.batchEditQuickComboModeAndReadStates`, `AdminMenuFlow.orderWeightedQuickComboAndReadRecallItems`, `AdminMenuFlow.batchReplaceItemPropertiesAndReadDetail` |
+| stage1/test_admin_menu.py | TestAdminMenu | global options, item language/name, item count, combo mode, weighted combo, batch item properties, tax-free, member price, batch price, multilingual display | tests/stage1/admin-menu.spec.ts | `AdminMenuFlow.copyPosGlobalOptionGroupToEmenuAndReadCount`, `AdminMenuFlow.orderUnitPriceItemAndReadPrice`, `AdminMenuFlow.modifyItemChineseNameAndReadLanguageNames`, `AdminMenuFlow.addPrintersToGlobalOptionAndReadPrinters`, `AdminMenuFlow.readPosMenuItemCountFromPageAndApi`, `AdminMenuFlow.batchEditQuickComboModeAndReadStates`, `AdminMenuFlow.orderWeightedQuickComboAndReadRecallItems`, `AdminMenuFlow.batchReplaceItemPropertiesAndReadDetail`, `AdminMenuFlow.enableTakeOutTaxFreeAndReadOrderTaxAudit` |
 
 ### Preconditions
 
