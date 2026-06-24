@@ -377,6 +377,12 @@ export class OrderDishesPage extends PageObject {
     });
   }
 
+  async selectOrderLineItem(index: number): Promise<void> {
+    await step(`选择第 ${index} 个订单菜品`, async () => {
+      await this.orderLineItems.nth(index - 1).click();
+    });
+  }
+
   async changeSelectedItemQuantity(quantity: number): Promise<void> {
     await step(`修改当前菜品数量为 ${quantity}`, async () => {
       await this.itemQuantityInput.fill(String(quantity));

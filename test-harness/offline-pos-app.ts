@@ -354,6 +354,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let deliveryHistoricalAddress = '';
       let messages = [];
       let currentOrderItems = [];
+      let selectedOrderItemIndex = -1;
       let latestSavedOrderItems = [];
       let currentItemOption = null;
       let latestSavedItemOption = null;
@@ -840,6 +841,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         return Number(amount || 0).toFixed(2);
       }
 
+      function roundMoney(amount) {
+        return Math.round((Number(amount || 0) + 1e-8) * 100) / 100;
+      }
+
       function largeTipToast(amountInCents, total) {
         const tipAmount = Number(amountInCents || 0) / 100;
         return tipAmount > Number(total || 0) * 0.5 ? 'The tip is more than 50% of the meal. Confirm to add?' : '';
@@ -872,7 +877,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         }
         if (target) {
           target.quantity = Number(target.quantity || 1) + 1;
-          target.price = Number((Number(target.unitPrice || dish.price || 0) * target.quantity).toFixed(2));
+          target.price = roundMoney(Number(target.unitPrice || dish.price || 0) * target.quantity);
+          selectedOrderItemIndex = currentOrderItems.indexOf(target);
           renderOrderAmounts();
           return;
         }
@@ -886,6 +892,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           sentToKitchen: false,
           inKitchenQuantity: 0,
         });
+        selectedOrderItemIndex = currentOrderItems.length - 1;
         renderOrderAmounts();
       }
 
@@ -988,7 +995,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           crmFixedRewardAmount: currentCrmFixedRewardAmount,
         });
         orderTax.textContent = String(Number((itemCount * 0.6).toFixed(2)));
-        orderSubtotal.textContent = String(Number(subtotal.toFixed(2)));
+        orderSubtotal.textContent = String(roundMoney(subtotal));
         orderReward.textContent = formatRewardDiscount(rewardDiscount, currentCrmDiscountRate);
         settleTotal.textContent = String(Number((subtotal + rewardDiscount).toFixed(2)));
         settleUnpaidAmount.textContent = String(calculatePayPageUnpaidAmount(subtotal, rewardDiscount, itemCount));
@@ -1004,13 +1011,20 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
 
       function renderOrderItemRows() {
         orderItemsList.innerHTML = '';
-        activeOrderItems().forEach((item) => {
+        activeOrderItems().forEach((item, activeIndex) => {
+          const orderIndex = currentOrderItems.indexOf(item);
           const row = document.createElement('div');
           row.dataset.testid = 'order-line-item';
+          row.dataset.index = String(orderIndex);
           row.dataset.quantity = String(item.quantity || 1);
           row.dataset.color = itemLineColor(item);
+          row.dataset.selected = orderIndex === selectedOrderItemIndex ? 'true' : 'false';
           row.style.color = itemLineColor(item);
           row.textContent = displayItemName(item);
+          row.addEventListener('click', () => {
+            selectedOrderItemIndex = orderIndex >= 0 ? orderIndex : activeIndex;
+            renderOrderAmounts();
+          });
           orderItemsList.appendChild(row);
         });
       }
@@ -1124,6 +1138,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
 
       function resetCurrentOrder() {
         currentOrderItems = [];
+        selectedOrderItemIndex = -1;
         currentItemOption = null;
         currentOrderTip = 0;
         currentSplitPartTip = null;
@@ -1825,7 +1840,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         if (currentOrderItems[0]) {
           if (Number(currentOrderItems[0].quantity || 1) > 1) {
             currentOrderItems[0].quantity = Number(currentOrderItems[0].quantity || 1) - 1;
-            currentOrderItems[0].price = Number((Number(currentOrderItems[0].unitPrice || 0) * currentOrderItems[0].quantity).toFixed(2));
+          currentOrderItems[0].price = roundMoney(Number(currentOrderItems[0].unitPrice || 0) * currentOrderItems[0].quantity);
           } else {
             currentOrderItems[0].quantity = 0;
             currentOrderItems[0].price = 0;
@@ -1891,22 +1906,23 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         }
       });
       itemPriceSubmitButton.addEventListener('click', () => {
-        if (currentOrderItems[0]) {
-          currentOrderItems[0].price = Number(itemPriceInput.value || '0');
-          currentOrderItems[0].unitPrice = Number(itemPriceInput.value || '0') / Number(currentOrderItems[0].quantity || 1);
+        const selectedItem = currentOrderItems[selectedOrderItemIndex] || currentOrderItems[0];
+        if (selectedItem) {
+          selectedItem.price = Number(itemPriceInput.value || '0');
+          selectedItem.unitPrice = Number(itemPriceInput.value || '0') / Number(selectedItem.quantity || 1);
           renderOrderAmounts();
         }
       });
       itemQuantitySubmitButton.addEventListener('click', () => {
-        const selectedItem = currentOrderItems[currentOrderItems.length - 1];
+        const selectedItem = currentOrderItems[selectedOrderItemIndex] || currentOrderItems[currentOrderItems.length - 1];
         if (selectedItem) {
           const quantity = Number(itemQuantityInput.value || '1');
           if (quantity === 0 && shouldRequirePrintedItemPassword(selectedItem)) {
-            requestPrintedItemPassword(currentOrderItems.length - 1);
+            requestPrintedItemPassword(selectedOrderItemIndex >= 0 ? selectedOrderItemIndex : currentOrderItems.length - 1);
             return;
           }
           selectedItem.quantity = quantity;
-          selectedItem.price = Number((Number(selectedItem.unitPrice || selectedItem.price || 0) * quantity).toFixed(2));
+          selectedItem.price = roundMoney(Number(selectedItem.unitPrice || selectedItem.price || 0) * quantity);
           renderOrderAmounts();
         }
       });

@@ -708,4 +708,60 @@ test.describe('POS 点单页面', () => {
     expect(result.secondDishQuantity).toBe('2.55');
     expect(result.combinedTotal).toBeCloseTo(result.firstOrderTotal + result.secondOrderTotal, 2);
   });
+
+  test('POS-33600 三个指定价格小数数量菜保存后 Recall 小计应为 64.24', {
+    annotation: [jiraIssue('POS-33600')],
+  }, async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const subtotal = await orderEntryFlow.createDecimalSpecialPriceOrderAndReadRecallSubtotal(environment.posHomeUrl, [
+      { dish: 'groupSwitchDish', price: 6.5, quantity: 2.55 },
+      { dish: 'categorySwitchDish', price: 5.5, quantity: 3.66 },
+      { dish: 'categoryOptionDish', price: 7.5, quantity: 3.67 },
+    ]);
+
+    expect(subtotal).toBe(64.24);
+  });
+
+  test('POS-33600 两个指定价格小数数量菜保存后 Recall 小计应为 23.78', {
+    annotation: [jiraIssue('POS-33600')],
+  }, async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const subtotal = await orderEntryFlow.createDecimalSpecialPriceOrderAndReadRecallSubtotal(environment.posHomeUrl, [
+      { dish: 'groupSwitchDish', price: 6.5, quantity: 1.5 },
+      { dish: 'categorySwitchDish', price: 5.5, quantity: 2.55 },
+    ]);
+
+    expect(subtotal).toBe(23.78);
+  });
+
+  test('POS-33600 三个指定价格菜部分小数数量保存后 Recall 小计应为 44.27', {
+    annotation: [jiraIssue('POS-33600')],
+  }, async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const subtotal = await orderEntryFlow.createDecimalSpecialPriceOrderAndReadRecallSubtotal(environment.posHomeUrl, [
+      { dish: 'groupSwitchDish', price: 6.5, quantity: 2.55 },
+      { dish: 'categorySwitchDish', price: 5.5, quantity: 3.67 },
+      { dish: 'categoryOptionDish', price: 7.5 },
+    ]);
+
+    expect(subtotal).toBe(44.27);
+  });
 });

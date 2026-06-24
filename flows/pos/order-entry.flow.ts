@@ -6,6 +6,7 @@ import type { RecalledItemOption, RecalledOrderItem, RecallPage } from '../../pa
 import type { DishSample, OptionOrderSample } from '../../test-data/pos/domain-types.js';
 import { combineSameItemModes, menuModes } from '../../test-data/pos/admin-settings.js';
 import {
+  categoryOptionDish,
   discountableDish,
   groupSwitchDish,
   categorySwitchDish,
@@ -151,6 +152,14 @@ export type DecimalCombineResult = {
   firstDishQuantity: string;
   secondDishQuantity: string;
   combinedTotal: number;
+};
+
+export type DecimalSpecialPriceDishKey = 'groupSwitchDish' | 'categorySwitchDish' | 'categoryOptionDish';
+
+export type DecimalSpecialPriceLine = {
+  dish: DecimalSpecialPriceDishKey;
+  price: number;
+  quantity?: number;
 };
 
 export class OrderEntryFlow {
@@ -772,6 +781,29 @@ export class OrderEntryFlow {
     };
   }
 
+  async createDecimalSpecialPriceOrderAndReadRecallSubtotal(
+    homeUrl: string,
+    lines: readonly DecimalSpecialPriceLine[],
+  ): Promise<number> {
+    await this.enableDecimalCount(homeUrl);
+    await this.homePage.clickTogo();
+    for (const [index, line] of lines.entries()) {
+      const dish = this.decimalSpecialPriceDish(line.dish);
+      await this.orderDishesPage.selectMenuGroup(dish.group);
+      await this.orderDishesPage.selectMenuCategory(dish.category);
+      await this.orderDishesPage.addMenuItem(dish.name);
+      await this.orderDishesPage.selectOrderLineItem(index + 1);
+      await this.orderDishesPage.changeSelectedItemPrice(line.price);
+      if (line.quantity !== undefined) {
+        await this.orderDishesPage.changeSelectedItemQuantity(line.quantity);
+      }
+    }
+    await this.orderDishesPage.saveOrder();
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    return this.recallPage.readOrderSubtotal();
+  }
+
   private async openOrderAndAddDish(homeUrl: string, dish: DishSample): Promise<void> {
     await this.homePage.open(homeUrl);
     await this.homePage.clickTogo();
@@ -796,6 +828,15 @@ export class OrderEntryFlow {
     await this.homePage.clickAdmin();
     await this.adminPage.setCountCanBeDecimal(true);
     await this.homePage.refresh();
+  }
+
+  private decimalSpecialPriceDish(dish: DecimalSpecialPriceDishKey): DishSample | OptionOrderSample {
+    const dishes: Record<DecimalSpecialPriceDishKey, DishSample | OptionOrderSample> = {
+      groupSwitchDish,
+      categorySwitchDish,
+      categoryOptionDish,
+    };
+    return dishes[dish];
   }
 
   private async openDineInOrderAsNoVoidPrintedStaff(homeUrl: string): Promise<void> {

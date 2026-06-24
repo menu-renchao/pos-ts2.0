@@ -527,6 +527,9 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 | stage0/test_order_page.py | TestOrderPage | `test_item_count_decimal_reduce` decimal quantity reduces to zero after repeated Reduce actions | tests/stage0/order-page.spec.ts | `OrderEntryFlow.reduceDecimalQuantityToZero` |
 | stage0/test_order_page.py | TestOrderPage | `test_item_count_decimal_split_by_drag` decimal quantity preserves dish count and price after drag split | tests/stage0/order-page.spec.ts | `OrderEntryFlow.splitDecimalQuantityOrderByDrag` |
 | stage0/test_order_page.py | TestOrderPage | `test_item_count_decimal_combine` decimal quantity preserves both dish counts and combined total after order combine | tests/stage0/order-page.spec.ts | `OrderEntryFlow.combineDecimalQuantityOrders` |
+| stage0/test_order_page.py | TestOrderPage | `test_item_count_decimal_special_price1` three special-price decimal quantity items save with expected Recall subtotal | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createDecimalSpecialPriceOrderAndReadRecallSubtotal` |
+| stage0/test_order_page.py | TestOrderPage | `test_item_count_decimal_special_price2` two special-price decimal quantity items save with expected Recall subtotal | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createDecimalSpecialPriceOrderAndReadRecallSubtotal` |
+| stage0/test_order_page.py | TestOrderPage | `test_item_count_decimal_special_price3` three special-price items with partial decimal quantities save with expected Recall subtotal | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createDecimalSpecialPriceOrderAndReadRecallSubtotal` |
 | stage0/test_order_page.py | all `Test*` classes | add dishes, modify items, save orders, validate order totals | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createTogoOrder` |
 | stage0/test_order_settle.py | all `Test*` classes | create payable orders before settlement | tests/stage0/order-settle.spec.ts | `OrderEntryFlow.createTogoOrder` |
 
@@ -561,6 +564,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 19. For decimal reduce behavior, enable Count Can Be Decimal, create a To Go order, set the item quantity to `1.25`, click Reduce twice, and read the item count as `0`.
 20. For decimal drag split behavior, enable Count Can Be Decimal, create a To Go order with first item quantity `2.55`, capture its total, add a second item with quantity `2`, save, open Recall split panel, drag split so the decimal item is isolated in suborder 2, open that suborder, and read quantity and total.
 21. For decimal combine behavior, enable Count Can Be Decimal, create two saved To Go orders with quantities `2.55`, open the latest Recall order, combine the previous order into it, then read both dish quantities and the combined total.
+22. For decimal special-price behavior, enable Count Can Be Decimal, create a To Go order, add each source-equivalent dish, select the added order line, set the requested special price, optionally set the requested decimal quantity, save, open Recall, and read subtotal.
 
 ### Expected Assertions
 
@@ -608,6 +612,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Decimal reduce flow verifies quantity `1.25` can be reduced twice and the rendered order count becomes `0`.
 - Decimal drag split flow verifies the isolated suborder dish quantity contains `2.55` and the suborder total equals the captured first-item total.
 - Decimal combine flow verifies both combined order dish quantities are `2.55` and the combined total equals the two source order totals within cents tolerance.
+- Decimal special-price flow verifies source POS-33600 subtotal outputs: `64.24` for `6.50 x 2.55 + 5.50 x 3.66 + 7.50 x 3.67`, `23.78` for `6.50 x 1.5 + 5.50 x 2.55`, and `44.27` for `6.50 x 2.55 + 5.50 x 3.67 + 7.50 x 1`.
 
 ### Page Responsibilities
 
@@ -623,6 +628,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `AdminPage` owns POS menu mode selection and save for search-mode behavior.
 - `DeliveryPage` owns Delivery order customer/address/note form entry and create-order submission.
 - `OrderDishesPage` owns Open Food keyboard input, item special-price input, 50% discount action, Delivery Info reads, combo add/reduce actions, and combo option-count reads.
+- `OrderDishesPage` owns order-line selection so special-price and quantity edits can target the source-equivalent first, second, or third dish.
 - `OrderDishesPage` owns menu search input, search result reads, search clear, order-page exit, Global Option Modify entry, Add/Count/Reduce actions, Modify-area visibility reads, and Global Option count reads.
 - `OrderDishesPage` owns guest-name input, Search Menu class reads, item-count reads, source integer-cent tip entry, large-tip toast reads, and credit-payment action for order-page paths.
 - `OrderDishesPage` owns Hold/Delay print actions, printed-item void/reduce permission prompt reads, manager password submission, order line-count reads, first-line quantity/name/color reads, and same-dish add actions.
@@ -639,6 +645,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `test-data/pos/dishes.ts` owns dish, combo, option, and inventory sample data.
 - `test-data/pos/dishes.ts` owns category-level and item-level option order samples, including Chinese category and optional sub-option variants.
 - `test-data/pos/dishes.ts` owns POS/EMENU search-item names and the stable non-combo dish used to enter Global Option Modify flows.
+- `test-data/pos/dishes.ts` owns `groupSwitchDish`, `categorySwitchDish`, and `categoryOptionDish` as the POS-33600 source-equivalent special-price decimal quantity dishes.
 - `test-data/pos/dishes.ts` owns the default POS Search Menu item `Broccoli Garlic Sauce`.
 - `test-data/pos/admin-settings.ts` owns canonical POS menu mode, Search Menu, same-item combine mode, separate-same-item, and permission setting values.
 - `test-data/pos/admin-settings.ts` owns Automatically Redirect After Reduce Items and Count Can Be Decimal setting names.
@@ -676,6 +683,8 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Stub Admin default keyboard selection is represented by a deterministic select control and does not persist beyond the current browser context.
 - Stub Open Food multi-language keyboard creates an order item whose name equals the typed keyboard text.
 - Stub special-price update replaces the selected item price, and the 50% discount floors to cents so `5.85` becomes `2.92`, matching the source assertion.
+- Stub order-line clicks update the selected order item so special-price and quantity edits apply to the source-equivalent dish line rather than always the first or latest dish.
+- Stub decimal special-price line totals use explicit half-up cents rounding before subtotal aggregation so `5.50 x 2.55` becomes `14.03` and `7.50 x 3.67` becomes `27.53`, matching the source POS subtotal assertions.
 - Stub Delivery create-order copies the entered phone, name, address, Apt, city, state, zip, and note into the order Info panel after navigating to the order page.
 - Stub combo option state starts at four options for the migrated combo sample and decrements by one for each reduce action.
 - Stub menu mode is stored in browser-local state so refresh keeps the selected mode inside the current test.
