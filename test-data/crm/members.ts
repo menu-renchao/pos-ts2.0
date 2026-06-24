@@ -52,6 +52,8 @@ export const crmRewardSettings = {
   pointsPerPaidOrder: 10,
 } as const;
 
+export const crmNewMemberInitialPoints = 1000;
+
 export const crmMaxDiscountRewardSetting = {
   discountName: '30% Off',
   discountRate: 0.3,

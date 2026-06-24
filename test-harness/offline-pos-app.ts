@@ -656,13 +656,13 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           firstName: joinMemberFirstNameInput.value,
           lastName: joinMemberLastNameInput.value,
           name: [joinMemberFirstNameInput.value, joinMemberLastNameInput.value].filter(Boolean).join(' '),
-          points: 0,
+          points: 1000,
         });
         currentCrmMember = {
           phone,
           email,
           name: [joinMemberFirstNameInput.value, joinMemberLastNameInput.value].filter(Boolean).join(' '),
-          points: 0,
+          points: 1000,
         };
         renderCurrentCrmState();
         joinMemberError.textContent = '';

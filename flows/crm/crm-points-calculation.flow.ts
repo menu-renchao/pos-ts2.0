@@ -1,3 +1,4 @@
+import type { StubCrmMemberClient } from '../../clients/crm/member.client.js';
 import type { StubCrmRewardClient } from '../../clients/crm/reward.client.js';
 import type { PosCrmPage } from '../../pages/pos/crm/pos-crm.page.js';
 import type { PosHomePage } from '../../pages/pos/home.page.js';
@@ -24,6 +25,13 @@ export type PaidOrderEarnPointResult = {
   readonly earnedPoints: number;
 };
 
+export type JoinEmailMemberInitialPointResult = {
+  readonly registrationVisible: boolean;
+  readonly createdEmail: string;
+  readonly memberEmail: string;
+  readonly memberPoints: number;
+};
+
 export class CrmPointsCalculationFlow {
   constructor(
     private readonly homePage: PosHomePage,
@@ -31,6 +39,7 @@ export class CrmPointsCalculationFlow {
     private readonly recallPage: RecallPage,
     private readonly posCrmPage: PosCrmPage,
     private readonly crmRewardClient: StubCrmRewardClient,
+    private readonly crmMemberClient: StubCrmMemberClient,
   ) {}
 
   async voidPaidMemberOrderAndReadPoints(homeUrl: string): Promise<PaidOrderVoidPointResult> {
@@ -68,6 +77,26 @@ export class CrmPointsCalculationFlow {
       pointsBeforePayment,
       pointsAfterPayment,
       earnedPoints: crmRewardSettings.pointsPerPaidOrder,
+    };
+  }
+
+  async joinEmailMemberAndReadInitialPoints(homeUrl: string): Promise<JoinEmailMemberInitialPointResult> {
+    await this.homePage.open(homeUrl);
+    await this.posCrmPage.openJoinMemberRegistration();
+    const registrationVisible = await this.posCrmPage.isJoinMemberRegistrationVisible();
+    const createdEmail = this.crmMemberClient.nextUniqueEmail();
+    await this.posCrmPage.fillJoinMemberEmail(createdEmail);
+    await this.posCrmPage.fillJoinMemberName('test_1', 'test_1');
+    await this.posCrmPage.submitJoinMember();
+    await this.homePage.clickAdmin();
+    await this.posCrmPage.openMemberListFromAdmin();
+    await this.posCrmPage.searchMember(createdEmail);
+
+    return {
+      registrationVisible,
+      createdEmail,
+      memberEmail: await this.posCrmPage.readMemberSearchEmailResult(),
+      memberPoints: Number(await this.posCrmPage.readMemberSearchPointResult()),
     };
   }
 
