@@ -28,6 +28,8 @@ export class PosCrmPage extends PageObject {
   private readonly redeemItemOptionButton: Locator;
   private readonly redeemPanel: Locator;
   private readonly redeemQuitButton: Locator;
+  private readonly redeemRemoveMemberButton: Locator;
+  private readonly redeemAddNewLoyaltyButton: Locator;
   private readonly redeemSplitButton: Locator;
 
   constructor(page: Page) {
@@ -55,6 +57,8 @@ export class PosCrmPage extends PageObject {
     this.redeemItemOptionButton = page.getByTestId('crm-redeem-item-option');
     this.redeemPanel = page.getByTestId('crm-redeem-panel');
     this.redeemQuitButton = page.getByTestId('crm-redeem-quit');
+    this.redeemRemoveMemberButton = page.getByTestId('crm-remove-member');
+    this.redeemAddNewLoyaltyButton = page.getByTestId('crm-redeem-add-new-loyalty');
     this.redeemSplitButton = page.getByTestId('crm-redeem-split');
   }
 
@@ -105,6 +109,33 @@ export class PosCrmPage extends PageObject {
       await this.memberOption.click();
       await expect(this.memberName).toBeVisible();
     });
+  }
+
+  async openAddNewLoyaltyFromRedeem(): Promise<void> {
+    await step('从 Redeem 面板打开新增会员', async () => {
+      await this.redeemAddNewLoyaltyButton.click();
+      await expect(this.joinMemberRegistrationBox).toBeVisible();
+    });
+  }
+
+  async removeRedeemMember(): Promise<void> {
+    await step('移除当前 Redeem 会员', async () => {
+      await this.redeemRemoveMemberButton.click();
+    });
+  }
+
+  async readRedeemOrderPoints(): Promise<string> {
+    return step('读取订单 Redeem 积分', async () => ((await this.pointBalance.textContent()) ?? '').trim());
+  }
+
+  async readRedeemOrderMember(): Promise<string> {
+    return this.readMemberName();
+  }
+
+  async readMemberSearchEmailResult(): Promise<string> {
+    return step('读取 CRM Member List Email 搜索结果', async () =>
+      ((await this.page.getByTestId('crm-member-search-email-result').textContent()) ?? '').trim(),
+    );
   }
 
   async searchRedeemMemberByPhone(phone: string): Promise<string> {

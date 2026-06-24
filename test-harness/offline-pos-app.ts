@@ -64,6 +64,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <section data-testid="crm-member-list" hidden>
         <input data-testid="crm-member-list-search" />
         <div data-testid="crm-member-search-phone-result"></div>
+        <div data-testid="crm-member-search-email-result"></div>
       </section>
     </section>
     <section data-testid="join-member-registration" hidden>
@@ -98,6 +99,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <section data-testid="crm-redeem-panel" hidden>
         <input data-testid="crm-member-search" />
         <button data-testid="crm-member-option">CRM Member Result</button>
+        <button data-testid="crm-redeem-add-new-loyalty">Add New Loyalty</button>
+        <button data-testid="crm-remove-member">Remove Member</button>
         <button data-testid="crm-redeem-discount">10% Off</button>
         <button data-testid="crm-redeem-item-option">Redeem Item Option</button>
         <button data-testid="crm-redeem-item">CRM Redeem Item</button>
@@ -165,6 +168,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <div data-testid="recall-order-tip"></div>
       <div data-testid="recall-order-status"></div>
       <div data-testid="recall-customer-name"></div>
+      <div data-testid="recall-guest-phone"></div>
+      <div data-testid="recall-guest-address"></div>
       <div data-testid="recall-order-subtotal"></div>
       <div data-testid="recall-order-reward">0</div>
       <div data-testid="recall-order-total"></div>
@@ -350,6 +355,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const crmRedeemPanel = document.querySelector('[data-testid="crm-redeem-panel"]');
       const crmMemberSearchInput = document.querySelector('[data-testid="crm-member-search"]');
       const crmMemberOptionButton = document.querySelector('[data-testid="crm-member-option"]');
+      const crmRedeemAddNewLoyaltyButton = document.querySelector('[data-testid="crm-redeem-add-new-loyalty"]');
+      const crmRemoveMemberButton = document.querySelector('[data-testid="crm-remove-member"]');
       const crmRedeemDiscountButton = document.querySelector('[data-testid="crm-redeem-discount"]');
       const crmRedeemItemOptionButton = document.querySelector('[data-testid="crm-redeem-item-option"]');
       const crmRedeemItemButton = document.querySelector('[data-testid="crm-redeem-item"]');
@@ -407,6 +414,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const recallOrderTip = document.querySelector('[data-testid="recall-order-tip"]');
       const recallOrderStatus = document.querySelector('[data-testid="recall-order-status"]');
       const recallCustomerName = document.querySelector('[data-testid="recall-customer-name"]');
+      const recallGuestPhone = document.querySelector('[data-testid="recall-guest-phone"]');
+      const recallGuestAddress = document.querySelector('[data-testid="recall-guest-address"]');
       const recallOrderSubtotal = document.querySelector('[data-testid="recall-order-subtotal"]');
       const recallOrderReward = document.querySelector('[data-testid="recall-order-reward"]');
       const recallOrderTotal = document.querySelector('[data-testid="recall-order-total"]');
@@ -491,6 +500,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const crmMemberList = document.querySelector('[data-testid="crm-member-list"]');
       const crmMemberListSearchInput = document.querySelector('[data-testid="crm-member-list-search"]');
       const crmMemberSearchPhoneResult = document.querySelector('[data-testid="crm-member-search-phone-result"]');
+      const crmMemberSearchEmailResult = document.querySelector('[data-testid="crm-member-search-email-result"]');
       const openFoodCategory = document.querySelector('[data-testid="open-food-category"]');
       const passwordInput = document.querySelector('[data-testid="employee-password"]');
       const saveButton = document.querySelector('[data-testid="employee-password-save"]');
@@ -531,7 +541,18 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       }
 
       function normalizePhone(phone) {
-        return (phone || '').replace(/\D/g, '');
+        return (phone || '').replace(/\\D/g, '');
+      }
+
+      function formatRecallPhone(phone) {
+        const digits = normalizePhone(phone);
+        if (digits.length === 11 && digits.startsWith('0')) {
+          return '(' + digits.slice(0, 3) + ') ' + digits.slice(3, 6) + '-' + digits.slice(6);
+        }
+        if (digits.length === 10) {
+          return '(' + digits.slice(0, 3) + ') ' + digits.slice(3, 6) + '-' + digits.slice(6);
+        }
+        return phone || '';
       }
 
       function openCrmMemberList() {
@@ -703,6 +724,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           crmDiscountRate: currentCrmDiscountRate,
           hasRedeemItem: currentHasRedeemItem,
           rewardDiscount: 0,
+          guestPhone: currentDeliveryInfoRows[0] || '',
+          guestAddress: currentDeliveryInfoRows[2] || '',
           deliveryInfoRows: [...currentDeliveryInfoRows],
           splitOrderPrices: [],
           subOrderStatuses: [],
@@ -786,6 +809,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         recallOrderTip.textContent = String(order.tip || 0);
         recallOrderStatus.textContent = order.status || '';
         recallCustomerName.textContent = order.customerName || '';
+        recallGuestPhone.textContent = formatRecallPhone(order.guestPhone || '');
+        recallGuestAddress.textContent = order.guestAddress || '';
         recallOrderSubtotal.textContent = String(order.subtotal ?? orderTotal(order));
         recallOrderReward.textContent = String(order.rewardDiscount || 0);
         recallOrderTotal.textContent = String(orderTotal(order));
@@ -1008,6 +1033,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         const query = normalizePhone(crmMemberListSearchInput.value);
         const member = registeredMembers.find((item) => normalizePhone(item.phone) === query);
         crmMemberSearchPhoneResult.textContent = member?.displayPhone || '';
+        crmMemberSearchEmailResult.textContent = member?.email || '';
       });
       document.querySelector('[data-testid="home-togo"]').addEventListener('click', () => {
         showPanel('order');
@@ -1049,9 +1075,21 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       crmRedeemButton.addEventListener('click', () => {
         crmRedeemPanel.hidden = false;
       });
+      crmRedeemAddNewLoyaltyButton.addEventListener('click', () => {
+        joinMemberFirstNameInput.value = '';
+        joinMemberLastNameInput.value = '';
+        joinMemberPhoneInput.value = '';
+        joinMemberEmailInput.value = '';
+        joinMemberError.textContent = '';
+        joinMemberRegistration.hidden = false;
+      });
       crmMemberOptionButton.addEventListener('click', () => {
         const member = crmMembers.find((item) => item.phone === crmMemberSearchInput.value);
         currentCrmMember = member ? { ...member } : null;
+        renderCurrentCrmState();
+      });
+      crmRemoveMemberButton.addEventListener('click', () => {
+        currentCrmMember = null;
         renderCurrentCrmState();
       });
       crmRedeemDiscountButton.addEventListener('click', () => {

@@ -15,6 +15,14 @@ export type RecalledItemOption = {
   price: number;
 };
 
+export type RecallCrmOrderHeader = {
+  orderGuestName: string;
+  orderGuestTel: string;
+  orderGuestAddr: string;
+  orderMember: string;
+  orderPoints: string;
+};
+
 export class RecallPage extends PageObject {
   private readonly recentOrderButton: Locator;
   private readonly recalledOptions: Locator;
@@ -44,6 +52,8 @@ export class RecallPage extends PageObject {
   private readonly recallCrmDiscountButton: Locator;
   private readonly recallCrmMemberName: Locator;
   private readonly recallCrmPointBalance: Locator;
+  private readonly recallGuestAddress: Locator;
+  private readonly recallGuestPhone: Locator;
   private readonly saveEditButton: Locator;
   private readonly saveSplitAmountButton: Locator;
   private readonly saveSplitButton: Locator;
@@ -87,6 +97,8 @@ export class RecallPage extends PageObject {
     this.recallCrmDiscountButton = page.getByTestId('recall-crm-redeem-discount');
     this.recallCrmMemberName = page.getByTestId('recall-crm-member-name');
     this.recallCrmPointBalance = page.getByTestId('recall-crm-point-balance');
+    this.recallGuestAddress = page.getByTestId('recall-guest-address');
+    this.recallGuestPhone = page.getByTestId('recall-guest-phone');
     this.saveEditButton = page.getByTestId('recall-save-edit');
     this.saveSplitAmountButton = page.getByTestId('split-save-amount');
     this.saveSplitButton = page.getByTestId('split-save');
@@ -186,6 +198,16 @@ export class RecallPage extends PageObject {
 
   async readCrmMemberName(): Promise<string> {
     return step('读取 Recall CRM 会员名称', async () => ((await this.recallCrmMemberName.textContent()) ?? '').trim());
+  }
+
+  async readCrmOrderHeaderInfo(): Promise<RecallCrmOrderHeader> {
+    return step('读取 Recall CRM 订单 Header 信息', async () => ({
+      orderGuestName: ((await this.customerName.textContent()) ?? '').trim(),
+      orderGuestTel: ((await this.recallGuestPhone.textContent()) ?? '').trim(),
+      orderGuestAddr: ((await this.recallGuestAddress.textContent()) ?? '').trim(),
+      orderMember: ((await this.recallCrmMemberName.textContent()) ?? '').trim(),
+      orderPoints: ((await this.recallCrmPointBalance.textContent()) ?? '').trim(),
+    }));
   }
 
   async readOrderPriceSummary(): Promise<{ subtotal: number; reward: number }> {
