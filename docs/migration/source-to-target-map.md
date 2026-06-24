@@ -66,7 +66,7 @@ Allowed `status` values: `not-started`, `migrated`, `verified`, `live-gap`.
 | stage0 | stage0/test_main_page.py | TestMainPage | test_move_admin_to_main_no_save | 219 |  |  | tests/stage0/main-page.spec.ts |  |  |  |  |  |  | not-started |  |
 | stage0 | stage0/test_main_page.py | TestMainPage | test_move_session_to_main | 228 |  |  | tests/stage0/main-page.spec.ts |  |  |  |  |  |  | not-started |  |
 | stage0 | stage0/test_main_page.py | TestMainPage | test_move_session_to_more | 241 |  |  | tests/stage0/main-page.spec.ts |  |  |  |  |  |  | not-started |  |
-| stage0 | stage0/test_main_page.py | TestMainPage | test_input_wrong_password | 253 |  |  | tests/stage0/main-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_main_page.py | TestMainPage | test_input_wrong_password | 253 |  |  | tests/stage0/main-page.spec.ts | 输入错误员工密码后应提示失败并清空密码框 | PosHomePage.open; PosHomePage.loginWithWrongPassword; PosHomePage.readPasswordValue; PosHomePage.inputEmployeePassword | PosEntryFlow.rejectWrongPassword; PosEntryFlow.enterWithEmployeePassword | none | test-data/pos/permissions.ts | 提示包含 Failed to login；密码框被清空；正确密码后首页 Togo 可见 | verified | offline verified by npm run test:offline |
 | stage0 | stage0/test_main_page.py | TestMainPage | test_add_gift_card | 269 |  |  | tests/stage0/main-page.spec.ts |  |  |  |  |  |  | live-gap | 源用例被 pytest skip: 本地礼品卡冲突 |
 | stage0 | stage0/test_main_page.py | TestMainPage | test_delivery_delete_phone_reselect | 302 |  |  | tests/stage0/main-page.spec.ts |  |  |  |  |  |  | not-started |  |
 | stage0 | stage0/test_main_page.py | TestMainPage | test_input_report_passwd_with_keyboard | 332 |  | 使用外接键盘输入密码进入报表 | tests/stage0/main-page.spec.ts |  |  |  |  |  |  | not-started |  |

@@ -386,7 +386,7 @@ function parseReferences(value) {
   return value
     .split(/[,;\n]+/)
     .map((item) => item.trim())
-    .filter(Boolean);
+    .filter((item) => item && !/^(none|n\/a)$/i.test(item));
 }
 
 function classNameFromReference(reference) {

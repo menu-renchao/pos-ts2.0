@@ -8,6 +8,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 
 | source_file | source_class | source_test_pattern | target_spec | target_flow_method |
 |---|---|---|---|---|
+| stage0/test_main_page.py | TestMainPage | `test_input_wrong_password` wrong employee password rejection | tests/stage0/main-page.spec.ts | `PosEntryFlow.rejectWrongPassword`; `PosEntryFlow.enterWithEmployeePassword` |
 | stage0/test_main_page.py | all `Test*` classes | POS home entry and employee password cases | tests/stage0/main-page.spec.ts | `PosEntryFlow.enterWithEmployeePassword` |
 | stage0/test_order_page.py | all `Test*` classes | cases that start from POS home before ordering | tests/stage0/order-page.spec.ts | `PosEntryFlow.enterWithEmployeePassword` |
 | stage0/test_order_settle.py | all `Test*` classes | cases that start from POS home before settlement | tests/stage0/order-settle.spec.ts | `PosEntryFlow.enterWithEmployeePassword` |
@@ -24,13 +25,15 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 
 1. Open the configured POS home URL.
 2. Enter employee password when the page requires employee context.
-3. Wait for a stable POS home availability signal.
-4. Return control to the caller with POS home actions available.
+3. For rejection paths, read the login failure message and password input value before continuing.
+4. Wait for a stable POS home availability signal.
+5. Return control to the caller with POS home actions available.
 
 ### Expected Assertions
 
 - POS home availability is visible.
 - Target entry buttons required by the scenario are actionable.
+- Wrong employee password shows `Failed to login` and clears the password field.
 - No direct POS inner-page URL is used.
 
 ### Page Responsibilities

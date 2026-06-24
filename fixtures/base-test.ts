@@ -12,13 +12,16 @@ export const test = base.extend<PosTestFixtures>({
   environment: async ({}, use) => {
     await use(testEnvironment);
   },
-  offlinePosHarness: async ({ page }, use) => {
-    const harness = createOfflinePosHarness();
-    if (testEnvironment.testMode === 'offline') {
-      await harness.install(page);
-    }
-    await use(harness);
-  },
+  offlinePosHarness: [
+    async ({ page }, use) => {
+      const harness = createOfflinePosHarness();
+      if (testEnvironment.testMode === 'offline') {
+        await harness.install(page);
+      }
+      await use(harness);
+    },
+    { auto: true },
+  ],
   adminSettingsClient: async ({}, use) => {
     await use(createStubClients().adminSettingsClient);
   },
