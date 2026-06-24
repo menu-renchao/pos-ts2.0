@@ -46,6 +46,15 @@ export const categorySwitchDish: DishSample = {
   taxRate: 0.0825,
 };
 
+export const crmRedeemItemDish: DishSample = {
+  id: 'dish-crm-redeem-item',
+  name: 'CRM Redeem Item',
+  price: 0,
+  category: 'CRM Reward',
+  group: 'Dinner Menu',
+  taxRate: 0,
+};
+
 export const categoryOptionDish: OptionOrderSample = {
   id: 'dish-category-option-pork',
   name: 'Category Option Pork',

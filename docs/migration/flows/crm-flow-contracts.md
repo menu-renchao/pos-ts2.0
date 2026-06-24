@@ -128,12 +128,18 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 |---|---|---|---|---|
 | crm/test_crm_copy_move_order.py | TestCRMCopyItem | `test_combine_*`, `test_remove_split_order_*`, `test_remove_item_*`, `test_recall_pay_order_*` | tests/crm/crm-copy-move-order.spec.ts | `CrmOrderTransferFlow.combineOrdersWithRewards`, `CrmOrderTransferFlow.removeRewardFromMovedItem` |
 | crm/test_crm_split_crm_order.py | TestSplitCrmOrder | `test_split_order_*` | tests/crm/crm-split-order.spec.ts | `CrmOrderTransferFlow.splitOrderWithRewards`, `CrmSettlementFlow.payRewardSuborder` |
+| crm/test_crm_copy_move_order.py | TestCRMCopyItem | `test_combine_order_redeem`, `test_combine_order_redeem_discount` | tests/crm/crm-copy-move-order.spec.ts | `CrmOrderTransferFlow.combineOrdersWithRewards` |
+| crm/test_crm_copy_move_order.py | TestCRMCopyItem | `test_remove_split_order_redeem_item` | tests/crm/crm-copy-move-order.spec.ts | `CrmOrderTransferFlow.splitRedeemItemOrderAndReadMoveOrderAvailability` |
+| crm/test_crm_copy_move_order.py | TestCRMCopyItem | `test_remove_item_redeem_item` | tests/crm/crm-copy-move-order.spec.ts | `CrmOrderTransferFlow.saveRedeemItemOrderAndReadMoveItemAvailability` |
+| crm/test_crm_copy_move_order.py | TestCRMCopyItem | `test_recall_pay_order_redeem_discount` | tests/crm/crm-copy-move-order.spec.ts | `CrmOrderTransferFlow.payRecalledOrderWithRedeemDiscount` |
 
 ### Preconditions
 
 - Source order contains CRM member context and at least one redeem/discount item.
 - Split/combine/copy/move operations use POS UI flows, not direct DB manipulation.
 - Stub order client can represent parent order, suborders, moved items, merged orders, and reward ownership.
+- CRM copy/move source rows use seeded members `crmSourceRewardMember` and `crmTargetRewardMember`.
+- CRM reward settings use deterministic `crmRewardSettings.discountRate = 0.1` and `pointsPerPaidOrder = 10`.
 
 ### Steps
 
@@ -142,6 +148,10 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 3. Execute split, combine, copy, move, or remove operation.
 4. Open affected order or suborder.
 5. Read reward state, item ownership, totals, and payment state.
+6. For `CrmOrderTransferFlow.combineOrdersWithRewards`, create two Dine In orders with different members; optionally apply `10% Off` to the target order; combine the other order into the selected owner order; pay by cash.
+7. For `CrmOrderTransferFlow.splitRedeemItemOrderAndReadMoveOrderAvailability`, create a To Go order with CRM redeem item, split evenly, save, open suborder, and read move-order availability.
+8. For `CrmOrderTransferFlow.saveRedeemItemOrderAndReadMoveItemAvailability`, create and save a CRM redeem item order, recall it, and read move-item availability.
+9. For `CrmOrderTransferFlow.payRecalledOrderWithRedeemDiscount`, save a member order, recall it, enter payment, apply percentage redeem discount, pay cash, and read price summary.
 
 ### Expected Assertions
 
@@ -149,6 +159,11 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 - Removed reward items do not leave stale discounts.
 - Combined orders recalculate totals and reward discounts according to source behavior.
 - Paying a reward suborder affects only the intended suborder and parent order state.
+- `test_combine_order_redeem`: combined order keeps source member name and point balance; cash payment increases points by 20; member remains unchanged.
+- `test_combine_order_redeem_discount`: combined order keeps target member and point balance; Reward Discount equals negative 10% of combined subtotal; cash payment increases points by 20.
+- `test_remove_split_order_redeem_item`: redeem-item suborder does not expose Move Order.
+- `test_remove_item_redeem_item`: redeem-item recalled order does not expose Move Item.
+- `test_recall_pay_order_redeem_discount`: Recall payment discount recalculates Reward as negative 10% of subtotal.
 
 ### Page Responsibilities
 
@@ -156,17 +171,29 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 - `OrderDishesPage` owns line-item and amount reads.
 - `RecallPage` owns recalled order/suborder detail reads.
 - `SettlementPage` owns suborder payment controls.
+- `PosCrmPage.openRedeem`, `PosCrmPage.selectMemberByPhone`, `PosCrmPage.applyRedeemDiscount`, `PosCrmPage.applyRedeemItem`, `PosCrmPage.quitRedeem`, `PosCrmPage.openRedeemSplit`, `PosCrmPage.readHeaderPointBalance`, and `PosCrmPage.readMemberName` own POS-side CRM reward/member interactions.
+- `SplitOrderPage.splitEvenly` and `SplitOrderPage.save` own the CRM redeem split save path used by POS-29869.
+- `RecallPage.combineCrmOrder`, `RecallPage.readCrmPointBalance`, `RecallPage.readCrmMemberName`, `RecallPage.readOrderPriceSummary`, `RecallPage.settleAllByCash`, `RecallPage.cancelAllCondition`, `RecallPage.clickSettle`, `RecallPage.applyRedeemDiscount`, `RecallPage.payCurrentOrderByCash`, `RecallPage.isMoveOrderVisible`, and `RecallPage.isMoveItemVisible` own Recall-side CRM transfer and payment reads.
 
 ### Client/Data Responsibilities
 
 - `StubPosOrderClient` owns order graph state for split/combine/move/copy.
 - `StubCrmRewardClient` owns reward ownership and recalculation rules.
 - `test-data/pos/dishes.ts` and `test-data/crm/members.ts` own scenario samples.
+- `StubCrmRewardClient.findMemberByPhone` resolves seeded CRM member identities.
+- `StubCrmRewardClient.calculateDiscount` defines the deterministic 10% Reward Discount rule used by POS-29862 and POS-29910.
+- `StubCrmRewardClient.canMoveOrder` and `StubCrmRewardClient.canMoveItem` define the redeem-item transfer restriction.
+- `test-data/crm/members.ts` owns `crmSourceRewardMember`, `crmTargetRewardMember`, and `crmRewardSettings`.
+- `test-data/pos/dishes.ts` owns `groupSwitchDish`, `categorySwitchDish`, and `crmRedeemItemDish`.
 
 ### Stub Behavior
 
 - Stub mode represents order graph changes deterministically in memory.
 - Reward recalculation is explicit in the flow/client method rather than hidden in page objects.
+- Offline POS stores CRM member, point balance, redeem discount rate, redeem item flag, and reward amount on the saved order.
+- Offline combine merges source order items into the selected owner order without changing the owner member.
+- Offline cash payment adds 20 points to the selected combined or recalled member order.
+- Offline redeem-item orders hide Move Order and Move Item controls after split/recall.
 
 ### Live Gaps
 

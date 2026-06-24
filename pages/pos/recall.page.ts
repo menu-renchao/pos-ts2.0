@@ -28,12 +28,22 @@ export class RecallPage extends PageObject {
   private readonly evenSplitButton: Locator;
   private readonly guestNameInput: Locator;
   private readonly itemSplitButton: Locator;
+  private readonly moveItemButton: Locator;
+  private readonly moveOrderButton: Locator;
   private readonly orderTotal: Locator;
   private readonly parentOrderCard: Locator;
   private readonly orderStatus: Locator;
   private readonly orderSubtotal: Locator;
+  private readonly orderReward: Locator;
   private readonly orderTip: Locator;
   private readonly previousOrderButton: Locator;
+  private readonly recallCashButton: Locator;
+  private readonly recallCancelConditionButton: Locator;
+  private readonly recallCrmCombineButton: Locator;
+  private readonly recallCrmCombineInput: Locator;
+  private readonly recallCrmDiscountButton: Locator;
+  private readonly recallCrmMemberName: Locator;
+  private readonly recallCrmPointBalance: Locator;
   private readonly saveEditButton: Locator;
   private readonly saveSplitAmountButton: Locator;
   private readonly saveSplitButton: Locator;
@@ -61,12 +71,22 @@ export class RecallPage extends PageObject {
     this.evenSplitButton = page.getByTestId('split-even-order');
     this.guestNameInput = page.getByTestId('recall-guest-name');
     this.itemSplitButton = page.getByTestId('split-by-item');
+    this.moveItemButton = page.getByTestId('recall-move-item');
+    this.moveOrderButton = page.getByTestId('recall-move-order');
     this.orderTotal = page.getByTestId('recall-order-total');
     this.parentOrderCard = page.getByTestId('recall-parent-order');
     this.orderStatus = page.getByTestId('recall-order-status');
     this.orderSubtotal = page.getByTestId('recall-order-subtotal');
+    this.orderReward = page.getByTestId('recall-order-reward');
     this.orderTip = page.getByTestId('recall-order-tip');
     this.previousOrderButton = page.getByTestId('recall-previous-order');
+    this.recallCashButton = page.getByTestId('recall-cash');
+    this.recallCancelConditionButton = page.getByTestId('recall-cancel-condition');
+    this.recallCrmCombineButton = page.getByTestId('recall-crm-combine-order');
+    this.recallCrmCombineInput = page.getByTestId('recall-crm-combine-order-no');
+    this.recallCrmDiscountButton = page.getByTestId('recall-crm-redeem-discount');
+    this.recallCrmMemberName = page.getByTestId('recall-crm-member-name');
+    this.recallCrmPointBalance = page.getByTestId('recall-crm-point-balance');
     this.saveEditButton = page.getByTestId('recall-save-edit');
     this.saveSplitAmountButton = page.getByTestId('split-save-amount');
     this.saveSplitButton = page.getByTestId('split-save');
@@ -151,6 +171,66 @@ export class RecallPage extends PageObject {
     await step('打开 Recall 前一笔订单', async () => {
       await this.previousOrderButton.click();
     });
+  }
+
+  async combineCrmOrder(orderIndex: number): Promise<void> {
+    await step(`CRM 合并第 ${orderIndex} 个订单`, async () => {
+      await this.recallCrmCombineInput.fill(String(orderIndex));
+      await this.recallCrmCombineButton.click();
+    });
+  }
+
+  async readCrmPointBalance(): Promise<number> {
+    return step('读取 Recall CRM 积分余额', async () => Number((await this.recallCrmPointBalance.textContent()) ?? '0'));
+  }
+
+  async readCrmMemberName(): Promise<string> {
+    return step('读取 Recall CRM 会员名称', async () => ((await this.recallCrmMemberName.textContent()) ?? '').trim());
+  }
+
+  async readOrderPriceSummary(): Promise<{ subtotal: number; reward: number }> {
+    return step('读取 Recall 订单金额和 Reward Discount', async () => ({
+      subtotal: Number((await this.orderSubtotal.textContent()) ?? '0'),
+      reward: Number((await this.orderReward.textContent()) ?? '0'),
+    }));
+  }
+
+  async settleAllByCash(): Promise<void> {
+    await step('Recall 现金支付整单', async () => {
+      await this.recallCashButton.click();
+    });
+  }
+
+  async cancelAllCondition(): Promise<void> {
+    await step('Recall 取消支付条件弹层', async () => {
+      await this.recallCancelConditionButton.click();
+    });
+  }
+
+  async clickSettle(): Promise<void> {
+    await step('Recall 点击支付', async () => {
+      await this.page.getByTestId('recall-settle').click();
+    });
+  }
+
+  async applyRedeemDiscount(discountName: string): Promise<void> {
+    await step(`Recall 兑换 CRM 折扣 ${discountName}`, async () => {
+      await this.recallCrmDiscountButton.click();
+    });
+  }
+
+  async payCurrentOrderByCash(): Promise<void> {
+    await step('Recall 当前订单现金支付', async () => {
+      await this.recallCashButton.click();
+    });
+  }
+
+  async isMoveOrderVisible(): Promise<boolean> {
+    return step('判断 Recall 移单按钮是否展示', async () => this.moveOrderButton.isVisible());
+  }
+
+  async isMoveItemVisible(): Promise<boolean> {
+    return step('判断 Recall 移菜按钮是否展示', async () => this.moveItemButton.isVisible());
   }
 
   async clickEdit(): Promise<void> {
