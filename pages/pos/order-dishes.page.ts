@@ -54,6 +54,7 @@ export class OrderDishesPage extends PageObject {
   private readonly sendKitchenButton: Locator;
   private readonly settleButton: Locator;
   private readonly settleCashButton: Locator;
+  private readonly settleEvenPayButton: Locator;
   private readonly settleTotal: Locator;
   private readonly settleUnpaidAmount: Locator;
   private readonly settleSelectMemberButton: Locator;
@@ -123,6 +124,7 @@ export class OrderDishesPage extends PageObject {
     this.sendKitchenButton = page.getByTestId('order-send-kitchen');
     this.settleButton = page.getByTestId('order-settle');
     this.settleCashButton = page.getByTestId('settle-cash');
+    this.settleEvenPayButton = page.getByTestId('settle-even-pay');
     this.settleTotal = page.getByTestId('settle-total');
     this.settleUnpaidAmount = page.getByTestId('settle-unpaid-amount');
     this.settleSelectMemberButton = page.getByTestId('settle-select-member');
@@ -231,6 +233,12 @@ export class OrderDishesPage extends PageObject {
   async applySettlementMember(): Promise<void> {
     await step('确认结算页会员选择', async () => {
       await this.settleApplyMemberButton.click();
+    });
+  }
+
+  async splitPaymentEvenly(parts: number): Promise<void> {
+    await step(`结算页按 ${parts} 份平分支付`, async () => {
+      await this.settleEvenPayButton.click();
     });
   }
 

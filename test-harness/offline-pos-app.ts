@@ -100,6 +100,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <div data-testid="settle-total">0</div>
       <div data-testid="settle-unpaid-amount">0</div>
       <button data-testid="settle-cash">Cash</button>
+      <button data-testid="settle-even-pay">Even Pay</button>
       <button data-testid="settle-select-member">Select Member</button>
       <button data-testid="settle-switch-member">Switch Member</button>
       <button data-testid="settle-apply-member">Apply Member</button>
@@ -302,6 +303,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let currentCrmFixedRewardAmount = 0;
       let currentCrmPointDeduction = 0;
       let currentHasRedeemItem = false;
+      let currentSemiPayMode = false;
       let currentRedeemControlsLocked = false;
       let currentSettlementSelectMode = false;
       let currentEditingOrder = null;
@@ -377,6 +379,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const settleTotal = document.querySelector('[data-testid="settle-total"]');
       const settleUnpaidAmount = document.querySelector('[data-testid="settle-unpaid-amount"]');
       const settleCashButton = document.querySelector('[data-testid="settle-cash"]');
+      const settleEvenPayButton = document.querySelector('[data-testid="settle-even-pay"]');
       const settleSelectMemberButton = document.querySelector('[data-testid="settle-select-member"]');
       const settleSwitchMemberButton = document.querySelector('[data-testid="settle-switch-member"]');
       const settleApplyMemberButton = document.querySelector('[data-testid="settle-apply-member"]');
@@ -845,6 +848,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         currentCrmFixedRewardAmount = 0;
         currentCrmPointDeduction = 0;
         currentHasRedeemItem = false;
+        currentSemiPayMode = false;
         currentRedeemControlsLocked = false;
         currentSettlementSelectMode = false;
         currentEditingOrder = null;
@@ -872,6 +876,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           currentEditingOrder.crmFixedRewardAmount = currentCrmFixedRewardAmount;
           currentEditingOrder.crmPointDeduction = currentCrmPointDeduction;
           currentEditingOrder.hasRedeemItem = currentHasRedeemItem;
+          currentEditingOrder.partialPaid = currentSemiPayMode;
           currentEditingOrder.rewardDiscount = calculateRewardDiscount(currentEditingOrder);
           currentEditingOrder = null;
           currentRedeemControlsLocked = false;
@@ -892,6 +897,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           crmFixedRewardAmount: currentCrmFixedRewardAmount,
           crmPointDeduction: currentCrmPointDeduction,
           hasRedeemItem: currentHasRedeemItem,
+          partialPaid: currentSemiPayMode,
           rewardDiscount: 0,
           guestPhone: currentDeliveryInfoRows[0] || '',
           guestAddress: currentDeliveryInfoRows[2] || '',
@@ -1255,7 +1261,15 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         crmRedeemPanel.hidden = true;
         renderCurrentCrmState();
       });
+      settleEvenPayButton.addEventListener('click', () => {
+        currentSemiPayMode = true;
+      });
       settleCashButton.addEventListener('click', () => {
+        if (currentSemiPayMode) {
+          currentOrderStatus = 'Partially Paid';
+          saveCurrentOrder();
+          return;
+        }
         currentOrderStatus = 'Paid';
         const member = selectedMemberRecord();
         if (member) {
@@ -1527,6 +1541,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       recallCashButton.addEventListener('click', () => {
         if (selectedRecallOrder) {
           selectedRecallOrder.status = 'Paid';
+          selectedRecallOrder.partialPaid = false;
           if (selectedRecallOrder.crmMember) {
             selectedRecallOrder.crmMember.points += earnPointsForSubtotal(selectedRecallOrder.subtotal);
           }
