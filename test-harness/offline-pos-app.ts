@@ -1209,6 +1209,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           guestAddress: currentDeliveryInfoRows[2] || '',
           deliveryInfoRows: [...currentDeliveryInfoRows],
           splitOrderPrices: [],
+          subOrderItems: [],
           subOrderStatuses: [],
           inventoryDeductedQuantity: 0,
           orderType: currentOrderType,
@@ -1276,13 +1277,31 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           card.addEventListener('click', () => {
             selectedSubOrderIndex = index;
             recallOrderStatus.textContent = order.subOrderStatuses[index];
+            renderRecallItemRows(order.subOrderItems?.[index] || []);
+            const total = Number(((order.subOrderItems?.[index] || []).reduce((sum, item) => sum + Number(item.price || 0), 0)).toFixed(2));
+            recallItemCount.textContent = formatItemCount(order.subOrderItems?.[index] || []);
+            recallOrderSubtotal.textContent = String(total);
+            recallOrderTotal.textContent = String(total);
           });
           recallSubOrders.appendChild(card);
         });
       }
 
-      function renderRecallOrderItems() {
+      function renderRecallItemRows(items) {
         recallOrderItems.innerHTML = '';
+        items.forEach((item) => {
+          const row = document.createElement('div');
+          row.dataset.testid = 'recall-order-item';
+          row.dataset.name = item.name;
+          row.dataset.price = String(item.price);
+          row.dataset.quantity = String(item.quantity ?? 1);
+          row.dataset.state = item.state || '';
+          row.textContent = item.name + ' x' + String(item.quantity ?? 1) + ' $' + item.price.toFixed(2);
+          recallOrderItems.appendChild(row);
+        });
+      }
+
+      function renderRecallOrderItems() {
         const order = selectedRecallOrder || {
           items: latestSavedOrderItems,
           itemOption: latestSavedItemOption,
@@ -1308,15 +1327,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         renderSplitPrices(order.splitOrderPrices || []);
         renderSplitItemPrices(draftSplitItemPrices);
         renderSubOrders(order);
-        order.items.forEach((item) => {
-          const row = document.createElement('div');
-          row.dataset.testid = 'recall-order-item';
-          row.dataset.name = item.name;
-          row.dataset.price = String(item.price);
-          row.dataset.state = item.state || '';
-          row.textContent = item.name + ' $' + item.price.toFixed(2);
-          recallOrderItems.appendChild(row);
-        });
+        renderRecallItemRows(order.items || []);
         if (order.itemOption) {
           const option = document.createElement('div');
           option.dataset.testid = 'recall-item-option';
@@ -1767,6 +1778,12 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         const order = saveCurrentOrder();
         order.splitOrderPrices = [Number((orderTotal(order) / 2).toFixed(2)), Number((orderTotal(order) / 2).toFixed(2))];
         order.subOrderStatuses = ['New Order', 'New Order'];
+        const redeemItems = order.items.filter((item) => item.name === 'CRM Redeem Item');
+        const paidItems = order.items.filter((item) => item.name !== 'CRM Redeem Item');
+        order.subOrderItems = [
+          [...redeemItems, ...(paidItems[0] ? [paidItems[0]] : [])],
+          [...redeemItems, ...(paidItems[1] ? [paidItems[1]] : [])],
+        ];
       });
       orderTipInput.addEventListener('keydown', (event) => {
         if (event.key === 'Enter') {
@@ -2055,10 +2072,18 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       splitByDragButton.addEventListener('click', () => {
         if (selectedRecallOrder) {
           selectedRecallOrder.subOrderStatuses = ['New Order', 'New Order'];
+          selectedRecallOrder.subOrderItems = [
+            (selectedRecallOrder.items || []).slice(1),
+            (selectedRecallOrder.items || []).slice(0, 1),
+          ];
+          selectedRecallOrder.splitOrderPrices = selectedRecallOrder.subOrderItems.map((items) =>
+            Number(items.reduce((sum, item) => sum + Number(item.price || 0), 0).toFixed(2)),
+          );
           selectedRecallOrder.parentBackground = 'rgba(33, 150, 243, 1)';
         }
         recallParentOrder.style.backgroundColor = selectedRecallOrder?.parentBackground || '';
         recallParentOrder.dataset.background = selectedRecallOrder?.parentBackground || '';
+        renderSplitPrices(selectedRecallOrder?.splitOrderPrices || []);
         renderSubOrders(selectedRecallOrder);
       });
       splitAddSuborderButton.addEventListener('click', () => {});

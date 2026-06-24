@@ -675,4 +675,37 @@ test.describe('POS 点单页面', () => {
 
     expect(result.itemCountAfterReduce).toBe('0');
   });
+
+  test('POS-33241 小数数量菜品拖拽分单后子单数量和金额应正确', {
+    annotation: [jiraIssue('POS-33241')],
+  }, async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.splitDecimalQuantityOrderByDrag(environment.posHomeUrl);
+
+    expect(result.firstSubOrderDishQuantity).toContain('2.55');
+    expect(result.firstSubOrderTotal).toBe(result.firstItemTotal);
+  });
+
+  test('POS-33244 小数数量订单合单后两个菜数量和总额应正确', {
+    annotation: [jiraIssue('POS-33244')],
+  }, async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.combineDecimalQuantityOrders(environment.posHomeUrl);
+
+    expect(result.firstDishQuantity).toBe('2.55');
+    expect(result.secondDishQuantity).toBe('2.55');
+    expect(result.combinedTotal).toBeCloseTo(result.firstOrderTotal + result.secondOrderTotal, 2);
+  });
 });

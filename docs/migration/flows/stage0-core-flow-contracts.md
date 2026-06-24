@@ -525,6 +525,8 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 | stage0/test_order_page.py | TestOrderPage | `test_combine_same_item_combine_include_in_kitchen` same dish combines into sent kitchen line with quantity, In Kitchen marker, and red color | tests/stage0/order-page.spec.ts | `OrderEntryFlow.addSameItemAfterKitchenWithIncludeKitchenCombine` |
 | stage0/test_order_page.py | TestOrderPage | `test_automatically_redirect_after_reduce_items_close` reduce-to-zero stays on original category when auto redirect is disabled | tests/stage0/order-page.spec.ts | `OrderEntryFlow.reduceItemWithAutoRedirectDisabled` |
 | stage0/test_order_page.py | TestOrderPage | `test_item_count_decimal_reduce` decimal quantity reduces to zero after repeated Reduce actions | tests/stage0/order-page.spec.ts | `OrderEntryFlow.reduceDecimalQuantityToZero` |
+| stage0/test_order_page.py | TestOrderPage | `test_item_count_decimal_split_by_drag` decimal quantity preserves dish count and price after drag split | tests/stage0/order-page.spec.ts | `OrderEntryFlow.splitDecimalQuantityOrderByDrag` |
+| stage0/test_order_page.py | TestOrderPage | `test_item_count_decimal_combine` decimal quantity preserves both dish counts and combined total after order combine | tests/stage0/order-page.spec.ts | `OrderEntryFlow.combineDecimalQuantityOrders` |
 | stage0/test_order_page.py | all `Test*` classes | add dishes, modify items, save orders, validate order totals | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createTogoOrder` |
 | stage0/test_order_settle.py | all `Test*` classes | create payable orders before settlement | tests/stage0/order-settle.spec.ts | `OrderEntryFlow.createTogoOrder` |
 
@@ -557,6 +559,8 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 17. For Include Kitchen combine behavior, set combine mode to Include Kitchen and separate same item off, send the first same dish to kitchen, Recall edit, add the same dish again, then read line count, first-line quantity, first-line name, and first-line color.
 18. For reduce auto-redirect disabled behavior, disable Automatically Redirect After Reduce Items, add two adjacent dishes from different categories, reduce the active item to zero, verify the option/list area is gone, verify the original category dish is still visible, then restore the setting.
 19. For decimal reduce behavior, enable Count Can Be Decimal, create a To Go order, set the item quantity to `1.25`, click Reduce twice, and read the item count as `0`.
+20. For decimal drag split behavior, enable Count Can Be Decimal, create a To Go order with first item quantity `2.55`, capture its total, add a second item with quantity `2`, save, open Recall split panel, drag split so the decimal item is isolated in suborder 2, open that suborder, and read quantity and total.
+21. For decimal combine behavior, enable Count Can Be Decimal, create two saved To Go orders with quantities `2.55`, open the latest Recall order, combine the previous order into it, then read both dish quantities and the combined total.
 
 ### Expected Assertions
 
@@ -602,6 +606,8 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Include Kitchen mode verifies the sent-kitchen and newly added same dish combine into one visible line with quantity `2`, name containing `(1In Kitchen)`, and color `rgba(113, 9, 9, 1)`.
 - Auto-redirect disabled reduce flow verifies reducing to zero hides the current option/list area and keeps the source category item visible.
 - Decimal reduce flow verifies quantity `1.25` can be reduced twice and the rendered order count becomes `0`.
+- Decimal drag split flow verifies the isolated suborder dish quantity contains `2.55` and the suborder total equals the captured first-item total.
+- Decimal combine flow verifies both combined order dish quantities are `2.55` and the combined total equals the two source order totals within cents tolerance.
 
 ### Page Responsibilities
 
@@ -621,10 +627,12 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `OrderDishesPage` owns guest-name input, Search Menu class reads, item-count reads, source integer-cent tip entry, large-tip toast reads, and credit-payment action for order-page paths.
 - `OrderDishesPage` owns Hold/Delay print actions, printed-item void/reduce permission prompt reads, manager password submission, order line-count reads, first-line quantity/name/color reads, and same-dish add actions.
 - `OrderDishesPage` owns reduce action, option/list visibility reads, menu-item visibility reads, decimal quantity input, and item-count reads.
+- `OrderDishesPage` owns decimal order subtotal reads used as source-equivalent item/order totals before split or combine.
 - `AdminPage` owns Search Menu enable/disable persistence, staff Void Printed Item permission, same-item combine mode, separate-same-item setting behavior, Automatically Redirect After Reduce Items, and Count Can Be Decimal.
 - `RecallPage` owns recalled item state, option reads, suborder tip reads, split-order combine action, order status reads, order selection, guest-name edit, customer-name reads, order total reads, split panel entry, even/item/seat/amount/drag split actions, split save/confirm/unsplit actions, suborder settlement/payment actions, suborder status reads, parent-card background reads, and split price reads.
 - `RecallPage` owns Recall subtotal reads for source cases that verify post-save subtotal instead of the active order page.
 - `RecallPage` owns Recall item-count reads, recalled tip reads, and post-credit large-tip entry/toast reads.
+- `RecallPage` owns recalled item quantity reads, generic order combine action, suborder opening, and suborder total reads for decimal quantity split/combine paths.
 
 ### Client/Data Responsibilities
 
@@ -688,6 +696,9 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Stub same-item combine mode `include-kitchen` combines the newly added same dish into the sent-kitchen line, keeps the source `(1In Kitchen)` marker, quantity `2`, and red color `rgba(113, 9, 9, 1)`.
 - Stub auto-redirect-after-reduce disabled hides the order option/list container when a reduced item reaches zero and leaves the menu category item visible.
 - Stub decimal count setting allows quantity `1.25`; each Reduce subtracts one until quantity reaches zero, and order count renders `0`.
+- Stub recalled item rows expose `data-quantity` so decimal quantities are verified directly rather than inferred from price.
+- Stub drag split stores suborder item lists and prices; opening suborder 2 renders the first source item with quantity `2.55` and total equal to its pre-split item total.
+- Stub order combine appends source-order items into the selected target order and recomputes subtotal/total from both source totals, preserving each item quantity.
 
 ### Live Gaps
 

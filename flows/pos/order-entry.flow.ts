@@ -139,6 +139,20 @@ export type DecimalReduceResult = {
   itemCountAfterReduce: string;
 };
 
+export type DecimalDragSplitResult = {
+  firstItemTotal: number;
+  firstSubOrderDishQuantity: string;
+  firstSubOrderTotal: number;
+};
+
+export type DecimalCombineResult = {
+  firstOrderTotal: number;
+  secondOrderTotal: number;
+  firstDishQuantity: string;
+  secondDishQuantity: string;
+  combinedTotal: number;
+};
+
 export class OrderEntryFlow {
   constructor(
     private readonly homePage: PosHomePage,
@@ -700,6 +714,64 @@ export class OrderEntryFlow {
     return { itemCountAfterReduce };
   }
 
+  async splitDecimalQuantityOrderByDrag(homeUrl: string): Promise<DecimalDragSplitResult> {
+    await this.enableDecimalCount(homeUrl);
+    await this.homePage.clickTogo();
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.changeSelectedItemQuantity(2.55);
+    const firstItemTotal = await this.orderDishesPage.readSubtotal();
+    await this.orderDishesPage.selectMenuGroup(categorySwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(categorySwitchDish.category);
+    await this.orderDishesPage.addMenuItem(categorySwitchDish.name);
+    await this.orderDishesPage.changeSelectedItemQuantity(2);
+    await this.orderDishesPage.saveOrder();
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.openSplitOrder();
+    await this.recallPage.splitByDrag();
+    await this.recallPage.openSubOrder(2);
+    const subOrderItems = await this.recallPage.readAllOrderItems();
+    const firstSubOrderTotal = await this.recallPage.readOrderTotal();
+    return {
+      firstItemTotal,
+      firstSubOrderDishQuantity: subOrderItems[0]?.quantity ?? '',
+      firstSubOrderTotal,
+    };
+  }
+
+  async combineDecimalQuantityOrders(homeUrl: string): Promise<DecimalCombineResult> {
+    await this.enableDecimalCount(homeUrl);
+    await this.homePage.clickTogo();
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.changeSelectedItemQuantity(2.55);
+    const firstOrderTotal = await this.orderDishesPage.readSubtotal();
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.clickTogo();
+    await this.orderDishesPage.selectMenuGroup(categorySwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(categorySwitchDish.category);
+    await this.orderDishesPage.addMenuItem(categorySwitchDish.name);
+    await this.orderDishesPage.changeSelectedItemQuantity(2.55);
+    const secondOrderTotal = await this.orderDishesPage.readSubtotal();
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.cancelAllCondition();
+    await this.recallPage.combineOrder(2);
+    const combinedItems = await this.recallPage.readAllOrderItems();
+    const combinedTotal = await this.recallPage.readOrderTotal();
+    return {
+      firstOrderTotal,
+      secondOrderTotal,
+      firstDishQuantity: combinedItems[0]?.quantity ?? '',
+      secondDishQuantity: combinedItems[1]?.quantity ?? '',
+      combinedTotal,
+    };
+  }
+
   private async openOrderAndAddDish(homeUrl: string, dish: DishSample): Promise<void> {
     await this.homePage.open(homeUrl);
     await this.homePage.clickTogo();
@@ -714,6 +786,16 @@ export class OrderEntryFlow {
     await this.orderDishesPage.selectMenuGroup(dish.group);
     await this.orderDishesPage.selectMenuCategory(dish.category);
     await this.orderDishesPage.addMenuItem(dish.name);
+  }
+
+  private async enableDecimalCount(homeUrl: string): Promise<void> {
+    if (!this.adminPage) {
+      throw new Error('AdminPage is required for decimal count setup');
+    }
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.setCountCanBeDecimal(true);
+    await this.homePage.refresh();
   }
 
   private async openDineInOrderAsNoVoidPrintedStaff(homeUrl: string): Promise<void> {

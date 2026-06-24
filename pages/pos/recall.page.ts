@@ -7,6 +7,7 @@ import { PageObject } from '../shared/page-object.js';
 export type RecalledOrderItem = {
   name: string;
   price: number;
+  quantity?: string;
   state?: string;
 };
 
@@ -143,10 +144,14 @@ export class RecallPage extends PageObject {
       const items: RecalledOrderItem[] = [];
       for (const itemElement of itemElements) {
         const state = await itemElement.getAttribute('data-state');
+        const quantity = await itemElement.getAttribute('data-quantity');
         const item: RecalledOrderItem = {
           name: (await itemElement.getAttribute('data-name')) ?? '',
           price: Number((await itemElement.getAttribute('data-price')) ?? '0'),
         };
+        if (quantity) {
+          item.quantity = quantity;
+        }
         if (state) {
           item.state = state;
         }
@@ -226,6 +231,13 @@ export class RecallPage extends PageObject {
 
   async combineCrmOrder(orderIndex: number): Promise<void> {
     await step(`CRM 合并第 ${orderIndex} 个订单`, async () => {
+      await this.recallCrmCombineInput.fill(String(orderIndex));
+      await this.recallCrmCombineButton.click();
+    });
+  }
+
+  async combineOrder(orderIndex: number): Promise<void> {
+    await step(`合并第 ${orderIndex} 个订单`, async () => {
       await this.recallCrmCombineInput.fill(String(orderIndex));
       await this.recallCrmCombineButton.click();
     });
