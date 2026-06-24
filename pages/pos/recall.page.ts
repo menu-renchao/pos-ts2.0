@@ -32,6 +32,7 @@ export type RecallPrintState = {
 export class RecallPage extends PageObject {
   private readonly recentOrderButton: Locator;
   private readonly recalledOptions: Locator;
+  private readonly recalledComboSubItems: Locator;
   private readonly recallItems: Locator;
   private readonly recallRoot: Locator;
   private readonly addSubOrderButton: Locator;
@@ -88,6 +89,7 @@ export class RecallPage extends PageObject {
     super(page);
     this.recentOrderButton = page.getByTestId('recall-recent-order');
     this.recalledOptions = page.getByTestId('recall-item-option');
+    this.recalledComboSubItems = page.getByTestId('recall-combo-sub-item');
     this.recallItems = page.getByTestId('recall-order-item');
     this.recallRoot = page.getByTestId('recall-page');
     this.addSubOrderButton = page.getByTestId('split-add-suborder');
@@ -169,6 +171,13 @@ export class RecallPage extends PageObject {
         items.push(item);
       }
       return items;
+    });
+  }
+
+  async readComboSubItemNames(): Promise<string[]> {
+    return step('读取 Recall Combo 子菜列表', async () => {
+      await expect(this.recalledComboSubItems.first()).toBeVisible();
+      return (await this.recalledComboSubItems.allTextContents()).map((name) => name.trim()).filter(Boolean);
     });
   }
 

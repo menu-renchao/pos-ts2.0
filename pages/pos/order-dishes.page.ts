@@ -96,6 +96,7 @@ export class OrderDishesPage extends PageObject {
   private readonly comboSubItemPriceInput: Locator;
   private readonly comboSubItemPriceSubmitButton: Locator;
   private readonly comboSubItemEditPriceButton: Locator;
+  private readonly comboSubItemChoices: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -190,6 +191,7 @@ export class OrderDishesPage extends PageObject {
     this.comboSubItemPriceInput = page.getByTestId('combo-subitem-price');
     this.comboSubItemPriceSubmitButton = page.getByTestId('combo-subitem-price-submit');
     this.comboSubItemEditPriceButton = page.getByTestId('combo-subitem-edit-price');
+    this.comboSubItemChoices = page.getByTestId('combo-sub-item-choice');
   }
 
   async readOpenFoodCategoryName(): Promise<string> {
@@ -669,6 +671,14 @@ export class OrderDishesPage extends PageObject {
   async selectOrderedComboSubItem(comboName: string, subItemName: string): Promise<void> {
     await step(`选择套餐 ${comboName} 子菜 ${subItemName}`, async () => {
       await this.comboSubItems.filter({ hasText: exactText(subItemName) }).click();
+    });
+  }
+
+  async replaceComboSubItems(comboName: string, subItemNames: readonly string[]): Promise<void> {
+    await step(`替换套餐 ${comboName} 子菜为 ${subItemNames.join(', ')}`, async () => {
+      for (const subItemName of subItemNames) {
+        await this.comboSubItemChoices.filter({ hasText: exactText(subItemName) }).click();
+      }
     });
   }
 

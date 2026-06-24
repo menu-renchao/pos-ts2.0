@@ -9,6 +9,7 @@ import { combineSameItemModes, menuModes } from '../../test-data/pos/admin-setti
 import {
   categoryOptionDish,
   chineseInitialSearchDish,
+  comboMaxModifyDish,
   discountableDish,
   editableComboDish,
   groupSwitchDish,
@@ -168,6 +169,10 @@ export type ComboSubItemEditPriceResult = {
   subtotalBeforeEdit: string;
   subtotalAfterAdjustableEdit: string;
   fixedSubItemSupportsEditPrice: boolean;
+};
+
+export type ComboSubItemModificationResult = {
+  recalledSubItems: string[];
 };
 
 export type CustomOrderReportNetSalesResult = {
@@ -922,6 +927,25 @@ export class OrderEntryFlow {
       subtotalBeforeEdit,
       subtotalAfterAdjustableEdit,
       fixedSubItemSupportsEditPrice,
+    };
+  }
+
+  async modifySavedComboSubItemsAndReadRecall(homeUrl: string): Promise<ComboSubItemModificationResult> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(comboMaxModifyDish.group);
+    await this.orderDishesPage.selectMenuCategory(comboMaxModifyDish.category);
+    await this.orderDishesPage.addMenuItem(comboMaxModifyDish.name);
+    await this.orderDishesPage.saveOrder();
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.clickEdit();
+    await this.orderDishesPage.replaceComboSubItems(comboMaxModifyDish.name, comboMaxModifyDish.replacementSubItems);
+    await this.orderDishesPage.saveOrder();
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    return {
+      recalledSubItems: await this.recallPage.readComboSubItemNames(),
     };
   }
 

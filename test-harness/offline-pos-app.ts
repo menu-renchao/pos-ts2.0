@@ -216,6 +216,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <button data-testid="open-food-no-tax">Open Food No Tax</button>
       <button data-testid="order-combo-item">Combo Item</button>
       <section data-testid="combo-subitems"></section>
+      <section data-testid="combo-subitem-choices"></section>
       <button data-testid="combo-subitem-edit-price">Edit Combo Sub Item Price</button>
       <input data-testid="combo-subitem-price" />
       <button data-testid="combo-subitem-price-submit">Submit Combo Sub Item Price</button>
@@ -458,6 +459,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let pendingNoteAuthorization = false;
       let currentComboSubItemNote = '';
       let selectedComboSubItemName = '';
+      let pendingComboReplacementStarted = false;
       let reservations = [];
       let mainFunctions = ['Dine In', 'Drawer', 'To Go', 'Delivery'];
       let hiddenFunctions = ['Admin', 'Session'];
@@ -590,6 +592,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const openFoodNoTaxButton = document.querySelector('[data-testid="open-food-no-tax"]');
       const orderComboItemButton = document.querySelector('[data-testid="order-combo-item"]');
       const comboSubItems = document.querySelector('[data-testid="combo-subitems"]');
+      const comboSubItemChoices = document.querySelector('[data-testid="combo-subitem-choices"]');
       const comboSubItemEditPriceButton = document.querySelector('[data-testid="combo-subitem-edit-price"]');
       const comboSubItemPriceInput = document.querySelector('[data-testid="combo-subitem-price"]');
       const comboSubItemPriceSubmitButton = document.querySelector('[data-testid="combo-subitem-price-submit"]');
@@ -958,13 +961,18 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         return activeOrderItems().find((item) => item.name === 'EditPriceCombo') || null;
       }
 
+      function currentComboWithSubItems() {
+        return activeOrderItems().find((item) => Array.isArray(item.subItems)) || null;
+      }
+
       function comboSubItem(name, editable) {
         return { name, editable };
       }
 
       function renderComboSubItems() {
         comboSubItems.innerHTML = '';
-        const combo = currentEditableCombo();
+        comboSubItemChoices.innerHTML = '';
+        const combo = currentComboWithSubItems();
         if (!combo) {
           comboSubItemEditPriceButton.disabled = true;
           return;
@@ -972,12 +980,27 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         (combo?.subItems || []).forEach((subItem) => {
           comboSubItems.appendChild(createButton('combo-sub-item', subItem.name, () => {
             selectedComboSubItemName = subItem.name;
-            comboSubItemEditPriceButton.disabled = !subItem.editable;
+            comboSubItemEditPriceButton.disabled = combo.name !== 'EditPriceCombo' || !subItem.editable;
           }));
         });
+        if (combo.name === 'combo_max') {
+          ['item', 'item_option', 'item-1', 'item_option-1'].forEach((subItemName) => {
+            comboSubItemChoices.appendChild(createButton('combo-sub-item-choice', subItemName, () => {
+              if (!pendingComboReplacementStarted) {
+                combo.subItems = [];
+                pendingComboReplacementStarted = true;
+              }
+              if (!combo.subItems.some((subItem) => subItem.name === subItemName)) {
+                combo.subItems.push(comboSubItem(subItemName, true));
+              }
+              selectedComboSubItemName = subItemName;
+              renderOrderAmounts();
+            }));
+          });
+        }
         if (!selectedComboSubItemName && combo?.subItems?.length) {
           selectedComboSubItemName = combo.subItems[0].name;
-          comboSubItemEditPriceButton.disabled = !combo.subItems[0].editable;
+          comboSubItemEditPriceButton.disabled = combo.name !== 'EditPriceCombo' || !combo.subItems[0].editable;
         }
       }
 
@@ -1003,6 +1026,24 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       }
 
       function addDishToCurrentOrder(dish) {
+        if (dish.comboSubItems) {
+          currentOrderItems.push({
+            name: dish.name,
+            price: dish.price,
+            unitPrice: dish.price,
+            quantity: 1,
+            category: dish.category,
+            group: dish.group,
+            state: '',
+            subItems: dish.comboSubItems.map((name) => comboSubItem(name, true)),
+          });
+          selectedOrderItemIndex = currentOrderItems.length - 1;
+          selectedComboSubItemName = dish.comboSubItems[0] || '';
+          pendingComboReplacementStarted = false;
+          renderComboSubItems();
+          renderOrderAmounts();
+          return;
+        }
         const sameNameItems = currentOrderItems.filter((item) => item.name === dish.name && item.state !== 'Voided');
         const combineWithKitchen = currentCombineSameItemMode === 'include-kitchen' && !currentSeparateSameItem;
         const combineSameStatus = currentCombineSameItemMode === 'auto-same-status' && !currentSeparateSameItem;
@@ -1125,6 +1166,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           { name: 'hn_normal_item1', searchKeyword: 'ptc', price: 10, group: 'Lunch', category: 'hn_cate' },
           { name: 'Mongolian Chicken', price: 10, group: 'Lunch', category: 'KDS' },
           { name: 'Pos Name Test', price: 10, group: 'Lunch', category: 'KDS' },
+          { name: 'combo_max', price: 20, group: 'crm_group', category: 'crm_cat', comboSubItems: ['item', 'item_option'] },
         ];
       }
 
@@ -1304,13 +1346,13 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
 
       function renderOrderMenu() {
         const effectiveLanguage = currentLanguage === 'Chinese' || userDefaultLanguage === 'Chinese' ? 'Chinese' : 'Default';
-        const groups = effectiveLanguage === 'Chinese' ? ['午餐菜单', '中餐菜单'] : ['Lunch', 'Lunch Menu', 'Dinner Menu', 'MansuperGroup'];
+        const groups = effectiveLanguage === 'Chinese' ? ['午餐菜单', '中餐菜单'] : ['Lunch', 'Lunch Menu', 'Dinner Menu', 'MansuperGroup', 'crm_group'];
         orderMenuGroups.innerHTML = '';
         groups.forEach((group) => {
           orderMenuGroups.appendChild(createButton('order-menu-group', group, () => {}));
         });
         orderMenuCategories.innerHTML = '';
-        ['Chicken Lunch E', 'Lunch Entree', 'Seafood', 'Burgers', 'Category Option', 'KDS鸡肉类午餐', 'Item Options', 'hn_cate', 'KDS', 'MansuperCat'].forEach((category) => {
+        ['Chicken Lunch E', 'Lunch Entree', 'Seafood', 'Burgers', 'Category Option', 'KDS鸡肉类午餐', 'Item Options', 'hn_cate', 'crm_cat', 'KDS', 'MansuperCat'].forEach((category) => {
           orderMenuCategories.appendChild(createButton('order-menu-category', category, () => {
             currentCategoryName = category;
             currentCategoryNameText.textContent = currentCategoryName;
@@ -1517,6 +1559,12 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           row.dataset.state = item.state || '';
           row.textContent = item.name + ' x' + String(item.quantity ?? 1) + ' $' + item.price.toFixed(2);
           recallOrderItems.appendChild(row);
+          (item.subItems || []).forEach((subItem) => {
+            const subItemRow = document.createElement('div');
+            subItemRow.dataset.testid = 'recall-combo-sub-item';
+            subItemRow.textContent = subItem.name;
+            recallOrderItems.appendChild(subItemRow);
+          });
         });
       }
 
@@ -2367,6 +2415,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           currentHasRedeemItem = Boolean(selectedRecallOrder.hasRedeemItem);
           currentRedeemControlsLocked = Boolean(selectedRecallOrder.hasRedeemItem);
           currentSettlementSelectMode = false;
+          pendingComboReplacementStarted = false;
           currentEditingOrder = selectedRecallOrder;
           orderPage.hidden = false;
           renderOrderAmounts();

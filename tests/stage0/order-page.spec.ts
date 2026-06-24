@@ -897,6 +897,20 @@ test.describe('POS 点单页面', () => {
     expect(result.searchResultText).toContain('普通菜1');
   });
 
+  test('POS-43956 Combo 保存后 Recall 编辑应能替换子菜', {
+    annotation: [jiraIssue('POS-43956')],
+  }, async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.modifySavedComboSubItemsAndReadRecall(environment.posHomeUrl);
+
+    expect(result.recalledSubItems).toEqual(['item-1', 'item_option-1']);
+  });
+
   test('POS-37804 无 NOTE 权限员工给 Combo 子菜加 Note 时应提示并可经理授权录入', {
     annotation: [jiraIssue('POS-37804')],
   }, async ({ environment, page }) => {

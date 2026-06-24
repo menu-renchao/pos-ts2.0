@@ -212,6 +212,15 @@ export const editableComboDish = {
   editPriceInput: '1200',
 } as const;
 
+export const comboMaxModifyDish = {
+  name: 'combo_max',
+  group: 'crm_group',
+  category: 'crm_cat',
+  initialSubItems: ['item', 'item_option'],
+  replacementSubItems: ['item-1', 'item_option-1'],
+  price: 20,
+} as const;
+
 export const defaultMenuGroup: MenuGroupSample = {
   id: 'group-migration-menu',
   name: 'Migration Menu',
@@ -230,5 +239,13 @@ export const defaultMenuGroup: MenuGroupSample = {
     chineseInitialSearchDish,
     requiredKdsDish,
     posNameDisplayDish,
+    {
+      id: 'dish-combo-max',
+      name: comboMaxModifyDish.name,
+      price: comboMaxModifyDish.price,
+      category: comboMaxModifyDish.category,
+      group: comboMaxModifyDish.group,
+      taxRate: 0.0825,
+    },
   ],
 };
