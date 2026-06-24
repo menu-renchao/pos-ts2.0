@@ -15,8 +15,14 @@ export class OrderDishesPage extends PageObject {
   private readonly openFoodCategory: Locator;
   private readonly orderRoot: Locator;
   private readonly itemDiscountButton: Locator;
+  private readonly itemHalfDiscountButton: Locator;
   private readonly itemPrice: Locator;
+  private readonly itemPriceInput: Locator;
+  private readonly itemPriceSubmitButton: Locator;
   private readonly itemTax: Locator;
+  private readonly comboOptionCount: Locator;
+  private readonly deliveryInfoButton: Locator;
+  private readonly deliveryInfoRows: Locator;
   private readonly managerPasswordInput: Locator;
   private readonly managerPasswordSubmitButton: Locator;
   private readonly modifyNoteInput: Locator;
@@ -25,6 +31,10 @@ export class OrderDishesPage extends PageObject {
   private readonly openFoodNameInput: Locator;
   private readonly openFoodNoTaxButton: Locator;
   private readonly openFoodPriceInput: Locator;
+  private readonly openFoodButton: Locator;
+  private readonly openFoodKeyboardLanguage: Locator;
+  private readonly openFoodKeyboardSubmitButton: Locator;
+  private readonly openFoodKeyboardTextInput: Locator;
   private readonly orderItemName: Locator;
   private readonly orderOptions: Locator;
   private readonly pickupButton: Locator;
@@ -35,8 +45,11 @@ export class OrderDishesPage extends PageObject {
   private readonly splitCombineButton: Locator;
   private readonly splitEvenButton: Locator;
   private readonly subOptions: Locator;
+  private readonly subtotal: Locator;
   private readonly tipInput: Locator;
   private readonly voidItemButton: Locator;
+  private readonly comboItemButton: Locator;
+  private readonly comboOptionReduceButton: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -48,8 +61,14 @@ export class OrderDishesPage extends PageObject {
     this.customerPhoneInput = page.getByTestId('customer-phone');
     this.customerSubmitButton = page.getByTestId('customer-submit');
     this.itemDiscountButton = page.getByTestId('item-discount-10');
+    this.itemHalfDiscountButton = page.getByTestId('item-discount-50');
     this.itemPrice = page.getByTestId('order-item-price');
+    this.itemPriceInput = page.getByTestId('item-price-input');
+    this.itemPriceSubmitButton = page.getByTestId('item-price-submit');
     this.itemTax = page.getByTestId('order-tax');
+    this.comboOptionCount = page.getByTestId('combo-option-count');
+    this.deliveryInfoButton = page.getByTestId('order-info');
+    this.deliveryInfoRows = page.getByTestId('order-info-row');
     this.managerPasswordInput = page.getByTestId('manager-password');
     this.managerPasswordSubmitButton = page.getByTestId('manager-password-submit');
     this.modifyNoteInput = page.getByTestId('modify-note-name');
@@ -58,6 +77,10 @@ export class OrderDishesPage extends PageObject {
     this.openFoodNameInput = page.getByTestId('open-food-name');
     this.openFoodNoTaxButton = page.getByTestId('open-food-no-tax');
     this.openFoodPriceInput = page.getByTestId('open-food-price');
+    this.openFoodButton = page.getByTestId('order-open-food');
+    this.openFoodKeyboardLanguage = page.getByTestId('open-food-keyboard-language');
+    this.openFoodKeyboardSubmitButton = page.getByTestId('open-food-keyboard-submit');
+    this.openFoodKeyboardTextInput = page.getByTestId('open-food-keyboard-text');
     this.orderItemName = page.getByTestId('order-item-name');
     this.orderOptions = page.getByTestId('order-option');
     this.pickupButton = page.getByTestId('order-pickup');
@@ -70,8 +93,11 @@ export class OrderDishesPage extends PageObject {
     this.splitCombineButton = page.getByTestId('split-combine');
     this.splitEvenButton = page.getByTestId('split-even');
     this.subOptions = page.getByTestId('order-sub-option');
+    this.subtotal = page.getByTestId('order-subtotal');
     this.tipInput = page.getByTestId('order-tip');
     this.voidItemButton = page.getByTestId('order-void-item');
+    this.comboItemButton = page.getByTestId('order-combo-item');
+    this.comboOptionReduceButton = page.getByTestId('combo-option-reduce');
   }
 
   async readOpenFoodCategoryName(): Promise<string> {
@@ -191,6 +217,24 @@ export class OrderDishesPage extends PageObject {
     });
   }
 
+  async applyHalfDiscount(): Promise<void> {
+    await step('给当前菜品应用 50% 单菜折扣', async () => {
+      await this.itemHalfDiscountButton.click();
+    });
+  }
+
+  async changeSelectedItemPrice(price: number): Promise<void> {
+    await step(`修改当前菜品价格为 ${price}`, async () => {
+      await this.itemPriceInput.fill(String(price));
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      await this.itemPriceSubmitButton.click();
+    });
+  }
+
+  async readSubtotal(): Promise<number> {
+    return step('读取当前订单小计', async () => Number((await this.subtotal.textContent()) ?? '0'));
+  }
+
   async addModifyNote(name: string, price: number): Promise<void> {
     await step('在 Modify 中添加菜品备注', async () => {
       await this.modifyNoteInput.fill(name);
@@ -224,6 +268,40 @@ export class OrderDishesPage extends PageObject {
       await this.openFoodPriceInput.fill(String(price));
       await this.openFoodNoTaxButton.click();
     });
+  }
+
+  async createOpenFoodWithKeyboard(language: string, expectedText: string): Promise<string> {
+    return step('使用多语言键盘创建 Open Food 菜品', async () => {
+      await this.openFoodButton.click();
+      await this.openFoodKeyboardLanguage.selectOption(language);
+      await this.openFoodKeyboardTextInput.fill(expectedText);
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      await this.openFoodKeyboardSubmitButton.click();
+      return (await this.orderItemName.textContent()) ?? '';
+    });
+  }
+
+  async readDeliveryInfo(): Promise<string[]> {
+    return step('读取点单页 Delivery Info 信息', async () => {
+      await this.deliveryInfoButton.click();
+      return (await this.deliveryInfoRows.allTextContents()).map((value) => value.trim());
+    });
+  }
+
+  async addComboWithOptions(optionCount: number): Promise<void> {
+    await step(`添加包含 ${optionCount} 个 Option 的 Combo`, async () => {
+      await this.comboItemButton.click();
+    });
+  }
+
+  async reduceComboOption(): Promise<void> {
+    await step('减少 Combo 子菜 Option', async () => {
+      await this.comboOptionReduceButton.click();
+    });
+  }
+
+  async readComboOptionCount(): Promise<number> {
+    return step('读取 Combo Option 数量', async () => Number((await this.comboOptionCount.textContent()) ?? '0'));
   }
 
   async settleByCash(): Promise<void> {

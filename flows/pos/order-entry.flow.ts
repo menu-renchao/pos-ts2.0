@@ -1,8 +1,11 @@
 import type { PosHomePage } from '../../pages/pos/home.page.js';
+import type { AdminPage } from '../../pages/pos/admin.page.js';
+import type { DeliveryPage } from '../../pages/pos/delivery.page.js';
 import type { OrderDishesPage } from '../../pages/pos/order-dishes.page.js';
 import type { RecalledItemOption, RecalledOrderItem, RecallPage } from '../../pages/pos/recall.page.js';
 import type { DishSample, OptionOrderSample } from '../../test-data/pos/domain-types.js';
 import { discountableDish, groupSwitchDish, categorySwitchDish } from '../../test-data/pos/dishes.js';
+import { deliveryOrderInfoSample } from '../../test-data/pos/delivery.js';
 import { languageOptions } from '../../test-data/pos/languages.js';
 
 export type OrderTaxEditResult = {
@@ -60,11 +63,18 @@ export type DragSplitPaymentStatusResult = {
   parentOrderBackground: string;
 };
 
+export type ComboOptionCountResult = {
+  beforeCount: number;
+  afterCount: number;
+};
+
 export class OrderEntryFlow {
   constructor(
     private readonly homePage: PosHomePage,
     private readonly orderDishesPage: OrderDishesPage,
     private readonly recallPage: RecallPage,
+    private readonly adminPage?: AdminPage,
+    private readonly deliveryPage?: DeliveryPage,
   ) {}
 
   async createTogoOrderAndReadRecall(homeUrl: string, dish: DishSample): Promise<RecalledOrderItem[]> {
@@ -294,6 +304,52 @@ export class OrderEntryFlow {
     const secondSubOrderStatus = await this.recallPage.readOrderStatus();
     const parentOrderBackground = await this.recallPage.readParentOrderBackground();
     return { firstSubOrderStatus, secondSubOrderStatus, parentOrderBackground };
+  }
+
+  async createChineseOpenFoodWithMultiLanguageKeyboard(homeUrl: string): Promise<string> {
+    if (!this.adminPage) {
+      throw new Error('AdminPage is required for default keyboard setup');
+    }
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.setDefaultKeyboard('support multi language');
+    await this.homePage.refresh();
+    await this.homePage.clickTogo();
+    return this.orderDishesPage.createOpenFoodWithKeyboard('Chinese Simpl. Pinyin', '中文');
+  }
+
+  async applySpecialPriceHalfDiscountAndReadRecallSubtotal(homeUrl: string): Promise<number> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.changeSelectedItemPrice(5.85);
+    await this.orderDishesPage.applyHalfDiscount();
+    await this.orderDishesPage.saveOrder();
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    return this.recallPage.readOrderSubtotal();
+  }
+
+  async createDeliveryOrderAndReadInfo(homeUrl: string): Promise<string[]> {
+    if (!this.deliveryPage) {
+      throw new Error('DeliveryPage is required for Delivery order creation');
+    }
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDelivery();
+    await this.deliveryPage.createDeliveryOrder(deliveryOrderInfoSample);
+    return this.orderDishesPage.readDeliveryInfo();
+  }
+
+  async reduceComboOptionsAndReadCounts(homeUrl: string): Promise<ComboOptionCountResult> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.addComboWithOptions(4);
+    const beforeCount = await this.orderDishesPage.readComboOptionCount();
+    await this.orderDishesPage.reduceComboOption();
+    await this.orderDishesPage.reduceComboOption();
+    await this.orderDishesPage.reduceComboOption();
+    const afterCount = await this.orderDishesPage.readComboOptionCount();
+    return { beforeCount, afterCount };
   }
 
   private async openOrderAndAddDish(homeUrl: string, dish: DishSample): Promise<void> {

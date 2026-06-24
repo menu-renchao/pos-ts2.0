@@ -1,5 +1,7 @@
 import { test, expect } from '../../fixtures/base-test.js';
 import { OrderEntryFlow } from '../../flows/pos/order-entry.flow.js';
+import { AdminPage } from '../../pages/pos/admin.page.js';
+import { DeliveryPage } from '../../pages/pos/delivery.page.js';
 import { PosHomePage } from '../../pages/pos/home.page.js';
 import { OrderDishesPage } from '../../pages/pos/order-dishes.page.js';
 import { RecallPage } from '../../pages/pos/recall.page.js';
@@ -381,5 +383,56 @@ test.describe('POS 点单页面', () => {
     expect(result.firstSubOrderStatus).toBe('Paid');
     expect(result.secondSubOrderStatus).toBe('New Order');
     expect(result.parentOrderBackground).toBe('rgba(33, 150, 243, 1)');
+  });
+
+  test('Open Food 多语言键盘输入中文后应生成中文菜名', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const itemName = await orderEntryFlow.createChineseOpenFoodWithMultiLanguageKeyboard(environment.posHomeUrl);
+
+    expect(itemName).toBe('中文');
+  });
+
+  test('特殊价格菜设置 50% 单菜折扣后 Recall 小计应为 2.92', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const subtotal = await orderEntryFlow.applySpecialPriceHalfDiscountAndReadRecallSubtotal(environment.posHomeUrl);
+
+    expect(subtotal).toBe(2.92);
+  });
+
+  test('Delivery 点单后 Info 应展示预输入客户信息', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      undefined,
+      new DeliveryPage(page),
+    );
+
+    const info = await orderEntryFlow.createDeliveryOrderAndReadInfo(environment.posHomeUrl);
+
+    expect(info).toEqual(['(012)345-67890', 'pos-test', 'menusifu-test', '55', 'New York', 'NY', '10016', '我的备注']);
+  });
+
+  test('Combo 子菜连续减少 Option 后数量应减少 3', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.reduceComboOptionsAndReadCounts(environment.posHomeUrl);
+
+    expect(result.afterCount).toBe(result.beforeCount - 3);
   });
 });

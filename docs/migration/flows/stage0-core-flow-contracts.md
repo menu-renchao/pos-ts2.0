@@ -505,6 +505,10 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 | stage0/test_order_page.py | TestOrderPage | `test_cancel_split` unsplit restores the original order total | tests/stage0/order-page.spec.ts | `OrderEntryFlow.cancelEvenSplitAndReadTotals` |
 | stage0/test_order_page.py | TestOrderPage | `test_even_item` Dine In item split creates suborders matching item prices | tests/stage0/order-page.spec.ts | `OrderEntryFlow.splitDineInOrderByItemAndReadSummary` |
 | stage0/test_order_page.py | TestOrderPage | `test_order_split_by_drag` drag split paid first child order and preserves remaining child/parent state | tests/stage0/order-page.spec.ts | `OrderEntryFlow.splitOrderByDragPayFirstSubOrderAndReadStatuses` |
+| stage0/test_order_page.py | TestOrderPage | `test_open_food_keyboard_multi_language` Admin default keyboard supports multi language and Open Food Chinese input creates Chinese item | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createChineseOpenFoodWithMultiLanguageKeyboard` |
+| stage0/test_order_page.py | TestOrderPage | `test_special_price_discount` special price item discounted 50% persists expected Recall subtotal | tests/stage0/order-page.spec.ts | `OrderEntryFlow.applySpecialPriceHalfDiscountAndReadRecallSubtotal` |
+| stage0/test_order_page.py | TestOrderPage | `test_delivery_order` Delivery order creation carries customer address information into order Info | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createDeliveryOrderAndReadInfo` |
+| stage0/test_order_page.py | TestOrderPage | `test_reduce_combo_options` combo child option reduce action decreases option count by three | tests/stage0/order-page.spec.ts | `OrderEntryFlow.reduceComboOptionsAndReadCounts` |
 | stage0/test_order_page.py | all `Test*` classes | add dishes, modify items, save orders, validate order totals | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createTogoOrder` |
 | stage0/test_order_settle.py | all `Test*` classes | create payable orders before settlement | tests/stage0/order-settle.spec.ts | `OrderEntryFlow.createTogoOrder` |
 
@@ -550,6 +554,10 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Cancel split removes split child orders and preserves the original order total.
 - Dine In item split returns two child orders whose amounts match the selected item amounts.
 - Drag split marks the first suborder paid after cash payment, leaves the second suborder as `New Order`, and keeps the parent order highlighted with `rgba(33, 150, 243, 1)`.
+- Multi-language Open Food flow sets the Admin default keyboard to `support multi language`, opens To Go, inputs `中文` through `Chinese Simpl. Pinyin`, and reads the current order item name as `中文`.
+- Special-price discount flow changes the current item price to `5.85`, applies a 50% item discount, saves, opens Recall, and reads subtotal `2.92`.
+- Delivery order flow enters phone, name, address, Apt, city, state, zip, and note, creates the Delivery order, opens order Info, and reads the same eight fields.
+- Combo option flow creates a combo with four options, reduces the option count three times, and verifies the final count is exactly three less than the initial count.
 
 ### Page Responsibilities
 
@@ -561,12 +569,18 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `OrderDishesPage` owns order tax reads, customer-info popup actions, manager password popup actions, item discount action, and Modify note entry.
 - `OrderDishesPage` owns tip input, split-even action, Open Food no-tax entry, cash payment action, and Pickup info submission.
 - `OrderDishesPage` owns option and sub-option selection plus current ordered-item name/price reads.
+- `AdminPage` owns default keyboard selection for the Open Food multi-language path.
+- `DeliveryPage` owns Delivery order customer/address/note form entry and create-order submission.
+- `OrderDishesPage` owns Open Food keyboard input, item special-price input, 50% discount action, Delivery Info reads, combo add/reduce actions, and combo option-count reads.
 - `RecallPage` owns recalled item state, option reads, suborder tip reads, split-order combine action, order status reads, order selection, guest-name edit, customer-name reads, order total reads, split panel entry, even/item/seat/amount/drag split actions, split save/confirm/unsplit actions, suborder settlement/payment actions, suborder status reads, parent-card background reads, and split price reads.
+- `RecallPage` owns Recall subtotal reads for source cases that verify post-save subtotal instead of the active order page.
 
 ### Client/Data Responsibilities
 
 - `test-data/pos/dishes.ts` owns dish, combo, option, and inventory sample data.
 - `test-data/pos/dishes.ts` owns category-level and item-level option order samples, including Chinese category and optional sub-option variants.
+- `test-data/pos/delivery.ts` owns the Delivery customer/address/note sample used by the Delivery order Info assertion.
+- `test-data/pos/languages.ts` owns canonical language and keyboard-related values reused by language and Open Food paths.
 - `test-data/pos/payments.ts` owns expected payment/tender values reused by settlement.
 - `StubPosOrderClient` or `StubPosDbClient` owns generated order identity in stub mode.
 
@@ -595,6 +609,11 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Stub unsplit clears saved child-order prices while keeping the recalled order total unchanged.
 - Stub Dine In item split reuses the two saved item prices as child-order prices.
 - Stub drag split creates two child orders, cash payment changes the first child to `Paid`, the second child remains `New Order`, and the parent card stores the source highlight color as a stable readable value.
+- Stub Admin default keyboard selection is represented by a deterministic select control and does not persist beyond the current browser context.
+- Stub Open Food multi-language keyboard creates an order item whose name equals the typed keyboard text.
+- Stub special-price update replaces the selected item price, and the 50% discount floors to cents so `5.85` becomes `2.92`, matching the source assertion.
+- Stub Delivery create-order copies the entered phone, name, address, Apt, city, state, zip, and note into the order Info panel after navigating to the order page.
+- Stub combo option state starts at four options for the migrated combo sample and decrements by one for each reduce action.
 
 ### Live Gaps
 

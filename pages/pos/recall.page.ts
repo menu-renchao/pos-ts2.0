@@ -31,6 +31,7 @@ export class RecallPage extends PageObject {
   private readonly orderTotal: Locator;
   private readonly parentOrderCard: Locator;
   private readonly orderStatus: Locator;
+  private readonly orderSubtotal: Locator;
   private readonly orderTip: Locator;
   private readonly previousOrderButton: Locator;
   private readonly saveEditButton: Locator;
@@ -63,6 +64,7 @@ export class RecallPage extends PageObject {
     this.orderTotal = page.getByTestId('recall-order-total');
     this.parentOrderCard = page.getByTestId('recall-parent-order');
     this.orderStatus = page.getByTestId('recall-order-status');
+    this.orderSubtotal = page.getByTestId('recall-order-subtotal');
     this.orderTip = page.getByTestId('recall-order-tip');
     this.previousOrderButton = page.getByTestId('recall-previous-order');
     this.saveEditButton = page.getByTestId('recall-save-edit');
@@ -178,6 +180,10 @@ export class RecallPage extends PageObject {
 
   async readOrderTotal(): Promise<number> {
     return step('读取 Recall 订单总额', async () => Number((await this.orderTotal.textContent()) ?? '0'));
+  }
+
+  async readOrderSubtotal(): Promise<number> {
+    return step('读取 Recall 订单小计', async () => Number((await this.orderSubtotal.textContent()) ?? '0'));
   }
 
   async openSplitOrder(): Promise<void> {

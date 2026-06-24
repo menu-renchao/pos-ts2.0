@@ -46,6 +46,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         <option value="Chinese">Chinese</option>
       </select>
       <button data-testid="save-user-default-language">Save Language</button>
+      <select data-testid="admin-default-keyboard">
+        <option value="default">default</option>
+        <option value="support multi language">support multi language</option>
+      </select>
     </section>
     <section data-testid="order-page" hidden>
       <div data-testid="open-food-category"></div>
@@ -53,8 +57,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <div data-testid="order-menu-categories"></div>
       <div data-testid="order-menu-items"></div>
       <div data-testid="order-tax">0</div>
+      <div data-testid="order-subtotal">0</div>
       <div data-testid="order-item-name"></div>
       <div data-testid="order-item-price">0</div>
+      <input data-testid="item-price-input" />
+      <button data-testid="item-price-submit">Submit Price</button>
       <div data-testid="order-options"></div>
       <div data-testid="order-sub-options"></div>
       <button data-testid="order-send-kitchen">Send Kitchen</button>
@@ -62,12 +69,24 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <button data-testid="settle-cash">Cash</button>
       <button data-testid="order-void-item">Void Item</button>
       <button data-testid="item-discount-10">10% Discount</button>
+      <button data-testid="item-discount-50">50% Discount</button>
       <input data-testid="order-tip" />
       <button data-testid="split-even">Split Even</button>
       <button data-testid="split-combine">Combine Split</button>
+      <button data-testid="order-open-food">Open Food</button>
+      <select data-testid="open-food-keyboard-language">
+        <option value="Chinese Simpl. Pinyin">Chinese Simpl. Pinyin</option>
+      </select>
+      <input data-testid="open-food-keyboard-text" />
+      <button data-testid="open-food-keyboard-submit">Submit Open Food Keyboard</button>
       <input data-testid="open-food-name" />
       <input data-testid="open-food-price" />
       <button data-testid="open-food-no-tax">Open Food No Tax</button>
+      <button data-testid="order-combo-item">Combo Item</button>
+      <button data-testid="combo-option-reduce">Reduce Combo Option</button>
+      <div data-testid="combo-option-count">0</div>
+      <button data-testid="order-info">Info</button>
+      <div data-testid="order-info-rows"></div>
       <button data-testid="order-pickup">Pickup</button>
       <button data-testid="pickup-info-submit">Submit Pickup Info</button>
       <input data-testid="modify-note-name" />
@@ -96,6 +115,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <div data-testid="recall-order-tip"></div>
       <div data-testid="recall-order-status"></div>
       <div data-testid="recall-customer-name"></div>
+      <div data-testid="recall-order-subtotal"></div>
       <div data-testid="recall-order-total"></div>
       <div data-testid="recall-order-items"></div>
       <section data-testid="split-panel" hidden>
@@ -128,6 +148,12 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <input data-testid="delivery-phone" />
       <input data-testid="delivery-name" />
       <input data-testid="delivery-address" />
+      <input data-testid="delivery-apt" />
+      <input data-testid="delivery-city" />
+      <input data-testid="delivery-state" />
+      <input data-testid="delivery-zip" />
+      <input data-testid="delivery-note" />
+      <button data-testid="delivery-create-order">Create Delivery Order</button>
       <button data-testid="delivery-history-customer">History Customer</button>
       <button data-testid="delivery-phone-delete">Delete Phone</button>
       <button data-testid="delivery-name-delete">Delete Name</button>
@@ -184,6 +210,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let currentSplitPartTip = null;
       let currentOrderStatus = '';
       let currentCustomerName = null;
+      let currentDeliveryInfoRows = [];
+      let currentComboOptionCount = 0;
       let savedOrders = [];
       let selectedRecallOrder = null;
       let draftSplitPrices = [];
@@ -220,8 +248,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const orderMenuItems = document.querySelector('[data-testid="order-menu-items"]');
       const orderSaveButton = document.querySelector('[data-testid="order-save"]');
       const orderTax = document.querySelector('[data-testid="order-tax"]');
+      const orderSubtotal = document.querySelector('[data-testid="order-subtotal"]');
       const orderItemName = document.querySelector('[data-testid="order-item-name"]');
       const orderItemPrice = document.querySelector('[data-testid="order-item-price"]');
+      const itemPriceInput = document.querySelector('[data-testid="item-price-input"]');
+      const itemPriceSubmitButton = document.querySelector('[data-testid="item-price-submit"]');
       const orderOptions = document.querySelector('[data-testid="order-options"]');
       const orderSubOptions = document.querySelector('[data-testid="order-sub-options"]');
       const orderSendKitchenButton = document.querySelector('[data-testid="order-send-kitchen"]');
@@ -229,11 +260,20 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const settleCashButton = document.querySelector('[data-testid="settle-cash"]');
       const orderVoidItemButton = document.querySelector('[data-testid="order-void-item"]');
       const itemDiscountButton = document.querySelector('[data-testid="item-discount-10"]');
+      const itemHalfDiscountButton = document.querySelector('[data-testid="item-discount-50"]');
       const orderTipInput = document.querySelector('[data-testid="order-tip"]');
       const splitEvenButton = document.querySelector('[data-testid="split-even"]');
+      const orderOpenFoodButton = document.querySelector('[data-testid="order-open-food"]');
+      const openFoodKeyboardTextInput = document.querySelector('[data-testid="open-food-keyboard-text"]');
+      const openFoodKeyboardSubmitButton = document.querySelector('[data-testid="open-food-keyboard-submit"]');
       const openFoodNameInput = document.querySelector('[data-testid="open-food-name"]');
       const openFoodPriceInput = document.querySelector('[data-testid="open-food-price"]');
       const openFoodNoTaxButton = document.querySelector('[data-testid="open-food-no-tax"]');
+      const orderComboItemButton = document.querySelector('[data-testid="order-combo-item"]');
+      const comboOptionReduceButton = document.querySelector('[data-testid="combo-option-reduce"]');
+      const comboOptionCount = document.querySelector('[data-testid="combo-option-count"]');
+      const orderInfoButton = document.querySelector('[data-testid="order-info"]');
+      const orderInfoRows = document.querySelector('[data-testid="order-info-rows"]');
       const orderPickupButton = document.querySelector('[data-testid="order-pickup"]');
       const pickupInfoSubmitButton = document.querySelector('[data-testid="pickup-info-submit"]');
       const modifyNoteNameInput = document.querySelector('[data-testid="modify-note-name"]');
@@ -257,6 +297,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const recallOrderTip = document.querySelector('[data-testid="recall-order-tip"]');
       const recallOrderStatus = document.querySelector('[data-testid="recall-order-status"]');
       const recallCustomerName = document.querySelector('[data-testid="recall-customer-name"]');
+      const recallOrderSubtotal = document.querySelector('[data-testid="recall-order-subtotal"]');
       const recallOrderTotal = document.querySelector('[data-testid="recall-order-total"]');
       const recallOrderItems = document.querySelector('[data-testid="recall-order-items"]');
       const recallParentOrder = document.querySelector('[data-testid="recall-parent-order"]');
@@ -293,6 +334,12 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const deliveryPhoneInput = document.querySelector('[data-testid="delivery-phone"]');
       const deliveryNameInput = document.querySelector('[data-testid="delivery-name"]');
       const deliveryAddressInput = document.querySelector('[data-testid="delivery-address"]');
+      const deliveryAptInput = document.querySelector('[data-testid="delivery-apt"]');
+      const deliveryCityInput = document.querySelector('[data-testid="delivery-city"]');
+      const deliveryStateInput = document.querySelector('[data-testid="delivery-state"]');
+      const deliveryZipInput = document.querySelector('[data-testid="delivery-zip"]');
+      const deliveryNoteInput = document.querySelector('[data-testid="delivery-note"]');
+      const deliveryCreateOrderButton = document.querySelector('[data-testid="delivery-create-order"]');
       const deliveryHistoryCustomerButton = document.querySelector('[data-testid="delivery-history-customer"]');
       const deliveryPhoneDeleteButton = document.querySelector('[data-testid="delivery-phone-delete"]');
       const deliveryNameDeleteButton = document.querySelector('[data-testid="delivery-name-delete"]');
@@ -392,9 +439,24 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
 
       function renderOrderAmounts() {
         const itemCount = currentOrderItems.filter((item) => item.state !== 'Voided').length;
+        const subtotal = currentOrderItems
+          .filter((item) => item.state !== 'Voided')
+          .reduce((total, item) => total + Number(item.price || 0), 0);
         orderTax.textContent = String(Number((itemCount * 0.6).toFixed(2)));
+        orderSubtotal.textContent = String(Number(subtotal.toFixed(2)));
         orderItemName.textContent = currentOrderItems[0]?.name || '';
         orderItemPrice.textContent = String(currentOrderItems[0]?.price || 0);
+        comboOptionCount.textContent = String(currentComboOptionCount);
+      }
+
+      function renderDeliveryInfoRows() {
+        orderInfoRows.innerHTML = '';
+        currentDeliveryInfoRows.forEach((value) => {
+          const row = document.createElement('div');
+          row.dataset.testid = 'order-info-row';
+          row.textContent = value;
+          orderInfoRows.appendChild(row);
+        });
       }
 
       function renderOptionControls() {
@@ -436,8 +498,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         currentSplitPartTip = null;
         currentOrderStatus = '';
         currentCustomerName = null;
+        currentDeliveryInfoRows = [];
+        currentComboOptionCount = 0;
         customerInfoPopup.hidden = true;
         managerPasswordPopup.hidden = true;
+        renderDeliveryInfoRows();
         renderOrderAmounts();
         renderOrderMenu();
         const effectiveLanguage = currentLanguage === 'Chinese' || userDefaultLanguage === 'Chinese' ? 'Chinese' : 'Default';
@@ -452,6 +517,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           splitTip: currentSplitPartTip,
           status: currentOrderStatus,
           customerName: currentCustomerName,
+          subtotal: Number(orderSubtotal.textContent || '0'),
+          deliveryInfoRows: [...currentDeliveryInfoRows],
           splitOrderPrices: [],
           subOrderStatuses: [],
         };
@@ -520,6 +587,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         recallOrderTip.textContent = String(order.tip || 0);
         recallOrderStatus.textContent = order.status || '';
         recallCustomerName.textContent = order.customerName || '';
+        recallOrderSubtotal.textContent = String(order.subtotal ?? orderTotal(order));
         recallOrderTotal.textContent = String(orderTotal(order));
         recallParentOrder.style.backgroundColor = order.parentBackground || '';
         recallParentOrder.dataset.background = order.parentBackground || '';
@@ -769,6 +837,42 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           renderOrderAmounts();
         }
       });
+      itemHalfDiscountButton.addEventListener('click', () => {
+        if (currentOrderItems[0]) {
+          currentOrderItems[0].price = Math.floor(currentOrderItems[0].price * 50) / 100;
+          renderOrderAmounts();
+        }
+      });
+      itemPriceSubmitButton.addEventListener('click', () => {
+        if (currentOrderItems[0]) {
+          currentOrderItems[0].price = Number(itemPriceInput.value || '0');
+          renderOrderAmounts();
+        }
+      });
+      orderOpenFoodButton.addEventListener('click', () => {
+        openFoodKeyboardTextInput.value = '';
+      });
+      openFoodKeyboardSubmitButton.addEventListener('click', () => {
+        currentOrderItems.push({
+          name: openFoodKeyboardTextInput.value || 'Open Food',
+          price: 0,
+          state: '',
+          taxRate: 0,
+        });
+        renderOrderAmounts();
+      });
+      orderComboItemButton.addEventListener('click', () => {
+        currentComboOptionCount = 4;
+        currentOrderItems.push({ name: 'Combo Item', price: 0, state: '' });
+        renderOrderAmounts();
+      });
+      comboOptionReduceButton.addEventListener('click', () => {
+        currentComboOptionCount = Math.max(0, currentComboOptionCount - 1);
+        renderOrderAmounts();
+      });
+      orderInfoButton.addEventListener('click', () => {
+        renderDeliveryInfoRows();
+      });
       modifySaveButton.addEventListener('click', () => {
         currentItemOption = {
           name: modifyNoteNameInput.value,
@@ -918,6 +1022,29 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       });
       deliverySeedAddressOrderButton.addEventListener('click', () => {
         deliveryHistoricalAddress = deliveryAddressInput.value;
+      });
+      deliveryCreateOrderButton.addEventListener('click', () => {
+        currentOrderItems = [];
+        currentItemOption = null;
+        currentOrderTip = 0;
+        currentSplitPartTip = null;
+        currentOrderStatus = '';
+        currentCustomerName = deliveryNameInput.value || null;
+        currentComboOptionCount = 0;
+        currentDeliveryInfoRows = [
+          deliveryPhoneInput.value,
+          deliveryNameInput.value,
+          deliveryAddressInput.value,
+          deliveryAptInput.value,
+          deliveryCityInput.value,
+          deliveryStateInput.value,
+          deliveryZipInput.value,
+          deliveryNoteInput.value,
+        ];
+        showPanel('order');
+        renderOrderAmounts();
+        renderOrderMenu();
+        renderDeliveryInfoRows();
       });
       deliveryAddressInput.addEventListener('keydown', (event) => {
         if (event.key === 'Enter' && deliveryHistoricalAddress.includes(deliveryAddressInput.value)) {
