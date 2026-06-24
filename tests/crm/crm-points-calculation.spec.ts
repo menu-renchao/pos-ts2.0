@@ -25,6 +25,14 @@ test.describe('CRM 积分计算', () => {
     expect(result.pointsAfterRefund).toBe(result.pointsAfterPayment);
     expect(result.adminPointsAfterRefund).toBe(result.pointsAfterPayment);
   });
+
+  test('POS-29991 已支付会员订单应按积分规则增加本单积分', async ({ environment, page }) => {
+    const crmPointsCalculationFlow = createCrmPointsCalculationFlow(page);
+
+    const result = await crmPointsCalculationFlow.earnPointsForPaidMemberOrderAndReadPoints(environment.posHomeUrl);
+
+    expect(result.pointsAfterPayment).toBe(result.pointsBeforePayment + result.earnedPoints);
+  });
 });
 
 function createCrmPointsCalculationFlow(page: Page): CrmPointsCalculationFlow {

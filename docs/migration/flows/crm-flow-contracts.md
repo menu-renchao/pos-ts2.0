@@ -136,7 +136,8 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 | crm/test_crm_paypage.py | TestCrmPayPage | `test_semipay_page_redeem_discount` | tests/crm/crm-paypage.spec.ts | `CrmPayPageFlow.semiPayRedeemDiscountAndReadPoints` |
 | crm/test_crm_points_calculation.py | TestCrmPointsCalculation | `test_redeem_void_order` | tests/crm/crm-points-calculation.spec.ts | `CrmPointsCalculationFlow.voidPaidMemberOrderAndReadPoints` |
 | crm/test_crm_points_calculation.py | TestCrmPointsCalculation | `test_redeem_refund_order` | tests/crm/crm-points-calculation.spec.ts | `CrmPointsCalculationFlow.refundPaidMemberOrderAndReadPoints` |
-| crm/test_crm_points_calculation.py | TestCrmPointsCalculation | `test_login_member_redeem_point`, `test_earn_points_rules_by_spent_pos_order`, `test_redeem_free_item_modify_global_option` | tests/crm/crm-points-calculation.spec.ts | not-started |
+| crm/test_crm_points_calculation.py | TestCrmPointsCalculation | `test_earn_points_rules_by_spent_pos_order` | tests/crm/crm-points-calculation.spec.ts | `CrmPointsCalculationFlow.earnPointsForPaidMemberOrderAndReadPoints` |
+| crm/test_crm_points_calculation.py | TestCrmPointsCalculation | `test_login_member_redeem_point`, `test_redeem_free_item_modify_global_option` | tests/crm/crm-points-calculation.spec.ts | not-started |
 
 ### Preconditions
 
@@ -171,6 +172,7 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 22. `CrmPayPageFlow.semiPayRedeemDiscountAndReadPoints`: create a To Go order with `crmSourceRewardMember`, read original points, apply `10% Off`, add `groupSwitchDish`, enter payment page, split payment evenly, pay one part, exit payment state, and read Admin points.
 23. `CrmPointsCalculationFlow.voidPaidMemberOrderAndReadPoints`: create a Dine In order, attach `crmSourceRewardMember`, add `groupSwitchDish`, save, recall, pay all by cash, reopen the recent order, read Recall point balance, void the paid order, and read Recall point balance again.
 24. `CrmPointsCalculationFlow.refundPaidMemberOrderAndReadPoints`: create a Dine In order, attach `crmSourceRewardMember`, add `groupSwitchDish`, save, recall, pay all by cash, reopen the recent order, read Recall point balance, refund the paid order, read Recall point balance again, then read the same member in Admin CRM Loyalty.
+25. `CrmPointsCalculationFlow.earnPointsForPaidMemberOrderAndReadPoints`: create a Dine In order, attach `crmSourceRewardMember`, read the POS header point balance, add `groupSwitchDish`, save, recall, pay all by cash, reopen the recent order, and read the Recall point balance.
 
 ### Expected Assertions
 
@@ -197,6 +199,7 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 - POS-29786 verifies pay-page `10% Off` semi-pay keeps the point deduction after a partial payment is made and the payment page is exited.
 - POS-29961 verifies paid-order Void removes the single-order earned points from the Recall CRM header balance.
 - POS-29963 verifies paid-order Refund keeps the payment-time point balance in Recall and Admin CRM Loyalty.
+- POS-29991 verifies paid-order earning adds the deterministic single-order points to the pre-payment POS header balance.
 
 ### Page Responsibilities
 
@@ -220,6 +223,7 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 - `OrderDishesPage.clickSettlementSwitchMember` and `OrderDishesPage.saveOrder` own payment-page member switching and save behavior for POS-29668.
 - `OrderDishesPage.splitPaymentEvenly`, `OrderDishesPage.settleByCash`, `RecallPage.clickSettle`, and `RecallPage.payCurrentOrderByCash` own full and semi-pay completion for POS-29703, POS-29769, and POS-29786.
 - `RecallPage.voidPaidOrder`, `RecallPage.refundPaidOrder`, and `RecallPage.readCrmPointBalance` own paid-order void/refund point-balance checks for POS-29961 and POS-29963.
+- `PosCrmPage.readHeaderPointBalance` and `RecallPage.readCrmPointBalance` own before/after point reads for POS-29991.
 
 ### Client/Data Responsibilities
 
@@ -259,6 +263,7 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 - Offline pay-page Redeem Item uses the existing free-item point deduction and the deterministic subtotal earning rule so a single regular dish restores the original member balance only after full payment.
 - Offline paid-order Void subtracts `earnPointsForSubtotal(order.subtotal)` from the selected recalled CRM member and refreshes the Recall header.
 - Offline paid-order Refund marks the recalled order refunded without changing CRM points, matching the source assertions that Recall and Admin balances remain equal to the payment-time balance.
+- Offline paid-order earning uses the same deterministic subtotal rule as the void/refund paths; a single `groupSwitchDish` order earns 10 points.
 
 ### Live Gaps
 

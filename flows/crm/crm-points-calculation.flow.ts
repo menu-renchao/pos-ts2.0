@@ -18,6 +18,12 @@ export type PaidOrderRefundPointResult = {
   readonly adminPointsAfterRefund: number;
 };
 
+export type PaidOrderEarnPointResult = {
+  readonly pointsBeforePayment: number;
+  readonly pointsAfterPayment: number;
+  readonly earnedPoints: number;
+};
+
 export class CrmPointsCalculationFlow {
   constructor(
     private readonly homePage: PosHomePage,
@@ -54,18 +60,31 @@ export class CrmPointsCalculationFlow {
     };
   }
 
-  private async createPaidDineInMemberOrder(homeUrl: string): Promise<void> {
+  async earnPointsForPaidMemberOrderAndReadPoints(homeUrl: string): Promise<PaidOrderEarnPointResult> {
+    const pointsBeforePayment = await this.createPaidDineInMemberOrder(homeUrl);
+    const pointsAfterPayment = await this.recallPage.readCrmPointBalance();
+
+    return {
+      pointsBeforePayment,
+      pointsAfterPayment,
+      earnedPoints: crmRewardSettings.pointsPerPaidOrder,
+    };
+  }
+
+  private async createPaidDineInMemberOrder(homeUrl: string): Promise<number> {
     await this.homePage.open(homeUrl);
     await this.homePage.clickDineIn();
     this.crmRewardClient.findMemberByPhone(crmSourceRewardMember.phone);
     await this.posCrmPage.openRedeem();
     await this.posCrmPage.selectMemberByPhone(crmSourceRewardMember.phone);
+    const pointsBeforePayment = await this.posCrmPage.readHeaderPointBalance();
     await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
     await this.orderDishesPage.saveOrder();
     await this.homePage.clickRecall();
     await this.recallPage.openRecentOrder();
     await this.recallPage.settleAllByCash();
     await this.recallPage.openRecentOrder();
+    return pointsBeforePayment;
   }
 
   private async readAdminPoints(member: string): Promise<number> {
