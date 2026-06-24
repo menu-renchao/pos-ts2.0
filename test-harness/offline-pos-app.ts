@@ -12,6 +12,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <button data-testid="switch-language-Chinese">Chinese</button>
       <button data-testid="switch-language-Default">Default</button>
       <button data-testid="home-logout">Logout</button>
+      <button data-testid="home-check-in">Check In/Out</button>
       <button data-testid="edit-home-functions">Edit</button>
       <button data-testid="more-functions">More</button>
       <section data-testid="home-function-cards"></section>
@@ -25,6 +26,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <button data-testid="home-admin">Admin</button>
       <input data-testid="employee-password" type="password" />
       <button data-testid="employee-password-save">Save</button>
+      <div data-testid="clock-text" role="status"></div>
+      <button data-testid="clock-break" hidden>Break</button>
+      <button data-testid="clock-back-to-work" hidden>Back To Work</button>
+      <button data-testid="clock-checkout" hidden>Checkout</button>
       <div data-testid="login-toast" role="status"></div>
       <div data-testid="home-toast" role="status"></div>
     </main>
@@ -42,6 +47,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const sessionMoveError = "Can't move this button to/from hide area";
       let currentLanguage = localStorage.getItem('currentLanguage') || 'Default';
       let userDefaultLanguage = localStorage.getItem('userDefaultLanguage') || 'Default';
+      let clockState = 'off';
       let mainFunctions = ['Dine In', 'Drawer', 'To Go', 'Delivery'];
       let hiddenFunctions = ['Admin', 'Session'];
       let draftMainFunctions = [...mainFunctions];
@@ -60,6 +66,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const switchChineseButton = document.querySelector('[data-testid="switch-language-Chinese"]');
       const switchDefaultButton = document.querySelector('[data-testid="switch-language-Default"]');
       const logoutButton = document.querySelector('[data-testid="home-logout"]');
+      const checkInButton = document.querySelector('[data-testid="home-check-in"]');
+      const clockText = document.querySelector('[data-testid="clock-text"]');
+      const breakButton = document.querySelector('[data-testid="clock-break"]');
+      const backToWorkButton = document.querySelector('[data-testid="clock-back-to-work"]');
+      const checkoutButton = document.querySelector('[data-testid="clock-checkout"]');
       const adminPage = document.querySelector('[data-testid="admin-page"]');
       const orderPage = document.querySelector('[data-testid="order-page"]');
       const languageSelect = document.querySelector('[data-testid="user-default-language"]');
@@ -73,6 +84,21 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         const effectiveLanguage = currentLanguage === 'Chinese' || userDefaultLanguage === 'Chinese' ? 'Chinese' : 'Default';
         welcomeText.textContent = effectiveLanguage === 'Chinese' ? '欢迎您' : 'Welcome';
         languageSelect.value = userDefaultLanguage;
+      }
+
+      function clockNow() {
+        const date = new Date();
+        let hour = date.getHours();
+        const minute = String(date.getMinutes()).padStart(2, '0');
+        const suffix = hour >= 12 ? 'PM' : 'AM';
+        hour = hour % 12 || 12;
+        return hour + ':' + minute + suffix;
+      }
+
+      function renderClockControls() {
+        breakButton.hidden = clockState !== 'clocked-in';
+        backToWorkButton.hidden = clockState !== 'on-break';
+        checkoutButton.hidden = clockState === 'off';
       }
 
       function renderFunctionCards() {
@@ -186,6 +212,28 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       logoutButton.addEventListener('click', () => {
         document.body.dataset.employeeContext = 'logged-out';
       });
+      checkInButton.addEventListener('click', () => {
+        if (clockState === 'off') {
+          clockState = 'clocked-in';
+          clockText.textContent = 'Clocked In at ' + clockNow();
+        }
+        renderClockControls();
+      });
+      breakButton.addEventListener('click', () => {
+        clockState = 'on-break';
+        clockText.textContent = 'On Break from ' + clockNow();
+        renderClockControls();
+      });
+      backToWorkButton.addEventListener('click', () => {
+        clockState = 'clocked-in';
+        clockText.textContent = 'Clocked In at ' + clockNow();
+        renderClockControls();
+      });
+      checkoutButton.addEventListener('click', () => {
+        clockState = 'off';
+        clockText.textContent = 'Checked Out';
+        renderClockControls();
+      });
       document.querySelector('[data-testid="home-admin"]').addEventListener('click', () => {
         adminPage.hidden = false;
         orderPage.hidden = true;
@@ -203,6 +251,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       });
       renderFunctionCards();
       renderLanguage();
+      renderClockControls();
     </script>
   </body>
 </html>`;

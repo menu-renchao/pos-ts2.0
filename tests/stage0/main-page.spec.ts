@@ -2,6 +2,7 @@ import { test, expect } from '../../fixtures/base-test.js';
 import { HomeFunctionLayoutFlow } from '../../flows/pos/home-function-layout.flow.js';
 import { LanguagePreferenceFlow } from '../../flows/pos/language-preference.flow.js';
 import { PosEntryFlow } from '../../flows/pos/pos-entry.flow.js';
+import { StaffClockFlow } from '../../flows/pos/staff-clock.flow.js';
 import { AdminPage } from '../../pages/pos/admin.page.js';
 import { PosHomePage } from '../../pages/pos/home.page.js';
 import { OrderDishesPage } from '../../pages/pos/order-dishes.page.js';
@@ -114,5 +115,20 @@ test.describe('POS 首页', () => {
     );
 
     expect(openFoodText.replace('\nauto_fix', '')).toBe('自定义菜');
+  });
+
+  test('未登录员工可打卡上班休息返回工作并下班', {
+    annotation: [jiraIssue('POS-34070')],
+  }, async ({ environment, page }) => {
+    const staffClockFlow = new StaffClockFlow(new PosHomePage(page));
+
+    const result = await staffClockFlow.clockInBreakBackToWorkAndCheckout(environment.posHomeUrl);
+
+    expect(result.clockedInText).toContain('Clocked In');
+    expect(result.clockedInText).toContain('at');
+    expect(result.clockedInText).toMatch(/\d{1,2}:\d{2}(AM|PM)/);
+    expect(result.onBreakText).toContain('On Break');
+    expect(result.onBreakText).toContain('from');
+    expect(result.onBreakText).toMatch(/\d{1,2}:\d{2}(AM|PM)/);
   });
 });

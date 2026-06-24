@@ -166,6 +166,57 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 | selector | Real language switch, user default language, and order category selectors must be confirmed against live DOM | Replace stub selectors with stable live selectors or request instrumentation |
 | cleanup | Live user default language writes DB-backed config | Add API/DB cleanup contract before live smoke |
 
+## StaffClockFlow
+
+### Source Coverage
+
+| source_file | source_class | source_test_pattern | target_spec | target_flow_method |
+|---|---|---|---|---|
+| stage0/test_main_page.py | TestMainPage | `test_clock_in_break` clock in, break, back to work, checkout, and login again | tests/stage0/main-page.spec.ts | `StaffClockFlow.clockInBreakBackToWorkAndCheckout` |
+
+### Preconditions
+
+- POS home is opened through `PosHomePage.open`.
+- Employee is logged out before using the check in/out entry.
+- Employee password comes from `test-data/pos/permissions.ts`.
+- Stub mode uses browser page state for current clock status.
+
+### Steps
+
+1. Log out from POS home.
+2. Open Check In/Out to clock in and read the status text.
+3. Open Check In/Out again, click Break, and read the break status text.
+4. Open Check In/Out, click Back To Work.
+5. Open Check In/Out, click Checkout, then enter the employee password to return to normal POS access.
+
+### Expected Assertions
+
+- Clock-in status includes `Clocked In`, `at`, and a POS-style time.
+- Break status includes `On Break`, `from`, and a POS-style time.
+- Checkout path allows employee password entry after the clock workflow.
+
+### Page Responsibilities
+
+- `PosHomePage` owns check in/out entry, break/back/checkout actions, clock text reads, logout, and password entry.
+
+### Client/Data Responsibilities
+
+- `test-data/pos/permissions.ts` owns the valid employee password.
+- No DB/API client is required for first-round offline staff clock behavior.
+
+### Stub Behavior
+
+- Stub clock state transitions through `off`, `clocked-in`, and `on-break`.
+- Stub clock text uses the browser local time format `h:mmAM/PM`.
+- Stub checkout returns the state to `off` and leaves password re-entry to the normal login flow.
+
+### Live Gaps
+
+| gap | reason | required before verified |
+|---|---|---|
+| selector | Real check in/out modal controls and status selectors must be confirmed against live DOM | Replace stub selectors with stable live selectors or request instrumentation |
+| time | Live POS may use terminal timezone or display localization | Verify time source and format during live smoke |
+
 ## OrderEntryFlow
 
 ### Source Coverage

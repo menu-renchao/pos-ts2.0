@@ -14,6 +14,11 @@ export class PosHomePage extends PageObject {
 
   private readonly adminPageRoot: Locator;
   private readonly cancelEditButton: Locator;
+  private readonly backToWorkButton: Locator;
+  private readonly breakButton: Locator;
+  private readonly checkInButton: Locator;
+  private readonly checkoutButton: Locator;
+  private readonly clockText: Locator;
   private readonly editButton: Locator;
   private readonly hiddenFunctionCards: Locator;
   private readonly hiddenFunctionList: Locator;
@@ -37,7 +42,12 @@ export class PosHomePage extends PageObject {
     this.adminButton = page.getByTestId('home-admin');
     this.passwordInput = page.getByTestId('employee-password');
     this.savePasswordButton = page.getByTestId('employee-password-save');
+    this.backToWorkButton = page.getByTestId('clock-back-to-work');
+    this.breakButton = page.getByTestId('clock-break');
     this.cancelEditButton = page.getByTestId('edit-cancel');
+    this.checkInButton = page.getByTestId('home-check-in');
+    this.checkoutButton = page.getByTestId('clock-checkout');
+    this.clockText = page.getByTestId('clock-text');
     this.editButton = page.getByTestId('edit-home-functions');
     this.hiddenFunctionList = page.getByTestId('hidden-function-cards');
     this.hiddenFunctionCards = page.getByTestId('hidden-function-card');
@@ -123,6 +133,35 @@ export class PosHomePage extends PageObject {
       await this.togoButton.click();
       await expect(this.orderPageRoot).toBeVisible();
     });
+  }
+
+  async openCheckIn(): Promise<void> {
+    await step('打开员工打卡入口', async () => {
+      await this.checkInButton.click();
+      await expect(this.clockText).toBeVisible();
+    });
+  }
+
+  async clickBreakButton(): Promise<void> {
+    await step('员工开始休息', async () => {
+      await this.breakButton.click();
+    });
+  }
+
+  async clickBackToWorkButton(): Promise<void> {
+    await step('员工返回工作', async () => {
+      await this.backToWorkButton.click();
+    });
+  }
+
+  async clickCheckoutButton(): Promise<void> {
+    await step('员工下班', async () => {
+      await this.checkoutButton.click();
+    });
+  }
+
+  async readClockText(): Promise<string> {
+    return step('读取员工打卡状态文案', async () => (await this.clockText.textContent()) ?? '');
   }
 
   async clickEdit(): Promise<void> {
