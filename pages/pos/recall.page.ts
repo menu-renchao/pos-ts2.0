@@ -210,6 +210,13 @@ export class RecallPage extends PageObject {
     }));
   }
 
+  async readRewardDiscountCount(): Promise<number> {
+    return step('读取 Recall Reward Discount 数量', async () => {
+      const reward = Number((await this.orderReward.textContent()) ?? '0');
+      return reward === 0 ? 0 : 1;
+    });
+  }
+
   async readOrderPriceSummary(): Promise<{ subtotal: number; reward: number }> {
     return step('读取 Recall 订单金额和 Reward Discount', async () => ({
       subtotal: Number((await this.orderSubtotal.textContent()) ?? '0'),

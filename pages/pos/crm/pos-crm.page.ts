@@ -28,6 +28,7 @@ export class PosCrmPage extends PageObject {
   private readonly redeemButton: Locator;
   private readonly redeemDiscountButton: Locator;
   private readonly redeemCreditButton: Locator;
+  private readonly redeemDeleteButton: Locator;
   private readonly redeemItemButton: Locator;
   private readonly redeemItemOptionButton: Locator;
   private readonly redeemPanel: Locator;
@@ -60,6 +61,7 @@ export class PosCrmPage extends PageObject {
     this.pointBalance = page.getByTestId('crm-point-balance');
     this.redeemButton = page.getByTestId('crm-redeem');
     this.redeemCreditButton = page.getByTestId('crm-redeem-credit');
+    this.redeemDeleteButton = page.getByTestId('crm-redeem-delete');
     this.redeemDiscountButton = page.getByTestId('crm-redeem-discount');
     this.redeemItemButton = page.getByTestId('crm-redeem-item');
     this.redeemItemOptionButton = page.getByTestId('crm-redeem-item-option');
@@ -178,6 +180,24 @@ export class PosCrmPage extends PageObject {
     }));
   }
 
+  async removeRedeemDiscount(): Promise<void> {
+    await step('删除当前 Redeem Discount', async () => {
+      await this.redeemDeleteButton.click();
+    });
+  }
+
+  async readAvailableRedeemControlCounts(): Promise<{
+    redeemDiscountCount: number;
+    redeemCreditCount: number;
+    redeemItemCount: number;
+  }> {
+    return step('读取可用 Redeem 操作数量', async () => ({
+      redeemDiscountCount: await this.countAvailableControl(this.redeemDiscountButton),
+      redeemCreditCount: await this.countAvailableControl(this.redeemCreditButton),
+      redeemItemCount: await this.countAvailableControl(this.redeemItemButton),
+    }));
+  }
+
   async searchRedeemMemberByPhone(phone: string): Promise<string> {
     return step(`Redeem 按电话搜索会员 ${phone}`, async () => {
       await this.redeemMemberSearchInput.fill(phone);
@@ -247,5 +267,15 @@ export class PosCrmPage extends PageObject {
 
   async readMemberSearchPhoneResult(): Promise<string> {
     return step('读取 CRM Member List 电话搜索结果', async () => ((await this.memberSearchPhoneResult.textContent()) ?? '').trim());
+  }
+
+  private async countAvailableControl(locator: Locator): Promise<number> {
+    if (!(await locator.isVisible())) {
+      return 0;
+    }
+    if (await locator.isDisabled()) {
+      return 0;
+    }
+    return 1;
   }
 }

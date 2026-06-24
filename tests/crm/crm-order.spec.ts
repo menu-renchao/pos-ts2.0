@@ -69,6 +69,36 @@ test.describe('CRM 订单会员', () => {
     expect(result.redeemMember).toBe(result.adminMemberName);
     expect(result.redeemPoints).toBe(result.adminPointBalance);
   });
+
+  test('订单使用 Redeem Item 后进入结算页应禁用 Switch Member', async ({ environment, page }) => {
+    const crmOrderFlow = createCrmOrderFlow(page);
+
+    const switchMemberClass = await crmOrderFlow.createRedeemItemOrderAndReadSettlementSwitchMemberState(environment.posHomeUrl);
+
+    expect(switchMemberClass).toContain('disabled');
+  });
+
+  test('Recall 编辑删除 Redeem Discount 后应保留会员积分并移除 Reward Discount', async ({ environment, page }) => {
+    const crmOrderFlow = createCrmOrderFlow(page);
+
+    const result = await crmOrderFlow.createDiscountOrderEditRemoveDiscountAndReadRecall(environment.posHomeUrl);
+
+    expect(result.orderPointsAfterEdit).toBe(result.orderPointsBeforeEdit);
+    expect(result.rewardDiscountCountBeforeEdit).toBe(1);
+    expect(result.rewardDiscountCountAfterEdit).toBe(0);
+  });
+
+  test('结算页 Select Member 选中会员后应显示会员信息并只开放折扣和积分兑换', async ({ environment, page }) => {
+    const crmOrderFlow = createCrmOrderFlow(page);
+
+    const result = await crmOrderFlow.selectSettlementMemberAndReadAvailableRedeems(environment.posHomeUrl);
+
+    expect(result.selectedMember).toBe(result.settlementMember);
+    expect(result.selectedPoints).toBe(result.settlementPoints);
+    expect(result.redeemDiscountCount).toBe(1);
+    expect(result.redeemCreditCount).toBe(1);
+    expect(result.redeemItemCount).toBe(0);
+  });
 });
 
 function createCrmOrderFlow(page: Page): CrmOrderFlow {

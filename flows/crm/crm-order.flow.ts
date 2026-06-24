@@ -47,6 +47,23 @@ export type AdminRedeemMemberCompareResult = {
   readonly redeemPoints: string;
 };
 
+export type RemoveDiscountEditResult = {
+  readonly orderPointsBeforeEdit: string;
+  readonly orderPointsAfterEdit: string;
+  readonly rewardDiscountCountBeforeEdit: number;
+  readonly rewardDiscountCountAfterEdit: number;
+};
+
+export type SettlementRedeemAvailabilityResult = {
+  readonly selectedMember: string;
+  readonly selectedPoints: string;
+  readonly settlementMember: string;
+  readonly settlementPoints: string;
+  readonly redeemDiscountCount: number;
+  readonly redeemCreditCount: number;
+  readonly redeemItemCount: number;
+};
+
 export class CrmOrderFlow {
   constructor(
     private readonly homePage: PosHomePage,
@@ -186,6 +203,70 @@ export class CrmOrderFlow {
       adminPointBalance,
       redeemMember: await this.posCrmPage.readRedeemOrderMember(),
       redeemPoints: await this.posCrmPage.readRedeemOrderPoints(),
+    };
+  }
+
+  async createRedeemItemOrderAndReadSettlementSwitchMemberState(homeUrl: string): Promise<string> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    this.crmRewardClient.findMemberByPhone(crmSourceRewardMember.phone);
+    await this.posCrmPage.openRedeem();
+    await this.posCrmPage.selectMemberByPhone(crmSourceRewardMember.phone);
+    await this.posCrmPage.openRedeem();
+    await this.posCrmPage.applyRedeemItem(crmRedeemItemDish.name);
+    await this.posCrmPage.quitRedeem();
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.clickSettle();
+    return this.orderDishesPage.readSettlementSwitchMemberClass();
+  }
+
+  async createDiscountOrderEditRemoveDiscountAndReadRecall(homeUrl: string): Promise<RemoveDiscountEditResult> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDelivery();
+    await this.deliveryPage.createDeliveryOrder(deliveryOrderInfoSample);
+    this.crmRewardClient.findMemberByPhone(crmSourceRewardMember.phone);
+    await this.posCrmPage.openRedeem();
+    await this.posCrmPage.selectMemberByPhone(crmSourceRewardMember.phone);
+    const orderPointsBeforeEdit = await this.posCrmPage.readRedeemOrderPoints();
+    await this.posCrmPage.openRedeem();
+    await this.posCrmPage.applyRedeemDiscount('10% Off');
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.saveOrder();
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    const rewardDiscountCountBeforeEdit = await this.recallPage.readRewardDiscountCount();
+    await this.recallPage.clickEdit();
+    await this.posCrmPage.openRedeem();
+    await this.posCrmPage.removeRedeemDiscount();
+    await this.orderDishesPage.saveOrder();
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    const header = await this.recallPage.readCrmOrderHeaderInfo();
+    return {
+      orderPointsBeforeEdit,
+      orderPointsAfterEdit: header.orderPoints,
+      rewardDiscountCountBeforeEdit,
+      rewardDiscountCountAfterEdit: await this.recallPage.readRewardDiscountCount(),
+    };
+  }
+
+  async selectSettlementMemberAndReadAvailableRedeems(homeUrl: string): Promise<SettlementRedeemAvailabilityResult> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.clickSettle();
+    await this.orderDishesPage.clickSettlementSelectMember();
+    this.crmRewardClient.findMemberByPhone(crmSourceRewardMember.phone);
+    await this.posCrmPage.selectMemberByPhone(crmSourceRewardMember.phone);
+    const selectedMember = await this.posCrmPage.readRedeemOrderMember();
+    const selectedPoints = await this.posCrmPage.readRedeemOrderPoints();
+    const availableControls = await this.posCrmPage.readAvailableRedeemControlCounts();
+    return {
+      selectedMember,
+      selectedPoints,
+      settlementMember: await this.posCrmPage.readRedeemOrderMember(),
+      settlementPoints: await this.posCrmPage.readRedeemOrderPoints(),
+      ...availableControls,
     };
   }
 }
