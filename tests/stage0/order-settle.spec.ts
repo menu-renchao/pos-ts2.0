@@ -108,4 +108,23 @@ test.describe('stage0 order settlement migration', () => {
       expect(unpaidAmount).toBe(7);
     },
   );
+
+  test(
+    'POS-31881 Dine In 现金付款条应先显示 Pay & Print 再显示 Pay',
+    {
+      annotation: jiraIssue('POS-31881'),
+    },
+    async ({ environment, page }) => {
+      const flow = new SettlementFlow(
+        new PosHomePage(page),
+        new AdminPage(page),
+        new OrderDishesPage(page),
+        new RecallPage(page),
+      );
+
+      const payActions = await flow.readDineInCashPaymentActionOrder(environment.posHomeUrl);
+
+      expect(payActions).toEqual(['Pay & Print', 'Pay']);
+    },
+  );
 });

@@ -110,6 +110,16 @@ export class SettlementFlow {
     return this.orderDishesPage.readSettlementUnpaidAmount();
   }
 
+  async readDineInCashPaymentActionOrder(homeUrl: string): Promise<string[]> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup('Lunch');
+    await this.orderDishesPage.selectMenuCategory('Chicken Lunch E');
+    await this.orderDishesPage.addMenuItem('superman item1');
+    await this.orderDishesPage.clickSettle();
+    return this.orderDishesPage.clickCashTenderAndReadPayActionOrder();
+  }
+
   private async payByCreditAddTwoTipsAndReadRecall(
     homeUrl: string,
     secondTipMethod: RecallTipMethod,

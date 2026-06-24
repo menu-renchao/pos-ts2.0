@@ -166,6 +166,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <input data-testid="settle-pay-amount" />
       <input data-testid="settle-tip" />
       <button data-testid="settle-cash">Cash</button>
+      <div data-testid="settle-pay-bar">
+        <div data-testid="settle-pay-bar-tender">Cash</div>
+        <div data-testid="settle-pay-bar-action">Pay & Print</div>
+        <div data-testid="settle-pay-bar-action">Pay</div>
+      </div>
       <button data-testid="settle-credit">Credit</button>
       <button data-testid="settle-loyalty-card">Loyalty Card</button>
       <button data-testid="settle-gift-card">Gift Card</button>

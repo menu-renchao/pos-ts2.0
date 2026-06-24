@@ -73,6 +73,7 @@ export class OrderDishesPage extends PageObject {
   private readonly settleGiftCardButton: Locator;
   private readonly settleLoyaltyCardButton: Locator;
   private readonly settlePayAmountInput: Locator;
+  private readonly settlePayBarActions: Locator;
   private readonly settleSelfCardButton: Locator;
   private readonly settleTipInput: Locator;
   private readonly settleEvenPayButton: Locator;
@@ -175,6 +176,7 @@ export class OrderDishesPage extends PageObject {
     this.settleGiftCardButton = page.getByTestId('settle-gift-card');
     this.settleLoyaltyCardButton = page.getByTestId('settle-loyalty-card');
     this.settlePayAmountInput = page.getByTestId('settle-pay-amount');
+    this.settlePayBarActions = page.getByTestId('settle-pay-bar-action');
     this.settleSelfCardButton = page.getByTestId('settle-self-card');
     this.settleTipInput = page.getByTestId('settle-tip');
     this.settleEvenPayButton = page.getByTestId('settle-even-pay');
@@ -349,6 +351,13 @@ export class OrderDishesPage extends PageObject {
       await this.settleTipInput.fill(String(amountInCents));
       await new Promise((resolve) => setTimeout(resolve, 200));
       await this.settleTipInput.press('Enter');
+    });
+  }
+
+  async clickCashTenderAndReadPayActionOrder(): Promise<string[]> {
+    return step('点击现金全额并读取付款按钮顺序', async () => {
+      await this.settleCashButton.click();
+      return (await this.settlePayBarActions.allTextContents()).map((text) => text.trim()).filter(Boolean);
     });
   }
 
