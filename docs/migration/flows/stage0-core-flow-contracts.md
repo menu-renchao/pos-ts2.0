@@ -271,6 +271,99 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 | selector | Real reservation form, status edit, inactive tab, and history selectors must be confirmed against live DOM | Replace stub selectors with stable live selectors or request instrumentation |
 | cleanup | Live seated reservations may create order records requiring cleanup | Add API/DB cleanup contract before live smoke |
 
+## ReportingFlow
+
+### Source Coverage
+
+| source_file | source_class | source_test_pattern | target_spec | target_flow_method |
+|---|---|---|---|---|
+| stage0/test_main_page.py | TestMainPage | `test_input_report_passwd_with_keyboard` enter report with external keyboard password | tests/stage0/main-page.spec.ts | `ReportingFlow.enterReportWithKeyboardPassword` |
+
+### Preconditions
+
+- POS home is opened through `PosHomePage.open`.
+- Report is entered through the home Report button, not by direct URL.
+- Employee password comes from `test-data/pos/permissions.ts`.
+
+### Steps
+
+1. Open POS home.
+2. Click Report to open the password popup.
+3. Fill the employee password and submit it after input settles.
+4. Read whether the report page is visible.
+
+### Expected Assertions
+
+- Report page visibility is `true` after the password popup is submitted.
+
+### Page Responsibilities
+
+- `PosHomePage` owns Report button entry and report password popup visibility check.
+- `ReportPage` owns password popup input/submit and report page visibility read.
+
+### Client/Data Responsibilities
+
+- `test-data/pos/permissions.ts` owns the employee password.
+- No DB/API client is required for first-round offline report entry behavior.
+
+### Stub Behavior
+
+- Stub report entry shows a password panel first.
+- Stub report page becomes visible only after the valid employee password is submitted.
+
+### Live Gaps
+
+| gap | reason | required before verified |
+|---|---|---|
+| selector | Real report button, password popup, and report landing selectors must be confirmed against live DOM | Replace stub selectors with stable live selectors or request instrumentation |
+
+## SupportInfoFlow
+
+### Source Coverage
+
+| source_file | source_class | source_test_pattern | target_spec | target_flow_method |
+|---|---|---|---|---|
+| stage0/test_main_page.py | TestMainPage | `test_check_patch_info` support page version and patch info | tests/stage0/main-page.spec.ts | `SupportInfoFlow.readPatchInfo` |
+
+### Preconditions
+
+- POS home is opened through `PosHomePage.open`.
+- Support information is entered through the home Support button.
+- Expected version and patch version values come from `test-data/pos/support-info.ts`.
+
+### Steps
+
+1. Open POS home.
+2. Click Support.
+3. Read version and patch version from the support panel.
+
+### Expected Assertions
+
+- Support version matches the expected offline app version.
+- Patch version matches the expected patch metadata.
+
+### Page Responsibilities
+
+- `PosHomePage` owns Support button entry.
+- `SupportPage` owns support panel visibility and version/patch-version reads.
+
+### Client/Data Responsibilities
+
+- `test-data/pos/support-info.ts` owns expected patch metadata for first-round offline behavior.
+- No DB/API/filesystem client is required in first-round offline mode; the source local patch file setup is represented by deterministic support metadata.
+
+### Stub Behavior
+
+- Stub support panel renders deterministic version and patch version values.
+- Stub mode does not read or write the Windows application install directory.
+
+### Live Gaps
+
+| gap | reason | required before verified |
+|---|---|---|
+| filesystem | Source Python case creates a local fastversion patch file under the POS install directory | Add live setup/cleanup contract for the Windows install path before live smoke |
+| selector | Real support panel version and patch selectors must be confirmed against live DOM | Replace stub selectors with stable live selectors or request instrumentation |
+
 ## OrderEntryFlow
 
 ### Source Coverage

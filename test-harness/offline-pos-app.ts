@@ -25,6 +25,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <button data-testid="home-recall">Recall</button>
       <button data-testid="home-admin">Admin</button>
       <button data-testid="home-reservation">Reservation</button>
+      <button data-testid="home-report">Report</button>
+      <button data-testid="home-support">Support</button>
       <input data-testid="employee-password" type="password" />
       <button data-testid="employee-password-save">Save</button>
       <div data-testid="clock-text" role="status"></div>
@@ -43,6 +45,17 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
     </section>
     <section data-testid="order-page" hidden>
       <div data-testid="open-food-category"></div>
+    </section>
+    <section data-testid="report-password-panel" hidden>
+      <input data-testid="report-password" type="password" />
+      <button data-testid="report-password-save">Save</button>
+    </section>
+    <section data-testid="report-page" hidden>
+      <h1>Report</h1>
+    </section>
+    <section data-testid="support-page" hidden>
+      <div data-testid="support-version">Voffline-fast</div>
+      <div data-testid="support-patch-version">7</div>
     </section>
     <section data-testid="reservation-page" hidden>
       <button data-testid="reservation-active-tab">Active</button>
@@ -92,6 +105,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const checkoutButton = document.querySelector('[data-testid="clock-checkout"]');
       const adminPage = document.querySelector('[data-testid="admin-page"]');
       const orderPage = document.querySelector('[data-testid="order-page"]');
+      const reportPasswordPanel = document.querySelector('[data-testid="report-password-panel"]');
+      const reportPasswordInput = document.querySelector('[data-testid="report-password"]');
+      const reportPasswordSaveButton = document.querySelector('[data-testid="report-password-save"]');
+      const reportPage = document.querySelector('[data-testid="report-page"]');
+      const supportPage = document.querySelector('[data-testid="support-page"]');
       const reservationPage = document.querySelector('[data-testid="reservation-page"]');
       const reservationPartyInput = document.querySelector('[data-testid="reservation-party-name"]');
       const reservationPhoneInput = document.querySelector('[data-testid="reservation-phone"]');
@@ -135,6 +153,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       function showPanel(panel) {
         adminPage.hidden = panel !== 'admin';
         orderPage.hidden = panel !== 'order';
+        reportPasswordPanel.hidden = panel !== 'report-password';
+        reportPage.hidden = panel !== 'report';
+        supportPage.hidden = panel !== 'support';
         reservationPage.hidden = panel !== 'reservation';
       }
 
@@ -303,6 +324,17 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       });
       document.querySelector('[data-testid="home-reservation"]').addEventListener('click', () => {
         showPanel('reservation');
+      });
+      document.querySelector('[data-testid="home-report"]').addEventListener('click', () => {
+        showPanel('report-password');
+      });
+      reportPasswordSaveButton.addEventListener('click', () => {
+        if (reportPasswordInput.value === '11') {
+          showPanel('report');
+        }
+      });
+      document.querySelector('[data-testid="home-support"]').addEventListener('click', () => {
+        showPanel('support');
       });
       reservationAddButton.addEventListener('click', () => {
         reservations.push({

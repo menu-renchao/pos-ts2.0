@@ -29,7 +29,11 @@ export class PosHomePage extends PageObject {
   private readonly mainAddButton: Locator;
   private readonly moreAddButton: Locator;
   private readonly orderPageRoot: Locator;
+  private readonly reportButton: Locator;
+  private readonly reportPasswordPanel: Locator;
   private readonly saveEditButton: Locator;
+  private readonly supportButton: Locator;
+  private readonly supportPageRoot: Locator;
   private readonly toast: Locator;
   private readonly welcomeText: Locator;
   private readonly homeRoot: Locator;
@@ -58,7 +62,11 @@ export class PosHomePage extends PageObject {
     this.mainAddButton = page.getByTestId('edit-main-add');
     this.moreAddButton = page.getByTestId('edit-more-add');
     this.orderPageRoot = page.getByTestId('order-page');
+    this.reportButton = page.getByTestId('home-report');
+    this.reportPasswordPanel = page.getByTestId('report-password-panel');
     this.saveEditButton = page.getByTestId('edit-save');
+    this.supportButton = page.getByTestId('home-support');
+    this.supportPageRoot = page.getByTestId('support-page');
     this.toast = page.getByTestId('home-toast');
     this.welcomeText = page.getByTestId('welcome-text');
     this.loginToast = page.getByTestId('login-toast');
@@ -141,6 +149,20 @@ export class PosHomePage extends PageObject {
     await step('从首页进入预约页面', async () => {
       await this.reservationButton.click();
       await expect(this.page.getByTestId('reservation-page')).toBeVisible();
+    });
+  }
+
+  async clickReport(): Promise<void> {
+    await step('从首页打开报表密码弹层', async () => {
+      await this.reportButton.click();
+      await expect(this.reportPasswordPanel).toBeVisible();
+    });
+  }
+
+  async clickSupport(): Promise<void> {
+    await step('从首页打开支持信息', async () => {
+      await this.supportButton.click();
+      await expect(this.supportPageRoot).toBeVisible();
     });
   }
 

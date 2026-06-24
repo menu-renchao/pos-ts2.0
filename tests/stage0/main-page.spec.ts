@@ -3,13 +3,18 @@ import { HomeFunctionLayoutFlow } from '../../flows/pos/home-function-layout.flo
 import { LanguagePreferenceFlow } from '../../flows/pos/language-preference.flow.js';
 import { PosEntryFlow } from '../../flows/pos/pos-entry.flow.js';
 import { ReservationFlow } from '../../flows/pos/reservation.flow.js';
+import { ReportingFlow } from '../../flows/pos/reporting.flow.js';
 import { StaffClockFlow } from '../../flows/pos/staff-clock.flow.js';
+import { SupportInfoFlow } from '../../flows/pos/support-info.flow.js';
 import { AdminPage } from '../../pages/pos/admin.page.js';
 import { PosHomePage } from '../../pages/pos/home.page.js';
 import { OrderDishesPage } from '../../pages/pos/order-dishes.page.js';
+import { ReportPage } from '../../pages/pos/report.page.js';
 import { ReservationPage } from '../../pages/pos/reservation.page.js';
+import { SupportPage } from '../../pages/pos/support.page.js';
 import { homeFunctions, sessionMoveError } from '../../test-data/pos/home-functions.js';
 import { languageOptions } from '../../test-data/pos/languages.js';
+import { expectedPatchInfo } from '../../test-data/pos/support-info.js';
 import { invalidEmployeePassword, validEmployeePassword } from '../../test-data/pos/permissions.js';
 import { jiraIssue } from '../../utils/jira.js';
 
@@ -165,5 +170,29 @@ test.describe('POS 首页', () => {
     for (const row of result.historyRows) {
       expect(row.phone).toContain(result.phone);
     }
+  });
+
+  test('首页点击报表并输入外接键盘密码后应进入报表页面', {
+    annotation: [jiraIssue('POS-33792')],
+  }, async ({ environment, page }) => {
+    const reportingFlow = new ReportingFlow(new PosHomePage(page), new ReportPage(page));
+
+    const isInReportPage = await reportingFlow.enterReportWithKeyboardPassword(
+      environment.posHomeUrl,
+      validEmployeePassword,
+    );
+
+    expect(isInReportPage).toBe(true);
+  });
+
+  test('首页支持信息应展示当前版本和补丁版本', {
+    annotation: [jiraIssue('POS-33799')],
+  }, async ({ environment, page }) => {
+    const supportInfoFlow = new SupportInfoFlow(new PosHomePage(page), new SupportPage(page));
+
+    const supportInfo = await supportInfoFlow.readPatchInfo(environment.posHomeUrl);
+
+    expect(supportInfo.version).toBe(expectedPatchInfo.version);
+    expect(supportInfo.patchVersion).toBe(expectedPatchInfo.patchVersion);
   });
 });
