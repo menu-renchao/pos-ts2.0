@@ -197,6 +197,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <button data-testid="recall-settle">Settle</button>
       <button data-testid="recall-crm-redeem-discount">10% Off</button>
       <button data-testid="recall-cash">Cash</button>
+      <button data-testid="recall-void-paid-order">Void Paid Order</button>
+      <button data-testid="recall-refund-paid-order">Refund Paid Order</button>
       <button data-testid="recall-cancel-condition">Cancel Condition</button>
       <button data-testid="recall-move-order">Move Order</button>
       <button data-testid="recall-move-item">Move Item</button>
@@ -464,6 +466,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const recallSettleButton = document.querySelector('[data-testid="recall-settle"]');
       const recallCrmRedeemDiscountButton = document.querySelector('[data-testid="recall-crm-redeem-discount"]');
       const recallCashButton = document.querySelector('[data-testid="recall-cash"]');
+      const recallVoidPaidOrderButton = document.querySelector('[data-testid="recall-void-paid-order"]');
+      const recallRefundPaidOrderButton = document.querySelector('[data-testid="recall-refund-paid-order"]');
       const recallCancelConditionButton = document.querySelector('[data-testid="recall-cancel-condition"]');
       const recallMoveOrderButton = document.querySelector('[data-testid="recall-move-order"]');
       const recallMoveItemButton = document.querySelector('[data-testid="recall-move-item"]');
@@ -1545,6 +1549,19 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           if (selectedRecallOrder.crmMember) {
             selectedRecallOrder.crmMember.points += earnPointsForSubtotal(selectedRecallOrder.subtotal);
           }
+          renderRecallOrderItems();
+        }
+      });
+      recallVoidPaidOrderButton.addEventListener('click', () => {
+        if (selectedRecallOrder?.crmMember && selectedRecallOrder.status === 'Paid') {
+          selectedRecallOrder.status = 'Voided';
+          selectedRecallOrder.crmMember.points -= earnPointsForSubtotal(selectedRecallOrder.subtotal);
+          renderRecallOrderItems();
+        }
+      });
+      recallRefundPaidOrderButton.addEventListener('click', () => {
+        if (selectedRecallOrder && selectedRecallOrder.status === 'Paid') {
+          selectedRecallOrder.status = 'Refunded';
           renderRecallOrderItems();
         }
       });

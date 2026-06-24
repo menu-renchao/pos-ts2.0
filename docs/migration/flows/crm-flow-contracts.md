@@ -134,7 +134,9 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 | crm/test_crm_paypage.py | TestCrmPayPage | `test_pay_page_redeem_item` | tests/crm/crm-paypage.spec.ts | `CrmPayPageFlow.payRedeemItemOrderByCashAndReadPoints` |
 | crm/test_crm_paypage.py | TestCrmPayPage | `test_semipay_page_redeem_item` | tests/crm/crm-paypage.spec.ts | `CrmPayPageFlow.payRedeemItemOrderBySemiPayAndReadPoints` |
 | crm/test_crm_paypage.py | TestCrmPayPage | `test_semipay_page_redeem_discount` | tests/crm/crm-paypage.spec.ts | `CrmPayPageFlow.semiPayRedeemDiscountAndReadPoints` |
-| crm/test_crm_points_calculation.py | TestCrmPointsCalculation | `test_login_member_redeem_point`, `test_earn_points_rules_by_spent_pos_order`, `test_redeem_free_item_modify_global_option` | tests/crm/crm-points-calculation.spec.ts | `CrmPointsFlow.redeemPoints`, `CrmPointsFlow.earnPointsForOrder` |
+| crm/test_crm_points_calculation.py | TestCrmPointsCalculation | `test_redeem_void_order` | tests/crm/crm-points-calculation.spec.ts | `CrmPointsCalculationFlow.voidPaidMemberOrderAndReadPoints` |
+| crm/test_crm_points_calculation.py | TestCrmPointsCalculation | `test_redeem_refund_order` | tests/crm/crm-points-calculation.spec.ts | `CrmPointsCalculationFlow.refundPaidMemberOrderAndReadPoints` |
+| crm/test_crm_points_calculation.py | TestCrmPointsCalculation | `test_login_member_redeem_point`, `test_earn_points_rules_by_spent_pos_order`, `test_redeem_free_item_modify_global_option` | tests/crm/crm-points-calculation.spec.ts | not-started |
 
 ### Preconditions
 
@@ -167,6 +169,8 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 20. `CrmPayPageFlow.payRedeemItemOrderByCashAndReadPoints`: create a To Go order with `crmSourceRewardMember`, read original points, redeem free item, add `groupSwitchDish`, enter payment page, pay cash, recall the order, and compare Recall/Admin points with the original balance.
 21. `CrmPayPageFlow.payRedeemItemOrderBySemiPayAndReadPoints`: create a To Go order with `crmSourceRewardMember`, read original points, redeem free item, add `groupSwitchDish`, enter payment page, split payment evenly, pay the first part by cash without earning points, recall the order, pay the remaining amount, and read Admin points.
 22. `CrmPayPageFlow.semiPayRedeemDiscountAndReadPoints`: create a To Go order with `crmSourceRewardMember`, read original points, apply `10% Off`, add `groupSwitchDish`, enter payment page, split payment evenly, pay one part, exit payment state, and read Admin points.
+23. `CrmPointsCalculationFlow.voidPaidMemberOrderAndReadPoints`: create a Dine In order, attach `crmSourceRewardMember`, add `groupSwitchDish`, save, recall, pay all by cash, reopen the recent order, read Recall point balance, void the paid order, and read Recall point balance again.
+24. `CrmPointsCalculationFlow.refundPaidMemberOrderAndReadPoints`: create a Dine In order, attach `crmSourceRewardMember`, add `groupSwitchDish`, save, recall, pay all by cash, reopen the recent order, read Recall point balance, refund the paid order, read Recall point balance again, then read the same member in Admin CRM Loyalty.
 
 ### Expected Assertions
 
@@ -191,6 +195,8 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 - POS-29703 verifies pay-page Redeem Item deducts 10 points and cash payment earns the single-order points back so Recall and Admin balances equal the original balance.
 - POS-29769 verifies pay-page Redeem Item semi-pay does not earn points on the partial payment, but earns them after the remaining payment is completed from Recall.
 - POS-29786 verifies pay-page `10% Off` semi-pay keeps the point deduction after a partial payment is made and the payment page is exited.
+- POS-29961 verifies paid-order Void removes the single-order earned points from the Recall CRM header balance.
+- POS-29963 verifies paid-order Refund keeps the payment-time point balance in Recall and Admin CRM Loyalty.
 
 ### Page Responsibilities
 
@@ -213,6 +219,7 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 - `OrderDishesPage.readTax`, `OrderDishesPage.clickSettle`, and `OrderDishesPage.readSettlementUnpaidAmount` own payment-page amount reads for POS-29638.
 - `OrderDishesPage.clickSettlementSwitchMember` and `OrderDishesPage.saveOrder` own payment-page member switching and save behavior for POS-29668.
 - `OrderDishesPage.splitPaymentEvenly`, `OrderDishesPage.settleByCash`, `RecallPage.clickSettle`, and `RecallPage.payCurrentOrderByCash` own full and semi-pay completion for POS-29703, POS-29769, and POS-29786.
+- `RecallPage.voidPaidOrder`, `RecallPage.refundPaidOrder`, and `RecallPage.readCrmPointBalance` own paid-order void/refund point-balance checks for POS-29961 and POS-29963.
 
 ### Client/Data Responsibilities
 
@@ -227,6 +234,7 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 - `test-data/crm/members.ts` owns `crmHighPointRewardMember`, `crmRewardSettings`, and `crmMaxDiscountRewardSetting`.
 - `test-data/pos/dishes.ts` owns `groupSwitchDish` for percentage discount subtotal calculations.
 - `StubCrmRewardClient.calculateDiscount` supports optional maximum discount caps for source CRM loyalty reward rules.
+- `test-data/crm/members.ts` owns `crmRewardSettings.pointsPerPaidOrder` for paid-order void expected point deduction.
 
 ### Stub Behavior
 
@@ -249,6 +257,8 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 - Offline payment-page member switching reuses the Redeem member selector and applies the `10% Off` point deduction to the active switched member only.
 - Offline pay-page semi-pay marks the order as partially paid and does not earn points until the recalled remaining payment is completed.
 - Offline pay-page Redeem Item uses the existing free-item point deduction and the deterministic subtotal earning rule so a single regular dish restores the original member balance only after full payment.
+- Offline paid-order Void subtracts `earnPointsForSubtotal(order.subtotal)` from the selected recalled CRM member and refreshes the Recall header.
+- Offline paid-order Refund marks the recalled order refunded without changing CRM points, matching the source assertions that Recall and Admin balances remain equal to the payment-time balance.
 
 ### Live Gaps
 

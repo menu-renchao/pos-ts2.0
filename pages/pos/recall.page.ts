@@ -54,6 +54,7 @@ export class RecallPage extends PageObject {
   private readonly recallCrmPointBalance: Locator;
   private readonly recallGuestAddress: Locator;
   private readonly recallGuestPhone: Locator;
+  private readonly recallRefundPaidOrderButton: Locator;
   private readonly saveEditButton: Locator;
   private readonly saveSplitAmountButton: Locator;
   private readonly saveSplitButton: Locator;
@@ -65,6 +66,7 @@ export class RecallPage extends PageObject {
   private readonly subOrderCards: Locator;
   private readonly subOrderSettleButton: Locator;
   private readonly unsplitButton: Locator;
+  private readonly voidPaidOrderButton: Locator;
   private readonly subOrderButton: Locator;
 
   constructor(page: Page) {
@@ -99,6 +101,7 @@ export class RecallPage extends PageObject {
     this.recallCrmPointBalance = page.getByTestId('recall-crm-point-balance');
     this.recallGuestAddress = page.getByTestId('recall-guest-address');
     this.recallGuestPhone = page.getByTestId('recall-guest-phone');
+    this.recallRefundPaidOrderButton = page.getByTestId('recall-refund-paid-order');
     this.saveEditButton = page.getByTestId('recall-save-edit');
     this.saveSplitAmountButton = page.getByTestId('split-save-amount');
     this.saveSplitButton = page.getByTestId('split-save');
@@ -110,6 +113,7 @@ export class RecallPage extends PageObject {
     this.subOrderCards = page.getByTestId('recall-sub-order-card');
     this.subOrderSettleButton = page.getByTestId('split-sub-order-settle');
     this.unsplitButton = page.getByTestId('split-unsplit');
+    this.voidPaidOrderButton = page.getByTestId('recall-void-paid-order');
     this.subOrderButton = page.getByTestId('recall-sub-order');
   }
 
@@ -251,6 +255,18 @@ export class RecallPage extends PageObject {
   async payCurrentOrderByCash(): Promise<void> {
     await step('Recall 当前订单现金支付', async () => {
       await this.recallCashButton.click();
+    });
+  }
+
+  async voidPaidOrder(): Promise<void> {
+    await step('Recall Void 已支付订单', async () => {
+      await this.voidPaidOrderButton.click();
+    });
+  }
+
+  async refundPaidOrder(): Promise<void> {
+    await step('Recall Refund 已支付订单', async () => {
+      await this.recallRefundPaidOrderButton.click();
     });
   }
 

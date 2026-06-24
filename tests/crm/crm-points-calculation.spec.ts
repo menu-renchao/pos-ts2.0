@@ -1,0 +1,38 @@
+import type { Page } from '@playwright/test';
+
+import { StubCrmRewardClient } from '../../clients/crm/reward.client.js';
+import { CrmPointsCalculationFlow } from '../../flows/crm/crm-points-calculation.flow.js';
+import { test, expect } from '../../fixtures/base-test.js';
+import { PosCrmPage } from '../../pages/pos/crm/pos-crm.page.js';
+import { PosHomePage } from '../../pages/pos/home.page.js';
+import { OrderDishesPage } from '../../pages/pos/order-dishes.page.js';
+import { RecallPage } from '../../pages/pos/recall.page.js';
+
+test.describe('CRM 积分计算', () => {
+  test('POS-29961 已支付会员订单 Void 后应扣除本单新增积分', async ({ environment, page }) => {
+    const crmPointsCalculationFlow = createCrmPointsCalculationFlow(page);
+
+    const result = await crmPointsCalculationFlow.voidPaidMemberOrderAndReadPoints(environment.posHomeUrl);
+
+    expect(result.pointsAfterVoid).toBe(result.pointsAfterPayment - result.earnedPoints);
+  });
+
+  test('POS-29963 已支付会员订单 Refund 后应保留支付后积分并同步 Admin', async ({ environment, page }) => {
+    const crmPointsCalculationFlow = createCrmPointsCalculationFlow(page);
+
+    const result = await crmPointsCalculationFlow.refundPaidMemberOrderAndReadPoints(environment.posHomeUrl);
+
+    expect(result.pointsAfterRefund).toBe(result.pointsAfterPayment);
+    expect(result.adminPointsAfterRefund).toBe(result.pointsAfterPayment);
+  });
+});
+
+function createCrmPointsCalculationFlow(page: Page): CrmPointsCalculationFlow {
+  return new CrmPointsCalculationFlow(
+    new PosHomePage(page),
+    new OrderDishesPage(page),
+    new RecallPage(page),
+    new PosCrmPage(page),
+    new StubCrmRewardClient(),
+  );
+}
