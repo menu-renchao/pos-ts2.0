@@ -1,0 +1,567 @@
+# POS TS 2.0 Source To Target Migration Map
+
+This table is the mandatory completeness ledger for the Python-to-TypeScript migration. Update `status` only when the target spec, page, flow, client/data dependency, and assertions are traceable.
+
+Allowed `status` values: `not-started`, `migrated`, `verified`, `live-gap`.
+
+| source_group | source_file | source_class | source_test | source_line | jira_key | allure_title | target_spec | target_test_title | pages | flows | clients | test_data | assertions | status | gap_reason |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| crm | crm/test_crm_copy_move_order.py | TestCRMCopyItem | test_combine_order_redeem | 41 |  |  | tests/crm/crm-copy-move-order.spec.ts |  |  |  |  |  |  | not-started |  |
+| crm | crm/test_crm_copy_move_order.py | TestCRMCopyItem | test_combine_order_redeem_discount | 93 |  |  | tests/crm/crm-copy-move-order.spec.ts |  |  |  |  |  |  | not-started |  |
+| crm | crm/test_crm_copy_move_order.py | TestCRMCopyItem | test_remove_split_order_redeem_item | 145 |  |  | tests/crm/crm-copy-move-order.spec.ts |  |  |  |  |  |  | not-started |  |
+| crm | crm/test_crm_copy_move_order.py | TestCRMCopyItem | test_remove_item_redeem_item | 179 |  |  | tests/crm/crm-copy-move-order.spec.ts |  |  |  |  |  |  | not-started |  |
+| crm | crm/test_crm_copy_move_order.py | TestCRMCopyItem | test_recall_pay_order_redeem_discount | 208 |  |  | tests/crm/crm-copy-move-order.spec.ts |  |  |  |  |  |  | not-started |  |
+| crm | crm/test_crm_copy_move_order.py | TestCRMCopyItem | test_join_member_email | 239 |  |  | tests/crm/crm-copy-move-order.spec.ts |  |  |  |  |  |  | live-gap | 源用例被 pytest skip |
+| crm | crm/test_crm_join_member.py | TestJoinMember | test_join_member_first_name_last_name | 28 |  |  | tests/crm/crm-join-member.spec.ts |  |  |  |  |  |  | not-started |  |
+| crm | crm/test_crm_join_member.py | TestJoinMember | test_join_member_phone_is_exist | 48 |  |  | tests/crm/crm-join-member.spec.ts |  |  |  |  |  |  | not-started |  |
+| crm | crm/test_crm_join_member.py | TestJoinMember | test_join_member_email | 71 |  |  | tests/crm/crm-join-member.spec.ts |  |  |  |  |  |  | live-gap | 源用例被 pytest skip |
+| crm | crm/test_crm_join_member.py | TestJoinMember | test_join_member_phone | 101 |  |  | tests/crm/crm-join-member.spec.ts |  |  |  |  |  |  | not-started |  |
+| crm | crm/test_crm_join_member.py | TestJoinMember | test_jump_member_page | 132 |  |  | tests/crm/crm-join-member.spec.ts |  |  |  |  |  |  | not-started |  |
+| crm | crm/test_crm_join_member.py | TestJoinMember | test_jump_member_no_permission | 146 |  |  | tests/crm/crm-join-member.spec.ts |  |  |  |  |  |  | not-started |  |
+| crm | crm/test_crm_join_member.py | TestJoinMember | test_search_by_phone_only_finds_cloud_members | 161 | POS-37879 |  | tests/crm/crm-join-member.spec.ts |  |  |  |  |  |  | not-started |  |
+| crm | crm/test_crm_order.py | TestCRMOrder | test_join_member_email | 48 |  |  | tests/crm/crm-order.spec.ts |  |  |  |  |  |  | live-gap | 源用例被 pytest skip |
+| crm | crm/test_crm_order.py | TestCRMOrder | test_join_member_phone | 80 |  |  | tests/crm/crm-order.spec.ts |  |  |  |  |  |  | not-started |  |
+| crm | crm/test_crm_order.py | TestCRMOrder | test_delivery_redeem | 100 |  |  | tests/crm/crm-order.spec.ts |  |  |  |  |  |  | not-started |  |
+| crm | crm/test_crm_order.py | TestCRMOrder | test_remove_redeem_reselect | 128 |  |  | tests/crm/crm-order.spec.ts |  |  |  |  |  |  | not-started |  |
+| crm | crm/test_crm_order.py | TestCRMOrder | test_order_edit_remove_redeem_item | 161 |  |  | tests/crm/crm-order.spec.ts |  |  |  |  |  |  | not-started |  |
+| crm | crm/test_crm_order.py | TestCRMOrder | test_settle_join_member_phone | 203 |  |  | tests/crm/crm-order.spec.ts |  |  |  |  |  |  | not-started |  |
+| crm | crm/test_crm_order.py | TestCRMOrder | test_order_select_phone | 233 |  |  | tests/crm/crm-order.spec.ts |  |  |  |  |  |  | not-started |  |
+| crm | crm/test_crm_order.py | TestCRMOrder | test_order_redeem_item_switch | 251 |  |  | tests/crm/crm-order.spec.ts |  |  |  |  |  |  | not-started |  |
+| crm | crm/test_crm_order.py | TestCRMOrder | test_order_edit_remove_discount | 266 |  |  | tests/crm/crm-order.spec.ts |  |  |  |  |  |  | not-started |  |
+| crm | crm/test_crm_order.py | TestCRMOrder | test_settle_select_member | 298 |  |  | tests/crm/crm-order.spec.ts |  |  |  |  |  |  | not-started |  |
+| crm | crm/test_crm_order.py | TestCRMOrder | test_settle_switch_member | 320 |  |  | tests/crm/crm-order.spec.ts |  |  |  |  |  |  | not-started |  |
+| crm | crm/test_crm_order.py | TestCRMOrder | test_settle_redeem_free_item | 368 |  |  | tests/crm/crm-order.spec.ts |  |  |  |  |  |  | not-started |  |
+| crm | crm/test_crm_order_redeem_discount.py | TestRedeemDiscount | test_redeem_discount | 55 |  |  | tests/crm/crm-order-redeem-discount.spec.ts |  |  |  |  |  |  | not-started |  |
+| crm | crm/test_crm_order_redeem_discount.py | TestRedeemDiscount | test_redeem_discount_options | 84 |  |  | tests/crm/crm-order-redeem-discount.spec.ts |  |  |  |  |  |  | not-started |  |
+| crm | crm/test_crm_order_redeem_discount.py | TestRedeemDiscount | test_max_discount | 105 |  |  | tests/crm/crm-order-redeem-discount.spec.ts |  |  |  |  |  |  | not-started |  |
+| crm | crm/test_crm_order_redeem_discount.py | TestRedeemDiscount | test_reduce_item0 | 150 |  |  | tests/crm/crm-order-redeem-discount.spec.ts |  |  |  |  |  |  | not-started |  |
+| crm | crm/test_crm_order_redeem_discount.py | TestRedeemDiscount | test_redeem_amount | 175 |  |  | tests/crm/crm-order-redeem-discount.spec.ts |  |  |  |  |  |  | not-started |  |
+| crm | crm/test_crm_order_redeem_discount.py | TestRedeemDiscount | test_redeem_percentage | 223 |  |  | tests/crm/crm-order-redeem-discount.spec.ts |  |  |  |  |  |  | not-started |  |
+| crm | crm/test_crm_paypage.py | TestCrmPayPage | test_redeem_discount | 61 |  |  | tests/crm/crm-paypage.spec.ts |  |  |  |  |  |  | not-started |  |
+| crm | crm/test_crm_paypage.py | TestCrmPayPage | test_redeem_switch_member | 89 |  |  | tests/crm/crm-paypage.spec.ts |  |  |  |  |  |  | not-started |  |
+| crm | crm/test_crm_paypage.py | TestCrmPayPage | test_pay_page_redeem_item | 145 |  |  | tests/crm/crm-paypage.spec.ts |  |  |  |  |  |  | not-started |  |
+| crm | crm/test_crm_paypage.py | TestCrmPayPage | test_semipay_page_redeem_item | 197 |  |  | tests/crm/crm-paypage.spec.ts |  |  |  |  |  |  | not-started |  |
+| crm | crm/test_crm_paypage.py | TestCrmPayPage | test_semipay_page_redeem_discount | 255 |  |  | tests/crm/crm-paypage.spec.ts |  |  |  |  |  |  | not-started |  |
+| crm | crm/test_crm_points_calculation.py | TestCrmPointsCalculation | test_redeem_void_order | 42 |  |  | tests/crm/crm-points-calculation.spec.ts |  |  |  |  |  |  | not-started |  |
+| crm | crm/test_crm_points_calculation.py | TestCrmPointsCalculation | test_redeem_refund_order | 79 |  |  | tests/crm/crm-points-calculation.spec.ts |  |  |  |  |  |  | not-started |  |
+| crm | crm/test_crm_points_calculation.py | TestCrmPointsCalculation | test_login_member_redeem_point | 126 |  |  | tests/crm/crm-points-calculation.spec.ts |  |  |  |  |  |  | not-started |  |
+| crm | crm/test_crm_points_calculation.py | TestCrmPointsCalculation | test_earn_points_rules_by_spent_pos_order | 159 |  |  | tests/crm/crm-points-calculation.spec.ts |  |  |  |  |  |  | not-started |  |
+| crm | crm/test_crm_points_calculation.py | TestCrmPointsCalculation | test_redeem_free_item_modify_global_option | 188 |  |  | tests/crm/crm-points-calculation.spec.ts |  |  |  |  |  |  | not-started |  |
+| crm | crm/test_crm_split_crm_order.py | TestSplitCrmOrder | test_split_order_redeem_item | 42 |  |  | tests/crm/crm-split-order.spec.ts |  |  |  |  |  |  | not-started |  |
+| crm | crm/test_crm_split_crm_order.py | TestSplitCrmOrder | test_split_order_pay_suborder | 78 |  |  | tests/crm/crm-split-order.spec.ts |  |  |  |  |  |  | not-started |  |
+| crm | crm/test_crm_split_crm_order.py | TestSplitCrmOrder | test_split_order_redeem_discount_suborder | 122 |  |  | tests/crm/crm-split-order.spec.ts |  |  |  |  |  |  | not-started |  |
+| crm | crm/test_crm_split_crm_order.py | TestSplitCrmOrder | test_split_order_redeem_discount_suborder_pay | 166 |  |  | tests/crm/crm-split-order.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_inventory.py | TestInventory | test_set_inventory_no_send_kitchen | 45 |  | 未送厨点菜、加菜、减菜验证库存变化 | tests/stage0/inventory.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_inventory.py | TestInventory | test_set_inventory_send_kitchen | 94 |  | 送厨后退菜验证库存变化 | tests/stage0/inventory.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_inventory.py | TestInventory | test_set_inventory_oder_decimal_num | 148 | POS-43891 | 库存点餐数量为小数验证库存变化 | tests/stage0/inventory.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_inventory.py | TestInventory | test_set_inventory_over_order | 182 | POS-43892 | pos超出库存点单验证 | tests/stage0/inventory.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_main_page.py | TestMainPage | test_search_loyalty_card | 76 |  |  | tests/stage0/main-page.spec.ts |  |  |  |  |  |  | live-gap | 源用例被 pytest skip |
+| stage0 | stage0/test_main_page.py | TestMainPage | test_search_gift_card | 90 |  |  | tests/stage0/main-page.spec.ts |  |  |  |  |  |  | live-gap | 源用例被 pytest skip: 本地礼品卡冲突 |
+| stage0 | stage0/test_main_page.py | TestMainPage | test_reserve_and_arrive | 104 |  |  | tests/stage0/main-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_main_page.py | TestMainPage | test_reserve_and_seated | 118 |  |  | tests/stage0/main-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_main_page.py | TestMainPage | test_search_reserve_by_phone | 143 |  |  | tests/stage0/main-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_main_page.py | TestMainPage | test_search_loyalty_card_by_no | 163 |  |  | tests/stage0/main-page.spec.ts |  |  |  |  |  |  | live-gap | 源用例被 pytest skip |
+| stage0 | stage0/test_main_page.py | TestMainPage | test_move_admin_to_main | 178 |  |  | tests/stage0/main-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_main_page.py | TestMainPage | test_move_dinein_and_togo | 192 |  |  | tests/stage0/main-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_main_page.py | TestMainPage | test_move_admin_to_main_no_save | 219 |  |  | tests/stage0/main-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_main_page.py | TestMainPage | test_move_session_to_main | 228 |  |  | tests/stage0/main-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_main_page.py | TestMainPage | test_move_session_to_more | 241 |  |  | tests/stage0/main-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_main_page.py | TestMainPage | test_input_wrong_password | 253 |  |  | tests/stage0/main-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_main_page.py | TestMainPage | test_add_gift_card | 269 |  |  | tests/stage0/main-page.spec.ts |  |  |  |  |  |  | live-gap | 源用例被 pytest skip: 本地礼品卡冲突 |
+| stage0 | stage0/test_main_page.py | TestMainPage | test_delivery_delete_phone_reselect | 302 |  |  | tests/stage0/main-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_main_page.py | TestMainPage | test_input_report_passwd_with_keyboard | 332 |  | 使用外接键盘输入密码进入报表 | tests/stage0/main-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_main_page.py | TestMainPage | test_check_patch_info | 344 |  | 检查首页补丁信息 | tests/stage0/main-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_main_page.py | TestMainPage | test_chinese_language | 374 |  |  | tests/stage0/main-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_main_page.py | TestMainPage | test_user_default_chinese_language | 383 |  |  | tests/stage0/main-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_main_page.py | TestMainPage | test_clock_in_break | 408 |  |  | tests/stage0/main-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_main_page.py | TestMainPage | test_check_main_page_qrcode | 450 |  |  | tests/stage0/main-page.spec.ts |  |  |  |  |  |  | live-gap | 源用例被 pytest skip |
+| stage0 | stage0/test_main_page.py | TestMainPage | test_delivery_order_asso_with_address | 463 |  |  | tests/stage0/main-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_main_page.py | TestMainPage | test_sdi_order_message | 477 | POS-44416 | pos端首页展示消息通知，SDI下单消息提醒，包含单号，桌号 | tests/stage0/main-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_order_switch_group | 74 |  |  | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_order_group_chinese | 94 |  |  | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_order_switch_category | 108 |  |  | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_order_edit_item_tax | 139 | POS-30543 | Seperate the same dishes开关开启，订单送厨后编辑页面，选择菜品，点击加1，存单后检查订单上的税率正确 | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_order_edit_customer_info | 170 | POS-42889 | 后台点单前确认客户信息，客户姓名必填，电话必填，点支付按钮后弹出输入电话号码和客户姓名的弹框 | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_no_permission_void_item | 184 | POS-39750 | 没有删菜权限的用户点单后删菜，弹出权限提示框提示没有权限，输入正确的密码可正常删菜 | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_edit_price_support_discount | 207 | POS-42886 | 菜品操作改价时可以选择单菜折扣 | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_add_note_by_modify | 218 | POS-42888 | 点Modify可以输入菜品的备注，保存订单后，菜品后面的备注信息正确 | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_split_tip_combine_check | 234 | POS-39762 | 点单，加小费，平分订单，合并子单，订单小费金额正常 | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_open_food_no_tax | 254 | POS-42011 | open Food 点单，不选择任何税，可以成功完成付款 | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_pick_up_order_no_repeat_name | 265 | POS-42943 | 连续创建两个不输入姓名的pick up订单，修改其中一个食客姓名，另一个不受影响 | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_order_category_option | 293 |  |  | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_order_category_chinese | 314 |  |  | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_order_category_sub_option | 336 |  |  | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_order_category_no_sub_option | 357 |  |  | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_order_item_no_sub_option | 378 |  |  | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_order_item_option | 399 |  |  | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_order_item_no_option | 420 |  |  | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_order_item_sub_option | 441 |  |  | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_even_split_two | 462 |  |  | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_add_split_by_item | 491 |  |  | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_add_split_by_seat | 522 |  |  | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_add_split_by_amount | 555 |  |  | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_cancel_split | 588 |  |  | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_even_item | 624 |  |  | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_order_split_by_drag | 658 |  |  | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_open_food_keyboard_multi_language | 689 |  |  | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_special_price_discount | 707 |  |  | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_delivery_order | 738 |  |  | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_reduce_combo_options | 754 |  |  | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_switch_menu_search | 769 |  |  | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_modify_add | 814 |  |  | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_modify_count | 831 |  |  | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_modify_reduce | 856 |  |  | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_order_with_name | 885 |  | 下单页和订单详情卡片上展示用户信息 | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_search_menu_off | 904 |  |  | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_item_count | 938 |  |  | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_order_big_tip | 963 |  |  | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_order_after_big_tip | 987 |  |  | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_add_gift_card | 1012 |  |  | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | live-gap | 源用例被 pytest skip |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_staff_without_void_printed_item_void_hold | 1049 |  |  | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_staff_without_void_printed_item_void_delay | 1088 |  |  | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_combine_same_item_dont_automatically_combine | 1130 |  |  | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_combine_same_item_automatically_combine | 1169 |  |  | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_combine_same_item_combine_include_in_kitchen | 1210 |  |  | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_automatically_redirect_after_reduce_items_close | 1250 |  |  | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_item_count_decimal_reduce | 1276 |  |  | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_item_count_decimal_split_by_drag | 1295 |  |  | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_item_count_decimal_combine | 1323 |  |  | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_item_count_decimal_special_price1 | 1363 |  |  | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_item_count_decimal_special_price2 | 1400 |  |  | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_item_count_decimal_special_price3 | 1431 |  |  | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_item_count_decimal_close | 1466 |  |  | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_item_count_decimal_combine_item_add_option | 1485 |  |  | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_custom_order | 1519 |  |  | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_delivery_order_exit | 1538 |  |  | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_item_with_number | 1550 |  |  | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_staff_without_note_edit_sub_item | 1571 |  |  | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_category_required | 1607 | POS-42060 | 必选类功能优化，未满足条件时无法提交，且自动跳转 | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_category_not_required_percent_charge | 1646 | POS-42958 | category未勾选“限制折扣”导致该category下所有菜品可以参与整单按比例加收 | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_order_page_show_name | 1664 | POS-42097 | 新UI点单页面，category正常展示配置的POS NAME | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_batch_edit_combo_mode | 1704 | POS-42061 | 套餐的子菜支持改价 | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_split_by_item_subitem_discount | 1742 | POS-36254 | 按菜分单后子单打折，打折界面整单金额检查 | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_custom_order_type | 1758 | POS-22657 | 自定义类型-报表显示Report-Overview-预览显示自定义类型的报表数据-数据正确 | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_display_menu_name_after_modify_language | 1790 | POS-43827 | 系统语言为中文，点单搜索框输入菜的首字母返回对应的菜 | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_combo_display_all_one_time_modify_sub_item | 1811 | POS-43956 | 套餐设置display all one time，子菜不可重复选，规则设置max，点单保存combo后，可正常编辑，修改子菜 | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_page.py | TestOrderPage | test_combo_subitem_no_option_select_option | 1838 | POS-43823 | combo子菜没有option，选择子菜返回主菜可正常选择option | tests/stage0/order-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_settle.py | TestOrderSettle | test_round | 69 |  |  | tests/stage0/order-settle.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_settle.py | TestOrderSettle | test_gift_card_void | 127 |  |  | tests/stage0/order-settle.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_settle.py | TestOrderSettle | test_gift_card_semi_pay | 149 |  |  | tests/stage0/order-settle.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_settle.py | TestOrderSettle | test_add_tip_two | 177 |  |  | tests/stage0/order-settle.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_settle.py | TestOrderSettle | test_multi_pay_tip | 207 |  |  | tests/stage0/order-settle.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_settle.py | TestOrderSettle | test_pay_button_order | 237 |  |  | tests/stage0/order-settle.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_settle.py | TestOrderSettle | test_search_gift_card_no_info | 258 |  |  | tests/stage0/order-settle.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_settle.py | TestOrderSettle | test_search_loyalty_card_no_info | 278 |  |  | tests/stage0/order-settle.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage0 | stage0/test_order_settle.py | TestOrderSettle | test_credit_card_fail_then_cash_payment | 300 | POS-44417 | 信用卡支付失败的订单，使用现金支付，recall页现金支付筛选能找到该订单 | tests/stage0/order-settle.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage1 | stage1/test_admin_menu.py | TestAdminMenu | test_copy_global_option_to_other_product_line | 67 | POS-31467 |  | tests/stage1/admin-menu.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage1 | stage1/test_admin_menu.py | TestAdminMenu | test_set_item_into_unit_price_item | 88 | POS-33919 | 设置普通菜为称重菜 | tests/stage1/admin-menu.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage1 | stage1/test_admin_menu.py | TestAdminMenu | test_modify_item_chinese_name | 109 |  |  | tests/stage1/admin-menu.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage1 | stage1/test_admin_menu.py | TestAdminMenu | test_global_option_add_printer | 133 |  |  | tests/stage1/admin-menu.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage1 | stage1/test_admin_menu.py | TestAdminMenu | test_menu_item_count | 164 |  |  | tests/stage1/admin-menu.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage1 | stage1/test_admin_menu.py | TestAdminMenu | test_batch_edit_combo_mode | 199 | POS-42064 | 后台menu的套餐批量设置套餐模式成功 | tests/stage1/admin-menu.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage1 | stage1/test_admin_menu.py | TestAdminMenu | test_batch_edit_combo_mode | 237 | POS-44624 | 称重套餐点餐 | tests/stage1/admin-menu.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage1 | stage1/test_admin_menu.py | TestAdminMenu | test_batch_edit_item_properties | 252 |  |  | tests/stage1/admin-menu.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage1 | stage1/test_admin_menu.py | TestAdminMenu | test_take_out_tax_free_enabled | 283 |  |  | tests/stage1/admin-menu.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage1 | stage1/test_admin_menu.py | TestAdminMenu | test_redeem_price | 324 | POS-37830 | 店铺有会员，admin-》menu，添加一个菜，编辑页添加会员价保存，会员点菜菜价展示正确 | tests/stage1/admin-menu.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage1 | stage1/test_admin_menu.py | TestAdminMenu | test_batch_edit_price | 338 |  |  | tests/stage1/admin-menu.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage1 | stage1/test_admin_menu.py | TestAdminMenu | test_batch_edit_member_price | 360 |  |  | tests/stage1/admin-menu.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage1 | stage1/test_admin_menu.py | TestAdminMenu | test_display_menu_name_after_modify_language | 379 | POS-42096 | 菜有中英文，系统只配置了英文，修改菜保存，重新配置多语言，设置为中文点菜，菜品中文名称展示正确 | tests/stage1/admin-menu.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage1 | stage1/test_admin_staff.py | TestAdminStaff | test_whole_order_maximum_discount_without_pwd | 36 |  |  | tests/stage1/admin-staff.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage1 | stage1/test_admin_staff.py | TestAdminStaff | test_whole_order_maximum_discount_with_manager_pwd | 88 |  |  | tests/stage1/admin-staff.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage1 | stage1/test_admin_staff.py | TestAdminStaff | test_whole_order_maximum_discount_with_boss_pwd | 131 |  |  | tests/stage1/admin-staff.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage1 | stage1/test_admin_staff.py | TestAdminStaff | test_item_maximum_discount_with_manager_pwd | 186 |  |  | tests/stage1/admin-staff.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage1 | stage1/test_admin_staff.py | TestAdminStaff | test_item_maximum_discount_with_boss_pwd | 233 |  |  | tests/stage1/admin-staff.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage1 | stage1/test_admin_staff.py | TestAdminStaff | test_recall_whole_order_maximum_discount_without_pwd | 291 |  |  | tests/stage1/admin-staff.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage1 | stage1/test_admin_staff.py | TestAdminStaff | test_recall_whole_order_maximum_discount_cancel | 337 |  |  | tests/stage1/admin-staff.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage1 | stage1/test_admin_staff.py | TestAdminStaff | test_recall_whole_order_maximum_discount_with_boss_pwd | 384 |  |  | tests/stage1/admin-staff.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage1 | stage1/test_admin_staff.py | TestAdminStaff | test_multi_maximum_discount | 443 |  |  | tests/stage1/admin-staff.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage1 | stage1/test_admin_staff.py | TestAdminStaff | test_multi_item_maximum_discount | 485 |  |  | tests/stage1/admin-staff.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage1 | stage1/test_admin_staff.py | TestAdminStaff | test_server_maximum_discount_zero | 525 |  |  | tests/stage1/admin-staff.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage1 | stage1/test_admin_staff.py | TestAdminStaff | test_multi_whole_order_item_maximum_discount | 575 |  |  | tests/stage1/admin-staff.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage1 | stage1/test_admin_staff.py | TestAdminStaff | test_staff_visit_without_analysis_authority | 623 |  | 没有analysis权限查看后台分析报表 | tests/stage1/admin-staff.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage1 | stage1/test_admin_staff.py | TestAdminStaff | test_staff_visit_without_view_history_authority | 649 | POS-33771 | 没有view history权限查看当天报表展示正常 | tests/stage1/admin-staff.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage1 | stage1/test_admin_staff.py | TestAdminStaff | test_create_new_staff_with_only_existed_authority | 682 | POS-39749 |  | tests/stage1/admin-staff.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage1 | stage1/test_caller.py | TestCaller | test_dine_in_caller_with_name_and_table | 49 |  | dine in选桌下单添加用户名字叫号展示用户名字 | tests/stage1/caller.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage1 | stage1/test_caller.py | TestCaller | test_dine_in_caller_with_table | 78 |  | dine in选桌下单叫号展示桌子区域加订单号 | tests/stage1/caller.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage1 | stage1/test_caller.py | TestCaller | test_emenu_caller_with_table | 107 |  | emenu选桌下单叫号展示桌子区域加订单号 | tests/stage1/caller.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage1 | stage1/test_caller.py | TestCaller | test_emenu_caller_with_name_and_table | 147 |  | emenu选桌下单，POS修改名称后emenu叫号展示名称 | tests/stage1/caller.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage1 | stage1/test_caller.py | TestCaller | test_emenu_caller_with_refresh_info | 193 |  | emenu选桌下单叫号，POS修改名称后再次叫号，叫号信息更新 | tests/stage1/caller.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage1 | stage1/test_cashin_cashout.py | TestCashInCashOut | test_cash_in_chinese | 29 |  |  | tests/stage1/cashin-cashout.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage1 | stage1/test_cashin_cashout.py | TestCashInCashOut | test_cashout_chinese | 45 |  |  | tests/stage1/cashin-cashout.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage1 | stage1/test_checkin_checkout.py | TestCheckInCheckOut | test_checkin_out_attendance | 44 |  |  | tests/stage1/checkin-checkout.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage1 | stage1/test_checkin_checkout.py | TestCheckInCheckOut | test_checkin_edit_staff_attendance | 88 |  |  | tests/stage1/checkin-checkout.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage1 | stage1/test_checkin_checkout.py | TestCheckInCheckOut | test_checkin_out_edit_attendance | 150 |  |  | tests/stage1/checkin-checkout.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage1 | stage1/test_checkin_checkout.py | TestCheckInCheckOut | test_checkin_success_after_earlist_checkin_time | 211 | POS-43835 | 配置最早打卡时间，在打卡时间内登录pos打卡成功 | tests/stage1/checkin-checkout.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage1 | stage1/test_checkin_checkout.py | TestCheckInCheckOut | test_auto_checkout_success_after_set_auto_checkout_time | 257 | POS-43836 | 配置自动打卡下班，员工打卡上班后到自动打卡时间自动打卡 | tests/stage1/checkin-checkout.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage1 | stage1/test_expiration.py | TestExpiration | test_no_permission_user | 406 | POS-44422 | 未授权员工Admin后开库存管理打开效期管理 | tests/stage1/expiration.spec.ts |  |  |  |  |  |  | live-gap | 源用例被 pytest skip: 16.7之後暫時不跑 |
+| stage1 | stage1/test_expiration.py | TestExpiration | test_only_display_enable_rule | 411 | POS-44423 | 效期规则界面效期规则只展示云平台上已有的已启用的效期规则 | tests/stage1/expiration.spec.ts |  |  |  |  |  |  | live-gap | 源用例被 pytest skip: 16.7之後暫時不跑 |
+| stage1 | stage1/test_expiration.py | TestExpiration | test_open_rule_with_expired_record | 420 | POS-44424 | 开封单个物料（存在已过期的开封记录），开封成功，打印标签 | tests/stage1/expiration.spec.ts |  |  |  |  |  |  | live-gap | 源用例被 pytest skip: 16.7之後暫時不跑 |
+| stage1 | stage1/test_expiration.py | TestExpiration | test_open_rule_with_valid_record | 460 | POS-44425 | 开封单个物料（存在未过期的开封记录），弹窗提示：已经存在未用完的物料，请用完后继续开封 | tests/stage1/expiration.spec.ts |  |  |  |  |  |  | live-gap | 源用例被 pytest skip: 16.7之後暫時不跑 |
+| stage1 | stage1/test_expiration.py | TestExpiration | test_expiration_time_for_same_day_rule | 478 | POS-44426 | 效期规则（未关联物料）为当日制，打印后，则有效期默认为门店当天打烊时间前一分钟 | tests/stage1/expiration.spec.ts |  |  |  |  |  |  | live-gap | 源用例被 pytest skip: 16.7之後暫時不跑 |
+| stage1 | stage1/test_expiration.py | TestExpiration | test_print_chinese_rule_name | 506 | POS-44428 | Pos中文模式下，点击任意选择效期卡片，再次打印，标签中打印中文名 | tests/stage1/expiration.spec.ts |  |  |  |  |  |  | live-gap | 源用例被 pytest skip: 16.7之後暫時不跑 |
+| stage1 | stage1/test_expiration.py | TestExpiration | test_use_up_of_valid_material | 536 | POS-44429 | 选中即将过期或未过期状态下的物料卡片，点击物料用完，确认，用完成功 | tests/stage1/expiration.spec.ts |  |  |  |  |  |  | live-gap | 源用例被 pytest skip: 16.7之後暫時不跑 |
+| stage1 | stage1/test_expiration.py | TestExpiration | test_use_up_btn_disabled_for_expired_record | 559 | POS-44430 | 选中已过期的物料卡片，无法点击物料用完 | tests/stage1/expiration.spec.ts |  |  |  |  |  |  | live-gap | 源用例被 pytest skip: 16.7之後暫時不跑 |
+| stage1 | stage1/test_expiration.py | TestExpiration | test_expiration_message | 582 | POS-44431 | 效期规则配置2条预警时间，Pos设置效期预警提示都设置为Pop-up reminder twice,到期时只收到各两条消息（共4条） | tests/stage1/expiration.spec.ts |  |  |  |  |  |  | live-gap | 源用例被 pytest skip: 16.7之後暫時不跑 |
+| stage1 | stage1/test_expiration.py | TestExpiration | test_no_message_generate_after_use_up | 614 | POS-44432 | 物料提前用完后，对应的即将过期预警和已过期提醒不再生成 | tests/stage1/expiration.spec.ts |  |  |  |  |  |  | live-gap | 源用例被 pytest skip: 16.7之後暫時不跑 |
+| stage1 | stage1/test_expiration.py | TestExpiration | test_use_english_name_for_rule_without_cn_name | 639 | POS-44433 | 无中文名的效期规则，在Pos默认展示英文名，打印的标签也展示英文 | tests/stage1/expiration.spec.ts |  |  |  |  |  |  | live-gap | 源用例被 pytest skip: 16.7之後暫時不跑 |
+| stage1 | stage1/test_expiration.py | TestExpiration | test_open_uncreated_item | 659 | POS-44434 | 开封未创建物料，弹框上输入所有字段，开封成功 | tests/stage1/expiration.spec.ts |  |  |  |  |  |  | live-gap | 源用例被 pytest skip: 16.7之後暫時不跑 |
+| stage1 | stage1/test_expiration.py | TestExpiration | test_open_2nd_stage_rule_without_open_1st_stage | 699 | POS-44435 | 跳过阶段1，直接打印阶段2对应的效期规则，开封失败，提示 | tests/stage1/expiration.spec.ts |  |  |  |  |  |  | live-gap | 源用例被 pytest skip: 16.7之後暫時不跑 |
+| stage1 | stage1/test_expiration.py | TestExpiration | test_3_stages_in_one_time | 710 | POS-44436 | 同时打印阶段1，阶段2，阶段3对应的效期规则，开封成功 | tests/stage1/expiration.spec.ts |  |  |  |  |  |  | live-gap | 源用例被 pytest skip: 16.7之後暫時不跑 |
+| stage1 | stage1/test_expiration.py | TestExpiration | test_open_rule_with_material_no_storage_env | 733 | POS-44437 | 效期规则已关联物料（物料无存储环境）为10分钟之后，打印后，则有效期为当前日期的10分钟之后 | tests/stage1/expiration.spec.ts |  |  |  |  |  |  | live-gap | 源用例被 pytest skip: 16.7之後暫時不跑 |
+| stage1 | stage1/test_expiration.py | TestExpiration | test_2nd_stage_expiration_time_beyond_1st_stage | 762 | POS-44438 | 效期规则已关联物料的非第一阶段，第一存储阶段为当日制，效期规则关联的阶段的的有效期超过当天营业时间，开封打印后，该规则有效期默认为门店当天打烊时间（第一阶段到期时间） | tests/stage1/expiration.spec.ts |  |  |  |  |  |  | live-gap | 源用例被 pytest skip: 16.7之後暫時不跑 |
+| stage1 | stage1/test_expiration.py | TestExpiration | test_later_stage_expiration_time_inside_1st_stage | 824 | POS-44439 | 效期规则已关联物料的非第一阶段，第一存储阶段为次日制，效期规则关联的阶段的的有效期早于次日营业时间，开封打印后，该规则有效期为该阶段的实际有效期 | tests/stage1/expiration.spec.ts |  |  |  |  |  |  | live-gap | 源用例被 pytest skip: 16.7之後暫時不跑 |
+| stage1 | stage1/test_expiration.py | TestExpiration | test_batch_loss | 889 | POS-44440 | 同一物料，批量报损成功 | tests/stage1/expiration.spec.ts |  |  |  |  |  |  | live-gap | 源用例被 pytest skip: 16.7之後暫時不跑 |
+| stage1 | stage1/test_expiration.py | TestExpiration | test_batch_open_up_to_10 | 924 | POS-44441 | 批量开封，最多选择10个 | tests/stage1/expiration.spec.ts |  |  |  |  |  |  | live-gap | 源用例被 pytest skip: 16.7之後暫時不跑 |
+| stage1 | stage1/test_expiration.py | TestExpiration | test_batch_open_with_fail_and_success | 933 | POS-44442 | 选择4个物料（一个存在未过期的开封记录，一个不存在未过期的开封记录，一个存在已过期的开封记录，一个跨阶段开封），批量开封提交成功，提示部分失败，成功的部分打印标签 | tests/stage1/expiration.spec.ts |  |  |  |  |  |  | live-gap | 源用例被 pytest skip: 16.7之後暫時不跑 |
+| stage1 | stage1/test_expiration.py | TestExpiration | test_reopen_1st_stage_rule_with_others_valid | 986 | POS-44666 | 已开封的多个阶段的效期规则，用完第一阶段后重新开封第一阶段，开封成功 | tests/stage1/expiration.spec.ts |  |  |  |  |  |  | live-gap | 源用例被 pytest skip: 16.7之後暫時不跑 |
+| stage2 | stage2/test_kiosk_interaction.py | TestKioskInteraction | test_global_takeout_tax_exemption | 69 | POS-20995 | 全局外带免税设置为外带不算税，kiosk togo点单，免税 | tests/stage2/kiosk-interaction.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_kiosk_interaction.py | TestKioskInteraction | test_kiosk_login_and_license_display | 109 | POS-24842 | Kiosk进行登录，登录列表展示所有类型为Kiosk的License | tests/stage2/kiosk-interaction.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_kiosk_interaction.py | TestKioskInteraction | test_kiosk_order_with_service_charge_and_tax | 124 | POS-28673 | 启加收计税，Kiosk后台勾选订单加收，Kiosk点单，信用卡支付，recall页订单卡片金额与详情一致，加收计税 | tests/stage2/kiosk-interaction.spec.ts |  |  |  |  |  |  | live-gap | 源用例被 pytest skip: 不适配新版kiosk |
+| stage2 | stage2/test_kiosk_interaction.py | TestKioskInteraction | test_dish_availability_sync_from_admin_kiosk_inventory_to_admin_menu | 166 | POS-36267 | admin-kiosk-inventory中设置菜品售罄，状态可同步至admin-menu中 | tests/stage2/kiosk-interaction.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_kiosk_interaction.py | TestKioskInteraction | test_kiosk_order_bind_member_and_redeem_gift_dish_in_pos | 186 | POS-36269 | kiosk订单进入pos可绑定会员，兑换赠菜 | tests/stage2/kiosk-interaction.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_operate_item_inventory.py | TestOperateItemInventory | test_check_invetory_of_kiosk_product_line | 65 | POS-43892 | kiosk产线查看菜品in stock，查看产线菜品状态 | tests/stage2/operate-item-inventory.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_operate_item_inventory.py | TestOperateItemInventory | test_check_inventory_of_emenu_product_line | 101 | POS-43893 | emenu产线查看菜品out of stock，查看产线菜品状态 | tests/stage2/operate-item-inventory.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_operate_item_inventory.py | TestOperateItemInventory | test_check_invetory_after_recovery_inventory | 131 | POS-43894 | 设置自动恢复库存后，修改本地时间到任务时间查看库存 | tests/stage2/operate-item-inventory.spec.ts |  |  |  |  |  |  | live-gap | 源用例被 pytest skip: 有嫌疑影响其他用例，暂时跳过 |
+| stage2 | stage2/test_operate_item_inventory.py | TestOperateItemInventory | test_oo_preorder_check_inventory | 217 | POS-43896 | OO预点单当天菜品，查看库存扣减 | tests/stage2/operate-item-inventory.spec.ts |  |  |  |  |  |  | live-gap | 源用例被 pytest skip: 有嫌疑影响其他用例，暂时跳过 |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_seat_split_void_no_shared_item | 139 | POS-19362 |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_seat_split_void_have_shared_item | 185 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_seat_split_modify_tip | 218 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_seat_split_close_unsplit | 260 | POS-19371 |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_amount_split_semi_paid_add | 285 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_amount_split_split | 313 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_amount_split_semi_paid_unsplit | 333 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_even_split_tip_unsplit | 361 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_split_tip_reduce_item | 392 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_split_tip_discount_item | 438 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_multi_pay_refund | 482 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_multi_amount_split | 522 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_order_void_reason | 544 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_order_charge_clear | 563 | POS-22813 |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_whole_order_discount_clear | 624 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_item_discount_clear | 645 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_sub_settle_add_tip | 670 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_no_option | 701 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_order_charge_not_tax | 730 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_order_charge_tax | 755 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_even_split_tip | 780 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_order_edit_after_modify_charge_name | 813 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_order_edit_after_modify_charge_rate_type_to_percent | 850 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_order_edit_after_modify_charge_rate_type_to_amount | 890 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_order_edit_after_modify_charge_amount_value | 926 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_order_edit_after_modify_charge_percent_value | 966 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_order_edit_after_modify_charge_tax | 1003 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_order_edit_after_modify_charge_order_type1 | 1036 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_order_edit_after_modify_charge_order_type2 | 1068 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_order_edit_after_delete_charge | 1103 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_order_edit_after_modify_auto_charge_name | 1132 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_order_edit_after_modify_auto_charge_rate_type_percent | 1152 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_order_edit_after_modify_auto_charge_rate_type_amount | 1174 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_order_edit_after_modify_auto_charge_amount | 1195 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_order_edit_after_modify_auto_charge_percent | 1215 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_order_edit_after_modify_auto_charge_type | 1237 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_order_edit_after_modify_auto_charge_tax | 1258 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_order_edit_after_delete_auto_charge | 1280 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_order_send_after_modify_auto_charge | 1299 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_edit_send_after_modify_manu_charge | 1326 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_edit_send_after_modify_auto_charge | 1350 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_order_split_after_modify_auto_charge | 1374 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_edit_split_after_modify_manu_charge | 1397 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_edit_split_after_modify_auto_charge | 1426 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_order_copy_after_modify_auto_charge | 1463 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_order_copy_after_modify_auto_charge_min_guest | 1496 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_order_copy_after_modify_auto_charge_min_guest2 | 1528 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_order_copy_after_modify_auto_charge_min_mile | 1560 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_order_copy_after_modify_auto_charge_trigger | 1588 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_order_copy_after_modify_manu_charge_trigger1 | 1612 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_order_copy_after_modify_manu_charge_trigger2 | 1637 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_order_combine_after_modify_charge | 1661 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_item_move_new_after_modify_charge | 1709 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_item_move_select_after_modify_charge | 1748 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_order_move_after_modify_charge | 1793 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_order_move_after_delete_charge | 1823 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_order_creditpay_addtips | 1854 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_order_discount_clear_all | 1920 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_chargefee | 1946 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_report_homepage_unpaid | 2019 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_combine_one_charge_tax | 2063 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_combine_one_charge_tip | 2110 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_combine_no_service_charge | 2174 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_combine_three_charge | 2224 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_combine_one_charge_recalculate_have | 2291 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_combine_one_charge_recalculate_not_have | 2365 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_combine_have_service_charge | 2409 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_combine_one_charge_tip_recalculate | 2460 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_combine_three_charge_recalculate | 2535 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_check_openfood_name_in_charge | 2601 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_switch_language_in_order_page | 2617 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_show_unsplit_items_when_split_order | 2647 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | live-gap | 源用例被 pytest skip: 逻辑变更，此用例不适用 |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_charge_with_three_decimals | 2699 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_charge_after_tax | 2720 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_delivery_send | 2749 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | live-gap | 源用例被 pytest skip: 不适用于奶茶版，无送厨按钮 |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_step_pay_cash_with_change | 2769 |  | 点单，分两次付款，第二次现金支付存在找零，支付成功 | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_refund_by_item_with_tax | 2791 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_refund_by_item_no_tax | 2821 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_refund_by_item_with_order_percent_discount | 2853 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_refund_by_item_exceed_pay_amount | 2887 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_refund_by_item_do_not_send | 2906 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_refund_by_item_multiple_times | 2957 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_refund_by_amount_contains_change | 2996 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_credit_part_pay_can_not_refund_by_item | 3023 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_refund_combo | 3056 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_refund_item_with_charge_and_percent_discount | 3085 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_refund_item_with_charge_and_amount_discount | 3123 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_optional_discount_reason | 3162 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_required_order_discount_reason | 3193 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_required_item_discount_reason | 3230 |  |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_split_order_with_sub_order_zero | 3263 | POS-37798 |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_order_plenty_item_operate_with_discount_and_void | 3285 | POS-42085 |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_send_combo_add_subitem_option_and_print | 3304 | POS-42631 |  | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_tip_suggestion_percentage_after_discount_and_additional_item | 3331 | POS-42086 | 折扣前记小费，点菜有多个数量，再点一个菜，菜有折扣，添加小费，建议小费百分比正确 | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_order_operation.py | TestOrderOperation | test_quit_global_option_by_click_blank | 3350 | POS-43825 | 点菜添加全局调味，点击空白处退出调味选择页 | tests/stage2/order-operation.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall.py | TestRecallSearchByTime | test_recall_search_by_time | 73 |  |  | tests/stage2/recall.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall.py | TestRecallSearchByTime | test_recall_search_by_time_range | 104 |  |  | tests/stage2/recall.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall.py | TestRecallSearchByTime | test_orders_starting_and_ending_on_same_day | 134 |  |  | tests/stage2/recall.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall.py | TestRecallSearchByTime | test_no_save_enter_recall | 161 |  |  | tests/stage2/recall.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall.py | TestRecallSearchByTime | test_fixed_time_filter_yesterday | 172 |  |  | tests/stage2/recall.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall.py | TestRecallSearchByTime | test_fixed_time_filter_last_week | 193 |  |  | tests/stage2/recall.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall.py | TestRecallSearchByTime | test_fixed_time_filter_last_month | 217 |  |  | tests/stage2/recall.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall.py | TestRecallSearchByTime | test_fixed_time_filter_today | 237 |  |  | tests/stage2/recall.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall.py | TestRecallSearchByTime | test_fixed_time_filter_this_week | 258 |  |  | tests/stage2/recall.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall.py | TestRecallSearchByTime | test_fixed_time_filter_this_month | 281 |  |  | tests/stage2/recall.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall.py | TestRecallSearchByTime | test_recall_unpaid_last_month | 302 |  |  | tests/stage2/recall.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall.py | TestRecallSearchByTime | test_recall_paid_last_month | 321 |  |  | tests/stage2/recall.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall.py | TestRecallSearchByTime | test_recall_printed_last_month | 341 |  |  | tests/stage2/recall.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall.py | TestRecallSearchByTime | test_recall_unsent_last_month | 361 |  |  | tests/stage2/recall.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall.py | TestRecallSearchByTime | test_recall_submitted_last_month | 380 |  |  | tests/stage2/recall.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall.py | TestRecallSearchByTime | test_recall_closed_last_month | 399 |  |  | tests/stage2/recall.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall.py | TestRecallSearchByTime | test_recall_new_order_last_month | 418 |  |  | tests/stage2/recall.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall.py | TestRecallSearchByTime | test_recall_cancel_last_month | 451 |  |  | tests/stage2/recall.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall.py | TestRecallSearchByTime | test_recall_dine_in_last_month | 470 |  |  | tests/stage2/recall.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall.py | TestRecallSearchByTime | test_recall_togo_last_month | 490 |  |  | tests/stage2/recall.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall.py | TestRecallSearchByTime | test_recall_pickup_last_month | 514 |  |  | tests/stage2/recall.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall.py | TestRecallSearchByTime | test_recall_delivery_last_month | 535 |  |  | tests/stage2/recall.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall.py | TestRecallSearchByTime | test_recall_credit_last_month | 556 |  |  | tests/stage2/recall.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall.py | TestRecallSearchByTime | test_close_all_orders_below | 576 | POS-37740 | 显示“关闭以下全部单子”按钮开关开启，recall筛选已付款的订单，一键关闭全部单子成功 | tests/stage2/recall.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall.py | TestRecallSearchByTime | test_add_tip_none_after_cash_pay | 590 | POS-39760 | 点单，现金支付，付款后加小费，不输入小费直接点ok，订单无小费，总金额正确，状态仍为已付款 | tests/stage2/recall.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall.py | TestRecallSearchByTime | test_recall_order_sorting_by_station | 610 | POS-16340 | Recall】-订单排序—★找单界面，按照企台排序正确 | tests/stage2/recall.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall.py | TestRecallSearchByTime | test_recall_order_sorting_by_status | 635 | POS-16340 | Recall】-订单排序—★找单界面，按照状态排序正确 | tests/stage2/recall.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_search_by_this_week | 85 |  |  | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_search_void_order | 103 |  |  | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_recall_sort_by_time | 135 |  |  | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_recall_sort_by_price | 151 |  |  | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_recall_sort_by_type | 167 |  |  | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_recall_sort_by_order_no | 183 |  |  | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_recall_sort_by_phone | 199 |  |  | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_recall_sort_by_payment | 215 |  |  | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_recall_sort_by_driver | 231 |  |  | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_recall_kiosk_pickup | 257 |  |  | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | live-gap | 源用例被 pytest skip: Todo 暂时未开通kiosk lisense |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_order_info_after_modify_charge_name | 274 |  |  | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_order_info_after_modify_charge_rate_type_to_percent | 323 |  |  | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_order_info_after_modify_charge_rate_type_to_amount | 372 |  |  | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_order_info_after_modify_charge_amount_value | 421 |  |  | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_order_info_after_modify_charge_percent_value | 470 |  |  | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_order_info_after_modify_charge_type | 519 |  |  | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_order_info_after_modify_charge_tax | 568 |  |  | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_order_info_after_modify_charge_order_type | 619 |  |  | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_order_info_after_delete_charge | 670 |  |  | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_order_paid_reminder | 718 |  |  | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_order_in_kitchen_reminder | 742 |  |  | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_orderid_select_with_letter_split_order | 762 |  |  | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_orderid_select_with_letter | 789 |  |  | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_switch_order_driver | 853 |  |  | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_keep_order_sequence_not_changed | 882 |  |  | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_auto_send_close_print | 914 |  |  | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_combine_same_item_reduce | 943 |  |  | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_void_unpaid_order | 990 |  | 盘点模式void未支付订单 | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_reorder_daily_close_column | 1024 |  | 调整盘点模式表单表头顺序 | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_keep_merged_order | 1052 |  | 保留被合单单据 | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_check_phone_style_in_recall_page | 1078 |  | 检查recall页面的电话格式 | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_add_credit_card_tip_without_credit_permission_with_tip_permission | 1094 |  |  | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_add_credit_card_tip_without_credit_permission_without_tip_permission | 1148 |  |  | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_add_quantity_credit_card_tip_percent | 1198 |  |  | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_add__credit_card_tip_0_background | 1223 |  |  | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_add__credit_card_cash_tip_0_background | 1246 |  |  | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_emenu_edit_search | 1269 |  |  | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_togo_combine_dinein_with_service_charge | 1294 |  |  | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_check_recall_card_receipt | 1336 |  | 销售额为0，有小费检查recall页订单card的收据 | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_printed_order_change_table | 1361 |  |  | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_printed_order_add_item | 1381 |  |  | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_printed_order_exempt_tax_add_tax | 1403 |  |  | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_in_kitchen_order_charge | 1426 |  |  | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_credit_part_pay_add_tip_whole | 1450 |  |  | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_credit_part_pay_daily_close_add_tip_whole | 1493 |  |  | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_tip_suggestion_have_tip | 1538 |  |  | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_partially_void | 1581 |  |  | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_daily_close_add_credit_card_tip | 1610 |  |  | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_recall_total_price | 1642 |  |  | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_view_own_orders | 1657 |  |  | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | live-gap | 源用例被 pytest skip: 手动执行通过 |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_check_pickup_recall_card | 1704 | POS-34673 |  | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_rounding_order_keep_price_unchange | 1725 | POS-30058 |  | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_check_phone_info_after_callerid | 1762 | POS-37811 |  | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_clear_sdi_convinience_fee_by_pos | 1783 | POS-38784 | Clear Online Convenience Fee勾选，配置convince fee为固定金额，sdi下单到POS，POS编辑订单点击加收，点击clear all确认，保存订单，POS和sdi订单信息正确 | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage2 | stage2/test_recall_page.py | TestRecallSearchByTime | test_sdi_order_item_togo_flag_display_in_pos | 1830 | POS-44384 | SDI下单设置菜为togo，到pos后菜展示togo标记 | tests/stage2/recall-page.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_kds.py | TestKds | test_redo_order | 70 | POS-43848 | 已完成订单有多个菜，依次点击重做，订单菜重新展示在待完成页 | tests/stage3/kds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_kds.py | TestKds | test_operate_whole_order | 97 | POS-43842 | 订单点多菜送厨，kds连续进行整单操作，kds消菜正常，rds消菜正常 | tests/stage3/kds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_kds.py | TestKds | test_operate_same_item_into_different_kds | 128 | POS-43841 | 订单的同一个菜进入不同的kdslicense，菜展示正常 | tests/stage3/kds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_kds.py | TestKds | test_kds_item_status_sync_to_pos | 156 | POS-43932 | kds操作菜品状态至备餐中，pos中菜品状态展示备餐中 | tests/stage3/kds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_kds.py | TestKds | test_kds_item_quantity_in_dish_mode | 181 | POS-43935 | kds菜品模式下，pos点单送厨，菜品数量累加正确 | tests/stage3/kds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_kds.py | TestKds | test_kds_sync_status_to_calling_page | 225 | POS-43934 |  | tests/stage3/kds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_kds.py | TestKds | test_multi_kds_operate_no_influence | 258 | POS-44011 | 一个菜品配置三个kds打印机；不同kds license1分别接受不同打印机，三个kds设备之间操作互不影响 | tests/stage3/kds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_kds.py | TestKds | test_kds_display_after_void_order | 294 | POS-43826 | 订单送厨后，进行删单，kds页面展示正常 | tests/stage3/kds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_kds.py | TestKds | test_kds_display_config_color_with_time | 328 | POS-43936 | kds config中配置5分钟超时，展示红色、7分钟超时，展示绿色，kds上订单超时后颜色正确 | tests/stage3/kds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_kds.py | TestKds | test_kds_rds_process_mapping_scense1 | 358 | POS-43845 |  | tests/stage3/kds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_kds.py | TestKds | test_kds_rds_process_mapping_scense2 | 393 | POS-43844 |  | tests/stage3/kds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_kds.py | TestKds | test_kds_rds_process_mapping_scense3 | 429 | POS-43846 |  | tests/stage3/kds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_kds.py | TestKds | test_kds_rds_process_mapping_scense4 | 465 | POS-43847 |  | tests/stage3/kds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_kds.py | TestKds | test_operate_combo_subitem_in_kds | 512 | POS-43843 | 子菜单独消除开启，主菜禁点未开启，点击combo菜送厨，依次点击子菜后waiting操作，菜状态正常 | tests/stage3/kds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_kds.py | TestKds | test_kds_large_data_operation | 546 | POS-44386 | kds数据量有50万，kds操作waiting、prepare，菜正常进入rds | tests/stage3/kds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_kds.py | TestKds | test_hold_item_then_split_order | 567 | POS-44383 | pos下单菜hold住送厨后分单，继续送厨kds菜展示正常 | tests/stage3/kds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_kds.py | TestKds | test_kds_waiting_operation_sync_to_pos_recall | 598 | POS-44382 | pos下单送厨后kds操作waiting，POS recall页面订单card的菜展示为prepare | tests/stage3/kds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_kds.py | TestKds | test_kds_display_meal_preparation_time | 624 | POS-44381 | pos下单送厨后kds展示的备餐时间正常 | tests/stage3/kds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_kds.py | TestKds | test_kds_auto_clear_expired_order | 657 | POS-44399 | 叫号屏单号显示时长设置2min，订单送厨至kds上，2min后，订单自动从kds消失 | tests/stage3/kds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_kds.py | TestKds | test_rds_auto_clear_expired_order | 685 | POS-44398 | ready订单自动销号设置2min，整单状态ready后2分钟，订单自动从rds消失 | tests/stage3/kds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_kds.py | TestKds | test_kds_rds_orders_by_time_scending | 718 | POS-44396 | kds/rds待完成页面，按时间最新的订单排在后面 | tests/stage3/kds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_kds.py | TestKds | test_kds_dish_size_merge_display | 756 | POS-44395 | 菜品模式下，同一菜品，不同size，送厨，其中有相同size时需要合并展示 | tests/stage3/kds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_kds.py | TestKds | test_delete_combo_operation_permission | 796 | POS-44394 |  | tests/stage3/kds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_print.py | TestPrint | test_charge_as_tip_credit_pay | 60 |  |  | tests/stage3/print.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_print.py | TestPrint | test_charge_as_tip_cash_pay | 103 |  |  | tests/stage3/print.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_print.py | TestPrint | test_clear_charge_reminder | 144 |  |  | tests/stage3/print.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_print.py | TestPrint | test_charge_reminder_contains_chinese | 195 |  |  | tests/stage3/print.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_print.py | TestPrint | test_charge_reminder_max_length | 262 |  |  | tests/stage3/print.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_print.py | TestPrint | test_charge_reminder_contains_special | 323 |  |  | tests/stage3/print.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_print.py | TestPrint | test_charge_reminder_close_recall_add_tip | 392 |  |  | tests/stage3/print.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_print.py | TestPrint | test_charge_reminder_close_service_charge | 434 |  |  | tests/stage3/print.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_print.py | TestPrint | test_charge_reminder_open_recall_add_tip | 481 |  |  | tests/stage3/print.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_print.py | TestPrint | test_charge_reminder_open_other_charge_not_tip | 552 |  |  | tests/stage3/print.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_print.py | TestPrint | test_charge_reminder_open_other_charge_as_tip | 598 |  |  | tests/stage3/print.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_print.py | TestPrint | test_charge_reminder_open_gift_card_pay | 650 |  |  | tests/stage3/print.spec.ts |  |  |  |  |  |  | live-gap | 源用例被 pytest skip: 本地礼品卡开关关闭 |
+| stage3 | stage3/test_print.py | TestPrint | test_charge_reminder_open_suborder | 702 |  |  | tests/stage3/print.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_print.py | TestPrint | test_charge_reminder_open_cash_pay | 760 |  |  | tests/stage3/print.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_print.py | TestPrint | test_charge_reminder_charge_as_tip_print | 806 |  |  | tests/stage3/print.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_print.py | TestPrint | test_charge_reminder_charge_as_tip_dine_in_print | 847 |  |  | tests/stage3/print.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_print.py | TestPrint | test_print_receipt_with_total_before_tips | 887 |  |  | tests/stage3/print.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_print.py | TestPrint | test_print_receipt_with_all_footers | 904 |  |  | tests/stage3/print.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_print.py | TestPrint | test_print_receipt_printing_time | 931 |  |  | tests/stage3/print.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_print.py | TestPrint | test_print_receipt_combine_discount_and_charge | 961 |  |  | tests/stage3/print.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_print.py | TestPrint | test_print_new_item | 997 |  |  | tests/stage3/print.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_print.py | TestPrint | test_print_receipt_order_type | 1040 |  |  | tests/stage3/print.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_print.py | TestPrint | test_print_kitchen_note | 1059 |  |  | tests/stage3/print.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_print.py | TestPrint | test_print_kitchen_togo_item | 1087 |  |  | tests/stage3/print.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_print.py | TestPrint | test_print_receipt_togo_item | 1117 |  |  | tests/stage3/print.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_print.py | TestPrint | test_print_phone_on_kitchen_ticket | 1145 |  |  | tests/stage3/print.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_print.py | TestPrint | test_print_addr_on_kitchen_ticket | 1174 |  |  | tests/stage3/print.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_print.py | TestPrint | test_print_item_on_kitchen_ticket | 1205 |  |  | tests/stage3/print.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_print.py | TestPrint | test_print_tip_suggestions_only_without_tip | 1240 |  |  | tests/stage3/print.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_print.py | TestPrint | test_void_item_style | 1266 |  |  | tests/stage3/print.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_print.py | TestPrint | test_item_with_option_void_order | 1295 |  |  | tests/stage3/print.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_print.py | TestPrint | test_delete_after_send_resend | 1316 | POS-42890 | 支付之后，点Resend可以按照选择送厨部分菜品 | tests/stage3/print.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_report.py | TestReport | test_check_void_report_date | 36 |  | 检查void报表展示日期 | tests/stage3/report.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_report_printpreview.py | TestReportPrintPreView | test_check_fee_after_gift_card_charge | 88 |  | 礼品卡充值后加小费检查报表 | tests/stage3/report-printpreview.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_report_printpreview.py | TestReportPrintPreView | test_check_report_dine_in | 139 |  |  | tests/stage3/report-printpreview.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_report_printpreview.py | TestReportPrintPreView | test_gift_card_refund | 196 |  | 验证礼品卡现金充值付款后refund,refund 之后余额不更新 | tests/stage3/report-printpreview.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_report_printpreview.py | TestReportPrintPreView | test_gift_card_void | 232 |  |  | tests/stage3/report-printpreview.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_report_printpreview.py | TestReportPrintPreView | test_staff_attendance_add_cash_tip | 276 |  |  | tests/stage3/report-printpreview.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_report_printpreview.py | TestReportPrintPreView | test_cash_refund_audit_log | 343 | POS-25259 |  | tests/stage3/report-printpreview.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_report_printpreview.py | TestReportPrintPreView | test_edit_item_price_audit_log | 383 |  |  | tests/stage3/report-printpreview.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_report_printpreview.py | TestReportPrintPreView | test_staff_personal_cash_in_out_report | 454 |  |  | tests/stage3/report-printpreview.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_report_printpreview.py | TestReportPrintPreView | test_total_report_staff_list | 500 |  |  | tests/stage3/report-printpreview.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_report_printpreview.py | TestReportPrintPreView | test_charge_as_tip | 537 |  |  | tests/stage3/report-printpreview.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_report_printpreview.py | TestReportPrintPreView | test_void_report_chinese | 586 |  |  | tests/stage3/report-printpreview.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_report_printpreview.py | TestReportPrintPreView | test_charge_as_tip_split_edit_suborder | 618 |  |  | tests/stage3/report-printpreview.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_report_printpreview.py | TestReportPrintPreView | test_move_item_audit | 682 |  |  | tests/stage3/report-printpreview.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_report_printpreview.py | TestReportPrintPreView | test_open_drawer_audit | 724 |  |  | tests/stage3/report-printpreview.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_report_printpreview.py | TestReportPrintPreView | test_delivery_charge | 749 |  |  | tests/stage3/report-printpreview.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_setting.py | TestSetting | test_auto_log_out | 63 |  |  | tests/stage3/setting.spec.ts |  |  |  |  |  |  | live-gap | 源用例被 pytest skip |
+| stage3 | stage3/test_setting.py | TestSetting | test_batch_unpaid_to_recall | 103 | POS-21223 | 设置未支付不能batch，并支持跳转到recall | tests/stage3/setting.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_setting.py | TestSetting | test_batch_unpaid_to_recall | 116 | POS-37882 | 设置batch前检查未打卡下班的员工 | tests/stage3/setting.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_setting.py | TestSetting | test_new_ui_create_item_color | 128 |  |  | tests/stage3/setting.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_setting.py | TestSetting | test_new_ui_create_category_color | 164 |  |  | tests/stage3/setting.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_setting.py | TestSetting | test_setting_check_out_print | 277 |  |  | tests/stage3/setting.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_setting.py | TestSetting | test_modify_component_name | 294 |  |  | tests/stage3/setting.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_setting.py | TestSetting | test_edit_semi_paid_orders_on_paid | 319 |  |  | tests/stage3/setting.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_setting.py | TestSetting | test_edit_semi_paid_orders_semi_paid | 351 |  |  | tests/stage3/setting.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_setting.py | TestSetting | test_edit_semi_paid_orders_on_discount | 385 |  |  | tests/stage3/setting.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_setting.py | TestSetting | test_edit_semi_paid_orders_void_item | 435 |  |  | tests/stage3/setting.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_setting.py | TestSetting | test_edit_semi_paid_orders_charge | 482 |  |  | tests/stage3/setting.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_setting.py | TestSetting | test_edit_semi_paid_orders_add_item | 546 |  |  | tests/stage3/setting.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_setting.py | TestSetting | test_cancel_semi_pay | 609 |  |  | tests/stage3/setting.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_setting.py | TestSetting | test_hide_cash_tip | 643 |  |  | tests/stage3/setting.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_setting.py | TestSetting | test_cloud_datahub | 674 |  |  | tests/stage3/setting.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_setting.py | TestSetting | test_refund_by_item_do_not_send | 682 |  |  | tests/stage3/setting.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_setting.py | TestSetting | test_void_payment_copy | 725 |  |  | tests/stage3/setting.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_setting.py | TestSetting | test_tip_suggestion_paid_tips | 759 |  |  | tests/stage3/setting.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_setting.py | TestSetting | test_auto_send_close_after_printed | 810 |  |  | tests/stage3/setting.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_setting.py | TestSetting | test_auto_send_close_after_settled | 843 |  |  | tests/stage3/setting.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_setting.py | TestSetting | test_credit_part_pay_add_tip_whole | 880 |  |  | tests/stage3/setting.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_setting.py | TestSetting | test_send_to_kitchen | 932 |  |  | tests/stage3/setting.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_setting.py | TestSetting | test_click_settle_auto_send | 968 |  |  | tests/stage3/setting.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_setting.py | TestSetting | test_receipt_3_5_paid | 1002 |  |  | tests/stage3/setting.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_setting.py | TestSetting | test_open_drawer | 1026 |  |  | tests/stage3/setting.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_setting.py | TestSetting | test_credit_part_pay_tip_base_whole | 1056 |  |  | tests/stage3/setting.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_setting.py | TestSetting | test_fast_food_mode_recall_new_order_redirect_to_togo | 1133 | POS-44385 | 开启快餐模式，recall页点击NEW order跳转togo下单 | tests/stage3/setting.spec.ts |  |  |  |  |  |  | live-gap | 源用例被 pytest skip: 这个配置不再生效，new order有单独的配置了 |
+| stage3 | stage3/test_setting.py | TestSetting | test_verify_emenu_pro_entry_visible | 1146 |  | 验证E-Menu Pro入口在admin页面可见 | tests/stage3/setting.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_table_order.py | TestTableOrder | test_order_table_empty | 37 |  |  | tests/stage3/table-order.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_table_order.py | TestTableOrder | test_order_table_inuse | 48 |  |  | tests/stage3/table-order.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_table_order.py | TestTableOrder | test_order_table_change_area | 59 |  |  | tests/stage3/table-order.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_table_order.py | TestTableOrder | test_order_duration | 70 |  |  | tests/stage3/table-order.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_table_order.py | TestTableOrder | test_table_order_id | 84 |  |  | tests/stage3/table-order.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_table_order.py | TestTableOrder | test_table_order_create_time | 105 |  |  | tests/stage3/table-order.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_table_order.py | TestTableOrder | test_table_order_party_size | 128 |  |  | tests/stage3/table-order.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_table_order.py | TestTableOrder | test_table_order_server | 146 |  |  | tests/stage3/table-order.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_table_order.py | TestTableOrder | test_table_order_price | 164 |  |  | tests/stage3/table-order.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_table_order.py | TestTableOrder | test_table_order_status | 182 |  |  | tests/stage3/table-order.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_table_order.py | TestTableOrder | test_table_order_guest_name | 195 |  |  | tests/stage3/table-order.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_table_order.py | TestTableOrder | test_drag_table | 208 |  |  | tests/stage3/table-order.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_table_order.py | TestTableOrder | test_resize_table | 227 |  |  | tests/stage3/table-order.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_table_order.py | TestTableOrder | test_pick_up_modify_guest | 248 |  |  | tests/stage3/table-order.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_table_order.py | TestTableOrder | test_operate_multi_order_on_table | 262 |  |  | tests/stage3/table-order.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_table_order.py | TestTableOrder | test_table_move_item_without_login | 297 |  |  | tests/stage3/table-order.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_y_cds.py | TestCds | test_cds_credit_pay_main_print_receipt | 108 |  |  | tests/stage3/y-cds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_y_cds.py | TestCds | test_cds_credit_pay_add_tip_sign_main_print | 174 |  |  | tests/stage3/y-cds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_y_cds.py | TestCds | test_cds_credit_pay_add_tip_sign_no_print | 245 |  |  | tests/stage3/y-cds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_y_cds.py | TestCds | test_cds_credit_pay_customize_tip_sign_print | 311 |  |  | tests/stage3/y-cds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_y_cds.py | TestCds | test_cds_backup_pay_main_no_receipt | 375 |  |  | tests/stage3/y-cds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_y_cds.py | TestCds | test_cds_credit_pay_main_no_tip_no_sign_no_print | 427 |  |  | tests/stage3/y-cds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_y_cds.py | TestCds | test_cds_credit_pay_cds_percent_tip_no_sign | 498 |  |  | tests/stage3/y-cds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_y_cds.py | TestCds | test_cds_cash_pay_main_no_receipt | 580 |  |  | tests/stage3/y-cds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_y_cds.py | TestCds | test_cds_credit_pay_main_no_tip_no_receipt | 638 |  |  | tests/stage3/y-cds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_y_cds.py | TestCds | test_cds_credit_pay_cds_no_tip_no_receipt | 712 |  |  | tests/stage3/y-cds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_y_cds.py | TestCds | test_cds_credit_pay_cds_percent_tip_print_receipt | 785 |  |  | tests/stage3/y-cds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_y_cds.py | TestCds | test_cds_backup_pay_cds_no_receipt | 859 |  |  | tests/stage3/y-cds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_y_cds.py | TestCds | test_cds_credit_pay_cds_percent_tip | 921 |  |  | tests/stage3/y-cds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_y_cds.py | TestCds | test_cds_recall_credit_pay_main_no_tip_no_sign_cds_print | 1000 |  |  | tests/stage3/y-cds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_y_cds.py | TestCds | test_cds_recall_credit_pay_main_no_tip_cds_sign_main_print | 1077 |  |  | tests/stage3/y-cds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_y_cds.py | TestCds | test_cds_recall_credit_pay_cds_no_tip_sign_print | 1154 |  |  | tests/stage3/y-cds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_y_cds.py | TestCds | test_cds_recall_credit_pay_percent_tip_sign_main_print | 1227 |  |  | tests/stage3/y-cds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_y_cds.py | TestCds | test_cds_recall_credit_pay_percent_tip_no_sign_main_no_print | 1304 |  |  | tests/stage3/y-cds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_y_cds.py | TestCds | test_cds_recall_credit_pay_amount_tip_sign_no_print | 1377 |  |  | tests/stage3/y-cds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_y_cds.py | TestCds | test_cds_recall_credit_pay_amount_tip_no_sign_no_print | 1455 |  |  | tests/stage3/y-cds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_y_cds.py | TestCds | test_cds_recall_credit_pay_customize_tip_sign_print | 1535 |  |  | tests/stage3/y-cds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_y_cds.py | TestCds | test_cds_recall_backup_pay_cds_no_receipt | 1620 |  |  | tests/stage3/y-cds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_y_cds.py | TestCds | test_cds_recall_credit_pay_main_no_tip_no_sign | 1685 |  |  | tests/stage3/y-cds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_y_cds.py | TestCds | test_cds_recall_credit_pay_cds_percent_tip_no_sign | 1759 |  |  | tests/stage3/y-cds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_y_cds.py | TestCds | test_cds_recall_cash_pay_main_no_receipt | 1843 |  |  | tests/stage3/y-cds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_y_cds.py | TestCds | test_cds_recall_credit_pay_main_no_tip_no_receipt | 1910 |  |  | tests/stage3/y-cds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_y_cds.py | TestCds | test_cds_recall_credit_pay_cds_no_tip_no_receipt | 1989 |  |  | tests/stage3/y-cds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_y_cds.py | TestCds | test_cds_recall_credit_pay_cds_percent_tip_print_receipt | 2066 |  |  | tests/stage3/y-cds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_y_cds.py | TestCds | test_cds_recall_credit_pay_main_customize_tip_no_receipt | 2145 |  |  | tests/stage3/y-cds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_y_cds.py | TestCds | test_cds_recall_backup_pay_cds_no_receipt2 | 2225 |  |  | tests/stage3/y-cds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_y_cds.py | TestCds | test_cds_recall_credit_pay_cds_percent_tip | 2291 |  |  | tests/stage3/y-cds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_y_cds.py | TestCds | test_old_cds_recall_credit_pay_percent_tip_sign_no_print | 2373 |  |  | tests/stage3/y-cds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_y_cds.py | TestCds | test_old_cds_message_credit_pay_percent_tip_sign_no_print | 2461 |  |  | tests/stage3/y-cds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_y_cds.py | TestCds | test_cds_big_tip | 2553 |  |  | tests/stage3/y-cds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_y_cds.py | TestCds | test_old_cds_big_tip | 2615 |  |  | tests/stage3/y-cds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_y_cds.py | TestCds | test_cds_price | 2686 |  |  | tests/stage3/y-cds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_y_cds.py | TestCds | test_cds_combo_price | 2722 |  |  | tests/stage3/y-cds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage3 | stage3/test_y_cds.py | TestCds | test_cds_work_normal_after_open_weight_switch | 2759 | POS-438804 |  | tests/stage3/y-cds.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage4 | stage4/test_crm_rights_card.py | TestCrmRightsCard | test_redeem_member_purchase_rights_card_success | 50 | POS-37881 |  | tests/stage4/crm-rights-card.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage4 | stage4/test_crm_rights_card.py | TestCrmRightsCard | test_custom_combo_price_calculation_with_rights_card | 73 | POS-37876 |  | tests/stage4/crm-rights-card.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage4 | stage4/test_crm_rights_card.py | TestCrmRightsCard | test_member_rights_card_seasoning_pricing | 87 | POS-37877 |  | tests/stage4/crm-rights-card.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage4 | stage4/test_crm_rights_card.py | TestCrmRightsCard | test_member_rights_card_order_copy_retains_rights_pricing | 102 | POS-37878 |  | tests/stage4/crm-rights-card.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage4 | stage4/test_crm_rights_card.py | TestCrmRightsCard | test_merged_order_restores_original_item_pricing | 125 | POS-37879 |  | tests/stage4/crm-rights-card.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage4 | stage4/test_crm_rights_card.py | TestCrmRightsCard | test_merged_order_applies_original_item_pricing_to_all_items | 150 | POS-37880 |  | tests/stage4/crm-rights-card.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage4 | stage4/test_paging.py | TestPagingPage | test_combinatorial_search_order | 47 | POS-42087 | paging页组合搜索订单成功 | tests/stage4/paging.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage4 | stage4/test_paging.py | TestPagingPage | test_paging_and_calloff_on_order_card | 68 | POS-42090 | 下单后送厨，订单详情卡片点击叫号和销号，订单状态正确 | tests/stage4/paging.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage4 | stage4/test_paging.py | TestPagingPage | test_auto_complete_order | 89 | POS-42091 | 配置超时自动完成，到时间后订单自动完成 | tests/stage4/paging.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage4 | stage4/test_paging.py | TestPagingPage | test_complete_all_orders | 115 | POS-42092 | paging页有多个待取餐状态的订单，点击全部完成，订单状态全部变成已完成 | tests/stage4/paging.spec.ts |  |  |  |  |  |  | not-started |  |
+| stage4 | stage4/test_paging.py | TestPagingPage | test_pos_refresh_calling_page | 144 | POS-43829 | pos叫号页点击刷新叫号屏，叫号屏页面正常刷新订单 | tests/stage4/paging.spec.ts |  |  |  |  |  |  | not-started |  |
