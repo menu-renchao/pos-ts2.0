@@ -1033,6 +1033,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 | stage1/test_admin_menu.py | TestAdminMenu | `test_batch_edit_combo_mode` POS-44624 weighted quick combo saves and recalls main combo name | tests/stage1/admin-menu.spec.ts | `AdminMenuFlow.orderWeightedQuickComboAndReadRecallItems` |
 | stage1/test_admin_menu.py | TestAdminMenu | `test_batch_edit_item_properties` POS-42067/POS-42066 batch replace menu item property labels | tests/stage1/admin-menu.spec.ts | `AdminMenuFlow.batchReplaceItemPropertiesAndReadDetail` |
 | stage1/test_admin_menu.py | TestAdminMenu | `test_take_out_tax_free_enabled` item Take Out Tax Free confirmation, dine-in tax, and audit log | tests/stage1/admin-menu.spec.ts | `AdminMenuFlow.enableTakeOutTaxFreeAndReadOrderTaxAudit` |
+| stage1/test_admin_menu.py | TestAdminMenu | `test_redeem_price` item switches from regular price to benefit/member price after CRM member selection | tests/stage1/admin-menu.spec.ts | `AdminMenuFlow.orderBenefitPriceItemAndReadPrices` |
 
 ### Preconditions
 
@@ -1051,6 +1052,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - POS-42067/POS-42066 uses source-equivalent items `superman item1`, `superman item2`, and `superman item3` under `Lunch` / `Chicken Lunch E`.
 - POS-42067/POS-42066 uses a deterministic round-one label sample `Gluten-free`, `Vege`, and `Lactose-free` instead of Python's random `random.sample(list(MenuLabels), 3)`.
 - POS-37827 uses source-equivalent item `taxtest` under `Lunch` / `Chicken Lunch E`, price `8.00`, tax id `tax-takeout-free`, and tax rate `0.075`.
+- POS-37830 uses source-equivalent item `benefit` under `Lunch` / `Chicken Lunch E`, regular price `8.00`, benefit/member price `6.00`, and CRM member `(64)673-37557`.
 
 ### Steps
 
@@ -1076,6 +1078,8 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 20. For POS-37827, open Admin Menu item detail for `taxtest`, enable Take Out Tax Free, save, and read the confirmation message.
 21. Record and read the source-equivalent tax audit log through the typed POS DB adapter.
 22. Return to POS home, enter Dine In, order `taxtest`, read order tax, and compare it with `8.00 * taxRate`.
+23. For POS-37830, enter Dine In, order `benefit`, and read the current item price before any member is selected.
+24. Open Redeem, select source member `(64)673-37557`, and read the current item price again.
 
 ### Expected Assertions
 
@@ -1092,6 +1096,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - POS-37827 verifies the Take Out Tax Free save confirmation is exactly `No tax will apply to the Item when take out.Are you sure you want to save?`.
 - POS-37827 verifies Dine In order tax for `taxtest` equals `8.00 * 0.075 = 0.60`, preserving that Dine In is still taxable after enabling take-out tax-free.
 - POS-37827 verifies the latest audit log has source-equivalent edit/type/category/path/display fields and old/new values mentioning take-out taxes versus take-out tax free.
+- POS-37830 verifies `benefit` shows regular price `8.00` before member selection and member price `6.00` after selecting the CRM member.
 
 ### Page Responsibilities
 
@@ -1113,6 +1118,8 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `AdminPage.readItemPropertyDetail` owns the POS-42067/POS-42066 item-detail property reads and all-property reads.
 - `AdminPage.saveItemTakeOutTaxFree` owns the POS-37827 item-detail tax-free edit and confirmation read.
 - `OrderDishesPage.selectMenuGroup`, `OrderDishesPage.selectMenuCategory`, `OrderDishesPage.addMenuItem`, and `OrderDishesPage.readTax` own the POS-37827 Dine In tax verification path.
+- `OrderDishesPage.selectMenuGroup`, `OrderDishesPage.selectMenuCategory`, `OrderDishesPage.addMenuItem`, and `OrderDishesPage.readSelectedItemPrice` own the POS-37830 order-line price reads.
+- `PosCrmPage.openRedeem` and `PosCrmPage.selectMemberByPhone` own the POS-37830 CRM member selection path.
 
 ### Client/Data Responsibilities
 
@@ -1128,6 +1135,8 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `test-data/pos/dishes.ts` owns `batchPropertyMenuItems` and `requiredMenuPropertyLabels`, preserving the source selected items and core labels for POS-42067/POS-42066.
 - `test-data/pos/dishes.ts` owns `takeOutTaxFreeDish`, preserving source item `taxtest`, price `8.00`, category, group, tax id, and deterministic tax rate for POS-37827.
 - `StubPosDbClient.readTaxRateById`, `StubPosDbClient.recordMenuItemTaxAudit`, and `StubPosDbClient.readLatestAuditLog` own the round-one source-equivalent `PosDBFunction` tax-rate and audit-log reads for POS-37827.
+- `test-data/pos/dishes.ts` owns `benefitPriceDish`, preserving source item `benefit`, regular price `8.00`, and benefit/member price `6.00` for POS-37830.
+- `test-data/crm/members.ts` owns `crmSourceRewardMember`, preserving source phone `(64)673-37557` for POS-37830.
 
 ### Stub Behavior
 
@@ -1146,6 +1155,8 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Offline harness renders Admin Take Out Tax Free controls and returns the source confirmation string when enabled.
 - Offline harness includes `taxtest` as a taxable Dine In menu item with tax rate `0.075`; order tax rendering uses explicit item tax rates when present.
 - Stub POS DB stores the latest POS-37827 audit log in memory for the current test and returns the deterministic tax rate by tax id.
+- Offline harness includes `benefit` as a Dine In menu item with regular price `8.00` and benefit price `6.00`.
+- Offline harness applies benefit price to current order lines after CRM member selection and reverts to regular unit price when the member is removed.
 
 ### Live Gaps
 
@@ -1170,3 +1181,5 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 | selector | POS-37827 item detail tax selector, Take Out Tax Free checkbox, save confirmation dialog, and order tax selector need live DOM confirmation | Confirm stable selectors or request `data-testid` |
 | data | POS-37827 source creates `taxtest` with a random live tax via MenuAPI/TaxAPI and deletes it afterward | Add live setup/cleanup through typed MenuAPI and TaxAPI adapters before live smoke |
 | DB | POS-37827 verifies latest audit log through POS DB | Add live POS DB adapter contract and tenant-safe audit-log filter before live smoke |
+| selector | POS-37830 Redeem member selection and order-line price selectors need live DOM confirmation | Confirm stable selectors or request `data-testid` |
+| data | POS-37830 source creates `benefit` with benefit_price through MenuAPI and chooses an existing CRM member | Add live MenuAPI setup/cleanup and CRM member fixture before live smoke |

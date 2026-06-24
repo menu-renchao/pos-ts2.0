@@ -2,10 +2,13 @@ import type { AdminPage } from '../../pages/pos/admin.page.js';
 import type { PosHomePage } from '../../pages/pos/home.page.js';
 import type { OrderDishesPage } from '../../pages/pos/order-dishes.page.js';
 import type { RecallPage } from '../../pages/pos/recall.page.js';
+import type { PosCrmPage } from '../../pages/pos/crm/pos-crm.page.js';
 import type { PosAuditLog, PosDbClient } from '../../clients/db/pos-db.client.js';
 import type { MenuClient } from '../../clients/pos-api/menu.client.js';
+import { crmSourceRewardMember } from '../../test-data/crm/members.js';
 import {
   batchPropertyMenuItems,
+  benefitPriceDish,
   chineseInitialSearchDish,
   quickComboBatchEditDish,
   requiredMenuPropertyLabels,
@@ -55,6 +58,11 @@ export type TakeOutTaxFreeAuditResult = {
   orderTax: number;
   expectedTax: number;
   auditLog: PosAuditLog;
+};
+
+export type BenefitPriceResult = {
+  beforeMemberPrice: number;
+  afterMemberPrice: number;
 };
 
 export class AdminMenuFlow {
@@ -275,6 +283,24 @@ export class AdminMenuFlow {
       orderTax,
       expectedTax: Number((takeOutTaxFreeDish.price * taxRate).toFixed(2)),
       auditLog,
+    };
+  }
+
+  async orderBenefitPriceItemAndReadPrices(homeUrl: string, posCrmPage: PosCrmPage): Promise<BenefitPriceResult> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(benefitPriceDish.group ?? '');
+    await this.orderDishesPage.selectMenuCategory(benefitPriceDish.category);
+    await this.orderDishesPage.addMenuItem(benefitPriceDish.name);
+    const beforeMemberPrice = await this.orderDishesPage.readSelectedItemPrice();
+
+    await posCrmPage.openRedeem();
+    await posCrmPage.selectMemberByPhone(crmSourceRewardMember.phone);
+    const afterMemberPrice = await this.orderDishesPage.readSelectedItemPrice();
+
+    return {
+      beforeMemberPrice,
+      afterMemberPrice,
     };
   }
 }

@@ -4,6 +4,7 @@ import { AdminPage } from '../../pages/pos/admin.page.js';
 import { PosHomePage } from '../../pages/pos/home.page.js';
 import { OrderDishesPage } from '../../pages/pos/order-dishes.page.js';
 import { RecallPage } from '../../pages/pos/recall.page.js';
+import { PosCrmPage } from '../../pages/pos/crm/pos-crm.page.js';
 import { jiraIssue, jiraIssues } from '../../utils/jira.js';
 
 test.describe('stage1 admin menu migration', () => {
@@ -139,6 +140,21 @@ test.describe('stage1 admin menu migration', () => {
       });
       expect(result.auditLog.oldValue).toContain('take out orders taxes');
       expect(result.auditLog.newValue).toContain('take out orders tax free');
+    },
+  );
+
+  test(
+    'POS-37830 选择 CRM 会员后菜品应展示会员价',
+    {
+      annotation: jiraIssue('POS-37830'),
+    },
+    async ({ environment, page }) => {
+      const flow = new AdminMenuFlow(new PosHomePage(page), new AdminPage(page), new OrderDishesPage(page));
+
+      const prices = await flow.orderBenefitPriceItemAndReadPrices(environment.posHomeUrl, new PosCrmPage(page));
+
+      expect(prices.beforeMemberPrice).toBe(8);
+      expect(prices.afterMemberPrice).toBe(6);
     },
   );
 });

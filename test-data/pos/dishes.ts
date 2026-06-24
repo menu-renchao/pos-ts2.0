@@ -266,6 +266,16 @@ export const takeOutTaxFreeDish: DishSample & { taxId: string } = {
   taxRate: 0.075,
 };
 
+export const benefitPriceDish: DishSample & { benefitPrice: number } = {
+  id: 'dish-benefit-price',
+  name: 'benefit',
+  price: 8,
+  benefitPrice: 6,
+  category: 'Chicken Lunch E',
+  group: 'Lunch',
+  taxRate: 0.0825,
+};
+
 export const weightQuickComboDish = {
   name: 'weight combo',
   group: 'MansuperGroup',
@@ -295,6 +305,7 @@ export const defaultMenuGroup: MenuGroupSample = {
     posNameDisplayDish,
     unitPriceDish,
     takeOutTaxFreeDish,
+    benefitPriceDish,
     {
       id: 'dish-combo-max',
       name: comboMaxModifyDish.name,

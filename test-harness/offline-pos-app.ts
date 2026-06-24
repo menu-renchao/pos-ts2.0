@@ -1305,12 +1305,13 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         }
         currentOrderItems.push({
           name: dish.name,
-          price: dish.price,
+          price: currentCrmMember && dish.benefitPrice !== undefined ? dish.benefitPrice : dish.price,
           unitPrice: dish.price,
           quantity: 1,
           category: dish.category || '',
           inventorySku: dish.inventorySku || '',
           taxRate: dish.taxRate,
+          benefitPrice: dish.benefitPrice,
           unitPriceItem: Boolean(dish.unitPriceItem),
           quickCombo: Boolean(dish.quickCombo),
           state: '',
@@ -1402,6 +1403,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           { name: 'superman item2', price: 9, group: 'Lunch', category: 'Chicken Lunch E' },
           { name: 'superman item3', price: 10, group: 'Lunch', category: 'Chicken Lunch E' },
           { name: 'taxtest', price: 8, group: 'Lunch', category: 'Chicken Lunch E', taxRate: 0.075 },
+          { name: 'benefit', price: 8, benefitPrice: 6, group: 'Lunch', category: 'Chicken Lunch E' },
           { name: 'Group Switch Beef', price: 11.25, group: 'Lunch Menu', category: 'Lunch Entree' },
           { name: 'Category Switch Fish', price: 13.5, group: 'Dinner Menu', category: 'Seafood' },
           { name: 'Discountable Burger', price: 10, group: 'Dinner Menu', category: 'Burgers' },
@@ -1556,6 +1558,17 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         settleSwitchMemberButton.className = currentHasRedeemItem ? 'disabled' : '';
         settleSwitchMemberButton.disabled = currentHasRedeemItem;
         crmRedeemItemButton.hidden = currentSettlementSelectMode;
+      }
+
+      function applyMemberPricesToCurrentOrder() {
+        currentOrderItems.forEach((item) => {
+          if (item.benefitPrice === undefined) {
+            return;
+          }
+          const unitPrice = currentCrmMember ? Number(item.benefitPrice) : Number(item.unitPrice || item.price || 0);
+          item.price = roundMoney(unitPrice * Number(item.quantity || 1));
+        });
+        renderOrderAmounts();
       }
 
       function calculateRewardDiscount(order) {
@@ -2484,11 +2497,13 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           currentCrmFixedRewardAmount = 0;
         }
         currentCrmMember = member || null;
+        applyMemberPricesToCurrentOrder();
         renderCurrentCrmState();
       });
       crmRemoveMemberButton.addEventListener('click', () => {
         refundCurrentCrmPointDeduction();
         currentCrmMember = null;
+        applyMemberPricesToCurrentOrder();
         renderCurrentCrmState();
       });
       crmRedeemAmount10Button.addEventListener('click', () => {
