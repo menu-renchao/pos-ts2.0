@@ -533,6 +533,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 | stage0/test_order_page.py | TestOrderPage | `test_item_count_decimal_close` decimal quantity input is treated as non-decimal digits when decimal count is disabled | tests/stage0/order-page.spec.ts | `OrderEntryFlow.enterDecimalQuantityWhenDecimalCountDisabled` |
 | stage0/test_order_page.py | TestOrderPage | `test_item_count_decimal_combine_item_add_option` decimal quantity same-item combine with Global Option splits quantities and preserves total after Recall | tests/stage0/order-page.spec.ts | `OrderEntryFlow.addGlobalOptionsToDecimalCombinedItemAndReadTotals` |
 | stage0/test_order_page.py | TestOrderPage | `test_custom_order` custom Delivery order saves and Recall Print exposes Reprint with three print outputs | tests/stage0/order-page.spec.ts | `OrderEntryFlow.printCustomDeliveryOrderAndReadPrintState` |
+| stage0/test_order_page.py | TestOrderPage | `test_delivery_order_exit` Delivery customer flow exits the order page directly back to POS home | tests/stage0/order-page.spec.ts | `OrderEntryFlow.exitDeliveryOrderAndReadHomeWelcome` |
 | stage0/test_order_page.py | all `Test*` classes | add dishes, modify items, save orders, validate order totals | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createTogoOrder` |
 | stage0/test_order_settle.py | all `Test*` classes | create payable orders before settlement | tests/stage0/order-settle.spec.ts | `OrderEntryFlow.createTogoOrder` |
 
@@ -571,6 +572,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 23. For disabled decimal-count behavior, disable Count Can Be Decimal, create a To Go order, enter quantity `2.55`, and read the first order-line quantity as rendered by the order page.
 24. For decimal combined-item Global Option behavior, enable Count Can Be Decimal and Auto Same Status combine, create a To Go order, set special price `7.95`, set quantity `2.3`, add a priced Global Option, read both split line quantities and the second-line price, save, open Recall, and compare saved total with Recall total.
 25. For custom Delivery print behavior, enter the custom Delivery order type, fill the source customer phone/name/address, add a source-equivalent kitchen item, save, open Recall, print, then read Reprint visibility and print output count.
+26. For Delivery exit behavior, enter Delivery, fill the source customer phone/name/address to reach the order page, click Exit, and read POS home welcome text.
 
 ### Expected Assertions
 
@@ -622,6 +624,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Disabled decimal-count flow verifies entering `2.55` renders quantity `255`.
 - Decimal combined-item Global Option flow verifies quantities split into `0.3` and `2`, the second-line price equals `optionPrice * 2 + itemUnitPrice * 2`, and the Recall total equals the pre-save order total.
 - Custom Delivery print flow verifies Recall Print makes Reprint visible and produces three offline print outputs, matching the source file-count assertion without using the live temp print directory.
+- Delivery exit flow verifies clicking Exit from the Delivery-created order page returns to POS home by reading the visible welcome text.
 
 ### Page Responsibilities
 
@@ -646,6 +649,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `OrderDishesPage` owns order-line quantity/price reads for decimal disabled and Global Option split-line assertions.
 - `OrderDishesPage` owns Global Option priced Add behavior for the decimal combined-item path.
 - `PosHomePage` owns the custom Delivery entry point, and `RecallPage` owns Recall Print/Reprint state and offline print output count reads.
+- `OrderDishesPage.exitOrderPage` owns direct order-page exit behavior, and `PosHomePage.readWelcomeText` owns the home-return assertion for Delivery exit.
 - `AdminPage` owns Search Menu enable/disable persistence, staff Void Printed Item permission, same-item combine mode, separate-same-item setting behavior, Automatically Redirect After Reduce Items, and Count Can Be Decimal.
 - `RecallPage` owns recalled item state, option reads, suborder tip reads, split-order combine action, order status reads, order selection, guest-name edit, customer-name reads, order total reads, split panel entry, even/item/seat/amount/drag split actions, split save/confirm/unsplit actions, suborder settlement/payment actions, suborder status reads, parent-card background reads, and split price reads.
 - `RecallPage` owns Recall subtotal reads for source cases that verify post-save subtotal instead of the active order page.
@@ -701,6 +705,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Stub disabled Count Can Be Decimal removes the decimal point from quantity input so `2.55` renders as `255`.
 - Stub Auto Same Status + decimal quantity + Global Option Add splits the source item into a decimal remainder line and an integer option line; the integer line price includes item unit price times quantity plus option price times quantity.
 - Stub custom Delivery uses the normal Delivery form but marks the order type as custom-delivery; Recall Print exposes Reprint and a deterministic print output count of `3` instead of touching the filesystem.
+- Stub Delivery create-order enters the order page, and order Exit hides the order page and leaves POS home welcome text visible for the direct-exit path.
 - Stub Delivery create-order copies the entered phone, name, address, Apt, city, state, zip, and note into the order Info panel after navigating to the order page.
 - Stub combo option state starts at four options for the migrated combo sample and decrements by one for each reduce action.
 - Stub menu mode is stored in browser-local state so refresh keeps the selected mode inside the current test.

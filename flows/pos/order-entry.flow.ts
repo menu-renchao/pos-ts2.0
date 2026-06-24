@@ -448,6 +448,17 @@ export class OrderEntryFlow {
     return this.orderDishesPage.readDeliveryInfo();
   }
 
+  async exitDeliveryOrderAndReadHomeWelcome(homeUrl: string): Promise<string> {
+    if (!this.deliveryPage) {
+      throw new Error('DeliveryPage is required for Delivery order creation');
+    }
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDelivery();
+    await this.deliveryPage.createDeliveryOrder(deliveryOrderInfoSample);
+    await this.orderDishesPage.exitOrderPage();
+    return this.homePage.readWelcomeText();
+  }
+
   async reduceComboOptionsAndReadCounts(homeUrl: string): Promise<ComboOptionCountResult> {
     await this.homePage.open(homeUrl);
     await this.homePage.clickDineIn();

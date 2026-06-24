@@ -814,4 +814,20 @@ test.describe('POS 点单页面', () => {
     expect(result.reprintVisible).toBe(true);
     expect(result.printFileCount).toBe(3);
   });
+
+  test('POS-36286 Delivery 填写客户信息进入点单页后点击 Exit 应回到首页', {
+    annotation: [jiraIssue('POS-36286')],
+  }, async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      undefined,
+      new DeliveryPage(page),
+    );
+
+    const welcomeText = await orderEntryFlow.exitDeliveryOrderAndReadHomeWelcome(environment.posHomeUrl);
+
+    expect(welcomeText).toContain('Welcome');
+  });
 });
