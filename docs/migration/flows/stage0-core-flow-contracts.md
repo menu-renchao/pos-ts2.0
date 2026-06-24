@@ -479,6 +479,9 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 
 | source_file | source_class | source_test_pattern | target_spec | target_flow_method |
 |---|---|---|---|---|
+| stage0/test_order_page.py | TestOrderPage | `test_order_switch_group` switch menu group, save order, verify Recall item | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createTogoOrderAndReadRecall` |
+| stage0/test_order_page.py | TestOrderPage | `test_order_group_chinese` Chinese menu groups visible on order page | tests/stage0/order-page.spec.ts | `OrderEntryFlow.readChineseMenuGroups` |
+| stage0/test_order_page.py | TestOrderPage | `test_order_switch_category` switch menu category, save order, verify Recall item | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createTogoOrderAndReadRecall` |
 | stage0/test_order_page.py | all `Test*` classes | add dishes, modify items, save orders, validate order totals | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createTogoOrder` |
 | stage0/test_order_settle.py | all `Test*` classes | create payable orders before settlement | tests/stage0/order-settle.spec.ts | `OrderEntryFlow.createTogoOrder` |
 
@@ -488,6 +491,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Order type is selected through UI navigation, not by direct URL.
 - Required dish, option, combo, quantity, and price samples exist in `test-data/pos`.
 - Stub DB/order clients can remember the generated order number.
+- Recall is opened from POS home after save for source cases that verify saved order content.
 
 ### Steps
 
@@ -497,6 +501,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 4. Apply item-level operations required by the source case.
 5. Read order summary values as numbers.
 6. Save or continue to settlement according to the source case.
+7. When the source validates Recall, open Recall through POS home and read the latest saved order.
 
 ### Expected Assertions
 
@@ -504,6 +509,8 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Quantity, subtotal, tax, discount, charge, and total values match the source case expectation.
 - Saved orders expose a traceable order number through page read or stub DB client.
 - Item operations preserve source behavior such as hold, void, discount, combo, and option pricing where relevant.
+- Menu group/category switch cases preserve dish name and price after save and Recall.
+- Chinese group case shows `午餐菜单` and `中餐菜单`.
 
 ### Page Responsibilities
 
@@ -511,6 +518,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `MenuGridSection` owns menu category/group/dish selection.
 - `ItemActionsSection` owns item-level actions.
 - `OrderSummarySection` owns numeric summary reads and line-item reads.
+- `RecallPage` owns latest saved-order selection and line-item reads for source cases that verify saved orders.
 
 ### Client/Data Responsibilities
 
@@ -522,6 +530,8 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 
 - Stub order identity is deterministic and does not require a live DB.
 - Stub clients do not validate menu availability against live APIs.
+- Stub order page stores the currently selected menu item and makes it available to Recall after save.
+- Stub Chinese mode renders Chinese menu group names on the order page.
 
 ### Live Gaps
 

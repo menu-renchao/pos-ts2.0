@@ -6,6 +6,7 @@ export type DishSample = {
   name: string;
   price: number;
   category: string;
+  group?: string;
   inventorySku?: string;
   taxRate?: number;
 };

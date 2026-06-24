@@ -151,6 +151,13 @@ export class PosHomePage extends PageObject {
     });
   }
 
+  async clickRecall(): Promise<void> {
+    await step('从首页进入 Recall 页面', async () => {
+      await this.recallButton.click();
+      await expect(this.page.getByTestId('recall-page')).toBeVisible();
+    });
+  }
+
   async clickReservation(): Promise<void> {
     await step('从首页进入预约页面', async () => {
       await this.reservationButton.click();

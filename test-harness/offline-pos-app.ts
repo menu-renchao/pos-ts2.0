@@ -47,6 +47,14 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
     </section>
     <section data-testid="order-page" hidden>
       <div data-testid="open-food-category"></div>
+      <div data-testid="order-menu-groups"></div>
+      <div data-testid="order-menu-categories"></div>
+      <div data-testid="order-menu-items"></div>
+      <button data-testid="order-save">Save Order</button>
+    </section>
+    <section data-testid="recall-page" hidden>
+      <button data-testid="recall-recent-order">Recent Order</button>
+      <div data-testid="recall-order-items"></div>
     </section>
     <section data-testid="report-password-panel" hidden>
       <input data-testid="report-password" type="password" />
@@ -107,6 +115,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let clockState = 'off';
       let deliveryHistoricalAddress = '';
       let messages = [];
+      let currentOrderItems = [];
+      let latestSavedOrderItems = [];
       let reservations = [];
       let mainFunctions = ['Dine In', 'Drawer', 'To Go', 'Delivery'];
       let hiddenFunctions = ['Admin', 'Session'];
@@ -133,6 +143,13 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const checkoutButton = document.querySelector('[data-testid="clock-checkout"]');
       const adminPage = document.querySelector('[data-testid="admin-page"]');
       const orderPage = document.querySelector('[data-testid="order-page"]');
+      const orderMenuGroups = document.querySelector('[data-testid="order-menu-groups"]');
+      const orderMenuCategories = document.querySelector('[data-testid="order-menu-categories"]');
+      const orderMenuItems = document.querySelector('[data-testid="order-menu-items"]');
+      const orderSaveButton = document.querySelector('[data-testid="order-save"]');
+      const recallPage = document.querySelector('[data-testid="recall-page"]');
+      const recallRecentOrderButton = document.querySelector('[data-testid="recall-recent-order"]');
+      const recallOrderItems = document.querySelector('[data-testid="recall-order-items"]');
       const reportPasswordPanel = document.querySelector('[data-testid="report-password-panel"]');
       const reportPasswordInput = document.querySelector('[data-testid="report-password"]');
       const reportPasswordSaveButton = document.querySelector('[data-testid="report-password-save"]');
@@ -201,6 +218,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         adminPage.hidden = panel !== 'admin';
         deliveryPage.hidden = panel !== 'delivery';
         orderPage.hidden = panel !== 'order';
+        recallPage.hidden = panel !== 'recall';
         reportPasswordPanel.hidden = panel !== 'report-password';
         reportPage.hidden = panel !== 'report';
         supportPage.hidden = panel !== 'support';
@@ -224,6 +242,52 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         deliveryCustomerList.hidden = false;
         deliveryCustomerList.textContent = 'Customer list';
         deliveryOrderInfo.textContent = '';
+      }
+
+      function createButton(testId, text, onClick) {
+        const button = document.createElement('button');
+        button.dataset.testid = testId;
+        button.textContent = text;
+        button.addEventListener('click', onClick);
+        return button;
+      }
+
+      function menuData() {
+        return [
+          { name: 'Group Switch Beef', price: 11.25, group: 'Lunch Menu', category: 'Lunch Entree' },
+          { name: 'Category Switch Fish', price: 13.5, group: 'Dinner Menu', category: 'Seafood' },
+        ];
+      }
+
+      function renderOrderMenu() {
+        const effectiveLanguage = currentLanguage === 'Chinese' || userDefaultLanguage === 'Chinese' ? 'Chinese' : 'Default';
+        const groups = effectiveLanguage === 'Chinese' ? ['午餐菜单', '中餐菜单'] : ['Lunch Menu', 'Dinner Menu'];
+        orderMenuGroups.innerHTML = '';
+        groups.forEach((group) => {
+          orderMenuGroups.appendChild(createButton('order-menu-group', group, () => {}));
+        });
+        orderMenuCategories.innerHTML = '';
+        ['Lunch Entree', 'Seafood'].forEach((category) => {
+          orderMenuCategories.appendChild(createButton('order-menu-category', category, () => {}));
+        });
+        orderMenuItems.innerHTML = '';
+        menuData().forEach((dish) => {
+          orderMenuItems.appendChild(createButton('order-menu-item', dish.name, () => {
+            currentOrderItems = [{ name: dish.name, price: dish.price }];
+          }));
+        });
+      }
+
+      function renderRecallOrderItems() {
+        recallOrderItems.innerHTML = '';
+        latestSavedOrderItems.forEach((item) => {
+          const row = document.createElement('div');
+          row.dataset.testid = 'recall-order-item';
+          row.dataset.name = item.name;
+          row.dataset.price = String(item.price);
+          row.textContent = item.name + ' $' + item.price.toFixed(2);
+          recallOrderItems.appendChild(row);
+        });
       }
 
       function updateReservationStatusRead(partyName) {
@@ -386,8 +450,18 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       });
       document.querySelector('[data-testid="home-togo"]').addEventListener('click', () => {
         showPanel('order');
+        renderOrderMenu();
         const effectiveLanguage = currentLanguage === 'Chinese' || userDefaultLanguage === 'Chinese' ? 'Chinese' : 'Default';
         openFoodCategory.textContent = effectiveLanguage === 'Chinese' ? '自定义菜\\nauto_fix' : 'Custom Food\\nauto_fix';
+      });
+      document.querySelector('[data-testid="home-recall"]').addEventListener('click', () => {
+        showPanel('recall');
+      });
+      orderSaveButton.addEventListener('click', () => {
+        latestSavedOrderItems = [...currentOrderItems];
+      });
+      recallRecentOrderButton.addEventListener('click', () => {
+        renderRecallOrderItems();
       });
       document.querySelector('[data-testid="home-reservation"]').addEventListener('click', () => {
         showPanel('reservation');
