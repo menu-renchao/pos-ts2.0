@@ -327,6 +327,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
     </section>
     <section data-testid="report-page" hidden>
       <h1>Report</h1>
+      <select data-testid="report-order-type">
+        <option value="ALL">ALL</option>
+        <option value="CUSTOM_D">CUSTOM_D</option>
+      </select>
+      <div data-testid="report-overview-net-sales">$0.00</div>
     </section>
     <section data-testid="delivery-page" hidden>
       <input data-testid="delivery-phone" />
@@ -670,6 +675,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const reportPasswordInput = document.querySelector('[data-testid="report-password"]');
       const reportPasswordSaveButton = document.querySelector('[data-testid="report-password-save"]');
       const reportPage = document.querySelector('[data-testid="report-page"]');
+      const reportOrderTypeSelect = document.querySelector('[data-testid="report-order-type"]');
+      const reportOverviewNetSales = document.querySelector('[data-testid="report-overview-net-sales"]');
       const supportPage = document.querySelector('[data-testid="support-page"]');
       const messageCenter = document.querySelector('[data-testid="message-center"]');
       const messageClearAllButton = document.querySelector('[data-testid="message-clear-all"]');
@@ -1206,6 +1213,18 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         return Number((discountedSubtotal + discountedSubtotal * taxRate).toFixed(2));
       }
 
+      function reportOrderType(order) {
+        return order?.orderType === 'custom-delivery' ? 'CUSTOM_D' : 'STANDARD';
+      }
+
+      function renderReportOverview() {
+        const selectedType = reportOrderTypeSelect.value;
+        const netSales = savedOrders
+          .filter((order) => selectedType === 'ALL' || reportOrderType(order) === selectedType)
+          .reduce((total, order) => total + Number(order.subtotal || 0), 0);
+        reportOverviewNetSales.textContent = '$' + roundMoney(netSales).toFixed(2);
+      }
+
       function earnPointsForSubtotal(subtotal) {
         return Math.floor(Number(subtotal || 0) / 10) * 10;
       }
@@ -1381,6 +1400,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           crmFixedRewardAmount: currentCrmFixedRewardAmount,
           crmPointDeduction: currentCrmPointDeduction,
           hasRedeemItem: currentHasRedeemItem,
+          orderType: currentOrderType,
           partialPaid: currentSemiPayMode,
           rewardDiscount: 0,
           guestPhone: currentDeliveryInfoRows[0] || '',
@@ -2420,7 +2440,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       reportPasswordSaveButton.addEventListener('click', () => {
         if (reportPasswordInput.value === '11') {
           showPanel('report');
+          renderReportOverview();
         }
+      });
+      reportOrderTypeSelect.addEventListener('change', () => {
+        renderReportOverview();
       });
       document.querySelector('[data-testid="home-support"]').addEventListener('click', () => {
         showPanel('support');

@@ -4,6 +4,7 @@ import { AdminPage } from '../../pages/pos/admin.page.js';
 import { DeliveryPage } from '../../pages/pos/delivery.page.js';
 import { PosHomePage } from '../../pages/pos/home.page.js';
 import { OrderDishesPage } from '../../pages/pos/order-dishes.page.js';
+import { ReportPage } from '../../pages/pos/report.page.js';
 import { RecallPage } from '../../pages/pos/recall.page.js';
 import {
   categoryNoSubOptionDish,
@@ -398,6 +399,24 @@ test.describe('POS 点单页面', () => {
     const wholeOrderPrice = await orderEntryFlow.readFirstDragSplitSubOrderDiscountWholePrice(environment.posHomeUrl);
 
     expect(wholeOrderPrice).toBe('8.00');
+  });
+
+  test('POS-22657 自定义订单类型应计入 Report Overview 净销售额', {
+    annotation: [jiraIssue('POS-22657')],
+  }, async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      undefined,
+      new DeliveryPage(page),
+      new ReportPage(page),
+    );
+
+    const result = await orderEntryFlow.createCustomDeliveryOrderAndReadReportNetSales(environment.posHomeUrl);
+
+    expect(result.orderType).toBe('CUSTOM_D');
+    expect(result.netSalesAfter - result.netSalesBefore).toBe(result.orderSubtotal);
   });
 
   test('Open Food 多语言键盘输入中文后应生成中文菜名', async ({ environment, page }) => {

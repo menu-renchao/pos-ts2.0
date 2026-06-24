@@ -3,6 +3,7 @@ import type { AdminPage } from '../../pages/pos/admin.page.js';
 import type { DeliveryPage } from '../../pages/pos/delivery.page.js';
 import type { OrderDishesPage } from '../../pages/pos/order-dishes.page.js';
 import type { RecalledItemOption, RecalledOrderItem, RecallPage, RecallPrintState } from '../../pages/pos/recall.page.js';
+import type { ReportPage } from '../../pages/pos/report.page.js';
 import type { DishSample, OptionOrderSample } from '../../test-data/pos/domain-types.js';
 import { combineSameItemModes, menuModes } from '../../test-data/pos/admin-settings.js';
 import {
@@ -163,6 +164,13 @@ export type ComboSubItemEditPriceResult = {
   fixedSubItemSupportsEditPrice: boolean;
 };
 
+export type CustomOrderReportNetSalesResult = {
+  orderType: 'CUSTOM_D';
+  netSalesBefore: number;
+  orderSubtotal: number;
+  netSalesAfter: number;
+};
+
 export type SameItemCombineResult = {
   itemLineCount: number;
   firstItemQuantity?: string;
@@ -222,6 +230,7 @@ export class OrderEntryFlow {
     private readonly recallPage: RecallPage,
     private readonly adminPage?: AdminPage,
     private readonly deliveryPage?: DeliveryPage,
+    private readonly reportPage?: ReportPage,
   ) {}
 
   async createTogoOrderAndReadRecall(homeUrl: string, dish: DishSample): Promise<RecalledOrderItem[]> {
@@ -475,6 +484,43 @@ export class OrderEntryFlow {
     await this.recallPage.openSubOrder(1);
     await this.recallPage.clickEdit();
     return this.orderDishesPage.openDiscountAndReadWholeOrderPrice();
+  }
+
+  async createCustomDeliveryOrderAndReadReportNetSales(homeUrl: string): Promise<CustomOrderReportNetSalesResult> {
+    if (!this.deliveryPage || !this.reportPage) {
+      throw new Error('DeliveryPage and ReportPage are required for custom order report validation');
+    }
+    const orderType = 'CUSTOM_D';
+    const dish = splitDiscountDishes[0];
+    if (!dish) {
+      throw new Error('splitDiscountDishes must contain the source custom-order dish');
+    }
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickReport();
+    await this.reportPage.inputPasswordInPopup(validEmployeePassword);
+    await this.reportPage.selectOrderType(orderType);
+    const netSalesBefore = await this.reportPage.readOverviewNetSales();
+
+    await this.homePage.clickCustomDelivery();
+    await this.deliveryPage.createDeliveryOrder(deliveryOrderInfoSample);
+    await this.orderDishesPage.selectMenuGroup(dish.group);
+    await this.orderDishesPage.selectMenuCategory(dish.category);
+    await this.orderDishesPage.addMenuItem(dish.name);
+    const orderSubtotal = await this.orderDishesPage.readSubtotal();
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.clickReport();
+    await this.reportPage.inputPasswordInPopup(validEmployeePassword);
+    await this.reportPage.selectOrderType(orderType);
+    const netSalesAfter = await this.reportPage.readOverviewNetSales();
+
+    return {
+      orderType,
+      netSalesBefore,
+      orderSubtotal,
+      netSalesAfter,
+    };
   }
 
   async createChineseOpenFoodWithMultiLanguageKeyboard(homeUrl: string): Promise<string> {
