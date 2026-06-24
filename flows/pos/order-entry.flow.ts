@@ -143,6 +143,11 @@ export type RequiredCategorySaveResult = {
   urlAfterCompletedSave: string;
 };
 
+export type PercentChargeResult = {
+  chargeLabel: string;
+  chargePrice: string;
+};
+
 export type SameItemCombineResult = {
   itemLineCount: number;
   firstItemQuantity?: string;
@@ -740,6 +745,28 @@ export class OrderEntryFlow {
     await this.adminPage.setKdsCategoryRequired(false);
     await this.homePage.refresh();
     return { categoryAfterRejectedSave, urlAfterRejectedSave, urlAfterCompletedSave };
+  }
+
+  async applyPercentChargeWhenKdsDiscountAllowanceDisabled(homeUrl: string): Promise<PercentChargeResult> {
+    if (!this.adminPage) {
+      throw new Error('AdminPage is required for category discount allowance setup');
+    }
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.setKdsCategoryDiscountAllowance(false);
+    await this.homePage.refresh();
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(requiredKdsDish.group);
+    await this.orderDishesPage.selectMenuCategory(requiredKdsDish.category);
+    await this.orderDishesPage.addMenuItem(requiredKdsDish.name);
+    await this.orderDishesPage.applyOrderCharge('20%');
+    const chargeLabel = await this.orderDishesPage.readChargeLabel();
+    const chargePrice = await this.orderDishesPage.readChargePrice();
+    await this.orderDishesPage.exitOrderPage();
+    await this.homePage.clickAdmin();
+    await this.adminPage.setKdsCategoryDiscountAllowance(true);
+    await this.homePage.refresh();
+    return { chargeLabel, chargePrice };
   }
 
   async createThreeSameItemsWithoutAutoCombine(homeUrl: string): Promise<SameItemCombineResult> {

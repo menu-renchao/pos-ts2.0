@@ -880,4 +880,20 @@ test.describe('POS 点单页面', () => {
     expect(result.urlAfterRejectedSave).toContain('orderDishes');
     expect(result.urlAfterCompletedSave).not.toContain('orderDishes');
   });
+
+  test('POS-42958 KDS Category 未勾选限制折扣时 20% 整单加收应为 2.00', {
+    annotation: [jiraIssue('POS-42958')],
+  }, async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.applyPercentChargeWhenKdsDiscountAllowanceDisabled(environment.posHomeUrl);
+
+    expect(result.chargeLabel).toBe('Charge(20%)');
+    expect(result.chargePrice).toBe('$2.00');
+  });
 });

@@ -89,6 +89,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         <option value="true">true</option>
         <option value="false">false</option>
       </select>
+      <select data-testid="admin-kds-category-discount-allowance">
+        <option value="true">true</option>
+        <option value="false">false</option>
+      </select>
       <button data-testid="admin-save-settings">Save Settings</button>
       <button data-testid="admin-member-list">CRM Loyalty</button>
       <section data-testid="member-list-permission-popup" hidden>
@@ -186,6 +190,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <button data-testid="item-discount-50">50% Discount</button>
       <input data-testid="order-tip" />
       <div data-testid="order-tip-toast"></div>
+      <button data-testid="order-charge-20">Charge 20%</button>
+      <div data-testid="order-charge-label"></div>
+      <div data-testid="order-charge-price"></div>
       <button data-testid="split-even">Split Even</button>
       <button data-testid="split-combine">Combine Split</button>
       <button data-testid="order-open-food">Open Food</button>
@@ -392,7 +399,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let currentAutoRedirectAfterReduce = localStorage.getItem('currentAutoRedirectAfterReduce') !== 'false';
       let currentCountCanBeDecimal = localStorage.getItem('currentCountCanBeDecimal') !== 'false';
       let currentKdsCategoryRequired = localStorage.getItem('currentKdsCategoryRequired') === 'true';
+      let currentKdsCategoryDiscountAllowance = localStorage.getItem('currentKdsCategoryDiscountAllowance') !== 'false';
       let currentCategoryName = '';
+      let currentOrderChargeRate = 0;
+      let currentOrderChargeLabel = '';
       let currentCrmMember = null;
       let currentCrmDiscountRate = 0;
       let currentCrmDiscountMaxAmount = null;
@@ -455,6 +465,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const combineSameItemSelect = document.querySelector('[data-testid="admin-combine-same-item"]');
       const countCanBeDecimalSelect = document.querySelector('[data-testid="admin-count-can-be-decimal"]');
       const kdsCategoryRequiredSelect = document.querySelector('[data-testid="admin-kds-category-required"]');
+      const kdsCategoryDiscountAllowanceSelect = document.querySelector('[data-testid="admin-kds-category-discount-allowance"]');
       const joinMemberButton = document.querySelector('[data-testid="home-join-member"]');
       const joinMemberRegistration = document.querySelector('[data-testid="join-member-registration"]');
       const joinMemberFirstNameInput = document.querySelector('[data-testid="join-member-first-name"]');
@@ -535,6 +546,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const itemHalfDiscountButton = document.querySelector('[data-testid="item-discount-50"]');
       const orderTipInput = document.querySelector('[data-testid="order-tip"]');
       const orderTipToast = document.querySelector('[data-testid="order-tip-toast"]');
+      const orderCharge20Button = document.querySelector('[data-testid="order-charge-20"]');
+      const orderChargeLabel = document.querySelector('[data-testid="order-charge-label"]');
+      const orderChargePrice = document.querySelector('[data-testid="order-charge-price"]');
       const splitEvenButton = document.querySelector('[data-testid="split-even"]');
       const orderOpenFoodButton = document.querySelector('[data-testid="order-open-food"]');
       const openFoodKeyboardTextInput = document.querySelector('[data-testid="open-food-keyboard-text"]');
@@ -1023,11 +1037,24 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         ];
       }
 
+      function currentChargeAmount(subtotal) {
+        if (!currentOrderChargeRate) {
+          return 0;
+        }
+        const chargeableSubtotal = currentKdsCategoryDiscountAllowance
+          ? activeOrderItems()
+            .filter((item) => item.category !== 'KDS')
+            .reduce((total, item) => total + Number(item.price || 0), 0)
+          : Number(subtotal || 0);
+        return roundMoney(chargeableSubtotal * currentOrderChargeRate);
+      }
+
       function renderOrderAmounts() {
         const itemCount = currentOrderItems.filter((item) => item.state !== 'Voided').length;
         const subtotal = currentOrderItems
           .filter((item) => item.state !== 'Voided')
           .reduce((total, item) => total + Number(item.price || 0), 0);
+        const chargeAmount = currentChargeAmount(subtotal);
         const rewardDiscount = calculateRewardDiscount({
           subtotal,
           crmDiscountRate: currentCrmDiscountRate,
@@ -1037,8 +1064,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         orderTax.textContent = String(Number((itemCount * 0.6).toFixed(2)));
         orderSubtotal.textContent = String(roundMoney(subtotal));
         orderReward.textContent = formatRewardDiscount(rewardDiscount, currentCrmDiscountRate);
-        settleTotal.textContent = String(Number((subtotal + rewardDiscount).toFixed(2)));
-        settleUnpaidAmount.textContent = String(calculatePayPageUnpaidAmount(subtotal, rewardDiscount, itemCount));
+        settleTotal.textContent = String(Number((subtotal + rewardDiscount + chargeAmount).toFixed(2)));
+        settleUnpaidAmount.textContent = String(calculatePayPageUnpaidAmount(subtotal + chargeAmount, rewardDiscount, itemCount));
+        orderChargeLabel.textContent = currentOrderChargeLabel;
+        orderChargePrice.textContent = chargeAmount ? '$' + chargeAmount.toFixed(2) : '';
         orderItemName.textContent = currentOrderItems[0] ? displayItemName(currentOrderItems[0]) : '';
         orderItemCount.textContent = formatItemCount(currentOrderItems);
         orderItemPrice.textContent = String(currentOrderItems[0]?.price || 0);
@@ -1185,6 +1214,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         selectedOrderItemIndex = -1;
         currentItemOption = null;
         currentOrderTip = 0;
+        currentOrderChargeRate = 0;
+        currentOrderChargeLabel = '';
         currentSplitPartTip = null;
         currentOrderStatus = '';
         currentOrderType = 'togo';
@@ -1587,6 +1618,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         currentAutoRedirectAfterReduce = autoRedirectAfterReduceSelect.value !== 'false';
         currentCountCanBeDecimal = countCanBeDecimalSelect.value === 'true';
         currentKdsCategoryRequired = kdsCategoryRequiredSelect.value === 'true';
+        currentKdsCategoryDiscountAllowance = kdsCategoryDiscountAllowanceSelect.value !== 'false';
         localStorage.setItem('currentMenuMode', currentMenuMode);
         localStorage.setItem('currentSearchMenuEnabled', String(currentSearchMenuEnabled));
         localStorage.setItem('currentCombineSameItemMode', currentCombineSameItemMode);
@@ -1596,6 +1628,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         localStorage.setItem('currentAutoRedirectAfterReduce', String(currentAutoRedirectAfterReduce));
         localStorage.setItem('currentCountCanBeDecimal', String(currentCountCanBeDecimal));
         localStorage.setItem('currentKdsCategoryRequired', String(currentKdsCategoryRequired));
+        localStorage.setItem('currentKdsCategoryDiscountAllowance', String(currentKdsCategoryDiscountAllowance));
       });
       adminMemberListButton.addEventListener('click', () => {
         if (currentEmployeePassword === '123') {
@@ -1647,6 +1680,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         markItemsPrinted('kitchen');
         currentOrderStatus = 'Sent';
         saveCurrentOrder();
+      });
+      orderCharge20Button.addEventListener('click', () => {
+        currentOrderChargeRate = 0.2;
+        currentOrderChargeLabel = 'Charge(20%)';
+        renderOrderAmounts();
       });
       orderExitButton.addEventListener('click', () => {
         showPanel('home');
@@ -2377,6 +2415,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       autoRedirectAfterReduceSelect.value = String(currentAutoRedirectAfterReduce);
       countCanBeDecimalSelect.value = String(currentCountCanBeDecimal);
       kdsCategoryRequiredSelect.value = String(currentKdsCategoryRequired);
+      kdsCategoryDiscountAllowanceSelect.value = String(currentKdsCategoryDiscountAllowance);
       renderClockControls();
     </script>
   </body>

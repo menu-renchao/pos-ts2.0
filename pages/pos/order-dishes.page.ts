@@ -55,6 +55,9 @@ export class OrderDishesPage extends PageObject {
   private readonly orderReward: Locator;
   private readonly orderExitButton: Locator;
   private readonly orderModifyButton: Locator;
+  private readonly orderCharge20Button: Locator;
+  private readonly orderChargeLabel: Locator;
+  private readonly orderChargePrice: Locator;
   private readonly pickupButton: Locator;
   private readonly pickupInfoSubmitButton: Locator;
   private readonly saveOrderButton: Locator;
@@ -137,6 +140,9 @@ export class OrderDishesPage extends PageObject {
     this.orderReward = page.getByTestId('order-reward');
     this.orderExitButton = page.getByTestId('order-exit');
     this.orderModifyButton = page.getByTestId('order-modify');
+    this.orderCharge20Button = page.getByTestId('order-charge-20');
+    this.orderChargeLabel = page.getByTestId('order-charge-label');
+    this.orderChargePrice = page.getByTestId('order-charge-price');
     this.pickupButton = page.getByTestId('order-pickup');
     this.pickupInfoSubmitButton = page.getByTestId('pickup-info-submit');
     this.openFoodCategory = page.getByTestId('open-food-category');
@@ -524,6 +530,23 @@ export class OrderDishesPage extends PageObject {
       await this.tipInput.press('Enter');
       return ((await this.tipToast.textContent()) ?? '').trim();
     });
+  }
+
+  async applyOrderCharge(rate: '20%'): Promise<void> {
+    await step(`应用整单按比例加收 ${rate}`, async () => {
+      if (rate !== '20%') {
+        throw new Error(`Unsupported offline order charge rate: ${rate}`);
+      }
+      await this.orderCharge20Button.click();
+    });
+  }
+
+  async readChargeLabel(): Promise<string> {
+    return step('读取整单加收名称', async () => ((await this.orderChargeLabel.textContent()) ?? '').trim());
+  }
+
+  async readChargePrice(): Promise<string> {
+    return step('读取整单加收金额', async () => ((await this.orderChargePrice.textContent()) ?? '').trim());
   }
 
   async readItemCount(): Promise<string> {

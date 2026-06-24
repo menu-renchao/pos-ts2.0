@@ -12,6 +12,7 @@ export class AdminPage extends PageObject {
   private readonly countCanBeDecimalSelect: Locator;
   private readonly defaultKeyboardSelect: Locator;
   private readonly kdsCategoryRequiredSelect: Locator;
+  private readonly kdsCategoryDiscountAllowanceSelect: Locator;
   private readonly languageSelect: Locator;
   private readonly menuModeSelect: Locator;
   private readonly saveSettingsButton: Locator;
@@ -29,6 +30,7 @@ export class AdminPage extends PageObject {
     this.countCanBeDecimalSelect = page.getByTestId('admin-count-can-be-decimal');
     this.defaultKeyboardSelect = page.getByTestId('admin-default-keyboard');
     this.kdsCategoryRequiredSelect = page.getByTestId('admin-kds-category-required');
+    this.kdsCategoryDiscountAllowanceSelect = page.getByTestId('admin-kds-category-discount-allowance');
     this.languageSelect = page.getByTestId('user-default-language');
     this.menuModeSelect = page.getByTestId('admin-menu-mode');
     this.saveSettingsButton = page.getByTestId('admin-save-settings');
@@ -115,6 +117,14 @@ export class AdminPage extends PageObject {
     await step(`设置 KDS Category Required 为 ${enabled ? '开启' : '关闭'}`, async () => {
       await expect(this.adminRoot).toBeVisible();
       await this.kdsCategoryRequiredSelect.selectOption(enabled ? 'true' : 'false');
+      await this.saveSettingsButton.click();
+    });
+  }
+
+  async setKdsCategoryDiscountAllowance(enabled: boolean): Promise<void> {
+    await step(`设置 KDS Category 限制折扣为 ${enabled ? '勾选' : '未勾选'}`, async () => {
+      await expect(this.adminRoot).toBeVisible();
+      await this.kdsCategoryDiscountAllowanceSelect.selectOption(enabled ? 'true' : 'false');
       await this.saveSettingsButton.click();
     });
   }
