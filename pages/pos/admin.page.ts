@@ -17,6 +17,7 @@ export class AdminPage extends PageObject {
   private readonly saveLanguageButton: Locator;
   private readonly searchMenuSelect: Locator;
   private readonly separateSameItemSelect: Locator;
+  private readonly staffNoteSelect: Locator;
   private readonly staffVoidPrintedItemSelect: Locator;
 
   constructor(page: Page) {
@@ -32,6 +33,7 @@ export class AdminPage extends PageObject {
     this.saveLanguageButton = page.getByTestId('save-user-default-language');
     this.searchMenuSelect = page.getByTestId('admin-search-menu');
     this.separateSameItemSelect = page.getByTestId('admin-separate-same-item');
+    this.staffNoteSelect = page.getByTestId('admin-staff-note');
     this.staffVoidPrintedItemSelect = page.getByTestId('admin-staff-void-printed-item');
   }
 
@@ -79,6 +81,14 @@ export class AdminPage extends PageObject {
     await step(`设置 Staff Void Printed Item 权限为 ${enabled ? '开启' : '关闭'}`, async () => {
       await expect(this.adminRoot).toBeVisible();
       await this.staffVoidPrintedItemSelect.selectOption(enabled ? 'true' : 'false');
+      await this.saveSettingsButton.click();
+    });
+  }
+
+  async setStaffNotePermission(enabled: boolean): Promise<void> {
+    await step(`设置 Staff NOTE 权限为 ${enabled ? '开启' : '关闭'}`, async () => {
+      await expect(this.adminRoot).toBeVisible();
+      await this.staffNoteSelect.selectOption(enabled ? 'true' : 'false');
       await this.saveSettingsButton.click();
     });
   }

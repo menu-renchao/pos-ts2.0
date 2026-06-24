@@ -131,6 +131,11 @@ export type VoidPrintedItemPermissionResult = {
   itemLineCountAfterDelete: number;
 };
 
+export type ComboSubItemNotePermissionResult = {
+  permissionToast: string;
+  noteText: string;
+};
+
 export type SameItemCombineResult = {
   itemLineCount: number;
   firstItemQuantity?: string;
@@ -678,6 +683,30 @@ export class OrderEntryFlow {
     await this.recallPage.clickEdit();
     const itemLineCountAfterDelete = await this.orderDishesPage.readOrderLineCount();
     return { permissionToast, itemLineCountAfterDelete };
+  }
+
+  async addComboSubItemNoteWithManagerAuthorization(homeUrl: string): Promise<ComboSubItemNotePermissionResult> {
+    if (!this.adminPage) {
+      throw new Error('AdminPage is required for staff NOTE permission setup');
+    }
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.setStaffNotePermission(false);
+    await this.homePage.refresh();
+    await this.homePage.logout();
+    await this.homePage.inputEmployeePassword(staffSamples.noNote.password);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.addComboWithOptions(4);
+    await this.orderDishesPage.openFirstComboSubItem();
+    const permissionToast = await this.orderDishesPage.clickComboSubItemEditNoteAndReadToast();
+    await this.orderDishesPage.submitManagerPassword(validEmployeePassword);
+    await this.orderDishesPage.inputComboSubItemNote('子菜的备注信息');
+    const noteText = await this.orderDishesPage.readComboSubItemNote();
+    await this.orderDishesPage.exitOrderPage();
+    await this.homePage.clickAdmin();
+    await this.adminPage.setStaffNotePermission(true);
+    await this.homePage.refresh();
+    return { permissionToast, noteText };
   }
 
   async createThreeSameItemsWithoutAutoCombine(homeUrl: string): Promise<SameItemCombineResult> {

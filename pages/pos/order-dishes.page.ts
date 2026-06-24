@@ -81,6 +81,10 @@ export class OrderDishesPage extends PageObject {
   private readonly reduceItemButton: Locator;
   private readonly voidItemButton: Locator;
   private readonly comboItemButton: Locator;
+  private readonly comboSubItemEditNoteButton: Locator;
+  private readonly comboSubItemNoteInput: Locator;
+  private readonly comboSubItemNoteText: Locator;
+  private readonly comboFirstSubItemButton: Locator;
   private readonly comboOptionReduceButton: Locator;
 
   constructor(page: Page) {
@@ -161,6 +165,10 @@ export class OrderDishesPage extends PageObject {
     this.reduceItemButton = page.getByTestId('order-reduce-item');
     this.voidItemButton = page.getByTestId('order-void-item');
     this.comboItemButton = page.getByTestId('order-combo-item');
+    this.comboSubItemEditNoteButton = page.getByTestId('combo-edit-note');
+    this.comboSubItemNoteInput = page.getByTestId('combo-subitem-note');
+    this.comboSubItemNoteText = page.getByTestId('combo-subitem-note-text');
+    this.comboFirstSubItemButton = page.getByTestId('combo-first-sub-item');
     this.comboOptionReduceButton = page.getByTestId('combo-option-reduce');
   }
 
@@ -597,6 +605,30 @@ export class OrderDishesPage extends PageObject {
     await step('减少 Combo 子菜 Option', async () => {
       await this.comboOptionReduceButton.click();
     });
+  }
+
+  async openFirstComboSubItem(): Promise<void> {
+    await step('打开 Combo 第一个子菜', async () => {
+      await this.comboFirstSubItemButton.click();
+    });
+  }
+
+  async clickComboSubItemEditNoteAndReadToast(): Promise<string> {
+    return step('点击 Combo 子菜 Edit Note 并读取权限提示', async () => {
+      await this.comboSubItemEditNoteButton.click();
+      return ((await this.tipToast.textContent()) ?? '').trim();
+    });
+  }
+
+  async inputComboSubItemNote(note: string): Promise<void> {
+    await step('输入 Combo 子菜备注', async () => {
+      await this.comboSubItemNoteInput.fill(note);
+      await this.comboSubItemNoteInput.press('Enter');
+    });
+  }
+
+  async readComboSubItemNote(): Promise<string> {
+    return step('读取 Combo 子菜备注', async () => ((await this.comboSubItemNoteText.textContent()) ?? '').trim());
   }
 
   async readComboOptionCount(): Promise<number> {

@@ -73,6 +73,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         <option value="true">true</option>
         <option value="false">false</option>
       </select>
+      <select data-testid="admin-staff-note">
+        <option value="true">true</option>
+        <option value="false">false</option>
+      </select>
       <select data-testid="admin-auto-redirect-after-reduce">
         <option value="true">true</option>
         <option value="false">false</option>
@@ -189,6 +193,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <input data-testid="open-food-price" />
       <button data-testid="open-food-no-tax">Open Food No Tax</button>
       <button data-testid="order-combo-item">Combo Item</button>
+      <button data-testid="combo-first-sub-item">First Combo Sub Item</button>
+      <button data-testid="combo-edit-note">Edit Combo Sub Item Note</button>
+      <input data-testid="combo-subitem-note" />
+      <div data-testid="combo-subitem-note-text"></div>
       <button data-testid="combo-option-reduce">Reduce Combo Option</button>
       <div data-testid="combo-option-count">0</div>
       <button data-testid="order-info">Info</button>
@@ -375,6 +383,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let currentCombineSameItemMode = localStorage.getItem('currentCombineSameItemMode') || 'dont-combine';
       let currentSeparateSameItem = localStorage.getItem('currentSeparateSameItem') !== 'false';
       let currentStaffCanVoidPrintedItem = localStorage.getItem('currentStaffCanVoidPrintedItem') !== 'false';
+      let currentStaffCanAddNote = localStorage.getItem('currentStaffCanAddNote') !== 'false';
       let currentAutoRedirectAfterReduce = localStorage.getItem('currentAutoRedirectAfterReduce') !== 'false';
       let currentCountCanBeDecimal = localStorage.getItem('currentCountCanBeDecimal') !== 'false';
       let currentCrmMember = null;
@@ -408,6 +417,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let draftSplitItemPrices = [];
       let selectedSubOrderIndex = null;
       let pendingPrintedDeleteIndex = null;
+      let pendingNoteAuthorization = false;
+      let currentComboSubItemNote = '';
       let reservations = [];
       let mainFunctions = ['Dine In', 'Drawer', 'To Go', 'Delivery'];
       let hiddenFunctions = ['Admin', 'Session'];
@@ -523,6 +534,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const openFoodPriceInput = document.querySelector('[data-testid="open-food-price"]');
       const openFoodNoTaxButton = document.querySelector('[data-testid="open-food-no-tax"]');
       const orderComboItemButton = document.querySelector('[data-testid="order-combo-item"]');
+      const comboFirstSubItemButton = document.querySelector('[data-testid="combo-first-sub-item"]');
+      const comboEditNoteButton = document.querySelector('[data-testid="combo-edit-note"]');
+      const comboSubItemNoteInput = document.querySelector('[data-testid="combo-subitem-note"]');
+      const comboSubItemNoteText = document.querySelector('[data-testid="combo-subitem-note-text"]');
       const comboOptionReduceButton = document.querySelector('[data-testid="combo-option-reduce"]');
       const comboOptionCount = document.querySelector('[data-testid="combo-option-count"]');
       const orderInfoButton = document.querySelector('[data-testid="order-info"]');
@@ -651,6 +666,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const reservationHistorySearchInput = document.querySelector('[data-testid="reservation-history-search"]');
       const reservationHistoryList = document.querySelector('[data-testid="reservation-history-list"]');
       const separateSameItemSelect = document.querySelector('[data-testid="admin-separate-same-item"]');
+      const staffNoteSelect = document.querySelector('[data-testid="admin-staff-note"]');
       const staffVoidPrintedItemSelect = document.querySelector('[data-testid="admin-staff-void-printed-item"]');
       const languageSelect = document.querySelector('[data-testid="user-default-language"]');
       const saveLanguageButton = document.querySelector('[data-testid="save-user-default-language"]');
@@ -1538,6 +1554,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         currentCombineSameItemMode = combineSameItemSelect.value;
         currentSeparateSameItem = separateSameItemSelect.value !== 'false';
         currentStaffCanVoidPrintedItem = staffVoidPrintedItemSelect.value !== 'false';
+        currentStaffCanAddNote = staffNoteSelect.value !== 'false';
         currentAutoRedirectAfterReduce = autoRedirectAfterReduceSelect.value !== 'false';
         currentCountCanBeDecimal = countCanBeDecimalSelect.value === 'true';
         localStorage.setItem('currentMenuMode', currentMenuMode);
@@ -1545,6 +1562,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         localStorage.setItem('currentCombineSameItemMode', currentCombineSameItemMode);
         localStorage.setItem('currentSeparateSameItem', String(currentSeparateSameItem));
         localStorage.setItem('currentStaffCanVoidPrintedItem', String(currentStaffCanVoidPrintedItem));
+        localStorage.setItem('currentStaffCanAddNote', String(currentStaffCanAddNote));
         localStorage.setItem('currentAutoRedirectAfterReduce', String(currentAutoRedirectAfterReduce));
         localStorage.setItem('currentCountCanBeDecimal', String(currentCountCanBeDecimal));
       });
@@ -1926,6 +1944,13 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         renderOrderAmounts();
       });
       managerPasswordSubmitButton.addEventListener('click', () => {
+        if (managerPasswordInput.value === '11' && pendingNoteAuthorization) {
+          pendingNoteAuthorization = false;
+          currentStaffCanAddNote = true;
+          managerPasswordPopup.hidden = true;
+          orderTipToast.textContent = '';
+          return;
+        }
         if (managerPasswordInput.value === '11' && pendingPrintedDeleteIndex != null) {
           deleteOrderItemAt(pendingPrintedDeleteIndex);
           return;
@@ -1985,6 +2010,24 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         currentComboOptionCount = 4;
         currentOrderItems.push({ name: 'Combo Item', price: 0, state: '' });
         renderOrderAmounts();
+      });
+      comboFirstSubItemButton.addEventListener('click', () => {
+        comboSubItemNoteInput.value = currentComboSubItemNote;
+      });
+      comboEditNoteButton.addEventListener('click', () => {
+        if (!currentStaffCanAddNote) {
+          pendingNoteAuthorization = true;
+          orderTipToast.textContent = 'You do not have permission NOTE, please enter the password!';
+          managerPasswordPopup.hidden = false;
+          return;
+        }
+        orderTipToast.textContent = '';
+      });
+      comboSubItemNoteInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          currentComboSubItemNote = comboSubItemNoteInput.value;
+          comboSubItemNoteText.textContent = currentComboSubItemNote;
+        }
       });
       comboOptionReduceButton.addEventListener('click', () => {
         currentComboOptionCount = Math.max(0, currentComboOptionCount - 1);
@@ -2299,6 +2342,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       combineSameItemSelect.value = currentCombineSameItemMode;
       separateSameItemSelect.value = String(currentSeparateSameItem);
       staffVoidPrintedItemSelect.value = String(currentStaffCanVoidPrintedItem);
+      staffNoteSelect.value = String(currentStaffCanAddNote);
       autoRedirectAfterReduceSelect.value = String(currentAutoRedirectAfterReduce);
       countCanBeDecimalSelect.value = String(currentCountCanBeDecimal);
       renderClockControls();

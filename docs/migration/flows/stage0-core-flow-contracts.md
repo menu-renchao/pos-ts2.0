@@ -535,6 +535,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 | stage0/test_order_page.py | TestOrderPage | `test_custom_order` custom Delivery order saves and Recall Print exposes Reprint with three print outputs | tests/stage0/order-page.spec.ts | `OrderEntryFlow.printCustomDeliveryOrderAndReadPrintState` |
 | stage0/test_order_page.py | TestOrderPage | `test_delivery_order_exit` Delivery customer flow exits the order page directly back to POS home | tests/stage0/order-page.spec.ts | `OrderEntryFlow.exitDeliveryOrderAndReadHomeWelcome` |
 | stage0/test_order_page.py | TestOrderPage | `test_item_with_number` menu item whose name and number are the same appears only once in order search results | tests/stage0/order-page.spec.ts | `OrderEntryFlow.searchDishWithSameNameAndNumberAndReadResult` |
+| stage0/test_order_page.py | TestOrderPage | `test_staff_without_note_edit_sub_item` staff without NOTE permission must manager-authorize before adding combo sub-item note | tests/stage0/order-page.spec.ts | `OrderEntryFlow.addComboSubItemNoteWithManagerAuthorization` |
 | stage0/test_order_page.py | all `Test*` classes | add dishes, modify items, save orders, validate order totals | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createTogoOrder` |
 | stage0/test_order_settle.py | all `Test*` classes | create payable orders before settlement | tests/stage0/order-settle.spec.ts | `OrderEntryFlow.createTogoOrder` |
 
@@ -575,6 +576,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 25. For custom Delivery print behavior, enter the custom Delivery order type, fill the source customer phone/name/address, add a source-equivalent kitchen item, save, open Recall, print, then read Reprint visibility and print output count.
 26. For Delivery exit behavior, enter Delivery, fill the source customer phone/name/address to reach the order page, click Exit, and read POS home welcome text.
 27. For name/number search behavior, seed the source-equivalent dish whose name and number are both `AA`, enter To Go, search `AA`, then read the result text and result item count.
+28. For combo sub-item NOTE permission behavior, remove NOTE permission from staff `1`, log out, log in with password `123`, enter Dine In, add the source-equivalent combo, open the first sub-item, click Edit Note, read the permission prompt, submit manager password `11`, enter `子菜的备注信息`, read the saved sub-item note, and restore NOTE permission.
 
 ### Expected Assertions
 
@@ -628,6 +630,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Custom Delivery print flow verifies Recall Print makes Reprint visible and produces three offline print outputs, matching the source file-count assertion without using the live temp print directory.
 - Delivery exit flow verifies clicking Exit from the Delivery-created order page returns to POS home by reading the visible welcome text.
 - Name/number search flow verifies searching `AA` returns text `AA` and exactly one visible search result even though both the dish name and dish number match the same keyword.
+- Combo sub-item NOTE permission flow verifies staff `1` without NOTE permission sees `You do not have permission NOTE, please enter the password!`, manager password authorizes the action, and the sub-item note text becomes `子菜的备注信息`.
 
 ### Page Responsibilities
 
@@ -647,13 +650,14 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `OrderDishesPage` owns menu search input, search result text/count reads, search clear, order-page exit, Global Option Modify entry, Add/Count/Reduce actions, Modify-area visibility reads, and Global Option count reads.
 - `OrderDishesPage` owns guest-name input, Search Menu class reads, item-count reads, source integer-cent tip entry, large-tip toast reads, and credit-payment action for order-page paths.
 - `OrderDishesPage` owns Hold/Delay print actions, printed-item void/reduce permission prompt reads, manager password submission, order line-count reads, first-line quantity/name/color reads, and same-dish add actions.
+- `OrderDishesPage` owns Combo sub-item selection, Combo sub-item Edit Note permission prompt reads, sub-item note input, and sub-item note reads.
 - `OrderDishesPage` owns reduce action, option/list visibility reads, menu-item visibility reads, decimal quantity input, and item-count reads.
 - `OrderDishesPage` owns decimal order subtotal reads used as source-equivalent item/order totals before split or combine.
 - `OrderDishesPage` owns order-line quantity/price reads for decimal disabled and Global Option split-line assertions.
 - `OrderDishesPage` owns Global Option priced Add behavior for the decimal combined-item path.
 - `PosHomePage` owns the custom Delivery entry point, and `RecallPage` owns Recall Print/Reprint state and offline print output count reads.
 - `OrderDishesPage.exitOrderPage` owns direct order-page exit behavior, and `PosHomePage.readWelcomeText` owns the home-return assertion for Delivery exit.
-- `AdminPage` owns Search Menu enable/disable persistence, staff Void Printed Item permission, same-item combine mode, separate-same-item setting behavior, Automatically Redirect After Reduce Items, and Count Can Be Decimal.
+- `AdminPage` owns Search Menu enable/disable persistence, staff Void Printed Item permission, staff NOTE permission, same-item combine mode, separate-same-item setting behavior, Automatically Redirect After Reduce Items, and Count Can Be Decimal.
 - `RecallPage` owns recalled item state, option reads, suborder tip reads, split-order combine action, order status reads, order selection, guest-name edit, customer-name reads, order total reads, split panel entry, even/item/seat/amount/drag split actions, split save/confirm/unsplit actions, suborder settlement/payment actions, suborder status reads, parent-card background reads, and split price reads.
 - `RecallPage` owns Recall subtotal reads for source cases that verify post-save subtotal instead of the active order page.
 - `RecallPage` owns Recall item-count reads, recalled tip reads, and post-credit large-tip entry/toast reads.
@@ -671,6 +675,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `test-data/pos/admin-settings.ts` owns canonical POS menu mode, Search Menu, same-item combine mode, separate-same-item, and permission setting values.
 - `test-data/pos/admin-settings.ts` owns Automatically Redirect After Reduce Items and Count Can Be Decimal setting names.
 - `test-data/pos/permissions.ts` owns the source-equivalent staff `1` password `123` and manager password `11`.
+- `test-data/pos/permissions.ts` owns the staff `1` no-NOTE permission identity reused by POS-37804.
 - `test-data/pos/delivery.ts` owns the Delivery customer/address/note sample used by the Delivery order Info assertion.
 - `test-data/pos/languages.ts` owns canonical language and keyboard-related values reused by language and Open Food paths.
 - `test-data/pos/payments.ts` owns expected payment/tender values reused by settlement.
@@ -726,6 +731,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Stub staff permission state persists in browser-local state; staff password `123` without Void Printed Item permission triggers the source permission prompt for sent/printed items.
 - Stub Hold and Delay print actions mark active items as sent-to-kitchen printed items and save the order for Recall editing.
 - Stub manager password `11` authorizes the pending printed-item delete and removes the target line, leaving the remaining line visible after save and Recall edit.
+- Stub staff NOTE permission state persists in browser-local state; staff password `123` without NOTE permission triggers the source NOTE permission prompt on Combo sub-item Edit Note, and manager password `11` authorizes sub-item note entry.
 - Stub same-item combine mode `dont-combine` keeps each repeated dish as its own order line even when separate-same-item is disabled.
 - Stub same-item combine mode `auto-same-status` combines only same-status unsent lines, so a sent-kitchen line and a newly added unsent line stay separate.
 - Stub same-item combine mode `include-kitchen` combines the newly added same dish into the sent-kitchen line, keeps the source `(1In Kitchen)` marker, quantity `2`, and red color `rgba(113, 9, 9, 1)`.
