@@ -812,6 +812,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 | stage0/test_order_settle.py | TestOrderSettle | `test_gift_card_void` loyalty card 全额支付后 void 支付记录 | tests/stage0/order-settle.spec.ts | `SettlementFlow.voidFullyLoyaltyPaidAutoSentOrderAndReadStatus` |
 | stage0/test_order_settle.py | TestOrderSettle | `test_gift_card_semi_pay` loyalty card 半支付、现金补齐、void 支付记录 | tests/stage0/order-settle.spec.ts | `SettlementFlow.voidCompletedSemiPaidLoyaltyOrderAndReadStatus` |
 | stage0/test_order_settle.py | TestOrderSettle | `test_add_tip_two` 信用卡付清后连续追加 credit/cash tip | tests/stage0/order-settle.spec.ts | `SettlementFlow.addTipsAfterCreditPaymentAndReadRecall` |
+| stage0/test_order_settle.py | TestOrderSettle | `test_multi_pay_tip` 部分现金支付后加 tip 重算未付金额 | tests/stage0/order-settle.spec.ts | `SettlementFlow.addTipAfterPartialCashPaymentAndReadUnpaidAmount` |
 | stage0/test_order_settle.py | all `Test*` classes | remaining cash, credit, discount, tax, total, and order completion settlement paths | tests/stage0/order-settle.spec.ts | pending |
 
 ### Preconditions
@@ -824,6 +825,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Payment method and expected amounts are defined in typed test data.
 - External payment devices are not required in first-round stub mode.
 - `test_add_tip_two` starts from a fully credit-card paid Dine In order and validates both source parameter branches from a fresh order state.
+- `test_multi_pay_tip` starts from a tax-exempt 10.00 Dine In order so the source formula `total - 5.00 + 2.00` is deterministic.
 
 ### Steps
 
@@ -835,6 +837,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 6. For `test_gift_card_void`, pay the auto-sent Dine In order by loyalty card, open Recall, void the payment record, and read the order status.
 7. For `test_gift_card_semi_pay`, split payment evenly into 2 parts, pay the first part by loyalty card, reopen the order in Recall, pay the remaining amount by cash, void the last payment record, and read the order status.
 8. For `test_add_tip_two`, pay a Dine In order by credit card, open the latest Recall order, add a 1.00 credit tip, then add a 2.00 second tip once as credit and once as cash/non-credit from independent fresh orders.
+9. For `test_multi_pay_tip`, change the selected item price to 10.00, void item tax, enter settlement, pay 5.00 by cash, add a 2.00 settlement tip, and read the remaining unpaid amount.
 
 ### Expected Assertions
 
@@ -844,6 +847,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - POS-16539 verifies that voiding the payment record for a fully loyalty-card paid, auto-sent order changes status back to `Printed`.
 - POS-16540 verifies that voiding the final payment record for an order that was previously semi-paid changes status back to `Semi-Paid`.
 - POS-19046/POS-19049 verify that the order remains `Paid`, a second credit tip replaces the prior credit tip with displayed tip `2.00`, and a second cash/non-credit tip accumulates to displayed tip `3.00`.
+- POS-23319 verifies the settlement unpaid amount is recalculated to `7.00` after partial cash payment `5.00` and settlement tip `2.00` on a 10.00 tax-exempt order.
 - Remaining settlement cases must assert source subtotal, tax, discount, charge, tip, tender, change, and total when migrated.
 - Completed order is visible in recall or final confirmation when required.
 - Payment method-specific behavior is preserved or documented as a live gap.
@@ -856,6 +860,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `RecallPage` owns post-payment order lookup when the source verifies recall state.
 - `RecallPage.clickSettle`, `RecallPage.payCurrentOrderByCash`, and `RecallPage.voidPaidOrder` own the POS-16540 remaining-payment and pay-record void path.
 - `RecallPage.addTipAfterCreditPayment` owns the post-credit-paid tip entry and tip tender method selection used by POS-19046/POS-19049.
+- `OrderDishesPage.modifySettlementPaymentAmount`, `OrderDishesPage.addSettlementTip`, and `OrderDishesPage.readSettlementUnpaidAmount` own the POS-23319 partial-payment recalculation checks.
 
 ### Client/Data Responsibilities
 
@@ -864,6 +869,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `test-data/pos/dishes.ts` owns the source-equivalent order item used by the auto-send loyalty-card void path.
 - `StubPosOrderClient` or `StubPosDbClient` owns paid-order state in stub mode.
 - The offline POS stub models credit tip as replacement and cash/non-credit tip as additive so POS-19046/POS-19049 can be verified without a live payment device.
+- The offline POS stub tracks the partial paid amount on the settlement page and recalculates unpaid amount after settlement tip entry for POS-23319.
 
 ### Stub Behavior
 

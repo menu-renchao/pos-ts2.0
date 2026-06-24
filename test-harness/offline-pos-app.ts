@@ -163,6 +163,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <button data-testid="order-settle">Settle</button>
       <div data-testid="settle-total">0</div>
       <div data-testid="settle-unpaid-amount">0</div>
+      <input data-testid="settle-pay-amount" />
+      <input data-testid="settle-tip" />
       <button data-testid="settle-cash">Cash</button>
       <button data-testid="settle-credit">Credit</button>
       <button data-testid="settle-loyalty-card">Loyalty Card</button>
@@ -446,6 +448,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let currentOrderChargeRate = 0;
       let currentOrderChargeLabel = '';
       let currentOrderTaxVoided = false;
+      let currentPaidAmount = 0;
       let currentSettlementTotal = null;
       let currentItemPosNames = JSON.parse(localStorage.getItem('currentItemPosNames') || '{}');
       let currentItemChineseNames = JSON.parse(localStorage.getItem('currentItemChineseNames') || '{}');
@@ -562,6 +565,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const orderSettleButton = document.querySelector('[data-testid="order-settle"]');
       const settleTotal = document.querySelector('[data-testid="settle-total"]');
       const settleUnpaidAmount = document.querySelector('[data-testid="settle-unpaid-amount"]');
+      const settlePayAmountInput = document.querySelector('[data-testid="settle-pay-amount"]');
+      const settleTipInput = document.querySelector('[data-testid="settle-tip"]');
       const settleCashButton = document.querySelector('[data-testid="settle-cash"]');
       const settleBackupCardButton = document.querySelector('[data-testid="settle-backup-card"]');
       const settleCreditButton = document.querySelector('[data-testid="settle-credit"]');
@@ -1259,8 +1264,12 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         orderTax.textContent = currentOrderTaxVoided ? '0' : String(Number((itemCount * 0.6).toFixed(2)));
         orderSubtotal.textContent = currentEditableCombo() ? '$' + roundMoney(subtotal).toFixed(2) : String(roundMoney(subtotal));
         orderReward.textContent = formatRewardDiscount(rewardDiscount, currentCrmDiscountRate);
-        settleTotal.textContent = String(Number((subtotal + rewardDiscount + chargeAmount).toFixed(2)));
-        settleUnpaidAmount.textContent = String(calculatePayPageUnpaidAmount(subtotal + chargeAmount, rewardDiscount, itemCount));
+        const settlementAmount = roundMoney(subtotal + rewardDiscount + chargeAmount + currentOrderTip);
+        const unpaidBeforePaid = currentOrderTaxVoided
+          ? settlementAmount
+          : roundMoney(calculatePayPageUnpaidAmount(subtotal + chargeAmount, rewardDiscount, itemCount) + currentOrderTip);
+        settleTotal.textContent = String(settlementAmount);
+        settleUnpaidAmount.textContent = String(roundMoney(Math.max(0, unpaidBeforePaid - currentPaidAmount)));
         orderChargeLabel.textContent = currentOrderChargeLabel;
         orderChargePrice.textContent = chargeAmount ? '$' + chargeAmount.toFixed(2) : '';
         orderItemName.textContent = currentOrderItems[0] ? displayItemName(currentOrderItems[0]) : '';
@@ -1425,6 +1434,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         currentOrderChargeRate = 0;
         currentOrderChargeLabel = '';
         currentOrderTaxVoided = false;
+        currentPaidAmount = 0;
         currentSettlementTotal = null;
         currentSplitPartTip = null;
         currentOrderStatus = '';
@@ -2032,6 +2042,16 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           saveCurrentOrder();
           return;
         }
+        const unpaidAmount = Number(settleUnpaidAmount.textContent || '0');
+        const requestedPaymentAmount = Number(settlePayAmountInput.value || '0') / 100;
+        const paymentAmount = requestedPaymentAmount > 0 ? requestedPaymentAmount : unpaidAmount;
+        if (paymentAmount > 0 && paymentAmount < unpaidAmount) {
+          currentPaidAmount = roundMoney(currentPaidAmount + paymentAmount);
+          currentOrderStatus = 'Partially Paid';
+          settlePayAmountInput.value = '';
+          renderOrderAmounts();
+          return;
+        }
         currentOrderStatus = 'Paid';
         if (currentClickSettleAutoSend) {
           markItemsPrinted('kitchen');
@@ -2061,6 +2081,12 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       });
       settleSelfCardButton.addEventListener('click', () => {
         settleCurrentOrder('self_card');
+      });
+      settleTipInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          currentOrderTip = Number(settleTipInput.value || '0') / 100;
+          renderOrderAmounts();
+        }
       });
       orderSendHoldPrintButton.addEventListener('click', () => {
         markItemsPrinted('hold');

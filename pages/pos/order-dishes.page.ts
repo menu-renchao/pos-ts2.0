@@ -72,7 +72,9 @@ export class OrderDishesPage extends PageObject {
   private readonly settleCreditButton: Locator;
   private readonly settleGiftCardButton: Locator;
   private readonly settleLoyaltyCardButton: Locator;
+  private readonly settlePayAmountInput: Locator;
   private readonly settleSelfCardButton: Locator;
+  private readonly settleTipInput: Locator;
   private readonly settleEvenPayButton: Locator;
   private readonly settleTotal: Locator;
   private readonly settleUnpaidAmount: Locator;
@@ -172,7 +174,9 @@ export class OrderDishesPage extends PageObject {
     this.settleCreditButton = page.getByTestId('settle-credit');
     this.settleGiftCardButton = page.getByTestId('settle-gift-card');
     this.settleLoyaltyCardButton = page.getByTestId('settle-loyalty-card');
+    this.settlePayAmountInput = page.getByTestId('settle-pay-amount');
     this.settleSelfCardButton = page.getByTestId('settle-self-card');
+    this.settleTipInput = page.getByTestId('settle-tip');
     this.settleEvenPayButton = page.getByTestId('settle-even-pay');
     this.settleTotal = page.getByTestId('settle-total');
     this.settleUnpaidAmount = page.getByTestId('settle-unpaid-amount');
@@ -331,6 +335,21 @@ export class OrderDishesPage extends PageObject {
 
   async readSettlementUnpaidAmount(): Promise<number> {
     return step('读取结算页未付金额', async () => Number((await this.settleUnpaidAmount.textContent()) ?? '0'));
+  }
+
+  async modifySettlementPaymentAmount(amountInCents: number): Promise<void> {
+    await step(`修改结算页本次支付金额为 ${amountInCents}`, async () => {
+      await this.settlePayAmountInput.fill(String(amountInCents));
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    });
+  }
+
+  async addSettlementTip(amountInCents: number): Promise<void> {
+    await step(`结算页添加小费 ${amountInCents}`, async () => {
+      await this.settleTipInput.fill(String(amountInCents));
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      await this.settleTipInput.press('Enter');
+    });
   }
 
   async applySettlementMember(): Promise<void> {

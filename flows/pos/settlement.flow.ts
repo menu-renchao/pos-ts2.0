@@ -95,6 +95,21 @@ export class SettlementFlow {
     };
   }
 
+  async addTipAfterPartialCashPaymentAndReadUnpaidAmount(homeUrl: string): Promise<number> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup('Lunch');
+    await this.orderDishesPage.selectMenuCategory('Chicken Lunch E');
+    await this.orderDishesPage.addMenuItem('superman item1');
+    await this.orderDishesPage.changeSelectedItemPrice(10);
+    await this.orderDishesPage.voidSelectedItemTax();
+    await this.orderDishesPage.clickSettle();
+    await this.orderDishesPage.modifySettlementPaymentAmount(500);
+    await this.orderDishesPage.settleByCash();
+    await this.orderDishesPage.addSettlementTip(200);
+    return this.orderDishesPage.readSettlementUnpaidAmount();
+  }
+
   private async payByCreditAddTwoTipsAndReadRecall(
     homeUrl: string,
     secondTipMethod: RecallTipMethod,

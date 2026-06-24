@@ -89,4 +89,23 @@ test.describe('stage0 order settlement migration', () => {
       expect(recallStates.cashTip.tipText).toBe('3.00');
     },
   );
+
+  test(
+    'POS-23319 分步付款后加小费应按已付金额重算待支付金额',
+    {
+      annotation: jiraIssue('POS-23319'),
+    },
+    async ({ environment, page }) => {
+      const flow = new SettlementFlow(
+        new PosHomePage(page),
+        new AdminPage(page),
+        new OrderDishesPage(page),
+        new RecallPage(page),
+      );
+
+      const unpaidAmount = await flow.addTipAfterPartialCashPaymentAndReadUnpaidAmount(environment.posHomeUrl);
+
+      expect(unpaidAmount).toBe(7);
+    },
+  );
 });
