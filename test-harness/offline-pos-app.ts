@@ -81,6 +81,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         <option value="true">true</option>
         <option value="false">false</option>
       </select>
+      <select data-testid="admin-click-settle-auto-send">
+        <option value="true">true</option>
+        <option value="false">false</option>
+      </select>
       <select data-testid="admin-count-can-be-decimal">
         <option value="true">true</option>
         <option value="false">false</option>
@@ -429,6 +433,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let currentStaffCanVoidPrintedItem = localStorage.getItem('currentStaffCanVoidPrintedItem') !== 'false';
       let currentStaffCanAddNote = localStorage.getItem('currentStaffCanAddNote') !== 'false';
       let currentAutoRedirectAfterReduce = localStorage.getItem('currentAutoRedirectAfterReduce') !== 'false';
+      let currentClickSettleAutoSend = localStorage.getItem('currentClickSettleAutoSend') === 'true';
       let currentCountCanBeDecimal = localStorage.getItem('currentCountCanBeDecimal') !== 'false';
       let currentKdsCategoryRequired = localStorage.getItem('currentKdsCategoryRequired') === 'true';
       let currentKdsCategoryDiscountAllowance = localStorage.getItem('currentKdsCategoryDiscountAllowance') !== 'false';
@@ -501,6 +506,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const checkoutButton = document.querySelector('[data-testid="clock-checkout"]');
       const adminPage = document.querySelector('[data-testid="admin-page"]');
       const autoRedirectAfterReduceSelect = document.querySelector('[data-testid="admin-auto-redirect-after-reduce"]');
+      const clickSettleAutoSendSelect = document.querySelector('[data-testid="admin-click-settle-auto-send"]');
       const combineSameItemSelect = document.querySelector('[data-testid="admin-combine-same-item"]');
       const countCanBeDecimalSelect = document.querySelector('[data-testid="admin-count-can-be-decimal"]');
       const kdsCategoryRequiredSelect = document.querySelector('[data-testid="admin-kds-category-required"]');
@@ -1831,6 +1837,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         currentStaffCanVoidPrintedItem = staffVoidPrintedItemSelect.value !== 'false';
         currentStaffCanAddNote = staffNoteSelect.value !== 'false';
         currentAutoRedirectAfterReduce = autoRedirectAfterReduceSelect.value !== 'false';
+        currentClickSettleAutoSend = clickSettleAutoSendSelect.value === 'true';
         currentCountCanBeDecimal = countCanBeDecimalSelect.value === 'true';
         currentKdsCategoryRequired = kdsCategoryRequiredSelect.value === 'true';
         currentKdsCategoryDiscountAllowance = kdsCategoryDiscountAllowanceSelect.value !== 'false';
@@ -1842,6 +1849,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         localStorage.setItem('currentStaffCanVoidPrintedItem', String(currentStaffCanVoidPrintedItem));
         localStorage.setItem('currentStaffCanAddNote', String(currentStaffCanAddNote));
         localStorage.setItem('currentAutoRedirectAfterReduce', String(currentAutoRedirectAfterReduce));
+        localStorage.setItem('currentClickSettleAutoSend', String(currentClickSettleAutoSend));
         localStorage.setItem('currentCountCanBeDecimal', String(currentCountCanBeDecimal));
         localStorage.setItem('currentKdsCategoryRequired', String(currentKdsCategoryRequired));
         localStorage.setItem('currentKdsCategoryDiscountAllowance', String(currentKdsCategoryDiscountAllowance));
@@ -2020,6 +2028,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           return;
         }
         currentOrderStatus = 'Paid';
+        if (currentClickSettleAutoSend) {
+          markItemsPrinted('kitchen');
+        }
         currentSettlementTotal = roundedSettlementTotal(Number(settleTotal.textContent || '0'));
         const member = selectedMemberRecord();
         if (member && paymentType === 'cash') {
@@ -2451,8 +2462,13 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       });
       recallVoidPaidOrderButton.addEventListener('click', () => {
         if (selectedRecallOrder?.crmMember && selectedRecallOrder.status === 'Paid') {
-          selectedRecallOrder.status = 'Voided';
+          selectedRecallOrder.status = selectedRecallOrder.items?.some((item) => item.sentToKitchen) ? 'Printed' : 'Voided';
           selectedRecallOrder.crmMember.points -= earnPointsForSubtotal(selectedRecallOrder.subtotal);
+          renderRecallOrderItems();
+          return;
+        }
+        if (selectedRecallOrder?.status === 'Paid' && selectedRecallOrder.items?.some((item) => item.sentToKitchen)) {
+          selectedRecallOrder.status = 'Printed';
           renderRecallOrderItems();
         }
       });
@@ -2713,6 +2729,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       staffVoidPrintedItemSelect.value = String(currentStaffCanVoidPrintedItem);
       staffNoteSelect.value = String(currentStaffCanAddNote);
       autoRedirectAfterReduceSelect.value = String(currentAutoRedirectAfterReduce);
+      clickSettleAutoSendSelect.value = String(currentClickSettleAutoSend);
       countCanBeDecimalSelect.value = String(currentCountCanBeDecimal);
       kdsCategoryRequiredSelect.value = String(currentKdsCategoryRequired);
       kdsCategoryDiscountAllowanceSelect.value = String(currentKdsCategoryDiscountAllowance);

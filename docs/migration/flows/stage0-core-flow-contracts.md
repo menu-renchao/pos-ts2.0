@@ -809,12 +809,14 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 | source_file | source_class | source_test_pattern | target_spec | target_flow_method |
 |---|---|---|---|---|
 | stage0/test_order_settle.py | TestOrderSettle | `test_round` 13 组 rounding/payment 参数 | tests/stage0/order-settle.spec.ts | `SettlementFlow.payRoundedOrderAndReadRecall` |
+| stage0/test_order_settle.py | TestOrderSettle | `test_gift_card_void` loyalty card 全额支付后 void 支付记录 | tests/stage0/order-settle.spec.ts | `SettlementFlow.voidFullyLoyaltyPaidAutoSentOrderAndReadStatus` |
 | stage0/test_order_settle.py | all `Test*` classes | remaining cash, credit, discount, tax, total, and order completion settlement paths | tests/stage0/order-settle.spec.ts | pending |
 
 ### Preconditions
 
 - POS home is opened through `PosHomePage.open`.
 - `test_round` configures rounding before creating the payable order.
+- `test_gift_card_void` enables click-settle auto-send before creating the payable order.
 - Settlement cases create the source-equivalent Dine In order through UI page objects, not by directly mutating stub state.
 - Settlement page is reached by UI action from order page or recall page.
 - Payment method and expected amounts are defined in typed test data.
@@ -827,12 +829,14 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 3. Open settlement from the order page.
 4. Pay through the source payment type: cash, loyalty card, gift card, backup card, or self card.
 5. Open Recall, open the latest order, cancel payment-condition filters, then read final status and total.
+6. For `test_gift_card_void`, pay the auto-sent Dine In order by loyalty card, open Recall, void the payment record, and read the order status.
 
 ### Expected Assertions
 
 - `test_round` preserves all 13 source parameter rows and Jira keys POS-16490/POS-16491/POS-16492/POS-16494/POS-16495/POS-16496/POS-16498/POS-16499/POS-16500/POS-16502/POS-16503/POS-16504/POS-16479.
 - Recall total text matches the exact source expectation, including trailing zero values such as `1.10` and `0.10`.
 - Recall status is `Paid` after every payment type.
+- POS-16539 verifies that voiding the payment record for a fully loyalty-card paid, auto-sent order changes status back to `Printed`.
 - Remaining settlement cases must assert source subtotal, tax, discount, charge, tip, tender, change, and total when migrated.
 - Completed order is visible in recall or final confirmation when required.
 - Payment method-specific behavior is preserved or documented as a live gap.
@@ -840,6 +844,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 ### Page Responsibilities
 
 - `AdminPage.setRoundingStrategy` owns the rounding setting used before order creation.
+- `AdminPage.setClickSettleAutoSend` owns the click-settle auto-send setting used before POS-16539 order creation.
 - `OrderDishesPage` owns order creation, item price change, item tax void, order charge, settlement entry, and payment-method buttons.
 - `RecallPage` owns post-payment order lookup when the source verifies recall state.
 
@@ -847,6 +852,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 
 - `test-data/pos/settlement.ts` owns rounding strategies, payment types, Jira keys, source modify-price cents, and expected Recall price strings.
 - `test-data/pos/admin-settings.ts` owns the Admin rounding setting enum.
+- `test-data/pos/dishes.ts` owns the source-equivalent order item used by the auto-send loyalty-card void path.
 - `StubPosOrderClient` or `StubPosDbClient` owns paid-order state in stub mode.
 
 ### Stub Behavior
@@ -854,6 +860,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Stub payment completion marks the order paid deterministically.
 - Offline rounding applies only to the paid settlement total persisted to Recall; ordinary unpaid totals retain existing item/tip/reward calculation behavior.
 - `nearest_5` and `nearest_10` round down to the lower 5-cent or 10-cent boundary, while `nearest_5_or_10` rounds to the nearest 5-cent boundary, matching the migrated source expectations.
+- Offline click-settle auto-send marks order items as sent to kitchen before payment completion, so voiding the payment record removes payment while preserving the printed order state.
 - Non-cash card/device payment buttons return deterministic paid success unless the source case explicitly validates device failure.
 
 ### Live Gaps

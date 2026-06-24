@@ -7,6 +7,7 @@ export const adminSettings = {
   combineSameItem: 'combineSameItem',
   voidPrintedItemPermission: 'voidPrintedItemPermission',
   automaticallyRedirectAfterReduceItems: 'automaticallyRedirectAfterReduceItems',
+  clickSettleAutoSend: 'clickSettleAutoSend',
   countCanBeDecimal: 'countCanBeDecimal',
   roundingStrategy: 'roundingStrategy',
 } as const;

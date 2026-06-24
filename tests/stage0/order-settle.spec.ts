@@ -5,7 +5,7 @@ import { PosHomePage } from '../../pages/pos/home.page.js';
 import { OrderDishesPage } from '../../pages/pos/order-dishes.page.js';
 import { RecallPage } from '../../pages/pos/recall.page.js';
 import { roundingSettlementCases, roundingSettlementJiraKeys } from '../../test-data/pos/settlement.js';
-import { jiraIssues } from '../../utils/jira.js';
+import { jiraIssue, jiraIssues } from '../../utils/jira.js';
 
 test.describe('stage0 order settlement migration', () => {
   test(
@@ -27,6 +27,25 @@ test.describe('stage0 order settlement migration', () => {
         expect(recallState.totalText, settlementCase.caseName).toBe(settlementCase.expectedRecallPrice);
         expect(recallState.status, settlementCase.caseName).toBe('Paid');
       }
+    },
+  );
+
+  test(
+    'POS-16539 loyalty card 全额支付订单 void 支付记录后应回到 Printed',
+    {
+      annotation: jiraIssue('POS-16539'),
+    },
+    async ({ environment, page }) => {
+      const flow = new SettlementFlow(
+        new PosHomePage(page),
+        new AdminPage(page),
+        new OrderDishesPage(page),
+        new RecallPage(page),
+      );
+
+      const status = await flow.voidFullyLoyaltyPaidAutoSentOrderAndReadStatus(environment.posHomeUrl);
+
+      expect(status).toBe('Printed');
     },
   );
 });

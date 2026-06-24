@@ -44,6 +44,23 @@ export class SettlementFlow {
     };
   }
 
+  async voidFullyLoyaltyPaidAutoSentOrderAndReadStatus(homeUrl: string): Promise<string> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.setClickSettleAutoSend(true);
+    await this.homePage.refresh();
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup('Lunch');
+    await this.orderDishesPage.selectMenuCategory('Chicken Lunch E');
+    await this.orderDishesPage.addMenuItem('superman item1');
+    await this.orderDishesPage.clickSettle();
+    await this.orderDishesPage.settleByLoyaltyCard();
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.voidPaidOrder();
+    return this.recallPage.readOrderStatus();
+  }
+
   private async payCurrentOrder(paymentType: SettlementPaymentType): Promise<void> {
     if (paymentType === 'cash') {
       await this.orderDishesPage.settleByCash();
