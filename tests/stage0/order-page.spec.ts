@@ -911,6 +911,20 @@ test.describe('POS 点单页面', () => {
     expect(result.recalledSubItems).toEqual(['item-1', 'item_option-1']);
   });
 
+  test('POS-43823 Combo 无 Option 子菜返回主菜后仍可选择普通菜 Option', {
+    annotation: [jiraIssue('POS-43823')],
+  }, async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const optionVisible = await orderEntryFlow.orderComboSubItemThenReadNormalItemOptions(environment.posHomeUrl);
+
+    expect(optionVisible).toBe(true);
+  });
+
   test('POS-37804 无 NOTE 权限员工给 Combo 子菜加 Note 时应提示并可经理授权录入', {
     annotation: [jiraIssue('POS-37804')],
   }, async ({ environment, page }) => {

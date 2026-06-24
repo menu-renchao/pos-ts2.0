@@ -221,6 +221,16 @@ export const comboMaxModifyDish = {
   price: 20,
 } as const;
 
+export const comboNoOptionThenOptionDish = {
+  comboName: 'ComboOptionTest',
+  group: 'MansuperGroup',
+  category: 'MansuperCat',
+  noOptionSubItem: 'combo-no-option-item',
+  optionDishName: 'combo-option-item',
+  comboPrice: 10,
+  optionDishPrice: 10,
+} as const;
+
 export const defaultMenuGroup: MenuGroupSample = {
   id: 'group-migration-menu',
   name: 'Migration Menu',
@@ -245,6 +255,22 @@ export const defaultMenuGroup: MenuGroupSample = {
       price: comboMaxModifyDish.price,
       category: comboMaxModifyDish.category,
       group: comboMaxModifyDish.group,
+      taxRate: 0.0825,
+    },
+    {
+      id: 'dish-combo-option-test',
+      name: comboNoOptionThenOptionDish.comboName,
+      price: comboNoOptionThenOptionDish.comboPrice,
+      category: comboNoOptionThenOptionDish.category,
+      group: comboNoOptionThenOptionDish.group,
+      taxRate: 0.0825,
+    },
+    {
+      id: 'dish-combo-option-item',
+      name: comboNoOptionThenOptionDish.optionDishName,
+      price: comboNoOptionThenOptionDish.optionDishPrice,
+      category: comboNoOptionThenOptionDish.category,
+      group: comboNoOptionThenOptionDish.group,
       taxRate: 0.0825,
     },
   ],

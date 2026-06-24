@@ -10,6 +10,7 @@ import {
   categoryOptionDish,
   chineseInitialSearchDish,
   comboMaxModifyDish,
+  comboNoOptionThenOptionDish,
   discountableDish,
   editableComboDish,
   groupSwitchDish,
@@ -947,6 +948,20 @@ export class OrderEntryFlow {
     return {
       recalledSubItems: await this.recallPage.readComboSubItemNames(),
     };
+  }
+
+  async orderComboSubItemThenReadNormalItemOptions(homeUrl: string): Promise<boolean> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(comboNoOptionThenOptionDish.group);
+    await this.orderDishesPage.selectMenuCategory(comboNoOptionThenOptionDish.category);
+    await this.orderDishesPage.addMenuItem(comboNoOptionThenOptionDish.comboName);
+    await this.orderDishesPage.selectOrderedComboSubItem(
+      comboNoOptionThenOptionDish.comboName,
+      comboNoOptionThenOptionDish.noOptionSubItem,
+    );
+    await this.orderDishesPage.addMenuItem(comboNoOptionThenOptionDish.optionDishName);
+    return this.orderDishesPage.isOrderItemOptionListVisible();
   }
 
   async createThreeSameItemsWithoutAutoCombine(homeUrl: string): Promise<SameItemCombineResult> {

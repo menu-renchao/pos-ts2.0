@@ -537,6 +537,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 | stage0/test_order_page.py | TestOrderPage | `test_item_with_number` menu item whose name and number are the same appears only once in order search results | tests/stage0/order-page.spec.ts | `OrderEntryFlow.searchDishWithSameNameAndNumberAndReadResult` |
 | stage0/test_order_page.py | TestOrderPage | `test_display_menu_name_after_modify_language` configured Chinese item name is returned by initial-letter search in Chinese mode | tests/stage0/order-page.spec.ts | `OrderEntryFlow.configureChineseItemNameAndSearchByInitials` |
 | stage0/test_order_page.py | TestOrderPage | `test_combo_display_all_one_time_modify_sub_item` saved combo can be edited from Recall and child items can be replaced | tests/stage0/order-page.spec.ts | `OrderEntryFlow.modifySavedComboSubItemsAndReadRecall` |
+| stage0/test_order_page.py | TestOrderPage | `test_combo_subitem_no_option_select_option` selecting a no-option combo child does not prevent the next normal item from showing options | tests/stage0/order-page.spec.ts | `OrderEntryFlow.orderComboSubItemThenReadNormalItemOptions` |
 | stage0/test_order_page.py | TestOrderPage | `test_staff_without_note_edit_sub_item` staff without NOTE permission must manager-authorize before adding combo sub-item note | tests/stage0/order-page.spec.ts | `OrderEntryFlow.addComboSubItemNoteWithManagerAuthorization` |
 | stage0/test_order_page.py | TestOrderPage | `test_category_required` required KDS category blocks save, keeps order page open, and auto-navigates to KDS until a KDS item is added | tests/stage0/order-page.spec.ts | `OrderEntryFlow.requireKdsCategoryBeforeSave` |
 | stage0/test_order_page.py | TestOrderPage | `test_category_not_required_percent_charge` KDS category without discount restriction participates in 20% whole-order charge | tests/stage0/order-page.spec.ts | `OrderEntryFlow.applyPercentChargeWhenKdsDiscountAllowanceDisabled` |
@@ -593,6 +594,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 34. For custom order type reporting behavior, open Report Overview, filter order type `CUSTOM_D`, read starting Net Sales, enter Custom Delivery, fill source delivery info, order `superman item1`, capture subtotal, save, reopen Report Overview filtered to `CUSTOM_D`, and read ending Net Sales.
 35. For Chinese initial-letter item search, open Admin, configure `hn_normal_item1` in group `Lunch` and category `hn_cate` with Chinese name `普通菜1`, refresh, switch system language to Chinese, enter Dine In, search `ptc`, read the search result, exit the order page, and restore default language.
 36. For Display All One Time combo sub-item edit behavior, enter Dine In, select `crm_group` / `crm_cat`, add `combo_max` with initial child items `item` and `item_option`, save, open Recall recent order, edit it, replace child items with `item-1` and `item_option-1`, save again, reopen Recall recent order, and read all combo child items.
+37. For no-option combo child then normal-item option behavior, enter Dine In, select `MansuperGroup` / `MansuperCat`, add `ComboOptionTest`, select no-option child item `combo-no-option-item`, then add normal item `combo-option-item` and read whether the order option area is visible.
 
 ### Expected Assertions
 
@@ -648,6 +650,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Name/number search flow verifies searching `AA` returns text `AA` and exactly one visible search result even though both the dish name and dish number match the same keyword.
 - Chinese initial-letter search flow verifies source item `hn_normal_item1` is configured with Chinese name `普通菜1`, Chinese mode search keyword `ptc` is used, and the visible search result contains `普通菜1`.
 - Display All One Time combo edit flow verifies the saved `combo_max` order can be opened from Recall, edited, saved again, and its recalled child items exactly equal `item-1` and `item_option-1`.
+- No-option combo child flow verifies selecting `combo-no-option-item` from `ComboOptionTest` still allows a following normal item `combo-option-item` to expose the option area.
 - Combo sub-item NOTE permission flow verifies staff `1` without NOTE permission sees `You do not have permission NOTE, please enter the password!`, manager password authorizes the action, and the sub-item note text becomes `子菜的备注信息`.
 - Required KDS category flow verifies the first Save leaves the browser on `orderDishes`, automatically sets current category to `KDS`, and after adding `Mongolian Chicken` a second Save leaves `orderDishes`.
 - KDS category percent charge flow verifies the charge line label is `Charge(20%)` and the price is `$2.00` for the source-equivalent `$10` KDS dish when category discount restriction is off.
@@ -706,6 +709,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `test-data/pos/dishes.ts` owns `posNameDisplayDish` and `posNameDisplayValue` as the source-equivalent KDS item/POS Name pair for POS-42097.
 - `test-data/pos/dishes.ts` owns `editableComboDish` as the source-equivalent `EditPriceCombo` setup for POS-42061.
 - `test-data/pos/dishes.ts` owns `comboMaxModifyDish` as the source-equivalent `combo_max` setup with initial `item,item_option` children and replacement `item-1,item_option-1` children for POS-43956.
+- `test-data/pos/dishes.ts` owns `comboNoOptionThenOptionDish` as the source-equivalent `ComboOptionTest` plus no-option child and following normal option item for POS-43823.
 - `test-data/pos/dishes.ts` owns `splitDiscountDishes` as the source-equivalent `superman item1`/`superman item2`/`superman item3` set for POS-36254.
 - `test-data/pos/dishes.ts` owns `chineseInitialSearchDish` as the source-equivalent `hn_normal_item1` / `普通菜1` / `ptc` item for POS-43827.
 - `test-data/pos/delivery.ts` owns source-equivalent customer phone/name/address data for custom Delivery order reporting.
@@ -778,6 +782,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Stub KDS item POS Name setting persists in browser-local state; menu buttons render the configured POS Name, but clicking that button adds the original dish name to the order line.
 - Stub editable combo creates `EditPriceCombo` with adjustable `ITEM1` and `ITEM2`, fixed `ITEM3`, initial subtotal `$30.20`, and editing adjustable `ITEM1` with the source price input updates subtotal to `$40.20` while fixed `ITEM3` disables edit price.
 - Stub `combo_max` starts with child items `item` and `item_option`; Recall edit exposes replacement choices and persists selected child items `item-1` and `item_option-1` back to the saved order for Recall verification.
+- Stub `ComboOptionTest` starts with no-option child `combo-no-option-item`; after that child is selected, adding normal item `combo-option-item` keeps the order option area visible.
 - Stub drag split creates three individual child orders for the source `superman item1`/`superman item2`/`superman item3` path; Recall child-order edit loads only the selected child items, so the discount panel whole-order amount for child order 1 is `8.00`.
 - Stub Report Overview computes Net Sales from saved orders in the current browser page, maps custom Delivery orders to `CUSTOM_D`, and applies the selected order-type filter without the source live cloud-report delay.
 - Stub same-item combine mode `dont-combine` keeps each repeated dish as its own order line even when separate-same-item is disabled.

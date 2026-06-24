@@ -1167,6 +1167,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           { name: 'Mongolian Chicken', price: 10, group: 'Lunch', category: 'KDS' },
           { name: 'Pos Name Test', price: 10, group: 'Lunch', category: 'KDS' },
           { name: 'combo_max', price: 20, group: 'crm_group', category: 'crm_cat', comboSubItems: ['item', 'item_option'] },
+          { name: 'ComboOptionTest', price: 10, group: 'MansuperGroup', category: 'MansuperCat', comboSubItems: ['combo-no-option-item'] },
+          { name: 'combo-option-item', price: 10, group: 'MansuperGroup', category: 'MansuperCat' },
         ];
       }
 
