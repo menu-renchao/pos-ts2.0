@@ -17,6 +17,11 @@ export type SaleItemLanguageNames = {
   kitchenName: string;
 };
 
+export type GlobalOptionPrinterResult = {
+  afterCashPrinter: string[];
+  afterRunnerPrinter: string[];
+};
+
 export class AdminMenuFlow {
   constructor(
     private readonly homePage: PosHomePage,
@@ -64,5 +69,35 @@ export class AdminMenuFlow {
     );
 
     return this.adminPage.searchSaleItemLanguageAndReadNames(chineseName);
+  }
+
+  async addPrintersToGlobalOptionAndReadPrinters(homeUrl: string): Promise<GlobalOptionPrinterResult> {
+    const group = 'Global Option Group';
+    const category = 'Sauce';
+    const optionName = 'global option add printer test';
+    const optionPrice = 10;
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.enterGlobalOptionCategory(group, category);
+
+    try {
+      const createdOptionName = await this.adminPage.createGlobalOption(optionName, optionPrice);
+
+      await this.adminPage.selectGlobalOption(createdOptionName);
+      await this.adminPage.addPrinterToSelectedGlobalOption('Cash');
+      const afterCashPrinter = await this.adminPage.readGlobalOptionPrinters(createdOptionName);
+
+      await this.adminPage.selectGlobalOption(createdOptionName);
+      await this.adminPage.addPrinterToSelectedGlobalOption('Runner');
+      const afterRunnerPrinter = await this.adminPage.readGlobalOptionPrinters(createdOptionName);
+
+      return { afterCashPrinter, afterRunnerPrinter };
+    } finally {
+      await this.homePage.open(homeUrl);
+      await this.homePage.clickAdmin();
+      await this.adminPage.enterGlobalOptionCategory(group, category);
+      await this.adminPage.deleteGlobalOption(optionName);
+    }
   }
 }

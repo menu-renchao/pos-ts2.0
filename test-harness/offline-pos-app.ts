@@ -128,6 +128,17 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <button data-testid="admin-menu-copy-group">Copy Product Group</button>
       <button data-testid="admin-menu-enter-group">Enter Product Group</button>
       <div data-testid="admin-menu-group-category-count">0</div>
+      <input data-testid="admin-global-option-group" />
+      <input data-testid="admin-global-option-category" />
+      <input data-testid="admin-global-option-name" />
+      <input data-testid="admin-global-option-price" />
+      <button data-testid="admin-global-option-create">Create Global Option</button>
+      <input data-testid="admin-global-option-selected-name" />
+      <button data-testid="admin-global-option-select">Select Global Option</button>
+      <input data-testid="admin-global-option-printer" />
+      <button data-testid="admin-global-option-add-printer">Add Printer</button>
+      <div data-testid="admin-global-option-printer-value"></div>
+      <button data-testid="admin-global-option-delete">Delete Global Option</button>
       <button data-testid="admin-save-settings">Save Settings</button>
       <button data-testid="admin-member-list">CRM Loyalty</button>
       <section data-testid="member-list-permission-popup" hidden>
@@ -516,6 +527,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           'Global Option Group': ['Legacy Emenu Option'],
         },
       };
+      let adminGlobalOptions = [];
+      let selectedGlobalOptionName = '';
       let adminCreatedMenuItems = [];
       let savedOrders = [];
       let nextOrderNumber = 100000;
@@ -585,6 +598,17 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const adminMenuCopyGroupButton = document.querySelector('[data-testid="admin-menu-copy-group"]');
       const adminMenuEnterGroupButton = document.querySelector('[data-testid="admin-menu-enter-group"]');
       const adminMenuGroupCategoryCount = document.querySelector('[data-testid="admin-menu-group-category-count"]');
+      const adminGlobalOptionGroupInput = document.querySelector('[data-testid="admin-global-option-group"]');
+      const adminGlobalOptionCategoryInput = document.querySelector('[data-testid="admin-global-option-category"]');
+      const adminGlobalOptionNameInput = document.querySelector('[data-testid="admin-global-option-name"]');
+      const adminGlobalOptionPriceInput = document.querySelector('[data-testid="admin-global-option-price"]');
+      const adminGlobalOptionCreateButton = document.querySelector('[data-testid="admin-global-option-create"]');
+      const adminGlobalOptionSelectedNameInput = document.querySelector('[data-testid="admin-global-option-selected-name"]');
+      const adminGlobalOptionSelectButton = document.querySelector('[data-testid="admin-global-option-select"]');
+      const adminGlobalOptionPrinterInput = document.querySelector('[data-testid="admin-global-option-printer"]');
+      const adminGlobalOptionAddPrinterButton = document.querySelector('[data-testid="admin-global-option-add-printer"]');
+      const adminGlobalOptionPrinterValue = document.querySelector('[data-testid="admin-global-option-printer-value"]');
+      const adminGlobalOptionDeleteButton = document.querySelector('[data-testid="admin-global-option-delete"]');
       const joinMemberButton = document.querySelector('[data-testid="home-join-member"]');
       const joinMemberRegistration = document.querySelector('[data-testid="join-member-registration"]');
       const joinMemberFirstNameInput = document.querySelector('[data-testid="join-member-first-name"]');
@@ -884,6 +908,15 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
 
       function renderAdminMenuGroupCount(productLine, groupName) {
         adminMenuGroupCategoryCount.textContent = String(adminMenuCategories(productLine, groupName).length);
+      }
+
+      function selectedGlobalOption() {
+        return adminGlobalOptions.find((option) => option.name === selectedGlobalOptionName);
+      }
+
+      function renderSelectedGlobalOptionPrinter() {
+        const option = selectedGlobalOption();
+        adminGlobalOptionPrinterValue.textContent = option ? option.printers.join(',') : '';
       }
 
       function showPanel(panel) {
@@ -1953,6 +1986,41 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       });
       adminMenuEnterGroupButton.addEventListener('click', () => {
         renderAdminMenuGroupCount(adminMenuTargetProductLineInput.value, adminMenuGroupNameInput.value);
+      });
+      adminGlobalOptionCreateButton.addEventListener('click', () => {
+        const optionName = adminGlobalOptionNameInput.value;
+        adminGlobalOptions = adminGlobalOptions.filter((option) => option.name !== optionName);
+        adminGlobalOptions.push({
+          name: optionName,
+          price: Number(adminGlobalOptionPriceInput.value || '0'),
+          group: adminGlobalOptionGroupInput.value,
+          category: adminGlobalOptionCategoryInput.value,
+          printers: [],
+        });
+        selectedGlobalOptionName = optionName;
+        adminGlobalOptionSelectedNameInput.value = optionName;
+        renderSelectedGlobalOptionPrinter();
+      });
+      adminGlobalOptionSelectButton.addEventListener('click', () => {
+        selectedGlobalOptionName = adminGlobalOptionSelectedNameInput.value;
+        renderSelectedGlobalOptionPrinter();
+      });
+      adminGlobalOptionAddPrinterButton.addEventListener('click', () => {
+        const option = selectedGlobalOption();
+        const printerName = adminGlobalOptionPrinterInput.value;
+        if (option && printerName && !option.printers.includes(printerName)) {
+          option.printers.push(printerName);
+        }
+        renderSelectedGlobalOptionPrinter();
+      });
+      adminGlobalOptionDeleteButton.addEventListener('click', () => {
+        const optionName = adminGlobalOptionNameInput.value || adminGlobalOptionSelectedNameInput.value;
+        adminGlobalOptions = adminGlobalOptions.filter((option) => option.name !== optionName);
+        if (selectedGlobalOptionName === optionName) {
+          selectedGlobalOptionName = '';
+          adminGlobalOptionSelectedNameInput.value = '';
+        }
+        renderSelectedGlobalOptionPrinter();
       });
       saveLanguageButton.addEventListener('click', () => {
         userDefaultLanguage = languageSelect.value;

@@ -35,6 +35,17 @@ export class AdminPage extends PageObject {
   private readonly menuCopyGroupButton: Locator;
   private readonly menuEnterGroupButton: Locator;
   private readonly menuGroupCategoryCount: Locator;
+  private readonly globalOptionGroupInput: Locator;
+  private readonly globalOptionCategoryInput: Locator;
+  private readonly globalOptionNameInput: Locator;
+  private readonly globalOptionPriceInput: Locator;
+  private readonly globalOptionCreateButton: Locator;
+  private readonly globalOptionSelectedNameInput: Locator;
+  private readonly globalOptionSelectButton: Locator;
+  private readonly globalOptionPrinterInput: Locator;
+  private readonly globalOptionAddPrinterButton: Locator;
+  private readonly globalOptionPrinterValue: Locator;
+  private readonly globalOptionDeleteButton: Locator;
   private readonly unitPriceItemGroupInput: Locator;
   private readonly unitPriceItemCategoryInput: Locator;
   private readonly unitPriceItemNameInput: Locator;
@@ -80,6 +91,17 @@ export class AdminPage extends PageObject {
     this.menuCopyGroupButton = page.getByTestId('admin-menu-copy-group');
     this.menuEnterGroupButton = page.getByTestId('admin-menu-enter-group');
     this.menuGroupCategoryCount = page.getByTestId('admin-menu-group-category-count');
+    this.globalOptionGroupInput = page.getByTestId('admin-global-option-group');
+    this.globalOptionCategoryInput = page.getByTestId('admin-global-option-category');
+    this.globalOptionNameInput = page.getByTestId('admin-global-option-name');
+    this.globalOptionPriceInput = page.getByTestId('admin-global-option-price');
+    this.globalOptionCreateButton = page.getByTestId('admin-global-option-create');
+    this.globalOptionSelectedNameInput = page.getByTestId('admin-global-option-selected-name');
+    this.globalOptionSelectButton = page.getByTestId('admin-global-option-select');
+    this.globalOptionPrinterInput = page.getByTestId('admin-global-option-printer');
+    this.globalOptionAddPrinterButton = page.getByTestId('admin-global-option-add-printer');
+    this.globalOptionPrinterValue = page.getByTestId('admin-global-option-printer-value');
+    this.globalOptionDeleteButton = page.getByTestId('admin-global-option-delete');
     this.unitPriceItemGroupInput = page.getByTestId('admin-unit-price-item-group');
     this.unitPriceItemCategoryInput = page.getByTestId('admin-unit-price-item-category');
     this.unitPriceItemNameInput = page.getByTestId('admin-unit-price-item-name');
@@ -245,6 +267,59 @@ export class AdminPage extends PageObject {
       await this.menuGroupNameInput.fill(groupName);
       await this.menuEnterGroupButton.click();
       return Number((await this.menuGroupCategoryCount.textContent()) ?? '0');
+    });
+  }
+
+  async enterGlobalOptionCategory(group: string, category: string): Promise<void> {
+    await step(`进入 ${group} / ${category} 的 Global Option 列表`, async () => {
+      await expect(this.adminRoot).toBeVisible();
+      await this.globalOptionGroupInput.fill(group);
+      await this.globalOptionCategoryInput.fill(category);
+    });
+  }
+
+  async createGlobalOption(optionName: string, optionPrice: number): Promise<string> {
+    return step(`创建 Global Option ${optionName}`, async () => {
+      await expect(this.adminRoot).toBeVisible();
+      await this.globalOptionNameInput.fill(optionName);
+      await this.globalOptionPriceInput.fill(String(optionPrice));
+      await this.globalOptionCreateButton.click();
+      return optionName;
+    });
+  }
+
+  async selectGlobalOption(optionName: string): Promise<void> {
+    await step(`勾选 Global Option ${optionName}`, async () => {
+      await expect(this.adminRoot).toBeVisible();
+      await this.globalOptionSelectedNameInput.fill(optionName);
+      await this.globalOptionSelectButton.click();
+    });
+  }
+
+  async addPrinterToSelectedGlobalOption(printerName: string): Promise<void> {
+    await step(`给已选 Global Option 增加打印机 ${printerName}`, async () => {
+      await expect(this.adminRoot).toBeVisible();
+      await this.globalOptionPrinterInput.fill(printerName);
+      await this.globalOptionAddPrinterButton.click();
+    });
+  }
+
+  async readGlobalOptionPrinters(optionName: string): Promise<string[]> {
+    return step(`读取 Global Option ${optionName} 的打印机`, async () => {
+      await expect(this.adminRoot).toBeVisible();
+      await this.globalOptionSelectedNameInput.fill(optionName);
+      await this.globalOptionSelectButton.click();
+      const printerText = ((await this.globalOptionPrinterValue.textContent()) ?? '').trim();
+      return printerText ? printerText.split(',').map((printer) => printer.trim()) : [];
+    });
+  }
+
+  async deleteGlobalOption(optionName: string): Promise<void> {
+    await step(`删除 Global Option ${optionName}`, async () => {
+      await expect(this.adminRoot).toBeVisible();
+      await this.globalOptionNameInput.fill(optionName);
+      await this.globalOptionSelectedNameInput.fill(optionName);
+      await this.globalOptionDeleteButton.click();
     });
   }
 

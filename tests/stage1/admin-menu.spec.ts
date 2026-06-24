@@ -43,4 +43,13 @@ test.describe('stage1 admin menu migration', () => {
     expect(names.posName).toBe('普通菜1的中文菜名');
     expect(names.kitchenName).toBe('普通菜1的中文菜名');
   });
+
+  test('POS-35406 Global Option 批量 Add Printer 后应保存打印机', async ({ environment, page }) => {
+    const flow = new AdminMenuFlow(new PosHomePage(page), new AdminPage(page), new OrderDishesPage(page));
+
+    const result = await flow.addPrintersToGlobalOptionAndReadPrinters(environment.posHomeUrl);
+
+    expect(result.afterCashPrinter).toEqual(['Cash']);
+    expect(result.afterRunnerPrinter).toEqual(['Cash', 'Runner']);
+  });
 });

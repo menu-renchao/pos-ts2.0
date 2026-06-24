@@ -1027,6 +1027,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 | stage1/test_admin_menu.py | TestAdminMenu | `test_copy_global_option_to_other_product_line` POS Global Option Group copy to Emenu Menu | tests/stage1/admin-menu.spec.ts | `AdminMenuFlow.copyPosGlobalOptionGroupToEmenuAndReadCount` |
 | stage1/test_admin_menu.py | TestAdminMenu | `test_set_item_into_unit_price_item` unit-price item order preserves original price per weight | tests/stage1/admin-menu.spec.ts | `AdminMenuFlow.orderUnitPriceItemAndReadPrice` |
 | stage1/test_admin_menu.py | TestAdminMenu | `test_modify_item_chinese_name` item Chinese name syncs POS/Kitchen names in Admin Language | tests/stage1/admin-menu.spec.ts | `AdminMenuFlow.modifyItemChineseNameAndReadLanguageNames` |
+| stage1/test_admin_menu.py | TestAdminMenu | `test_global_option_add_printer` created Global Option receives Cash then Runner printers | tests/stage1/admin-menu.spec.ts | `AdminMenuFlow.addPrintersToGlobalOptionAndReadPrinters` |
 
 ### Preconditions
 
@@ -1038,6 +1039,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - POS-33919 uses deterministic test data `unitPriceDish` instead of the source fixture's random item name.
 - POS-33919 source `MenuAPI.create_dish(..., unit_price=True)` setup is represented by `AdminPage.configureUnitPriceItem` in round-one offline mode.
 - POS-34360 uses source-equivalent seeded dish `hn_normal_item1` / `hn_cate` from `chineseInitialSearchDish`.
+- POS-35406 uses source-equivalent `Global Option Group` / `Sauce`, option name `global option add printer test`, option price `10`, and printer names `Cash` then `Runner`.
 
 ### Steps
 
@@ -1051,6 +1053,8 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 8. Verify the unit-price input is visible, input `200`, and read the current item price.
 9. For POS-34360, set `hn_normal_item1` Chinese name to `普通菜1的中文菜名`.
 10. Open the Admin Language Sale Item search path, search `普通菜1的中文菜名`, and read the POS Name and Kitchen Name values.
+11. For POS-35406, enter `Global Option Group` / `Sauce`, create `global option add printer test` with price `10`, select it, add `Cash`, and read the printer list.
+12. Select the same option again, add `Runner`, read the printer list again, and delete the created option in cleanup.
 
 ### Expected Assertions
 
@@ -1058,6 +1062,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - POS-33919 verifies the unit-price input exists after ordering the configured item.
 - POS-33919 verifies input `200` computes item price `20.00`, preserving original unit price `10.00` at weight `2.00`.
 - POS-34360 verifies both Admin Language POS Name and Kitchen Name equal `普通菜1的中文菜名` after the item Chinese name edit.
+- POS-35406 verifies the first Add Printer action returns exactly `Cash`, and the second Add Printer action returns exactly `Cash` plus `Runner` in order.
 
 ### Page Responsibilities
 
@@ -1069,6 +1074,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `OrderDishesPage.selectMenuGroup`, `OrderDishesPage.selectMenuCategory`, `OrderDishesPage.addMenuItem`, `OrderDishesPage.isUnitPriceInputVisible`, and `OrderDishesPage.inputUnitPriceAndReadSelectedPrice` own the POS-33919 order-side verification.
 - `AdminPage.setItemChineseName` owns the POS-34360 category item edit action.
 - `AdminPage.searchSaleItemLanguageAndReadNames` owns the Admin Language Sale Item search and POS/Kitchen name reads.
+- `AdminPage.enterGlobalOptionCategory`, `AdminPage.createGlobalOption`, `AdminPage.selectGlobalOption`, `AdminPage.addPrinterToSelectedGlobalOption`, `AdminPage.readGlobalOptionPrinters`, and `AdminPage.deleteGlobalOption` own the POS-35406 Global Option edit and cleanup path.
 
 ### Client/Data Responsibilities
 
@@ -1077,6 +1083,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `test-data/pos/dishes.ts` owns `unitPriceDish` with source-equivalent base price `10.00`.
 - `test-data/pos/dishes.ts` owns `chineseInitialSearchDish` with source-equivalent `hn_normal_item1` and default Chinese name.
 - Live POS-33919 should use the real `MenuAPI`/`TaxAPI` fixture path or confirmed Admin Menu UI selectors before being marked live verified.
+- POS-35406 has no live client dependency in round one; the offline POS stub owns created Global Option records and assigned printer names.
 
 ### Stub Behavior
 
@@ -1086,6 +1093,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Offline harness stores Admin-created unit-price items in page memory for the current test.
 - Unit-price item ordering shows a dedicated unit-price input; submitting `200` stores quantity `2.00` and recalculates price from base unit price.
 - Offline harness stores edited item Chinese names and returns the edited Chinese name as both POS Name and Kitchen Name in the Admin Language Sale Item search result.
+- Offline harness stores created Global Options in page memory, assigns selected printers without duplicates, returns printer names in append order, and deletes the created option during cleanup.
 
 ### Live Gaps
 
@@ -1097,3 +1105,5 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 | selector | Scale/tare/unit-price order UI selectors need live confirmation | Confirm stable selectors for unit-price input, tare display, and selected item price |
 | selector | POS-34360 Admin category edit and Admin Language Sale Item selectors need live confirmation | Confirm stable selectors for edit item Chinese name, Sale Item search, POS Name, and Kitchen Name |
 | cleanup | Source restores `hn_normal_item1` Chinese name in `finally` | Add live cleanup fixture or afterEach restore before live verification |
+| selector | POS-35406 Global Option category navigation, item checkbox selection, batch edit Add Printer dialog, and printer selector need live confirmation | Confirm stable selectors and the save/refresh signal for assigned printers |
+| cleanup | POS-35406 creates a Global Option and must delete it even when printer assignment fails | Add live cleanup fixture using UI or API before live verification |
