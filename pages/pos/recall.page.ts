@@ -67,6 +67,8 @@ export class RecallPage extends PageObject {
   private readonly subOrderSettleButton: Locator;
   private readonly unsplitButton: Locator;
   private readonly voidPaidOrderButton: Locator;
+  private readonly voidOrderButton: Locator;
+  private readonly restoreInventoryCheckbox: Locator;
   private readonly subOrderButton: Locator;
 
   constructor(page: Page) {
@@ -114,6 +116,8 @@ export class RecallPage extends PageObject {
     this.subOrderSettleButton = page.getByTestId('split-sub-order-settle');
     this.unsplitButton = page.getByTestId('split-unsplit');
     this.voidPaidOrderButton = page.getByTestId('recall-void-paid-order');
+    this.voidOrderButton = page.getByTestId('recall-void-order');
+    this.restoreInventoryCheckbox = page.getByTestId('recall-restore-inventory');
     this.subOrderButton = page.getByTestId('recall-sub-order');
   }
 
@@ -268,6 +272,17 @@ export class RecallPage extends PageObject {
   async voidPaidOrder(): Promise<void> {
     await step('Recall Void 已支付订单', async () => {
       await this.voidPaidOrderButton.click();
+    });
+  }
+
+  async voidOrder(restoreInventory = true): Promise<void> {
+    await step(`Recall Void 订单${restoreInventory ? '并恢复库存' : '且不恢复库存'}`, async () => {
+      if (restoreInventory) {
+        await this.restoreInventoryCheckbox.check();
+      } else {
+        await this.restoreInventoryCheckbox.uncheck();
+      }
+      await this.voidOrderButton.click();
     });
   }
 

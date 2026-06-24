@@ -19,6 +19,8 @@ export class OrderDishesPage extends PageObject {
   private readonly itemPrice: Locator;
   private readonly itemPriceInput: Locator;
   private readonly itemPriceSubmitButton: Locator;
+  private readonly itemQuantityInput: Locator;
+  private readonly itemQuantitySubmitButton: Locator;
   private readonly itemTax: Locator;
   private readonly comboOptionCount: Locator;
   private readonly globalOptionArea: Locator;
@@ -43,6 +45,7 @@ export class OrderDishesPage extends PageObject {
   private readonly openFoodKeyboardLanguage: Locator;
   private readonly openFoodKeyboardSubmitButton: Locator;
   private readonly openFoodKeyboardTextInput: Locator;
+  private readonly orderInventoryButton: Locator;
   private readonly orderItemName: Locator;
   private readonly orderOptions: Locator;
   private readonly orderReward: Locator;
@@ -51,6 +54,7 @@ export class OrderDishesPage extends PageObject {
   private readonly pickupButton: Locator;
   private readonly pickupInfoSubmitButton: Locator;
   private readonly saveOrderButton: Locator;
+  private readonly saveOrderAlert: Locator;
   private readonly sendKitchenButton: Locator;
   private readonly settleButton: Locator;
   private readonly settleCashButton: Locator;
@@ -87,6 +91,8 @@ export class OrderDishesPage extends PageObject {
     this.itemPrice = page.getByTestId('order-item-price');
     this.itemPriceInput = page.getByTestId('item-price-input');
     this.itemPriceSubmitButton = page.getByTestId('item-price-submit');
+    this.itemQuantityInput = page.getByTestId('order-item-quantity');
+    this.itemQuantitySubmitButton = page.getByTestId('order-item-quantity-submit');
     this.itemTax = page.getByTestId('order-tax');
     this.comboOptionCount = page.getByTestId('combo-option-count');
     this.globalOptionArea = page.getByTestId('global-option-area');
@@ -111,6 +117,7 @@ export class OrderDishesPage extends PageObject {
     this.openFoodKeyboardLanguage = page.getByTestId('open-food-keyboard-language');
     this.openFoodKeyboardSubmitButton = page.getByTestId('open-food-keyboard-submit');
     this.openFoodKeyboardTextInput = page.getByTestId('open-food-keyboard-text');
+    this.orderInventoryButton = page.getByTestId('order-inventory');
     this.orderItemName = page.getByTestId('order-item-name');
     this.orderOptions = page.getByTestId('order-option');
     this.orderReward = page.getByTestId('order-reward');
@@ -121,6 +128,7 @@ export class OrderDishesPage extends PageObject {
     this.openFoodCategory = page.getByTestId('open-food-category');
     this.orderRoot = page.getByTestId('order-page');
     this.saveOrderButton = page.getByTestId('order-save');
+    this.saveOrderAlert = page.getByTestId('order-save-alert');
     this.sendKitchenButton = page.getByTestId('order-send-kitchen');
     this.settleButton = page.getByTestId('order-settle');
     this.settleCashButton = page.getByTestId('settle-cash');
@@ -161,26 +169,40 @@ export class OrderDishesPage extends PageObject {
   async selectMenuGroup(groupName = ''): Promise<void> {
     await step(`选择点单菜单组 ${groupName}`, async () => {
       if (groupName) {
-        await this.menuGroups.filter({ hasText: groupName }).click();
+        await this.menuGroups.filter({ hasText: exactText(groupName) }).click();
       }
     });
   }
 
   async selectMenuCategory(categoryName: string): Promise<void> {
     await step(`选择点单菜单类别 ${categoryName}`, async () => {
-      await this.menuCategories.filter({ hasText: categoryName }).click();
+      await this.menuCategories.filter({ hasText: exactText(categoryName) }).click();
     });
   }
 
   async addMenuItem(itemName: string): Promise<void> {
     await step(`添加点单菜品 ${itemName}`, async () => {
-      await this.menuItems.filter({ hasText: itemName }).click();
+      await this.menuItems.filter({ hasText: exactText(itemName) }).click();
     });
   }
 
   async saveOrder(): Promise<void> {
     await step('保存当前订单', async () => {
       await this.saveOrderButton.click();
+    });
+  }
+
+  async saveOrderAndReadAlert(): Promise<string> {
+    return step('保存当前订单并读取提示', async () => {
+      await this.saveOrderButton.click();
+      return ((await this.saveOrderAlert.textContent()) ?? '').trim();
+    });
+  }
+
+  async openInventoryPage(): Promise<void> {
+    await step('从点单页打开库存页', async () => {
+      await this.orderInventoryButton.click();
+      await expect(this.page.getByTestId('inventory-page')).toBeVisible();
     });
   }
 
@@ -317,6 +339,14 @@ export class OrderDishesPage extends PageObject {
     });
   }
 
+  async changeSelectedItemQuantity(quantity: number): Promise<void> {
+    await step(`修改当前菜品数量为 ${quantity}`, async () => {
+      await this.itemQuantityInput.fill(String(quantity));
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      await this.itemQuantitySubmitButton.click();
+    });
+  }
+
   async readSubtotal(): Promise<number> {
     return step('读取当前订单小计', async () => Number((await this.subtotal.textContent()) ?? '0'));
   }
@@ -327,6 +357,12 @@ export class OrderDishesPage extends PageObject {
 
   async reduceFirstItemToZero(): Promise<void> {
     await step('将当前订单首个菜品数量减少为 0', async () => {
+      await this.reduceItemButton.click();
+    });
+  }
+
+  async reduceSelectedItemQuantity(): Promise<void> {
+    await step('减少当前菜品数量', async () => {
       await this.reduceItemButton.click();
     });
   }
@@ -473,4 +509,8 @@ export class OrderDishesPage extends PageObject {
       await this.pickupInfoSubmitButton.click();
     });
   }
+}
+
+function exactText(text: string): RegExp {
+  return new RegExp(`^${text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`);
 }

@@ -1,12 +1,12 @@
 import type { DishSample, MenuGroupSample, OptionOrderSample } from './domain-types.js';
 
 export const inventoryTrackedDish: DishSample = {
-  id: 'dish-beef-noodle',
-  name: 'Beef Noodle',
-  price: 12.5,
-  category: 'Noodles',
-  group: 'Migration Menu',
-  inventorySku: 'INV-BEEF-NOODLE',
+  id: 'dish-superman-item4',
+  name: 'superman item4',
+  price: 8,
+  category: 'Chicken Lunch E',
+  group: 'Lunch',
+  inventorySku: 'INV-SUPERMAN-ITEM4',
   taxRate: 0.0825,
 };
 

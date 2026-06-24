@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { defaultMenuGroup, inventoryTrackedDish, openFoodDish } from './dishes.js';
 
 test('inventoryTrackedDish has inventory identity and positive price', () => {
-  assert.equal(inventoryTrackedDish.inventorySku, 'INV-BEEF-NOODLE');
+  assert.equal(inventoryTrackedDish.inventorySku, 'INV-SUPERMAN-ITEM4');
   assert.ok(inventoryTrackedDish.price > 0);
 });
 

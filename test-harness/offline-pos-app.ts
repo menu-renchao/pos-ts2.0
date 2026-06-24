@@ -87,6 +87,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <div data-testid="order-reward">0</div>
       <div data-testid="order-item-name"></div>
       <div data-testid="order-item-price">0</div>
+      <input data-testid="order-item-quantity" />
+      <button data-testid="order-item-quantity-submit">Submit Quantity</button>
       <input data-testid="order-search" />
       <button data-testid="order-search-clear">Clear Search</button>
       <div data-testid="order-search-result"></div>
@@ -157,6 +159,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <button data-testid="combo-option-reduce">Reduce Combo Option</button>
       <div data-testid="combo-option-count">0</div>
       <button data-testid="order-info">Info</button>
+      <button data-testid="order-inventory">Inventory</button>
       <div data-testid="order-info-rows"></div>
       <button data-testid="order-pickup">Pickup</button>
       <button data-testid="pickup-info-submit">Submit Pickup Info</button>
@@ -172,7 +175,28 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         <input data-testid="manager-password" type="password" />
         <button data-testid="manager-password-submit">Submit Manager Password</button>
       </section>
+      <div data-testid="order-save-alert" role="alert"></div>
       <button data-testid="order-save">Save Order</button>
+    </section>
+    <section data-testid="inventory-page" hidden>
+      <select data-testid="inventory-channel">
+        <option value="POS">POS</option>
+      </select>
+      <select data-testid="inventory-type">
+        <option value="All">All</option>
+      </select>
+      <input data-testid="inventory-item-search" />
+      <button data-testid="inventory-search">Search Inventory</button>
+      <div data-testid="inventory-item-state"></div>
+      <button data-testid="inventory-setting">Inventory Setting</button>
+      <section data-testid="inventory-setting-page" hidden>
+        <select data-testid="inventory-stock-status">
+          <option value="LIMITED_STOCK">LIMITED_STOCK</option>
+        </select>
+        <input data-testid="inventory-limited-stock-quantity" />
+        <button data-testid="inventory-save-config">Save Inventory Config</button>
+      </section>
+      <button data-testid="inventory-back-order">Back Order</button>
     </section>
     <section data-testid="recall-page" hidden>
       <button data-testid="recall-recent-order">Recent Order</button>
@@ -199,6 +223,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <button data-testid="recall-crm-redeem-discount">10% Off</button>
       <button data-testid="recall-cash">Cash</button>
       <button data-testid="recall-void-paid-order">Void Paid Order</button>
+      <label>
+        <input data-testid="recall-restore-inventory" type="checkbox" checked />
+        Restore Inventory
+      </label>
+      <button data-testid="recall-void-order">Void Order</button>
       <button data-testid="recall-refund-paid-order">Refund Paid Order</button>
       <button data-testid="recall-cancel-condition">Cancel Condition</button>
       <button data-testid="recall-move-order">Move Order</button>
@@ -295,6 +324,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let currentOrderTip = 0;
       let currentSplitPartTip = null;
       let currentOrderStatus = '';
+      let currentOrderType = 'togo';
       let currentCustomerName = null;
       let currentDeliveryInfoRows = [];
       let currentComboOptionCount = 0;
@@ -311,6 +341,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let currentSettlementSelectMode = false;
       let currentEditingOrder = null;
       let currentEmployeePassword = '11';
+      let currentInventorySearchItem = 'superman item4';
+      const inventoryRecords = {
+        'superman item4': { status: 'LIMITED_STOCK', quantity: 0 },
+      };
       const crmMembers = [
         { phone: '(64)673-37557', name: 'CRM Member A', points: 100 },
         { phone: '(92)923-69168', name: 'CRM Member B', points: 80 },
@@ -374,6 +408,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const orderSearchResult = document.querySelector('[data-testid="order-search-result"]');
       const itemPriceInput = document.querySelector('[data-testid="item-price-input"]');
       const itemPriceSubmitButton = document.querySelector('[data-testid="item-price-submit"]');
+      const itemQuantityInput = document.querySelector('[data-testid="order-item-quantity"]');
+      const itemQuantitySubmitButton = document.querySelector('[data-testid="order-item-quantity-submit"]');
       const orderOptions = document.querySelector('[data-testid="order-options"]');
       const orderSubOptions = document.querySelector('[data-testid="order-sub-options"]');
       const orderSendKitchenButton = document.querySelector('[data-testid="order-send-kitchen"]');
@@ -432,6 +468,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const comboOptionReduceButton = document.querySelector('[data-testid="combo-option-reduce"]');
       const comboOptionCount = document.querySelector('[data-testid="combo-option-count"]');
       const orderInfoButton = document.querySelector('[data-testid="order-info"]');
+      const orderInventoryButton = document.querySelector('[data-testid="order-inventory"]');
       const orderInfoRows = document.querySelector('[data-testid="order-info-rows"]');
       const orderPickupButton = document.querySelector('[data-testid="order-pickup"]');
       const pickupInfoSubmitButton = document.querySelector('[data-testid="pickup-info-submit"]');
@@ -445,6 +482,19 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const managerPasswordPopup = document.querySelector('[data-testid="manager-password-popup"]');
       const managerPasswordInput = document.querySelector('[data-testid="manager-password"]');
       const managerPasswordSubmitButton = document.querySelector('[data-testid="manager-password-submit"]');
+      const orderSaveAlert = document.querySelector('[data-testid="order-save-alert"]');
+      const inventoryPage = document.querySelector('[data-testid="inventory-page"]');
+      const inventoryChannelSelect = document.querySelector('[data-testid="inventory-channel"]');
+      const inventoryTypeSelect = document.querySelector('[data-testid="inventory-type"]');
+      const inventoryItemSearchInput = document.querySelector('[data-testid="inventory-item-search"]');
+      const inventorySearchButton = document.querySelector('[data-testid="inventory-search"]');
+      const inventoryItemState = document.querySelector('[data-testid="inventory-item-state"]');
+      const inventorySettingButton = document.querySelector('[data-testid="inventory-setting"]');
+      const inventorySettingPage = document.querySelector('[data-testid="inventory-setting-page"]');
+      const inventoryStockStatusSelect = document.querySelector('[data-testid="inventory-stock-status"]');
+      const inventoryLimitedStockQuantityInput = document.querySelector('[data-testid="inventory-limited-stock-quantity"]');
+      const inventorySaveConfigButton = document.querySelector('[data-testid="inventory-save-config"]');
+      const inventoryBackOrderButton = document.querySelector('[data-testid="inventory-back-order"]');
       const recallPage = document.querySelector('[data-testid="recall-page"]');
       const recallRecentOrderButton = document.querySelector('[data-testid="recall-recent-order"]');
       const recallPreviousOrderButton = document.querySelector('[data-testid="recall-previous-order"]');
@@ -469,6 +519,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const recallCrmRedeemDiscountButton = document.querySelector('[data-testid="recall-crm-redeem-discount"]');
       const recallCashButton = document.querySelector('[data-testid="recall-cash"]');
       const recallVoidPaidOrderButton = document.querySelector('[data-testid="recall-void-paid-order"]');
+      const recallRestoreInventoryCheckbox = document.querySelector('[data-testid="recall-restore-inventory"]');
+      const recallVoidOrderButton = document.querySelector('[data-testid="recall-void-order"]');
       const recallRefundPaidOrderButton = document.querySelector('[data-testid="recall-refund-paid-order"]');
       const recallCancelConditionButton = document.querySelector('[data-testid="recall-cancel-condition"]');
       const recallMoveOrderButton = document.querySelector('[data-testid="recall-move-order"]');
@@ -577,6 +629,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         adminPage.hidden = panel !== 'admin';
         deliveryPage.hidden = panel !== 'delivery';
         joinMemberRegistration.hidden = panel !== 'join-member';
+        inventoryPage.hidden = panel !== 'inventory';
         orderPage.hidden = panel !== 'order';
         recallPage.hidden = panel !== 'recall';
         reportPasswordPanel.hidden = panel !== 'report-password';
@@ -697,8 +750,67 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         return button;
       }
 
+      function inventoryRecord(itemName) {
+        inventoryRecords[itemName] = inventoryRecords[itemName] || { status: 'LIMITED_STOCK', quantity: 0 };
+        return inventoryRecords[itemName];
+      }
+
+      function formatInventoryState(itemName) {
+        return 'Stock: ' + Math.floor(Number(inventoryRecord(itemName).quantity || 0));
+      }
+
+      function trackedInventoryQuantity(items) {
+        return (items || [])
+          .filter((item) => item.inventorySku && item.state !== 'Voided')
+          .reduce((total, item) => total + Number(item.quantity || 1), 0);
+      }
+
+      function firstTrackedInventoryItem(items) {
+        return (items || []).find((item) => item.inventorySku && item.state !== 'Voided') || null;
+      }
+
+      function inventoryShortage(items, previousDeductedQuantity) {
+        const trackedItem = firstTrackedInventoryItem(items);
+        if (!trackedItem) {
+          return null;
+        }
+        const desiredQuantity = trackedInventoryQuantity(items);
+        const additionalQuantity = desiredQuantity - Number(previousDeductedQuantity || 0);
+        const remaining = Number(inventoryRecord(trackedItem.name).quantity || 0);
+        if (additionalQuantity > remaining) {
+          return { itemName: trackedItem.name, remaining: Math.floor(remaining) };
+        }
+        return null;
+      }
+
+      function applyInventoryDelta(order, items) {
+        const trackedItem = firstTrackedInventoryItem(items);
+        if (!trackedItem) {
+          order.inventoryDeductedQuantity = 0;
+          return;
+        }
+        const previousDeductedQuantity = Number(order.inventoryDeductedQuantity || 0);
+        const nextDeductedQuantity = trackedInventoryQuantity(items);
+        inventoryRecord(trackedItem.name).quantity -= nextDeductedQuantity - previousDeductedQuantity;
+        order.inventoryDeductedQuantity = nextDeductedQuantity;
+      }
+
+      function restoreOrderInventory(order) {
+        const trackedItem = firstTrackedInventoryItem(order?.items || []);
+        if (!trackedItem || !Number(order?.inventoryDeductedQuantity || 0)) {
+          return;
+        }
+        inventoryRecord(trackedItem.name).quantity += Number(order.inventoryDeductedQuantity || 0);
+        order.inventoryDeductedQuantity = 0;
+      }
+
+      function renderInventorySearchResult() {
+        inventoryItemState.textContent = formatInventoryState(currentInventorySearchItem);
+      }
+
       function menuData() {
         return [
+          { name: 'superman item4', price: 8, group: 'Lunch', category: 'Chicken Lunch E', inventorySku: 'INV-SUPERMAN-ITEM4' },
           { name: 'Group Switch Beef', price: 11.25, group: 'Lunch Menu', category: 'Lunch Entree' },
           { name: 'Category Switch Fish', price: 13.5, group: 'Dinner Menu', category: 'Seafood' },
           { name: 'Discountable Burger', price: 10, group: 'Dinner Menu', category: 'Burgers' },
@@ -727,6 +839,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         settleUnpaidAmount.textContent = String(calculatePayPageUnpaidAmount(subtotal, rewardDiscount, itemCount));
         orderItemName.textContent = currentOrderItems[0]?.name || '';
         orderItemPrice.textContent = String(currentOrderItems[0]?.price || 0);
+        itemQuantityInput.value = String(currentOrderItems[currentOrderItems.length - 1]?.quantity || 1);
         comboOptionCount.textContent = String(currentComboOptionCount);
         globalOptionListCountValue.textContent = String(currentGlobalOptionCount);
       }
@@ -819,19 +932,26 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
 
       function renderOrderMenu() {
         const effectiveLanguage = currentLanguage === 'Chinese' || userDefaultLanguage === 'Chinese' ? 'Chinese' : 'Default';
-        const groups = effectiveLanguage === 'Chinese' ? ['午餐菜单', '中餐菜单'] : ['Lunch Menu', 'Dinner Menu'];
+        const groups = effectiveLanguage === 'Chinese' ? ['午餐菜单', '中餐菜单'] : ['Lunch', 'Lunch Menu', 'Dinner Menu'];
         orderMenuGroups.innerHTML = '';
         groups.forEach((group) => {
           orderMenuGroups.appendChild(createButton('order-menu-group', group, () => {}));
         });
         orderMenuCategories.innerHTML = '';
-        ['Lunch Entree', 'Seafood', 'Burgers', 'Category Option', 'KDS鸡肉类午餐', 'Item Options'].forEach((category) => {
+        ['Chicken Lunch E', 'Lunch Entree', 'Seafood', 'Burgers', 'Category Option', 'KDS鸡肉类午餐', 'Item Options'].forEach((category) => {
           orderMenuCategories.appendChild(createButton('order-menu-category', category, () => {}));
         });
         orderMenuItems.innerHTML = '';
         menuData().forEach((dish) => {
           orderMenuItems.appendChild(createButton('order-menu-item', dish.name, () => {
-            currentOrderItems.push({ name: dish.name, price: dish.price, state: '' });
+            currentOrderItems.push({
+              name: dish.name,
+              price: dish.price,
+              unitPrice: dish.price,
+              quantity: 1,
+              inventorySku: dish.inventorySku || '',
+              state: '',
+            });
             renderOrderAmounts();
           }));
         });
@@ -844,6 +964,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         currentOrderTip = 0;
         currentSplitPartTip = null;
         currentOrderStatus = '';
+        currentOrderType = 'togo';
         currentCustomerName = null;
         currentDeliveryInfoRows = [];
         currentComboOptionCount = 0;
@@ -860,6 +981,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         currentEditingOrder = null;
         orderSearchInput.value = '';
         orderSearchResult.textContent = '';
+        orderSaveAlert.textContent = '';
         globalOptionArea.hidden = true;
         crmRedeemPanel.hidden = true;
         customerInfoPopup.hidden = true;
@@ -873,6 +995,14 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       }
 
       function saveCurrentOrder() {
+        const previousDeductedQuantity = Number(currentEditingOrder?.inventoryDeductedQuantity || 0);
+        const shortage = inventoryShortage(currentOrderItems, previousDeductedQuantity);
+        if (shortage) {
+          orderSaveAlert.textContent =
+            'Insufficient stock, please modify the order.\\n' + shortage.itemName + ': ' + shortage.remaining + ' remaining.';
+          return null;
+        }
+        orderSaveAlert.textContent = '';
         if (currentEditingOrder) {
           currentEditingOrder.items = [...currentOrderItems];
           currentEditingOrder.itemOption = currentItemOption;
@@ -884,6 +1014,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           currentEditingOrder.hasRedeemItem = currentHasRedeemItem;
           currentEditingOrder.partialPaid = currentSemiPayMode;
           currentEditingOrder.rewardDiscount = calculateRewardDiscount(currentEditingOrder);
+          applyInventoryDelta(currentEditingOrder, currentOrderItems);
           currentEditingOrder = null;
           currentRedeemControlsLocked = false;
           renderCurrentCrmState();
@@ -910,8 +1041,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           deliveryInfoRows: [...currentDeliveryInfoRows],
           splitOrderPrices: [],
           subOrderStatuses: [],
+          inventoryDeductedQuantity: 0,
+          orderType: currentOrderType,
         };
         order.rewardDiscount = calculateRewardDiscount(order);
+        applyInventoryDelta(order, currentOrderItems);
         savedOrders.push(order);
         latestSavedOrderItems = [...order.items];
         latestSavedItemOption = order.itemOption;
@@ -1220,14 +1354,17 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       document.querySelector('[data-testid="home-togo"]').addEventListener('click', () => {
         showPanel('order');
         resetCurrentOrder();
+        currentOrderType = 'togo';
       });
       document.querySelector('[data-testid="home-dine-in"]').addEventListener('click', () => {
         showPanel('order');
         resetCurrentOrder();
+        currentOrderType = 'dine-in';
       });
       document.querySelector('[data-testid="home-pickup"]').addEventListener('click', () => {
         showPanel('order');
         resetCurrentOrder();
+        currentOrderType = 'pickup';
       });
       document.querySelector('[data-testid="home-recall"]').addEventListener('click', () => {
         showPanel('recall');
@@ -1235,7 +1372,12 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       orderSaveButton.addEventListener('click', () => {
         saveCurrentOrder();
       });
-      orderSendKitchenButton.addEventListener('click', () => {});
+      orderSendKitchenButton.addEventListener('click', () => {
+        currentOrderStatus = 'Sent';
+        if (trackedInventoryQuantity(currentOrderItems) > 0) {
+          saveCurrentOrder();
+        }
+      });
       orderExitButton.addEventListener('click', () => {
         showPanel('home');
       });
@@ -1246,6 +1388,31 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       orderSearchClearButton.addEventListener('click', () => {
         orderSearchInput.value = '';
         orderSearchResult.textContent = '';
+      });
+      orderInventoryButton.addEventListener('click', () => {
+        inventorySettingPage.hidden = true;
+        renderInventorySearchResult();
+        showPanel('inventory');
+      });
+      inventorySearchButton.addEventListener('click', () => {
+        currentInventorySearchItem = inventoryItemSearchInput.value || currentInventorySearchItem;
+        renderInventorySearchResult();
+      });
+      inventorySettingButton.addEventListener('click', () => {
+        currentInventorySearchItem = inventoryItemSearchInput.value || currentInventorySearchItem;
+        inventoryStockStatusSelect.value = inventoryRecord(currentInventorySearchItem).status;
+        inventoryLimitedStockQuantityInput.value = String(inventoryRecord(currentInventorySearchItem).quantity || 0);
+        inventorySettingPage.hidden = false;
+      });
+      inventorySaveConfigButton.addEventListener('click', () => {
+        const record = inventoryRecord(currentInventorySearchItem);
+        record.status = inventoryStockStatusSelect.value;
+        record.quantity = Number(inventoryLimitedStockQuantityInput.value || '0');
+        inventorySettingPage.hidden = true;
+        renderInventorySearchResult();
+      });
+      inventoryBackOrderButton.addEventListener('click', () => {
+        showPanel('order');
       });
       orderSettleButton.addEventListener('click', () => {
         customerInfoPopup.hidden = false;
@@ -1436,7 +1603,13 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       });
       orderReduceItemButton.addEventListener('click', () => {
         if (currentOrderItems[0]) {
-          currentOrderItems[0].price = 0;
+          if (Number(currentOrderItems[0].quantity || 1) > 1) {
+            currentOrderItems[0].quantity = Number(currentOrderItems[0].quantity || 1) - 1;
+            currentOrderItems[0].price = Number((Number(currentOrderItems[0].unitPrice || 0) * currentOrderItems[0].quantity).toFixed(2));
+          } else {
+            currentOrderItems[0].quantity = 0;
+            currentOrderItems[0].price = 0;
+          }
           renderOrderAmounts();
         }
       });
@@ -1493,6 +1666,16 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       itemPriceSubmitButton.addEventListener('click', () => {
         if (currentOrderItems[0]) {
           currentOrderItems[0].price = Number(itemPriceInput.value || '0');
+          currentOrderItems[0].unitPrice = Number(itemPriceInput.value || '0') / Number(currentOrderItems[0].quantity || 1);
+          renderOrderAmounts();
+        }
+      });
+      itemQuantitySubmitButton.addEventListener('click', () => {
+        const selectedItem = currentOrderItems[currentOrderItems.length - 1];
+        if (selectedItem) {
+          const quantity = Number(itemQuantityInput.value || '1');
+          selectedItem.quantity = quantity;
+          selectedItem.price = Number((Number(selectedItem.unitPrice || selectedItem.price || 0) * quantity).toFixed(2));
           renderOrderAmounts();
         }
       });
@@ -1575,6 +1758,15 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         if (selectedRecallOrder?.crmMember && selectedRecallOrder.status === 'Paid') {
           selectedRecallOrder.status = 'Voided';
           selectedRecallOrder.crmMember.points -= earnPointsForSubtotal(selectedRecallOrder.subtotal);
+          renderRecallOrderItems();
+        }
+      });
+      recallVoidOrderButton.addEventListener('click', () => {
+        if (selectedRecallOrder) {
+          selectedRecallOrder.status = 'Voided';
+          if (recallRestoreInventoryCheckbox.checked) {
+            restoreOrderInventory(selectedRecallOrder);
+          }
           renderRecallOrderItems();
         }
       });

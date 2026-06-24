@@ -18,8 +18,8 @@ test('addItem changes subtotal and total', () => {
 
   const updated = state.addItem(order.id, inventoryTrackedDish, 2);
 
-  assert.equal(updated.subtotal, 25);
-  assert.equal(updated.total, 27.06);
+  assert.equal(updated.subtotal, inventoryTrackedDish.price * 2);
+  assert.equal(updated.total, Number((inventoryTrackedDish.price * 2 * (1 + (inventoryTrackedDish.taxRate ?? 0))).toFixed(2)));
 });
 
 test('payOrder changes paid status and records payment', () => {

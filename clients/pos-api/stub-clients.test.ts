@@ -14,7 +14,7 @@ test('StubOrderClient creates orders and calculates totals', async () => {
 
   assert.equal(order.status, 'open');
   assert.equal(order.items[0]?.quantity, 2);
-  assert.equal(order.subtotal, 25);
+  assert.equal(order.subtotal, inventoryTrackedDish.price * 2);
   assert.ok(order.orderNumber.startsWith('OFFLINE-ORDER-'));
 });
 

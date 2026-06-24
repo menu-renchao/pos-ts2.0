@@ -697,45 +697,52 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 
 | source_file | source_class | source_test_pattern | target_spec | target_flow_method |
 |---|---|---|---|---|
-| stage0/test_inventory.py | all `Test*` classes | inventory setup, menu stock changes, sold-out state, and order interaction | tests/stage0/inventory.spec.ts | `InventoryFlow.configureInventoryForOrder` |
+| stage0/test_inventory.py | TestInventory | `test_set_inventory_no_send_kitchen` | tests/stage0/inventory.spec.ts | `InventoryFlow.saveAndEditUnsentInventoryOrder` |
+| stage0/test_inventory.py | TestInventory | `test_set_inventory_send_kitchen` | tests/stage0/inventory.spec.ts | `InventoryFlow.voidSentInventoryOrderWithRestoreOptions` |
+| stage0/test_inventory.py | TestInventory | `test_set_inventory_oder_decimal_num` | tests/stage0/inventory.spec.ts | `InventoryFlow.orderDecimalQuantityAndVoid` |
+| stage0/test_inventory.py | TestInventory | `test_set_inventory_over_order` | tests/stage0/inventory.spec.ts | `InventoryFlow.readInsufficientStockAlert` |
 
 ### Preconditions
 
-- POS home is open through `PosEntryFlow`.
-- Admin/inventory navigation uses UI entry points.
-- Required stock, dish, category, and admin setting samples exist in typed test data.
-- Stub menu/admin clients can represent stock or setting state without live APIs.
+- POS home is open through `PosHomePage`.
+- Inventory navigation uses the POS order-page Inventory entry point.
+- Required stock dish, category, menu group, price, and inventory SKU exist in typed test data as `inventoryTrackedDish`.
+- Offline harness can represent limited stock quantity, order saves, send-kitchen, edit, void, restore-inventory, and insufficient-stock alert state without live APIs.
 
 ### Steps
 
-1. Enter Admin or Inventory through POS UI navigation.
-2. Configure stock or item state required by the source case.
-3. Return to order entry through UI navigation.
-4. Attempt source-equivalent ordering behavior.
-5. Read order or inventory state.
+1. `InventoryFlow.saveAndEditUnsentInventoryOrder`: set `superman item4` to Limited Stock 20, order 10 and save, read Stock 10, recall/edit the order, add 5 more and save, read Stock 5, recall/edit again, reduce 1 item and save, then read Stock 6.
+2. `InventoryFlow.voidSentInventoryOrderWithRestoreOptions`: set Limited Stock 20, order 10 and send to kitchen, read Stock 10, recall and void with Restore Inventory enabled, read Stock 20, order 5 and send to kitchen, read Stock 15, recall and void with Restore Inventory disabled, then read Stock 15.
+3. `InventoryFlow.orderDecimalQuantityAndVoid`: set Limited Stock 10, order quantity 3.44 and send to kitchen, read floored Stock 6, recall and void with Restore Inventory enabled, then read Stock 10.
+4. `InventoryFlow.readInsufficientStockAlert`: set Limited Stock 2, order quantity 3, save, and read the insufficient stock alert text.
 
 ### Expected Assertions
 
-- Inventory state changes are visible through page reads or deterministic stub clients.
-- Sold-out or limited-stock behavior matches the source case.
-- Order totals and item availability reflect inventory state.
+- POS-43898/POS-43890/POS-43889 verify unsent saved-order inventory changes: 20 -> 10 -> 5 -> 6.
+- POS-43898/POS-43890/POS-43889 verify sent-order Void behavior honors Restore Inventory: 20 -> 10 -> 20, then 20 -> 15 -> 15 when restore is disabled.
+- POS-43891 verifies decimal quantity 3.44 reduces displayed stock from 10 to floored Stock 6 and restores to Stock 10 after Void with restore enabled.
+- POS-43892 verifies saving quantity 3 against stock 2 shows `Insufficient stock, please modify the order.\nsuperman item4: 2 remaining.`
 
 ### Page Responsibilities
 
-- `InventoryPage` owns inventory controls and reads.
-- `AdminPage` and `MenuAdminPage` own admin navigation and menu setting actions.
-- `OrderDishesPage` owns order-side visibility and amount reads.
+- `InventoryPage.searchInventory`, `InventoryPage.openInventorySetting`, `InventoryPage.setLimitedStockQuantity`, `InventoryPage.saveInventoryConfig`, `InventoryPage.readItemState`, and `InventoryPage.backToOrderPage` own inventory configuration and state reads.
+- `OrderDishesPage.openInventoryPage`, `OrderDishesPage.selectMenuGroup`, `OrderDishesPage.selectMenuCategory`, `OrderDishesPage.addMenuItem`, `OrderDishesPage.changeSelectedItemQuantity`, `OrderDishesPage.saveOrder`, `OrderDishesPage.saveOrderAndReadAlert`, `OrderDishesPage.sendAllToKitchen`, `OrderDishesPage.exitOrderPage`, and `OrderDishesPage.reduceSelectedItemQuantity` own order-side inventory interactions.
+- `RecallPage.openRecentOrder`, `RecallPage.clickEdit`, and `RecallPage.voidOrder` own recalled-order edit and void inventory paths.
 
 ### Client/Data Responsibilities
 
-- `test-data/pos/dishes.ts` owns stock-related menu samples.
-- `test-data/pos/admin-settings.ts` owns inventory/admin setting names and values.
-- `StubPosMenuClient` and `StubPosAdminSettingsClient` own stub state.
+- `test-data/pos/dishes.ts` owns `inventoryTrackedDish` with source-equivalent name `superman item4`, category `Chicken Lunch E`, group `Lunch`, price `8.00`, and inventory SKU `INV-SUPERMAN-ITEM4`.
+- No live client is called in round one; source `MenuAPI`/`TaxAPI` setup is represented by typed dish data and deterministic offline harness stock state.
 
 ### Stub Behavior
 
-- Stub clients store configured inventory state in memory for the current test.
-- Stub mode does not persist inventory state across tests.
+- Offline harness stores Limited Stock quantity in memory for the current browser page.
+- Saving an inventory-tracked order deducts only the delta from the order's previously deducted quantity.
+- Editing an unsent saved order and adding quantity deducts the added delta; reducing quantity restores one unit.
+- Sending an inventory-tracked order to kitchen saves the order and deducts stock immediately.
+- Recall Void with Restore Inventory enabled restores the order's deducted quantity; disabled restore leaves stock unchanged.
+- Decimal stock deductions retain exact internal quantity but display `Stock: floor(remaining)`, matching the source expectation for 3.44.
+- Saving beyond available stock does not create the order and renders the source-equivalent insufficient-stock alert.
 
 ### Live Gaps
 
