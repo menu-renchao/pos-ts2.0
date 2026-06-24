@@ -247,6 +247,15 @@ export const quickComboBatchEditDish = {
   price: 15,
 } as const;
 
+export const batchPropertyMenuItems = {
+  group: 'Lunch',
+  category: 'Chicken Lunch E',
+  names: ['superman item1', 'superman item2', 'superman item3'],
+  detailItemName: 'superman item2',
+} as const;
+
+export const requiredMenuPropertyLabels = ['Gluten-free', 'Vege', 'Lactose-free'] as const;
+
 export const weightQuickComboDish = {
   name: 'weight combo',
   group: 'MansuperGroup',

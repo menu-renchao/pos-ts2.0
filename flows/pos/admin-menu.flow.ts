@@ -4,8 +4,10 @@ import type { OrderDishesPage } from '../../pages/pos/order-dishes.page.js';
 import type { RecallPage } from '../../pages/pos/recall.page.js';
 import type { MenuClient } from '../../clients/pos-api/menu.client.js';
 import {
+  batchPropertyMenuItems,
   chineseInitialSearchDish,
   quickComboBatchEditDish,
+  requiredMenuPropertyLabels,
   unitPriceDish,
   weightQuickComboDish,
 } from '../../test-data/pos/dishes.js';
@@ -38,6 +40,12 @@ export type QuickComboModeResult = {
   afterDisableQuickCombo: boolean;
   afterEnableQuickCombo: boolean;
   orderPageQuickCombo: boolean;
+};
+
+export type BatchItemPropertyResult = {
+  selectedLabels: string[];
+  itemProperties: string[];
+  allProperties: string[];
 };
 
 export class AdminMenuFlow {
@@ -202,5 +210,30 @@ export class AdminMenuFlow {
     const items = await this.recallPage.readAllOrderItems();
 
     return items.map((item) => item.name);
+  }
+
+  async batchReplaceItemPropertiesAndReadDetail(homeUrl: string): Promise<BatchItemPropertyResult> {
+    const selectedLabels = [...requiredMenuPropertyLabels];
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.batchReplaceItemPropertyLabels(
+      batchPropertyMenuItems.group,
+      batchPropertyMenuItems.category,
+      batchPropertyMenuItems.names,
+      selectedLabels,
+    );
+
+    const detail = await this.adminPage.readItemPropertyDetail(
+      batchPropertyMenuItems.group,
+      batchPropertyMenuItems.category,
+      batchPropertyMenuItems.detailItemName,
+    );
+
+    return {
+      selectedLabels,
+      itemProperties: detail.itemProperties,
+      allProperties: detail.allProperties,
+    };
   }
 }

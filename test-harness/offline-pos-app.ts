@@ -151,6 +151,15 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <button data-testid="admin-combo-display-mode-save">Save Combo Display Mode</button>
       <button data-testid="admin-combo-detail-open">Open Combo Detail</button>
       <div data-testid="admin-combo-detail-quick-combo"></div>
+      <input data-testid="admin-property-item-group" />
+      <input data-testid="admin-property-item-category" />
+      <input data-testid="admin-property-item-names" />
+      <input data-testid="admin-property-selected-labels" />
+      <button data-testid="admin-property-batch-replace">Batch Replace Properties</button>
+      <input data-testid="admin-property-detail-item" />
+      <button data-testid="admin-property-detail-open">Open Property Detail</button>
+      <div data-testid="admin-property-item-labels"></div>
+      <div data-testid="admin-property-all-labels"></div>
       <button data-testid="admin-save-settings">Save Settings</button>
       <button data-testid="admin-member-list">CRM Loyalty</button>
       <section data-testid="member-list-permission-popup" hidden>
@@ -546,6 +555,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const adminComboModes = {
         QuickComboTest: true,
       };
+      const adminAllMenuPropertyLabels = ['Gluten-free', 'Vege', 'Lactose-free', 'Spicy', 'Vegan'];
+      const adminMenuItemProperties = {};
       let adminGlobalOptions = [];
       let selectedGlobalOptionName = '';
       let adminCreatedMenuItems = [];
@@ -637,6 +648,15 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const adminComboDisplayModeSaveButton = document.querySelector('[data-testid="admin-combo-display-mode-save"]');
       const adminComboDetailOpenButton = document.querySelector('[data-testid="admin-combo-detail-open"]');
       const adminComboDetailQuickCombo = document.querySelector('[data-testid="admin-combo-detail-quick-combo"]');
+      const adminPropertyItemGroupInput = document.querySelector('[data-testid="admin-property-item-group"]');
+      const adminPropertyItemCategoryInput = document.querySelector('[data-testid="admin-property-item-category"]');
+      const adminPropertyItemNamesInput = document.querySelector('[data-testid="admin-property-item-names"]');
+      const adminPropertySelectedLabelsInput = document.querySelector('[data-testid="admin-property-selected-labels"]');
+      const adminPropertyBatchReplaceButton = document.querySelector('[data-testid="admin-property-batch-replace"]');
+      const adminPropertyDetailItemInput = document.querySelector('[data-testid="admin-property-detail-item"]');
+      const adminPropertyDetailOpenButton = document.querySelector('[data-testid="admin-property-detail-open"]');
+      const adminPropertyItemLabels = document.querySelector('[data-testid="admin-property-item-labels"]');
+      const adminPropertyAllLabels = document.querySelector('[data-testid="admin-property-all-labels"]');
       const joinMemberButton = document.querySelector('[data-testid="home-join-member"]');
       const joinMemberRegistration = document.querySelector('[data-testid="join-member-registration"]');
       const joinMemberFirstNameInput = document.querySelector('[data-testid="join-member-first-name"]');
@@ -959,6 +979,24 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
 
       function renderComboDetailQuickCombo() {
         adminComboDetailQuickCombo.textContent = String(Boolean(adminComboModes[adminComboItemNameInput.value]));
+      }
+
+      function splitCsv(value) {
+        return value.split(',').map((item) => item.trim()).filter(Boolean);
+      }
+
+      function adminPropertyKey(group, category, itemName) {
+        return group + '|' + category + '|' + itemName;
+      }
+
+      function renderItemPropertyDetail() {
+        const key = adminPropertyKey(
+          adminPropertyItemGroupInput.value,
+          adminPropertyItemCategoryInput.value,
+          adminPropertyDetailItemInput.value,
+        );
+        adminPropertyItemLabels.textContent = (adminMenuItemProperties[key] || []).join(',');
+        adminPropertyAllLabels.textContent = adminAllMenuPropertyLabels.join(',');
       }
 
       function showPanel(panel) {
@@ -2094,6 +2132,21 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       });
       adminComboDetailOpenButton.addEventListener('click', () => {
         renderComboDetailQuickCombo();
+      });
+      adminPropertyBatchReplaceButton.addEventListener('click', () => {
+        const labels = splitCsv(adminPropertySelectedLabelsInput.value);
+        splitCsv(adminPropertyItemNamesInput.value).forEach((itemName) => {
+          const key = adminPropertyKey(
+            adminPropertyItemGroupInput.value,
+            adminPropertyItemCategoryInput.value,
+            itemName,
+          );
+          adminMenuItemProperties[key] = [...labels];
+        });
+        renderItemPropertyDetail();
+      });
+      adminPropertyDetailOpenButton.addEventListener('click', () => {
+        renderItemPropertyDetail();
       });
       saveLanguageButton.addEventListener('click', () => {
         userDefaultLanguage = languageSelect.value;

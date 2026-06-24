@@ -4,7 +4,7 @@ import { AdminPage } from '../../pages/pos/admin.page.js';
 import { PosHomePage } from '../../pages/pos/home.page.js';
 import { OrderDishesPage } from '../../pages/pos/order-dishes.page.js';
 import { RecallPage } from '../../pages/pos/recall.page.js';
-import { jiraIssue } from '../../utils/jira.js';
+import { jiraIssue, jiraIssues } from '../../utils/jira.js';
 
 test.describe('stage1 admin menu migration', () => {
   test(
@@ -96,6 +96,23 @@ test.describe('stage1 admin menu migration', () => {
       const itemNames = await flow.orderWeightedQuickComboAndReadRecallItems(environment.posHomeUrl);
 
       expect(itemNames).toEqual(['weight combo']);
+    },
+  );
+
+  test(
+    'POS-42067 POS-42066 批量 Replace 菜品标签后详情页应展示所选标签',
+    {
+      annotation: jiraIssues(['POS-42067', 'POS-42066']),
+    },
+    async ({ environment, page }) => {
+      const flow = new AdminMenuFlow(new PosHomePage(page), new AdminPage(page), new OrderDishesPage(page));
+
+      const result = await flow.batchReplaceItemPropertiesAndReadDetail(environment.posHomeUrl);
+
+      expect(new Set(result.itemProperties)).toEqual(new Set(result.selectedLabels));
+      expect(result.allProperties).toEqual(
+        expect.arrayContaining(['Gluten-free', 'Vege', 'Lactose-free']),
+      );
     },
   );
 });

@@ -55,6 +55,15 @@ export class AdminPage extends PageObject {
   private readonly comboDisplayModeSaveButton: Locator;
   private readonly comboDetailOpenButton: Locator;
   private readonly comboDetailQuickComboValue: Locator;
+  private readonly propertyItemGroupInput: Locator;
+  private readonly propertyItemCategoryInput: Locator;
+  private readonly propertyItemNamesInput: Locator;
+  private readonly propertySelectedLabelsInput: Locator;
+  private readonly propertyBatchReplaceButton: Locator;
+  private readonly propertyDetailItemInput: Locator;
+  private readonly propertyDetailOpenButton: Locator;
+  private readonly propertyItemLabelsValue: Locator;
+  private readonly propertyAllLabelsValue: Locator;
   private readonly unitPriceItemGroupInput: Locator;
   private readonly unitPriceItemCategoryInput: Locator;
   private readonly unitPriceItemNameInput: Locator;
@@ -120,6 +129,15 @@ export class AdminPage extends PageObject {
     this.comboDisplayModeSaveButton = page.getByTestId('admin-combo-display-mode-save');
     this.comboDetailOpenButton = page.getByTestId('admin-combo-detail-open');
     this.comboDetailQuickComboValue = page.getByTestId('admin-combo-detail-quick-combo');
+    this.propertyItemGroupInput = page.getByTestId('admin-property-item-group');
+    this.propertyItemCategoryInput = page.getByTestId('admin-property-item-category');
+    this.propertyItemNamesInput = page.getByTestId('admin-property-item-names');
+    this.propertySelectedLabelsInput = page.getByTestId('admin-property-selected-labels');
+    this.propertyBatchReplaceButton = page.getByTestId('admin-property-batch-replace');
+    this.propertyDetailItemInput = page.getByTestId('admin-property-detail-item');
+    this.propertyDetailOpenButton = page.getByTestId('admin-property-detail-open');
+    this.propertyItemLabelsValue = page.getByTestId('admin-property-item-labels');
+    this.propertyAllLabelsValue = page.getByTestId('admin-property-all-labels');
     this.unitPriceItemGroupInput = page.getByTestId('admin-unit-price-item-group');
     this.unitPriceItemCategoryInput = page.getByTestId('admin-unit-price-item-category');
     this.unitPriceItemNameInput = page.getByTestId('admin-unit-price-item-name');
@@ -377,6 +395,41 @@ export class AdminPage extends PageObject {
     });
   }
 
+  async batchReplaceItemPropertyLabels(
+    group: string,
+    category: string,
+    itemNames: readonly string[],
+    labels: readonly string[],
+  ): Promise<void> {
+    await step(`批量替换 ${itemNames.join(', ')} 的属性标签`, async () => {
+      await expect(this.adminRoot).toBeVisible();
+      await this.propertyItemGroupInput.fill(group);
+      await this.propertyItemCategoryInput.fill(category);
+      await this.propertyItemNamesInput.fill(itemNames.join(','));
+      await this.propertySelectedLabelsInput.fill(labels.join(','));
+      await this.propertyBatchReplaceButton.click();
+    });
+  }
+
+  async readItemPropertyDetail(
+    group: string,
+    category: string,
+    itemName: string,
+  ): Promise<{ itemProperties: string[]; allProperties: string[] }> {
+    return step(`读取菜品 ${itemName} 的属性标签详情`, async () => {
+      await expect(this.adminRoot).toBeVisible();
+      await this.propertyItemGroupInput.fill(group);
+      await this.propertyItemCategoryInput.fill(category);
+      await this.propertyDetailItemInput.fill(itemName);
+      await this.propertyDetailOpenButton.click();
+
+      const itemProperties = await this.readCommaSeparatedText(this.propertyItemLabelsValue);
+      const allProperties = await this.readCommaSeparatedText(this.propertyAllLabelsValue);
+
+      return { itemProperties, allProperties };
+    });
+  }
+
   async configureUnitPriceItem(group: string, category: string, itemName: string, price: number): Promise<void> {
     await step(`配置称重菜 ${itemName}`, async () => {
       await expect(this.adminRoot).toBeVisible();
@@ -399,5 +452,15 @@ export class AdminPage extends PageObject {
         kitchenName: await this.languageKitchenNameInput.inputValue(),
       };
     });
+  }
+
+  private async readCommaSeparatedText(locator: Locator): Promise<string[]> {
+    const text = ((await locator.textContent()) ?? '').trim();
+    return text
+      ? text
+          .split(',')
+          .map((value) => value.trim())
+          .filter(Boolean)
+      : [];
   }
 }
