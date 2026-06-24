@@ -17,6 +17,14 @@ test.describe('CRM 分单', () => {
 
     expect(result.redeemItemPrices).toEqual([0, 0]);
   });
+
+  test('POS-29806 无折扣会员订单两个子单全部支付后应增加 20 积分', async ({ environment, page }) => {
+    const crmSplitOrderFlow = createCrmSplitOrderFlow(page);
+
+    const result = await crmSplitOrderFlow.paySplitMemberSubordersAndReadPoints(environment.posHomeUrl);
+
+    expect(result.pointsAfterAllSubordersPaid).toBe(result.pointsBeforePayment + result.earnedPoints);
+  });
 });
 
 function createCrmSplitOrderFlow(page: Page): CrmSplitOrderFlow {

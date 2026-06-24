@@ -1553,6 +1553,16 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       });
       recallCashButton.addEventListener('click', () => {
         if (selectedRecallOrder) {
+          if (selectedRecallOrder.subOrderStatuses?.length && selectedSubOrderIndex !== null) {
+            selectedRecallOrder.subOrderStatuses[selectedSubOrderIndex] = 'Paid';
+            selectedRecallOrder.subOrderPointEarned = selectedRecallOrder.subOrderPointEarned || [];
+            if (!selectedRecallOrder.subOrderPointEarned[selectedSubOrderIndex] && selectedRecallOrder.crmMember) {
+              selectedRecallOrder.crmMember.points += selectedRecallOrder.crmDiscountRate ? 0 : 10;
+              selectedRecallOrder.subOrderPointEarned[selectedSubOrderIndex] = true;
+            }
+            renderRecallOrderItems();
+            return;
+          }
           selectedRecallOrder.status = 'Paid';
           selectedRecallOrder.partialPaid = false;
           if (selectedRecallOrder.crmMember) {

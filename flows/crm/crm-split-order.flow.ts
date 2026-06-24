@@ -11,6 +11,12 @@ export type SplitRedeemItemPriceResult = {
   readonly redeemItemPrices: readonly number[];
 };
 
+export type SplitSuborderPaymentPointResult = {
+  readonly pointsBeforePayment: number;
+  readonly pointsAfterAllSubordersPaid: number;
+  readonly earnedPoints: number;
+};
+
 export class CrmSplitOrderFlow {
   constructor(
     private readonly homePage: PosHomePage,
@@ -44,6 +50,33 @@ export class CrmSplitOrderFlow {
 
     return {
       redeemItemPrices: [firstSubOrderRedeemPrice, secondSubOrderRedeemPrice],
+    };
+  }
+
+  async paySplitMemberSubordersAndReadPoints(homeUrl: string): Promise<SplitSuborderPaymentPointResult> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    this.crmRewardClient.findMemberByPhone(crmSourceRewardMember.phone);
+    await this.posCrmPage.openRedeem();
+    await this.posCrmPage.selectMemberByPhone(crmSourceRewardMember.phone);
+    const pointsBeforePayment = await this.posCrmPage.readHeaderPointBalance();
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.addMenuItem(categorySwitchDish.name);
+    await this.posCrmPage.openRedeemSplit();
+    await this.splitOrderPage.splitByDrag();
+    await this.splitOrderPage.save();
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.openSubOrder(1);
+    await this.recallPage.settleAllByCash();
+    await this.recallPage.openSubOrder(2);
+    await this.recallPage.settleAllByCash();
+    await this.recallPage.openSubOrder(1);
+
+    return {
+      pointsBeforePayment,
+      pointsAfterAllSubordersPaid: await this.recallPage.readCrmPointBalance(),
+      earnedPoints: 20,
     };
   }
 }
