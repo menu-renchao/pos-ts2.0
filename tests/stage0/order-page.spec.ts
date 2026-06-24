@@ -435,4 +435,66 @@ test.describe('POS 点单页面', () => {
 
     expect(result.afterCount).toBe(result.beforeCount - 3);
   });
+
+  test('切换 POS 和 EMENU 菜单模式后搜索应返回对应菜品', {
+    annotation: [jiraIssue('POS-30762')],
+  }, async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.switchMenuModesAndSearchItems(environment.posHomeUrl);
+
+    expect(result.posSearchResult).toBe('Broccoli Garlic Sauce');
+    expect(result.eMenuSearchResult).toBe('All you can eat item');
+  });
+
+  test('Modify Global Option 点击 Add 后右侧应继续展示 Modify 区域', {
+    annotation: [jiraIssue('POS-31662')],
+  }, async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.addGlobalOptionAndReadModifyArea(environment.posHomeUrl);
+
+    expect(result.modifyAreaVisibleAfterAdd).toBe(true);
+  });
+
+  test('Modify Global Option 修改数量为 5 和 0 后右侧应继续展示 Modify 区域', {
+    annotation: [jiraIssue('POS-31663')],
+  }, async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.changeGlobalOptionCountsAndReadModifyArea(environment.posHomeUrl, [5, 0]);
+
+    expect(result.modifyAreaVisibleAfterFirstCount).toBe(true);
+    expect(result.modifyAreaVisibleAfterZeroCount).toBe(true);
+    expect(result.optionCountAfterZero).toBe(0);
+  });
+
+  test('Modify Global Option 连续 Reduce 到 0 后右侧应继续展示 Modify 区域', {
+    annotation: [jiraIssue('POS-31664')],
+  }, async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.reduceGlobalOptionToZeroAndReadModifyArea(environment.posHomeUrl);
+
+    expect(result.modifyAreaVisibleAfterInitialCount).toBe(true);
+    expect(result.modifyAreaVisibleAfterReduce).toBe(true);
+    expect(result.optionCountAfterReduce).toBe(0);
+  });
 });

@@ -509,6 +509,10 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 | stage0/test_order_page.py | TestOrderPage | `test_special_price_discount` special price item discounted 50% persists expected Recall subtotal | tests/stage0/order-page.spec.ts | `OrderEntryFlow.applySpecialPriceHalfDiscountAndReadRecallSubtotal` |
 | stage0/test_order_page.py | TestOrderPage | `test_delivery_order` Delivery order creation carries customer address information into order Info | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createDeliveryOrderAndReadInfo` |
 | stage0/test_order_page.py | TestOrderPage | `test_reduce_combo_options` combo child option reduce action decreases option count by three | tests/stage0/order-page.spec.ts | `OrderEntryFlow.reduceComboOptionsAndReadCounts` |
+| stage0/test_order_page.py | TestOrderPage | `test_switch_menu_search` POS and EMENU menu modes return their expected search result items | tests/stage0/order-page.spec.ts | `OrderEntryFlow.switchMenuModesAndSearchItems` |
+| stage0/test_order_page.py | TestOrderPage | `test_modify_add` global option Add keeps the Modify area visible | tests/stage0/order-page.spec.ts | `OrderEntryFlow.addGlobalOptionAndReadModifyArea` |
+| stage0/test_order_page.py | TestOrderPage | `test_modify_count` global option count changes to five and zero keep the Modify area visible | tests/stage0/order-page.spec.ts | `OrderEntryFlow.changeGlobalOptionCountsAndReadModifyArea` |
+| stage0/test_order_page.py | TestOrderPage | `test_modify_reduce` global option reduce actions down to zero keep the Modify area visible | tests/stage0/order-page.spec.ts | `OrderEntryFlow.reduceGlobalOptionToZeroAndReadModifyArea` |
 | stage0/test_order_page.py | all `Test*` classes | add dishes, modify items, save orders, validate order totals | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createTogoOrder` |
 | stage0/test_order_settle.py | all `Test*` classes | create payable orders before settlement | tests/stage0/order-settle.spec.ts | `OrderEntryFlow.createTogoOrder` |
 
@@ -558,6 +562,10 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Special-price discount flow changes the current item price to `5.85`, applies a 50% item discount, saves, opens Recall, and reads subtotal `2.92`.
 - Delivery order flow enters phone, name, address, Apt, city, state, zip, and note, creates the Delivery order, opens order Info, and reads the same eight fields.
 - Combo option flow creates a combo with four options, reduces the option count three times, and verifies the final count is exactly three less than the initial count.
+- Menu-mode search flow sets menu mode to `POS`, searches `Broccoli Garlic Sauce`, exits the order page, sets mode to `EMENU`, searches `All you can eat item`, then restores menu mode to `POS`.
+- Modify Add flow opens a non-combo Dine In item, opens the Global Option Modify area, clicks Add, and verifies the Modify area remains visible.
+- Modify Count flow opens a non-combo Dine In item, opens Global Option Modify, sets option count to `5`, verifies the Modify area, sets count to `0`, verifies the Modify area again, and reads option count `0`.
+- Modify Reduce flow opens a non-combo Dine In item, opens Global Option Modify, sets option count to `2`, verifies the Modify area, reduces twice, verifies the Modify area again, and reads option count `0`.
 
 ### Page Responsibilities
 
@@ -570,8 +578,10 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `OrderDishesPage` owns tip input, split-even action, Open Food no-tax entry, cash payment action, and Pickup info submission.
 - `OrderDishesPage` owns option and sub-option selection plus current ordered-item name/price reads.
 - `AdminPage` owns default keyboard selection for the Open Food multi-language path.
+- `AdminPage` owns POS menu mode selection and save for search-mode behavior.
 - `DeliveryPage` owns Delivery order customer/address/note form entry and create-order submission.
 - `OrderDishesPage` owns Open Food keyboard input, item special-price input, 50% discount action, Delivery Info reads, combo add/reduce actions, and combo option-count reads.
+- `OrderDishesPage` owns menu search input, search result reads, search clear, order-page exit, Global Option Modify entry, Add/Count/Reduce actions, Modify-area visibility reads, and Global Option count reads.
 - `RecallPage` owns recalled item state, option reads, suborder tip reads, split-order combine action, order status reads, order selection, guest-name edit, customer-name reads, order total reads, split panel entry, even/item/seat/amount/drag split actions, split save/confirm/unsplit actions, suborder settlement/payment actions, suborder status reads, parent-card background reads, and split price reads.
 - `RecallPage` owns Recall subtotal reads for source cases that verify post-save subtotal instead of the active order page.
 
@@ -579,6 +589,8 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 
 - `test-data/pos/dishes.ts` owns dish, combo, option, and inventory sample data.
 - `test-data/pos/dishes.ts` owns category-level and item-level option order samples, including Chinese category and optional sub-option variants.
+- `test-data/pos/dishes.ts` owns POS/EMENU search-item names and the stable non-combo dish used to enter Global Option Modify flows.
+- `test-data/pos/admin-settings.ts` owns canonical POS menu mode values.
 - `test-data/pos/delivery.ts` owns the Delivery customer/address/note sample used by the Delivery order Info assertion.
 - `test-data/pos/languages.ts` owns canonical language and keyboard-related values reused by language and Open Food paths.
 - `test-data/pos/payments.ts` owns expected payment/tender values reused by settlement.
@@ -614,6 +626,11 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Stub special-price update replaces the selected item price, and the 50% discount floors to cents so `5.85` becomes `2.92`, matching the source assertion.
 - Stub Delivery create-order copies the entered phone, name, address, Apt, city, state, zip, and note into the order Info panel after navigating to the order page.
 - Stub combo option state starts at four options for the migrated combo sample and decrements by one for each reduce action.
+- Stub menu mode is stored in browser-local state so refresh keeps the selected mode inside the current test.
+- Stub search returns only the source-expected item for the active menu mode: `Broccoli Garlic Sauce` for `POS`, `All you can eat item` for `EMENU`.
+- Stub order exit hides the order panel and leaves home controls available for the next Admin entry.
+- Stub Global Option Modify area stays visible after Add, Count, and Reduce actions.
+- Stub Global Option count can be set directly and reduce never goes below zero.
 
 ### Live Gaps
 

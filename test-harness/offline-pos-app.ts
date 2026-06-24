@@ -50,6 +50,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         <option value="default">default</option>
         <option value="support multi language">support multi language</option>
       </select>
+      <select data-testid="admin-menu-mode">
+        <option value="POS">POS</option>
+        <option value="EMENU">EMENU</option>
+      </select>
+      <button data-testid="admin-save-settings">Save Settings</button>
     </section>
     <section data-testid="order-page" hidden>
       <div data-testid="open-food-category"></div>
@@ -60,14 +65,27 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <div data-testid="order-subtotal">0</div>
       <div data-testid="order-item-name"></div>
       <div data-testid="order-item-price">0</div>
+      <input data-testid="order-search" />
+      <button data-testid="order-search-clear">Clear Search</button>
+      <div data-testid="order-search-result"></div>
       <input data-testid="item-price-input" />
       <button data-testid="item-price-submit">Submit Price</button>
       <div data-testid="order-options"></div>
       <div data-testid="order-sub-options"></div>
       <button data-testid="order-send-kitchen">Send Kitchen</button>
+      <button data-testid="order-exit">Exit Order</button>
       <button data-testid="order-settle">Settle</button>
       <button data-testid="settle-cash">Cash</button>
       <button data-testid="order-void-item">Void Item</button>
+      <button data-testid="order-modify">Modify</button>
+      <button data-testid="global-option-no">Global Option No</button>
+      <button data-testid="global-option-list-add">Global Option Add</button>
+      <button data-testid="global-option-list-count">Global Option Count</button>
+      <button data-testid="global-option-list-reduce">Global Option Reduce</button>
+      <input data-testid="global-option-count-input" />
+      <button data-testid="global-option-count-submit">Submit Global Option Count</button>
+      <div data-testid="global-option-list-count-value">0</div>
+      <section data-testid="global-option-area" hidden>Global Option Area</section>
       <button data-testid="item-discount-10">10% Discount</button>
       <button data-testid="item-discount-50">50% Discount</button>
       <input data-testid="order-tip" />
@@ -212,6 +230,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let currentCustomerName = null;
       let currentDeliveryInfoRows = [];
       let currentComboOptionCount = 0;
+      let currentGlobalOptionCount = 0;
+      let currentMenuMode = localStorage.getItem('currentMenuMode') || 'POS';
       let savedOrders = [];
       let selectedRecallOrder = null;
       let draftSplitPrices = [];
@@ -251,14 +271,27 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const orderSubtotal = document.querySelector('[data-testid="order-subtotal"]');
       const orderItemName = document.querySelector('[data-testid="order-item-name"]');
       const orderItemPrice = document.querySelector('[data-testid="order-item-price"]');
+      const orderSearchInput = document.querySelector('[data-testid="order-search"]');
+      const orderSearchClearButton = document.querySelector('[data-testid="order-search-clear"]');
+      const orderSearchResult = document.querySelector('[data-testid="order-search-result"]');
       const itemPriceInput = document.querySelector('[data-testid="item-price-input"]');
       const itemPriceSubmitButton = document.querySelector('[data-testid="item-price-submit"]');
       const orderOptions = document.querySelector('[data-testid="order-options"]');
       const orderSubOptions = document.querySelector('[data-testid="order-sub-options"]');
       const orderSendKitchenButton = document.querySelector('[data-testid="order-send-kitchen"]');
+      const orderExitButton = document.querySelector('[data-testid="order-exit"]');
       const orderSettleButton = document.querySelector('[data-testid="order-settle"]');
       const settleCashButton = document.querySelector('[data-testid="settle-cash"]');
       const orderVoidItemButton = document.querySelector('[data-testid="order-void-item"]');
+      const orderModifyButton = document.querySelector('[data-testid="order-modify"]');
+      const globalOptionNoButton = document.querySelector('[data-testid="global-option-no"]');
+      const globalOptionListAddButton = document.querySelector('[data-testid="global-option-list-add"]');
+      const globalOptionListCountButton = document.querySelector('[data-testid="global-option-list-count"]');
+      const globalOptionListReduceButton = document.querySelector('[data-testid="global-option-list-reduce"]');
+      const globalOptionCountInput = document.querySelector('[data-testid="global-option-count-input"]');
+      const globalOptionCountSubmitButton = document.querySelector('[data-testid="global-option-count-submit"]');
+      const globalOptionListCountValue = document.querySelector('[data-testid="global-option-list-count-value"]');
+      const globalOptionArea = document.querySelector('[data-testid="global-option-area"]');
       const itemDiscountButton = document.querySelector('[data-testid="item-discount-10"]');
       const itemHalfDiscountButton = document.querySelector('[data-testid="item-discount-50"]');
       const orderTipInput = document.querySelector('[data-testid="order-tip"]');
@@ -361,6 +394,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const reservationHistoryList = document.querySelector('[data-testid="reservation-history-list"]');
       const languageSelect = document.querySelector('[data-testid="user-default-language"]');
       const saveLanguageButton = document.querySelector('[data-testid="save-user-default-language"]');
+      const menuModeSelect = document.querySelector('[data-testid="admin-menu-mode"]');
+      const saveSettingsButton = document.querySelector('[data-testid="admin-save-settings"]');
       const openFoodCategory = document.querySelector('[data-testid="open-food-category"]');
       const passwordInput = document.querySelector('[data-testid="employee-password"]');
       const saveButton = document.querySelector('[data-testid="employee-password-save"]');
@@ -447,6 +482,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         orderItemName.textContent = currentOrderItems[0]?.name || '';
         orderItemPrice.textContent = String(currentOrderItems[0]?.price || 0);
         comboOptionCount.textContent = String(currentComboOptionCount);
+        globalOptionListCountValue.textContent = String(currentGlobalOptionCount);
       }
 
       function renderDeliveryInfoRows() {
@@ -500,6 +536,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         currentCustomerName = null;
         currentDeliveryInfoRows = [];
         currentComboOptionCount = 0;
+        currentGlobalOptionCount = 0;
+        orderSearchInput.value = '';
+        orderSearchResult.textContent = '';
+        globalOptionArea.hidden = true;
         customerInfoPopup.hidden = true;
         managerPasswordPopup.hidden = true;
         renderDeliveryInfoRows();
@@ -771,6 +811,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         localStorage.setItem('userDefaultLanguage', userDefaultLanguage);
         renderLanguage();
       });
+      saveSettingsButton.addEventListener('click', () => {
+        currentMenuMode = menuModeSelect.value;
+        localStorage.setItem('currentMenuMode', currentMenuMode);
+      });
       document.querySelector('[data-testid="home-togo"]').addEventListener('click', () => {
         showPanel('order');
         resetCurrentOrder();
@@ -790,6 +834,17 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         saveCurrentOrder();
       });
       orderSendKitchenButton.addEventListener('click', () => {});
+      orderExitButton.addEventListener('click', () => {
+        showPanel('home');
+      });
+      orderSearchInput.addEventListener('input', () => {
+        const expected = currentMenuMode === 'EMENU' ? 'All you can eat item' : 'Broccoli Garlic Sauce';
+        orderSearchResult.textContent = orderSearchInput.value === expected ? expected : '';
+      });
+      orderSearchClearButton.addEventListener('click', () => {
+        orderSearchInput.value = '';
+        orderSearchResult.textContent = '';
+      });
       orderSettleButton.addEventListener('click', () => {
         customerInfoPopup.hidden = false;
       });
@@ -824,6 +879,34 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       });
       orderVoidItemButton.addEventListener('click', () => {
         managerPasswordPopup.hidden = false;
+      });
+      orderModifyButton.addEventListener('click', () => {
+        globalOptionArea.hidden = false;
+      });
+      globalOptionNoButton.addEventListener('click', () => {
+        globalOptionArea.hidden = false;
+        if (currentGlobalOptionCount === 0) {
+          currentGlobalOptionCount = 1;
+        }
+        renderOrderAmounts();
+      });
+      globalOptionListAddButton.addEventListener('click', () => {
+        currentGlobalOptionCount += 1;
+        globalOptionArea.hidden = false;
+        renderOrderAmounts();
+      });
+      globalOptionListCountButton.addEventListener('click', () => {
+        globalOptionCountInput.value = String(currentGlobalOptionCount);
+      });
+      globalOptionCountSubmitButton.addEventListener('click', () => {
+        currentGlobalOptionCount = Number(globalOptionCountInput.value || '0');
+        globalOptionArea.hidden = false;
+        renderOrderAmounts();
+      });
+      globalOptionListReduceButton.addEventListener('click', () => {
+        currentGlobalOptionCount = Math.max(0, currentGlobalOptionCount - 1);
+        globalOptionArea.hidden = false;
+        renderOrderAmounts();
       });
       managerPasswordSubmitButton.addEventListener('click', () => {
         if (managerPasswordInput.value === '11' && currentOrderItems[0]) {

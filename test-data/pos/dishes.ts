@@ -114,6 +114,11 @@ export const chineseMenuGroups = {
   chinese: '中餐菜单',
 } as const;
 
+export const menuModeSearchItems = {
+  pos: 'Broccoli Garlic Sauce',
+  emenu: 'All you can eat item',
+} as const;
+
 export const defaultMenuGroup: MenuGroupSample = {
   id: 'group-migration-menu',
   name: 'Migration Menu',

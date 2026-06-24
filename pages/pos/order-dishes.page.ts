@@ -21,6 +21,14 @@ export class OrderDishesPage extends PageObject {
   private readonly itemPriceSubmitButton: Locator;
   private readonly itemTax: Locator;
   private readonly comboOptionCount: Locator;
+  private readonly globalOptionArea: Locator;
+  private readonly globalOptionCountInput: Locator;
+  private readonly globalOptionCountSubmitButton: Locator;
+  private readonly globalOptionListAddButton: Locator;
+  private readonly globalOptionListCount: Locator;
+  private readonly globalOptionListCountButton: Locator;
+  private readonly globalOptionListReduceButton: Locator;
+  private readonly globalOptionNoButton: Locator;
   private readonly deliveryInfoButton: Locator;
   private readonly deliveryInfoRows: Locator;
   private readonly managerPasswordInput: Locator;
@@ -37,6 +45,8 @@ export class OrderDishesPage extends PageObject {
   private readonly openFoodKeyboardTextInput: Locator;
   private readonly orderItemName: Locator;
   private readonly orderOptions: Locator;
+  private readonly orderExitButton: Locator;
+  private readonly orderModifyButton: Locator;
   private readonly pickupButton: Locator;
   private readonly pickupInfoSubmitButton: Locator;
   private readonly saveOrderButton: Locator;
@@ -46,6 +56,9 @@ export class OrderDishesPage extends PageObject {
   private readonly splitEvenButton: Locator;
   private readonly subOptions: Locator;
   private readonly subtotal: Locator;
+  private readonly searchClearButton: Locator;
+  private readonly searchInput: Locator;
+  private readonly searchResult: Locator;
   private readonly tipInput: Locator;
   private readonly voidItemButton: Locator;
   private readonly comboItemButton: Locator;
@@ -67,6 +80,14 @@ export class OrderDishesPage extends PageObject {
     this.itemPriceSubmitButton = page.getByTestId('item-price-submit');
     this.itemTax = page.getByTestId('order-tax');
     this.comboOptionCount = page.getByTestId('combo-option-count');
+    this.globalOptionArea = page.getByTestId('global-option-area');
+    this.globalOptionCountInput = page.getByTestId('global-option-count-input');
+    this.globalOptionCountSubmitButton = page.getByTestId('global-option-count-submit');
+    this.globalOptionListAddButton = page.getByTestId('global-option-list-add');
+    this.globalOptionListCount = page.getByTestId('global-option-list-count-value');
+    this.globalOptionListCountButton = page.getByTestId('global-option-list-count');
+    this.globalOptionListReduceButton = page.getByTestId('global-option-list-reduce');
+    this.globalOptionNoButton = page.getByTestId('global-option-no');
     this.deliveryInfoButton = page.getByTestId('order-info');
     this.deliveryInfoRows = page.getByTestId('order-info-row');
     this.managerPasswordInput = page.getByTestId('manager-password');
@@ -83,6 +104,8 @@ export class OrderDishesPage extends PageObject {
     this.openFoodKeyboardTextInput = page.getByTestId('open-food-keyboard-text');
     this.orderItemName = page.getByTestId('order-item-name');
     this.orderOptions = page.getByTestId('order-option');
+    this.orderExitButton = page.getByTestId('order-exit');
+    this.orderModifyButton = page.getByTestId('order-modify');
     this.pickupButton = page.getByTestId('order-pickup');
     this.pickupInfoSubmitButton = page.getByTestId('pickup-info-submit');
     this.openFoodCategory = page.getByTestId('open-food-category');
@@ -94,6 +117,9 @@ export class OrderDishesPage extends PageObject {
     this.splitEvenButton = page.getByTestId('split-even');
     this.subOptions = page.getByTestId('order-sub-option');
     this.subtotal = page.getByTestId('order-subtotal');
+    this.searchClearButton = page.getByTestId('order-search-clear');
+    this.searchInput = page.getByTestId('order-search');
+    this.searchResult = page.getByTestId('order-search-result');
     this.tipInput = page.getByTestId('order-tip');
     this.voidItemButton = page.getByTestId('order-void-item');
     this.comboItemButton = page.getByTestId('order-combo-item');
@@ -137,6 +163,12 @@ export class OrderDishesPage extends PageObject {
   async saveOrder(): Promise<void> {
     await step('保存当前订单', async () => {
       await this.saveOrderButton.click();
+    });
+  }
+
+  async exitOrderPage(): Promise<void> {
+    await step('退出当前点单页面', async () => {
+      await this.orderExitButton.click();
     });
   }
 
@@ -233,6 +265,59 @@ export class OrderDishesPage extends PageObject {
 
   async readSubtotal(): Promise<number> {
     return step('读取当前订单小计', async () => Number((await this.subtotal.textContent()) ?? '0'));
+  }
+
+  async searchMenuItem(keyword: string): Promise<void> {
+    await step(`在点单页搜索菜品 ${keyword}`, async () => {
+      await this.searchInput.fill(keyword);
+    });
+  }
+
+  async readSearchResult(): Promise<string> {
+    return step('读取点单页搜索结果', async () => ((await this.searchResult.textContent()) ?? '').trim());
+  }
+
+  async clearSearch(): Promise<void> {
+    await step('清空点单页搜索条件', async () => {
+      await this.searchClearButton.click();
+    });
+  }
+
+  async openGlobalOptionModify(): Promise<void> {
+    await step('打开当前菜品的 Global Option Modify 区域', async () => {
+      await this.orderItemName.click();
+      await this.orderModifyButton.click();
+      await this.globalOptionNoButton.click();
+    });
+  }
+
+  async addGlobalOptionListItem(): Promise<void> {
+    await step('点击 Global Option 列表 Add', async () => {
+      await this.globalOptionListAddButton.click();
+    });
+  }
+
+  async setGlobalOptionListCount(count: number): Promise<void> {
+    await step(`设置 Global Option 列表数量为 ${count}`, async () => {
+      await this.globalOptionListCountButton.click();
+      await this.globalOptionCountInput.fill(String(count));
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      await this.globalOptionCountSubmitButton.click();
+    });
+  }
+
+  async reduceGlobalOptionListItem(): Promise<void> {
+    await step('点击 Global Option 列表 Reduce', async () => {
+      await this.globalOptionListReduceButton.click();
+    });
+  }
+
+  async isGlobalOptionModifyAreaVisible(): Promise<boolean> {
+    return step('判断 Modify Global Option 区域是否展示', async () => this.globalOptionArea.isVisible());
+  }
+
+  async readGlobalOptionListCount(): Promise<number> {
+    return step('读取 Global Option 列表数量', async () => Number((await this.globalOptionListCount.textContent()) ?? '0'));
   }
 
   async addModifyNote(name: string, price: number): Promise<void> {

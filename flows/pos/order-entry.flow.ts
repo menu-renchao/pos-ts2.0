@@ -4,7 +4,13 @@ import type { DeliveryPage } from '../../pages/pos/delivery.page.js';
 import type { OrderDishesPage } from '../../pages/pos/order-dishes.page.js';
 import type { RecalledItemOption, RecalledOrderItem, RecallPage } from '../../pages/pos/recall.page.js';
 import type { DishSample, OptionOrderSample } from '../../test-data/pos/domain-types.js';
-import { discountableDish, groupSwitchDish, categorySwitchDish } from '../../test-data/pos/dishes.js';
+import { menuModes } from '../../test-data/pos/admin-settings.js';
+import {
+  discountableDish,
+  groupSwitchDish,
+  categorySwitchDish,
+  menuModeSearchItems,
+} from '../../test-data/pos/dishes.js';
 import { deliveryOrderInfoSample } from '../../test-data/pos/delivery.js';
 import { languageOptions } from '../../test-data/pos/languages.js';
 
@@ -66,6 +72,27 @@ export type DragSplitPaymentStatusResult = {
 export type ComboOptionCountResult = {
   beforeCount: number;
   afterCount: number;
+};
+
+export type MenuModeSearchResult = {
+  posSearchResult: string;
+  eMenuSearchResult: string;
+};
+
+export type GlobalOptionAddResult = {
+  modifyAreaVisibleAfterAdd: boolean;
+};
+
+export type GlobalOptionCountResult = {
+  modifyAreaVisibleAfterFirstCount: boolean;
+  modifyAreaVisibleAfterZeroCount: boolean;
+  optionCountAfterZero: number;
+};
+
+export type GlobalOptionReduceResult = {
+  modifyAreaVisibleAfterInitialCount: boolean;
+  modifyAreaVisibleAfterReduce: boolean;
+  optionCountAfterReduce: number;
 };
 
 export class OrderEntryFlow {
@@ -350,6 +377,69 @@ export class OrderEntryFlow {
     await this.orderDishesPage.reduceComboOption();
     const afterCount = await this.orderDishesPage.readComboOptionCount();
     return { beforeCount, afterCount };
+  }
+
+  async switchMenuModesAndSearchItems(homeUrl: string): Promise<MenuModeSearchResult> {
+    if (!this.adminPage) {
+      throw new Error('AdminPage is required for menu mode setup');
+    }
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.setPosMenuMode(menuModes.pos);
+    await this.homePage.refresh();
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.searchMenuItem(menuModeSearchItems.pos);
+    const posSearchResult = await this.orderDishesPage.readSearchResult();
+    await this.orderDishesPage.clearSearch();
+    await this.orderDishesPage.exitOrderPage();
+
+    await this.homePage.clickAdmin();
+    await this.adminPage.setPosMenuMode(menuModes.emenu);
+    await this.homePage.refresh();
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.searchMenuItem(menuModeSearchItems.emenu);
+    const eMenuSearchResult = await this.orderDishesPage.readSearchResult();
+    await this.orderDishesPage.clearSearch();
+    await this.orderDishesPage.exitOrderPage();
+
+    await this.homePage.clickAdmin();
+    await this.adminPage.setPosMenuMode(menuModes.pos);
+    await this.homePage.refresh();
+    return { posSearchResult, eMenuSearchResult };
+  }
+
+  async addGlobalOptionAndReadModifyArea(homeUrl: string): Promise<GlobalOptionAddResult> {
+    await this.openDineInOrderAndAddDish(homeUrl, groupSwitchDish);
+    await this.orderDishesPage.openGlobalOptionModify();
+    await this.orderDishesPage.addGlobalOptionListItem();
+    const modifyAreaVisibleAfterAdd = await this.orderDishesPage.isGlobalOptionModifyAreaVisible();
+    return { modifyAreaVisibleAfterAdd };
+  }
+
+  async changeGlobalOptionCountsAndReadModifyArea(
+    homeUrl: string,
+    counts: readonly [number, number],
+  ): Promise<GlobalOptionCountResult> {
+    await this.openDineInOrderAndAddDish(homeUrl, groupSwitchDish);
+    await this.orderDishesPage.openGlobalOptionModify();
+    await this.orderDishesPage.setGlobalOptionListCount(counts[0]);
+    const modifyAreaVisibleAfterFirstCount = await this.orderDishesPage.isGlobalOptionModifyAreaVisible();
+    await this.orderDishesPage.setGlobalOptionListCount(counts[1]);
+    const modifyAreaVisibleAfterZeroCount = await this.orderDishesPage.isGlobalOptionModifyAreaVisible();
+    const optionCountAfterZero = await this.orderDishesPage.readGlobalOptionListCount();
+    return { modifyAreaVisibleAfterFirstCount, modifyAreaVisibleAfterZeroCount, optionCountAfterZero };
+  }
+
+  async reduceGlobalOptionToZeroAndReadModifyArea(homeUrl: string): Promise<GlobalOptionReduceResult> {
+    await this.openDineInOrderAndAddDish(homeUrl, groupSwitchDish);
+    await this.orderDishesPage.openGlobalOptionModify();
+    await this.orderDishesPage.setGlobalOptionListCount(2);
+    const modifyAreaVisibleAfterInitialCount = await this.orderDishesPage.isGlobalOptionModifyAreaVisible();
+    await this.orderDishesPage.reduceGlobalOptionListItem();
+    await this.orderDishesPage.reduceGlobalOptionListItem();
+    const modifyAreaVisibleAfterReduce = await this.orderDishesPage.isGlobalOptionModifyAreaVisible();
+    const optionCountAfterReduce = await this.orderDishesPage.readGlobalOptionListCount();
+    return { modifyAreaVisibleAfterInitialCount, modifyAreaVisibleAfterReduce, optionCountAfterReduce };
   }
 
   private async openOrderAndAddDish(homeUrl: string, dish: DishSample): Promise<void> {
