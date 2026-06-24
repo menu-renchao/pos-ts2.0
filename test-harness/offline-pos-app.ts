@@ -98,6 +98,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <button data-testid="order-exit">Exit Order</button>
       <button data-testid="order-settle">Settle</button>
       <div data-testid="settle-total">0</div>
+      <div data-testid="settle-unpaid-amount">0</div>
       <button data-testid="settle-cash">Cash</button>
       <button data-testid="settle-select-member">Select Member</button>
       <button data-testid="settle-switch-member">Switch Member</button>
@@ -374,6 +375,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const orderExitButton = document.querySelector('[data-testid="order-exit"]');
       const orderSettleButton = document.querySelector('[data-testid="order-settle"]');
       const settleTotal = document.querySelector('[data-testid="settle-total"]');
+      const settleUnpaidAmount = document.querySelector('[data-testid="settle-unpaid-amount"]');
       const settleCashButton = document.querySelector('[data-testid="settle-cash"]');
       const settleSelectMemberButton = document.querySelector('[data-testid="settle-select-member"]');
       const settleSwitchMemberButton = document.querySelector('[data-testid="settle-switch-member"]');
@@ -713,6 +715,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         orderSubtotal.textContent = String(Number(subtotal.toFixed(2)));
         orderReward.textContent = formatRewardDiscount(rewardDiscount, currentCrmDiscountRate);
         settleTotal.textContent = String(Number((subtotal + rewardDiscount).toFixed(2)));
+        settleUnpaidAmount.textContent = String(calculatePayPageUnpaidAmount(subtotal, rewardDiscount, itemCount));
         orderItemName.textContent = currentOrderItems[0]?.name || '';
         orderItemPrice.textContent = String(currentOrderItems[0]?.price || 0);
         comboOptionCount.textContent = String(currentComboOptionCount);
@@ -738,6 +741,15 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         const discount = Number((Number(order?.subtotal || 0) * Number(order?.crmDiscountRate || 0)).toFixed(2));
         const cappedDiscount = order?.crmDiscountMaxAmount == null ? discount : Math.min(discount, Number(order.crmDiscountMaxAmount));
         return Number((cappedDiscount * -1).toFixed(2));
+      }
+
+      function calculatePayPageUnpaidAmount(subtotal, rewardDiscount, itemCount) {
+        if (!subtotal) {
+          return 0;
+        }
+        const discountedSubtotal = Number((Number(subtotal) + Number(rewardDiscount || 0)).toFixed(2));
+        const taxRate = Number((itemCount * 0.6).toFixed(2)) / Number(subtotal);
+        return Number((discountedSubtotal + discountedSubtotal * taxRate).toFixed(2));
       }
 
       function earnPointsForSubtotal(subtotal) {

@@ -55,6 +55,7 @@ export class OrderDishesPage extends PageObject {
   private readonly settleButton: Locator;
   private readonly settleCashButton: Locator;
   private readonly settleTotal: Locator;
+  private readonly settleUnpaidAmount: Locator;
   private readonly settleSelectMemberButton: Locator;
   private readonly settleSwitchMemberButton: Locator;
   private readonly settleApplyMemberButton: Locator;
@@ -123,6 +124,7 @@ export class OrderDishesPage extends PageObject {
     this.settleButton = page.getByTestId('order-settle');
     this.settleCashButton = page.getByTestId('settle-cash');
     this.settleTotal = page.getByTestId('settle-total');
+    this.settleUnpaidAmount = page.getByTestId('settle-unpaid-amount');
     this.settleSelectMemberButton = page.getByTestId('settle-select-member');
     this.settleSwitchMemberButton = page.getByTestId('settle-switch-member');
     this.settleApplyMemberButton = page.getByTestId('settle-apply-member');
@@ -220,6 +222,10 @@ export class OrderDishesPage extends PageObject {
 
   async readSettlementTotal(): Promise<number> {
     return step('读取结算页订单总额', async () => Number((await this.settleTotal.textContent()) ?? '0'));
+  }
+
+  async readSettlementUnpaidAmount(): Promise<number> {
+    return step('读取结算页未付金额', async () => Number((await this.settleUnpaidAmount.textContent()) ?? '0'));
   }
 
   async applySettlementMember(): Promise<void> {

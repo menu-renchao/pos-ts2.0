@@ -129,7 +129,9 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 | crm/test_crm_order_redeem_discount.py | TestRedeemDiscount | `test_reduce_item0` | tests/crm/crm-order-redeem-discount.spec.ts | `CrmOrderRedeemDiscountFlow.applyDiscountThenReduceItemsToZeroAndReadReward` |
 | crm/test_crm_order_redeem_discount.py | TestRedeemDiscount | `test_redeem_amount` | tests/crm/crm-order-redeem-discount.spec.ts | `CrmOrderRedeemDiscountFlow.redeemFixedAmountPayAndReadPointBalance` |
 | crm/test_crm_order_redeem_discount.py | TestRedeemDiscount | `test_redeem_percentage` | tests/crm/crm-order-redeem-discount.spec.ts | `CrmOrderRedeemDiscountFlow.redeemPercentageDiscountPayAndReadPointBalance` |
-| crm/test_crm_paypage.py | TestCrmPayPage | `test_redeem_*`, `test_pay_page_redeem_item`, `test_semipay_page_redeem_*` | tests/crm/crm-paypage.spec.ts | `CrmSettlementFlow.applyPayPageRedeem`, `CrmSettlementFlow.applySemiPayRedeem` |
+| crm/test_crm_paypage.py | TestCrmPayPage | `test_redeem_discount` | tests/crm/crm-paypage.spec.ts | `CrmPayPageFlow.applyPayPageDiscountAndReadUnpaidAmount` |
+| crm/test_crm_paypage.py | TestCrmPayPage | `test_redeem_switch_member` | tests/crm/crm-paypage.spec.ts | `CrmPayPageFlow.switchMemberApplyPayPageDiscountAndReadPoints` |
+| crm/test_crm_paypage.py | TestCrmPayPage | `test_pay_page_redeem_item`, `test_semipay_page_redeem_*` | tests/crm/crm-paypage.spec.ts | `CrmSettlementFlow.applyPayPageRedeem`, `CrmSettlementFlow.applySemiPayRedeem` |
 | crm/test_crm_points_calculation.py | TestCrmPointsCalculation | `test_login_member_redeem_point`, `test_earn_points_rules_by_spent_pos_order`, `test_redeem_free_item_modify_global_option` | tests/crm/crm-points-calculation.spec.ts | `CrmPointsFlow.redeemPoints`, `CrmPointsFlow.earnPointsForOrder` |
 
 ### Preconditions
@@ -158,6 +160,8 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 15. `CrmOrderRedeemDiscountFlow.applyDiscountThenReduceItemsToZeroAndReadReward`: create a Dine In order, attach `crmSourceRewardMember`, apply `10% Off`, add `groupSwitchDish`, read subtotal and current Reward Discount, reduce the item to zero, and read the Reward Discount display text.
 16. `CrmOrderRedeemDiscountFlow.redeemFixedAmountPayAndReadPointBalance`: create a Dine In order, attach `crmSourceRewardMember`, read original points, add `groupSwitchDish`, redeem `$10.00`, read deducted points, save, recall, pay cash, read recalled points, then confirm Admin CRM Loyalty points.
 17. `CrmOrderRedeemDiscountFlow.redeemPercentageDiscountPayAndReadPointBalance`: create a Dine In order, attach `crmSourceRewardMember`, read original points, add `groupSwitchDish`, redeem `10% Off`, read deducted points, save, recall, pay cash, read recalled points, then confirm Admin CRM Loyalty points.
+18. `CrmPayPageFlow.applyPayPageDiscountAndReadUnpaidAmount`: create a Dine In order, attach `crmSourceRewardMember`, add `groupSwitchDish`, read subtotal and tax, enter payment page, redeem `10% Off`, and read payment-page unpaid amount.
+19. `CrmPayPageFlow.switchMemberApplyPayPageDiscountAndReadPoints`: create a Dine In order with `crmSourceRewardMember`, read source points, add `groupSwitchDish`, enter payment page, switch to `crmTargetRewardMember`, read target points, redeem `10% Off`, save the order, then read both members in Admin CRM Loyalty.
 
 ### Expected Assertions
 
@@ -177,6 +181,8 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 - POS-29561 verifies the current order Reward Discount recalculates to the source-equivalent text `-0.00` after the only item is reduced to zero.
 - POS-29608 verifies `$10.00` Fixed Amount redeem deducts 10 points immediately, cash payment earns the single-order points back to the original balance, and Admin CRM Loyalty matches the paid balance.
 - POS-29578 verifies `10% Off` Percentage Off redeem deducts 10 points immediately, cash payment earns the single-order points back to the original balance, and Admin CRM Loyalty matches the paid balance.
+- POS-29638 verifies payment-page unpaid amount is recalculated from discounted subtotal plus tax computed from the original tax rate.
+- POS-29668 verifies payment-page Switch Member leaves the original member points unchanged and deducts 10 points from the switched member after applying `10% Off`.
 
 ### Page Responsibilities
 
@@ -196,6 +202,8 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 - `OrderDishesPage.readSubtotal`, `OrderDishesPage.readRewardText`, and `OrderDishesPage.reduceFirstItemToZero` own the current-order price recalculation checks used by POS-29561.
 - `RecallPage.readOrderPriceSummary` owns recalled-order subtotal and Reward Discount reads for POS-29552 and POS-29554.
 - `PosCrmPage.applyRedeemAmount`, `PosCrmPage.readHeaderPointBalance`, `RecallPage.settleAllByCash`, `RecallPage.readCrmOrderHeaderInfo`, and `PosCrmPage.readMemberSearchPointResult` own the point-balance path for POS-29608 and POS-29578.
+- `OrderDishesPage.readTax`, `OrderDishesPage.clickSettle`, and `OrderDishesPage.readSettlementUnpaidAmount` own payment-page amount reads for POS-29638.
+- `OrderDishesPage.clickSettlementSwitchMember` and `OrderDishesPage.saveOrder` own payment-page member switching and save behavior for POS-29668.
 
 ### Client/Data Responsibilities
 
@@ -228,6 +236,8 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 - Offline `$10.00` Fixed Amount and `10% Off` Percentage Off deduct 10 points from the shared CRM member record.
 - Offline deleting a redeem discount, removing a member, or switching to a different member refunds the active redeem point deduction before changing member context.
 - Offline cash payment earns deterministic points from order subtotal, so a single `groupSwitchDish` order earns 10 points while existing multi-item and combined orders continue to earn 20 points.
+- Offline payment-page unpaid amount is a separate DOM value from settlement total; it uses discounted subtotal plus the source-equivalent tax rate while existing settlement-total assertions remain tax-free.
+- Offline payment-page member switching reuses the Redeem member selector and applies the `10% Off` point deduction to the active switched member only.
 
 ### Live Gaps
 
