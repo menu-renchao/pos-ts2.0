@@ -1369,6 +1369,15 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
             comboSubItems: ['Vegetable Spring Roll'],
             quickCombo: adminComboModes.QuickComboTest,
           },
+          {
+            name: 'weight combo',
+            price: 12,
+            group: 'MansuperGroup',
+            category: 'MansuperCat',
+            comboSubItems: ['Vegetable Spring Roll'],
+            quickCombo: true,
+            weight: 100,
+          },
           ...adminCreatedMenuItems,
         ];
       }

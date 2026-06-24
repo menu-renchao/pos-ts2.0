@@ -1030,6 +1030,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 | stage1/test_admin_menu.py | TestAdminMenu | `test_global_option_add_printer` created Global Option receives Cash then Runner printers | tests/stage1/admin-menu.spec.ts | `AdminMenuFlow.addPrintersToGlobalOptionAndReadPrinters` |
 | stage1/test_admin_menu.py | TestAdminMenu | `test_menu_item_count` POS menu displayed item count equals MenuAPI count | tests/stage1/admin-menu.spec.ts | `AdminMenuFlow.readPosMenuItemCountFromPageAndApi` |
 | stage1/test_admin_menu.py | TestAdminMenu | `test_batch_edit_combo_mode` POS-42064 batch edit quick combo display mode and order it | tests/stage1/admin-menu.spec.ts | `AdminMenuFlow.batchEditQuickComboModeAndReadStates` |
+| stage1/test_admin_menu.py | TestAdminMenu | `test_batch_edit_combo_mode` POS-44624 weighted quick combo saves and recalls main combo name | tests/stage1/admin-menu.spec.ts | `AdminMenuFlow.orderWeightedQuickComboAndReadRecallItems` |
 
 ### Preconditions
 
@@ -1044,6 +1045,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - POS-35406 uses source-equivalent `Global Option Group` / `Sauce`, option name `global option add printer test`, option price `10`, and printer names `Cash` then `Runner`.
 - POS-36298 compares Admin Menu's displayed POS product-line count with the source-equivalent Menu API response.
 - POS-42064 uses source-equivalent `QuickComboTest` in `MansuperGroup` / `MansuperCat`, created in round-one stub data instead of reading `quick_combo_request.json` through live `MenuAPI`.
+- POS-44624 uses source-equivalent weighted quick combo `weight combo`, weight `100`, section `rcs2`, and sub item `Vegetable Spring Roll`.
 
 ### Steps
 
@@ -1063,6 +1065,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 14. For POS-42064, batch edit `QuickComboTest` display mode to regular, open item detail, and read that Quick Combo is false.
 15. Batch edit `QuickComboTest` display mode back to quick, open item detail, and read that Quick Combo is true.
 16. Return to POS home, enter Dine In, select `MansuperGroup` / `MansuperCat`, order `QuickComboTest`, and read that the current order item is Quick Combo.
+17. For POS-44624, enter Dine In, select `MansuperGroup` / `MansuperCat`, order weighted quick combo `weight combo`, save the order, enter Recall, open the recent order, and read the recalled item names.
 
 ### Expected Assertions
 
@@ -1073,6 +1076,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - POS-35406 verifies the first Add Printer action returns exactly `Cash`, and the second Add Printer action returns exactly `Cash` plus `Runner` in order.
 - POS-36298 verifies the displayed POS menu item count equals the Menu API POS `menuItemCount` and is greater than 0.
 - POS-42064 verifies the item detail Quick Combo indicator is false after disabling, true after enabling, and true after ordering the item on the POS order page.
+- POS-44624 verifies the Recall ordered item list is exactly `["weight combo"]` after saving the weighted quick combo order.
 
 ### Page Responsibilities
 
@@ -1088,6 +1092,8 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `AdminPage.readMenuItemCount` owns the POS-36298 Admin Menu product-line count read from the page.
 - `AdminPage.batchEditComboDisplayMode` and `AdminPage.readComboDetailQuickCombo` own the POS-42064 batch edit and item-detail verification path.
 - `OrderDishesPage.selectMenuGroup`, `OrderDishesPage.selectMenuCategory`, `OrderDishesPage.addMenuItem`, and `OrderDishesPage.isCurrentQuickCombo` own the POS-42064 order-page verification path.
+- `OrderDishesPage.selectMenuGroup`, `OrderDishesPage.selectMenuCategory`, `OrderDishesPage.addMenuItem`, and `OrderDishesPage.saveOrder` own the POS-44624 weighted quick-combo order creation path.
+- `RecallPage.openRecentOrder` and `RecallPage.readAllOrderItems` own the POS-44624 Recall verification path.
 
 ### Client/Data Responsibilities
 
@@ -1099,6 +1105,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - POS-35406 has no live client dependency in round one; the offline POS stub owns created Global Option records and assigned printer names.
 - `StubMenuClient.getAllMenuGroupInfo` owns the round-one source-equivalent `MenuAPI().get_all_menu_group_info()` response for POS-36298.
 - `test-data/pos/dishes.ts` owns `quickComboBatchEditDish`, preserving the source item name, group, and category for POS-42064.
+- `test-data/pos/dishes.ts` owns `weightQuickComboDish`, preserving the source item name, group, category, weight, and sub item for POS-44624.
 
 ### Stub Behavior
 
@@ -1111,6 +1118,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Offline harness stores created Global Options in page memory, assigns selected printers without duplicates, returns printer names in append order, and deletes the created option during cleanup.
 - Offline harness renders the POS product-line menu item count from the same deterministic count used by `StubMenuClient`.
 - Offline harness stores `QuickComboTest` combo-display mode in page memory, reflects it in Admin item detail, and copies the current value onto the ordered item so the order page can verify Quick Combo state.
+- Offline harness includes `weight combo` as a quick combo menu item with sub item `Vegetable Spring Roll`; saving the order stores the main combo line so Recall returns `weight combo`.
 
 ### Live Gaps
 
@@ -1128,3 +1136,5 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 | api | POS-36298 live verification depends on authenticated `MenuAPI().get_all_menu_group_info()` access and matching tenant data | Add live Menu API client wiring and ensure the UI and API read the same store/tenant |
 | selector | POS-42064 batch edit, item detail Quick Combo flag, save/back navigation, and order-page Quick Combo state need live DOM confirmation | Confirm stable selectors or request `data-testid` |
 | data | POS-42064 source fixture creates `QuickComboTest` from `quick_combo_request.json` when missing | Add live setup through MenuAPI or a seeded menu fixture before live smoke |
+| selector | POS-44624 weighted quick-combo item selection, weight input/confirmation, save completion, and Recall item list need live DOM confirmation | Confirm stable selectors or request `data-testid` |
+| data | POS-44624 source fixture creates `weight combo` from `combo_weight.json` when missing | Add live setup through MenuAPI or a seeded weighted quick-combo fixture before live smoke |

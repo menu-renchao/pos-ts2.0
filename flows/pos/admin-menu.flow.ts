@@ -1,8 +1,14 @@
 import type { AdminPage } from '../../pages/pos/admin.page.js';
 import type { PosHomePage } from '../../pages/pos/home.page.js';
 import type { OrderDishesPage } from '../../pages/pos/order-dishes.page.js';
+import type { RecallPage } from '../../pages/pos/recall.page.js';
 import type { MenuClient } from '../../clients/pos-api/menu.client.js';
-import { chineseInitialSearchDish, quickComboBatchEditDish, unitPriceDish } from '../../test-data/pos/dishes.js';
+import {
+  chineseInitialSearchDish,
+  quickComboBatchEditDish,
+  unitPriceDish,
+  weightQuickComboDish,
+} from '../../test-data/pos/dishes.js';
 
 const posMenuProductLine = 'POS Menu';
 const emenuProductLine = 'Emenu Menu';
@@ -40,6 +46,7 @@ export class AdminMenuFlow {
     private readonly adminPage: AdminPage,
     private readonly orderDishesPage: OrderDishesPage,
     private readonly menuClient?: MenuClient,
+    private readonly recallPage?: RecallPage,
   ) {}
 
   async copyPosGlobalOptionGroupToEmenuAndReadCount(homeUrl: string): Promise<number> {
@@ -176,5 +183,24 @@ export class AdminMenuFlow {
       afterEnableQuickCombo,
       orderPageQuickCombo,
     };
+  }
+
+  async orderWeightedQuickComboAndReadRecallItems(homeUrl: string): Promise<string[]> {
+    if (!this.recallPage) {
+      throw new Error('RecallPage is required to verify weighted quick combo in Recall.');
+    }
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(weightQuickComboDish.group);
+    await this.orderDishesPage.selectMenuCategory(weightQuickComboDish.category);
+    await this.orderDishesPage.addMenuItem(weightQuickComboDish.name);
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    const items = await this.recallPage.readAllOrderItems();
+
+    return items.map((item) => item.name);
   }
 }

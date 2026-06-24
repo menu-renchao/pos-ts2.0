@@ -3,6 +3,7 @@ import { AdminMenuFlow } from '../../flows/pos/admin-menu.flow.js';
 import { AdminPage } from '../../pages/pos/admin.page.js';
 import { PosHomePage } from '../../pages/pos/home.page.js';
 import { OrderDishesPage } from '../../pages/pos/order-dishes.page.js';
+import { RecallPage } from '../../pages/pos/recall.page.js';
 import { jiraIssue } from '../../utils/jira.js';
 
 test.describe('stage1 admin menu migration', () => {
@@ -75,6 +76,26 @@ test.describe('stage1 admin menu migration', () => {
       expect(result.afterDisableQuickCombo).toBe(false);
       expect(result.afterEnableQuickCombo).toBe(true);
       expect(result.orderPageQuickCombo).toBe(true);
+    },
+  );
+
+  test(
+    'POS-44624 称重 Quick Combo 保存后 Recall 应保留主套餐菜名',
+    {
+      annotation: jiraIssue('POS-44624'),
+    },
+    async ({ environment, page }) => {
+      const flow = new AdminMenuFlow(
+        new PosHomePage(page),
+        new AdminPage(page),
+        new OrderDishesPage(page),
+        undefined,
+        new RecallPage(page),
+      );
+
+      const itemNames = await flow.orderWeightedQuickComboAndReadRecallItems(environment.posHomeUrl);
+
+      expect(itemNames).toEqual(['weight combo']);
     },
   );
 });

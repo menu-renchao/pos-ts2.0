@@ -247,6 +247,15 @@ export const quickComboBatchEditDish = {
   price: 15,
 } as const;
 
+export const weightQuickComboDish = {
+  name: 'weight combo',
+  group: 'MansuperGroup',
+  category: 'MansuperCat',
+  subItemName: 'Vegetable Spring Roll',
+  weight: 100,
+  price: 12,
+} as const;
+
 export const defaultMenuGroup: MenuGroupSample = {
   id: 'group-migration-menu',
   name: 'Migration Menu',
