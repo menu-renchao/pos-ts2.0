@@ -8,6 +8,7 @@ import type { DishSample, OptionOrderSample } from '../../test-data/pos/domain-t
 import { combineSameItemModes, menuModes } from '../../test-data/pos/admin-settings.js';
 import {
   categoryOptionDish,
+  chineseInitialSearchDish,
   discountableDish,
   editableComboDish,
   groupSwitchDish,
@@ -119,6 +120,11 @@ export type NumberedNameSearchResult = {
   searchKeyword: string;
   searchResultText: string;
   searchResultCount: number;
+};
+
+export type ChineseInitialSearchResult = {
+  searchKeyword: string;
+  searchResultText: string;
 };
 
 export type ItemCountRecallResult = {
@@ -695,6 +701,31 @@ export class OrderEntryFlow {
       searchKeyword: numberedNameConflictDish.name,
       searchResultText,
       searchResultCount,
+    };
+  }
+
+  async configureChineseItemNameAndSearchByInitials(homeUrl: string): Promise<ChineseInitialSearchResult> {
+    if (!this.adminPage) {
+      throw new Error('AdminPage is required for item Chinese name setup');
+    }
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.setItemChineseName(
+      chineseInitialSearchDish.group,
+      chineseInitialSearchDish.category,
+      chineseInitialSearchDish.name,
+      chineseInitialSearchDish.chineseName,
+    );
+    await this.homePage.refresh();
+    await this.homePage.switchLanguage(languageOptions.chinese);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.searchMenuItem(chineseInitialSearchDish.searchKeyword);
+    const searchResultText = await this.orderDishesPage.readSearchResult();
+    await this.orderDishesPage.exitOrderPage();
+    await this.homePage.switchLanguage(languageOptions.default);
+    return {
+      searchKeyword: chineseInitialSearchDish.searchKeyword,
+      searchResultText,
     };
   }
 

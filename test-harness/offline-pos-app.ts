@@ -96,6 +96,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <input data-testid="admin-kds-item-name" />
       <input data-testid="admin-kds-pos-name" />
       <button data-testid="admin-kds-pos-name-save">Save Item POS Name</button>
+      <input data-testid="admin-item-group" />
+      <input data-testid="admin-item-category" />
+      <input data-testid="admin-item-name" />
+      <input data-testid="admin-item-chinese-name" />
+      <button data-testid="admin-item-chinese-name-save">Save Item Chinese Name</button>
       <button data-testid="admin-save-settings">Save Settings</button>
       <button data-testid="admin-member-list">CRM Loyalty</button>
       <section data-testid="member-list-permission-popup" hidden>
@@ -418,6 +423,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let currentOrderChargeRate = 0;
       let currentOrderChargeLabel = '';
       let currentItemPosNames = JSON.parse(localStorage.getItem('currentItemPosNames') || '{}');
+      let currentItemChineseNames = JSON.parse(localStorage.getItem('currentItemChineseNames') || '{}');
       let currentCrmMember = null;
       let currentCrmDiscountRate = 0;
       let currentCrmDiscountMaxAmount = null;
@@ -485,6 +491,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const kdsItemNameInput = document.querySelector('[data-testid="admin-kds-item-name"]');
       const kdsItemPosNameInput = document.querySelector('[data-testid="admin-kds-pos-name"]');
       const kdsItemPosNameSaveButton = document.querySelector('[data-testid="admin-kds-pos-name-save"]');
+      const adminItemGroupInput = document.querySelector('[data-testid="admin-item-group"]');
+      const adminItemCategoryInput = document.querySelector('[data-testid="admin-item-category"]');
+      const adminItemNameInput = document.querySelector('[data-testid="admin-item-name"]');
+      const adminItemChineseNameInput = document.querySelector('[data-testid="admin-item-chinese-name"]');
+      const adminItemChineseNameSaveButton = document.querySelector('[data-testid="admin-item-chinese-name-save"]');
       const joinMemberButton = document.querySelector('[data-testid="home-join-member"]');
       const joinMemberRegistration = document.querySelector('[data-testid="join-member-registration"]');
       const joinMemberFirstNameInput = document.querySelector('[data-testid="join-member-first-name"]');
@@ -1111,12 +1122,21 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           { name: 'Item Option Pork', price: 12, group: 'Dinner Menu', category: 'Item Options' },
           { name: 'Item Option Seafood', price: 12.75, group: 'Dinner Menu', category: 'Item Options' },
           { name: 'AA', number: 'AA', price: 10, group: 'Dinner Menu', category: 'Chicken Lunch E' },
+          { name: 'hn_normal_item1', searchKeyword: 'ptc', price: 10, group: 'Lunch', category: 'hn_cate' },
           { name: 'Mongolian Chicken', price: 10, group: 'Lunch', category: 'KDS' },
           { name: 'Pos Name Test', price: 10, group: 'Lunch', category: 'KDS' },
         ];
       }
 
+      function effectiveLanguage() {
+        return currentLanguage === 'Chinese' || userDefaultLanguage === 'Chinese' ? 'Chinese' : 'Default';
+      }
+
       function menuDisplayName(dish) {
+        const chineseConfig = currentItemChineseNames[dish.name];
+        if (effectiveLanguage() === 'Chinese' && chineseConfig?.chineseName) {
+          return chineseConfig.chineseName;
+        }
         return currentItemPosNames[dish.name] || dish.posName || dish.name;
       }
 
@@ -1290,7 +1310,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           orderMenuGroups.appendChild(createButton('order-menu-group', group, () => {}));
         });
         orderMenuCategories.innerHTML = '';
-        ['Chicken Lunch E', 'Lunch Entree', 'Seafood', 'Burgers', 'Category Option', 'KDS鸡肉类午餐', 'Item Options', 'KDS', 'MansuperCat'].forEach((category) => {
+        ['Chicken Lunch E', 'Lunch Entree', 'Seafood', 'Burgers', 'Category Option', 'KDS鸡肉类午餐', 'Item Options', 'hn_cate', 'KDS', 'MansuperCat'].forEach((category) => {
           orderMenuCategories.appendChild(createButton('order-menu-category', category, () => {
             currentCategoryName = category;
             currentCategoryNameText.textContent = currentCategoryName;
@@ -1737,6 +1757,21 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         localStorage.setItem('currentItemPosNames', JSON.stringify(currentItemPosNames));
         renderOrderMenu();
       });
+      adminItemChineseNameSaveButton.addEventListener('click', () => {
+        currentItemChineseNames = {
+          ...currentItemChineseNames,
+          [adminItemNameInput.value]: {
+            group: adminItemGroupInput.value,
+            category: adminItemCategoryInput.value,
+            chineseName: adminItemChineseNameInput.value,
+          },
+        };
+        if (!adminItemChineseNameInput.value) {
+          delete currentItemChineseNames[adminItemNameInput.value];
+        }
+        localStorage.setItem('currentItemChineseNames', JSON.stringify(currentItemChineseNames));
+        renderOrderMenu();
+      });
       adminMemberListButton.addEventListener('click', () => {
         if (currentEmployeePassword === '123') {
           memberListPermissionPopup.hidden = false;
@@ -1799,14 +1834,23 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       orderSearchInput.addEventListener('input', () => {
         const expected = currentMenuMode === 'EMENU' ? 'All you can eat item' : 'Broccoli Garlic Sauce';
         const keyword = orderSearchInput.value.trim();
-        const matches = menuData().filter((dish) => dish.name === keyword || dish.number === keyword);
+        const matches = menuData().filter((dish) => {
+          const chineseConfig = currentItemChineseNames[dish.name];
+          const isConfiguredChineseInitialSearch =
+            effectiveLanguage() === 'Chinese' &&
+            Boolean(chineseConfig?.chineseName) &&
+            chineseConfig.group === dish.group &&
+            chineseConfig.category === dish.category &&
+            dish.searchKeyword === keyword;
+          return dish.name === keyword || dish.number === keyword || isConfiguredChineseInitialSearch;
+        });
         const results = matches.length ? Array.from(new Map(matches.map((dish) => [dish.name, dish])).values()) : [];
         orderSearchResult.innerHTML = '';
         const visibleResults = results.length ? results : keyword === expected ? [{ name: expected }] : [];
         visibleResults.forEach((dish) => {
           const item = document.createElement('div');
           item.dataset.testid = 'order-search-result-item';
-          item.textContent = dish.name;
+          item.textContent = menuDisplayName(dish);
           orderSearchResult.appendChild(item);
         });
       });

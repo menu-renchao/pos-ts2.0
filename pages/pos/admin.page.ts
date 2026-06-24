@@ -13,6 +13,11 @@ export class AdminPage extends PageObject {
   private readonly defaultKeyboardSelect: Locator;
   private readonly kdsCategoryRequiredSelect: Locator;
   private readonly kdsCategoryDiscountAllowanceSelect: Locator;
+  private readonly itemChineseNameInput: Locator;
+  private readonly itemChineseNameSaveButton: Locator;
+  private readonly itemGroupInput: Locator;
+  private readonly itemCategoryInput: Locator;
+  private readonly itemNameInput: Locator;
   private readonly kdsItemNameInput: Locator;
   private readonly kdsItemPosNameInput: Locator;
   private readonly kdsItemPosNameSaveButton: Locator;
@@ -34,6 +39,11 @@ export class AdminPage extends PageObject {
     this.defaultKeyboardSelect = page.getByTestId('admin-default-keyboard');
     this.kdsCategoryRequiredSelect = page.getByTestId('admin-kds-category-required');
     this.kdsCategoryDiscountAllowanceSelect = page.getByTestId('admin-kds-category-discount-allowance');
+    this.itemGroupInput = page.getByTestId('admin-item-group');
+    this.itemCategoryInput = page.getByTestId('admin-item-category');
+    this.itemNameInput = page.getByTestId('admin-item-name');
+    this.itemChineseNameInput = page.getByTestId('admin-item-chinese-name');
+    this.itemChineseNameSaveButton = page.getByTestId('admin-item-chinese-name-save');
     this.kdsItemNameInput = page.getByTestId('admin-kds-item-name');
     this.kdsItemPosNameInput = page.getByTestId('admin-kds-pos-name');
     this.kdsItemPosNameSaveButton = page.getByTestId('admin-kds-pos-name-save');
@@ -141,6 +151,17 @@ export class AdminPage extends PageObject {
       await this.kdsItemNameInput.fill(itemName);
       await this.kdsItemPosNameInput.fill(posName);
       await this.kdsItemPosNameSaveButton.click();
+    });
+  }
+
+  async setItemChineseName(group: string, category: string, itemName: string, chineseName: string): Promise<void> {
+    await step(`设置菜品 ${itemName} 的中文名称`, async () => {
+      await expect(this.adminRoot).toBeVisible();
+      await this.itemGroupInput.fill(group);
+      await this.itemCategoryInput.fill(category);
+      await this.itemNameInput.fill(itemName);
+      await this.itemChineseNameInput.fill(chineseName);
+      await this.itemChineseNameSaveButton.click();
     });
   }
 }

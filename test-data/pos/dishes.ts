@@ -170,6 +170,17 @@ export const numberedNameConflictDish: DishSample = {
   taxRate: 0.0825,
 };
 
+export const chineseInitialSearchDish = {
+  id: 'dish-hn-normal-item1',
+  name: 'hn_normal_item1',
+  chineseName: '普通菜1',
+  searchKeyword: 'ptc',
+  price: 10,
+  category: 'hn_cate',
+  group: 'Lunch',
+  taxRate: 0.0825,
+} as const;
+
 export const requiredKdsDish: DishSample = {
   id: 'dish-required-kds-mongolian-chicken',
   name: 'Mongolian Chicken',
@@ -216,6 +227,7 @@ export const defaultMenuGroup: MenuGroupSample = {
     itemNoSubOptionDish,
     itemOptionDish,
     numberedNameConflictDish,
+    chineseInitialSearchDish,
     requiredKdsDish,
     posNameDisplayDish,
   ],

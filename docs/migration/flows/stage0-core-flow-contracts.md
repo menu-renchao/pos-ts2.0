@@ -535,6 +535,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 | stage0/test_order_page.py | TestOrderPage | `test_custom_order` custom Delivery order saves and Recall Print exposes Reprint with three print outputs | tests/stage0/order-page.spec.ts | `OrderEntryFlow.printCustomDeliveryOrderAndReadPrintState` |
 | stage0/test_order_page.py | TestOrderPage | `test_delivery_order_exit` Delivery customer flow exits the order page directly back to POS home | tests/stage0/order-page.spec.ts | `OrderEntryFlow.exitDeliveryOrderAndReadHomeWelcome` |
 | stage0/test_order_page.py | TestOrderPage | `test_item_with_number` menu item whose name and number are the same appears only once in order search results | tests/stage0/order-page.spec.ts | `OrderEntryFlow.searchDishWithSameNameAndNumberAndReadResult` |
+| stage0/test_order_page.py | TestOrderPage | `test_display_menu_name_after_modify_language` configured Chinese item name is returned by initial-letter search in Chinese mode | tests/stage0/order-page.spec.ts | `OrderEntryFlow.configureChineseItemNameAndSearchByInitials` |
 | stage0/test_order_page.py | TestOrderPage | `test_staff_without_note_edit_sub_item` staff without NOTE permission must manager-authorize before adding combo sub-item note | tests/stage0/order-page.spec.ts | `OrderEntryFlow.addComboSubItemNoteWithManagerAuthorization` |
 | stage0/test_order_page.py | TestOrderPage | `test_category_required` required KDS category blocks save, keeps order page open, and auto-navigates to KDS until a KDS item is added | tests/stage0/order-page.spec.ts | `OrderEntryFlow.requireKdsCategoryBeforeSave` |
 | stage0/test_order_page.py | TestOrderPage | `test_category_not_required_percent_charge` KDS category without discount restriction participates in 20% whole-order charge | tests/stage0/order-page.spec.ts | `OrderEntryFlow.applyPercentChargeWhenKdsDiscountAllowanceDisabled` |
@@ -589,6 +590,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 32. For editable combo sub-item price behavior, enter Dine In, switch to `MansuperGroup`/`MansuperCat`, order `EditPriceCombo`, read subtotal, select adjustable sub-item `ITEM1`, edit price with source input `1200`, read subtotal again, select fixed sub-item `ITEM3`, and verify edit price is unavailable.
 33. For split child-order discount behavior, enter Dine In, add `superman item1`, `superman item2`, and `superman item3` from `Lunch`/`Chicken Lunch E`, save, open Recall, drag-split into child orders, open child order 1, edit it, open the discount panel, and read the discount panel whole-order amount.
 34. For custom order type reporting behavior, open Report Overview, filter order type `CUSTOM_D`, read starting Net Sales, enter Custom Delivery, fill source delivery info, order `superman item1`, capture subtotal, save, reopen Report Overview filtered to `CUSTOM_D`, and read ending Net Sales.
+35. For Chinese initial-letter item search, open Admin, configure `hn_normal_item1` in group `Lunch` and category `hn_cate` with Chinese name `普通菜1`, refresh, switch system language to Chinese, enter Dine In, search `ptc`, read the search result, exit the order page, and restore default language.
 
 ### Expected Assertions
 
@@ -642,6 +644,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Custom Delivery print flow verifies Recall Print makes Reprint visible and produces three offline print outputs, matching the source file-count assertion without using the live temp print directory.
 - Delivery exit flow verifies clicking Exit from the Delivery-created order page returns to POS home by reading the visible welcome text.
 - Name/number search flow verifies searching `AA` returns text `AA` and exactly one visible search result even though both the dish name and dish number match the same keyword.
+- Chinese initial-letter search flow verifies source item `hn_normal_item1` is configured with Chinese name `普通菜1`, Chinese mode search keyword `ptc` is used, and the visible search result contains `普通菜1`.
 - Combo sub-item NOTE permission flow verifies staff `1` without NOTE permission sees `You do not have permission NOTE, please enter the password!`, manager password authorizes the action, and the sub-item note text becomes `子菜的备注信息`.
 - Required KDS category flow verifies the first Save leaves the browser on `orderDishes`, automatically sets current category to `KDS`, and after adding `Mongolian Chicken` a second Save leaves `orderDishes`.
 - KDS category percent charge flow verifies the charge line label is `Charge(20%)` and the price is `$2.00` for the source-equivalent `$10` KDS dish when category discount restriction is off.
@@ -681,6 +684,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `OrderDishesPage` owns Global Option priced Add behavior for the decimal combined-item path.
 - `PosHomePage` owns the custom Delivery entry point, and `RecallPage` owns Recall Print/Reprint state and offline print output count reads.
 - `OrderDishesPage.exitOrderPage` owns direct order-page exit behavior, and `PosHomePage.readWelcomeText` owns the home-return assertion for Delivery exit.
+- `AdminPage` owns generic item Chinese-name configuration by group, category, source item name, and translated display name.
 - `AdminPage` owns Search Menu enable/disable persistence, staff Void Printed Item permission, staff NOTE permission, KDS Category Required setting, KDS Category discount restriction setting, KDS item POS Name setting, same-item combine mode, separate-same-item setting behavior, Automatically Redirect After Reduce Items, and Count Can Be Decimal.
 - `RecallPage` owns recalled item state, option reads, suborder tip reads, split-order combine action, order status reads, order selection, guest-name edit, customer-name reads, order total reads, split panel entry, even/item/seat/amount/drag split actions, split save/confirm/unsplit actions, suborder settlement/payment actions, suborder status reads, parent-card background reads, and split price reads.
 - `RecallPage` owns Recall subtotal reads for source cases that verify post-save subtotal instead of the active order page.
@@ -697,6 +701,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `test-data/pos/dishes.ts` owns `posNameDisplayDish` and `posNameDisplayValue` as the source-equivalent KDS item/POS Name pair for POS-42097.
 - `test-data/pos/dishes.ts` owns `editableComboDish` as the source-equivalent `EditPriceCombo` setup for POS-42061.
 - `test-data/pos/dishes.ts` owns `splitDiscountDishes` as the source-equivalent `superman item1`/`superman item2`/`superman item3` set for POS-36254.
+- `test-data/pos/dishes.ts` owns `chineseInitialSearchDish` as the source-equivalent `hn_normal_item1` / `普通菜1` / `ptc` item for POS-43827.
 - `test-data/pos/delivery.ts` owns source-equivalent customer phone/name/address data for custom Delivery order reporting.
 - `test-data/pos/dishes.ts` owns `groupSwitchDish`, `categorySwitchDish`, and `categoryOptionDish` as the POS-33600 source-equivalent special-price decimal quantity dishes.
 - `test-data/pos/dishes.ts` owns `pricedGlobalOption` as the source-equivalent Global Option price used by POS-35660.
@@ -726,6 +731,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Stub cash settlement stores the current order as `Paid` and makes it available in Recall.
 - Stub Pickup order creation stores multiple orders in one browser page session so editing the previous order does not mutate the latest order.
 - Stub order menu renders category-level and item-level option sample dishes plus Chinese category sample dishes.
+- Stub Admin item Chinese-name setting persists by item name, group, and category; Chinese-mode order search matches configured item initials and renders the configured Chinese display name.
 - Stub option and sub-option controls are deterministic UI actions; first-round assertions validate the source-observed item name/price preservation rather than live option-pricing internals.
 - Stub Recall computes order total from saved item prices plus tip.
 - Stub split state records draft and saved split-order prices in the selected recalled order.
