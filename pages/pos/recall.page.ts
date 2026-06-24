@@ -20,6 +20,15 @@ export class RecallPage extends PageObject {
   private readonly recalledOptions: Locator;
   private readonly recallItems: Locator;
   private readonly recallRoot: Locator;
+  private readonly combinedTipButton: Locator;
+  private readonly customerName: Locator;
+  private readonly editButton: Locator;
+  private readonly guestNameInput: Locator;
+  private readonly orderStatus: Locator;
+  private readonly orderTip: Locator;
+  private readonly previousOrderButton: Locator;
+  private readonly saveEditButton: Locator;
+  private readonly subOrderButton: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -27,6 +36,15 @@ export class RecallPage extends PageObject {
     this.recalledOptions = page.getByTestId('recall-item-option');
     this.recallItems = page.getByTestId('recall-order-item');
     this.recallRoot = page.getByTestId('recall-page');
+    this.combinedTipButton = page.getByTestId('recall-combine-split');
+    this.customerName = page.getByTestId('recall-customer-name');
+    this.editButton = page.getByTestId('recall-edit');
+    this.guestNameInput = page.getByTestId('recall-guest-name');
+    this.orderStatus = page.getByTestId('recall-order-status');
+    this.orderTip = page.getByTestId('recall-order-tip');
+    this.previousOrderButton = page.getByTestId('recall-previous-order');
+    this.saveEditButton = page.getByTestId('recall-save-edit');
+    this.subOrderButton = page.getByTestId('recall-sub-order');
   }
 
   async openRecentOrder(): Promise<void> {
@@ -72,6 +90,57 @@ export class RecallPage extends PageObject {
         name: (await option.getAttribute('data-name')) ?? '',
         price: Number((await option.getAttribute('data-price')) ?? '0'),
       };
+    });
+  }
+
+  async openFirstSubOrder(): Promise<void> {
+    await step('打开 Recall 第一个子单', async () => {
+      await this.subOrderButton.click();
+    });
+  }
+
+  async readOrderTip(): Promise<number> {
+    return step('读取 Recall 订单小费', async () => Number((await this.orderTip.textContent()) ?? '0'));
+  }
+
+  async combineSplitOrders(): Promise<void> {
+    await step('从 Recall 合并拆分订单', async () => {
+      await this.combinedTipButton.click();
+    });
+  }
+
+  async readOrderStatus(): Promise<string> {
+    return step('读取 Recall 订单状态', async () => (await this.orderStatus.textContent()) ?? '');
+  }
+
+  async openPreviousOrder(): Promise<void> {
+    await step('打开 Recall 前一笔订单', async () => {
+      await this.previousOrderButton.click();
+    });
+  }
+
+  async clickEdit(): Promise<void> {
+    await step('点击 Recall 编辑订单', async () => {
+      await this.editButton.click();
+    });
+  }
+
+  async editGuestName(name: string): Promise<void> {
+    await step(`编辑订单客名为 ${name}`, async () => {
+      await this.guestNameInput.fill(name);
+    });
+  }
+
+  async saveEdit(): Promise<void> {
+    await step('保存 Recall 编辑订单', async () => {
+      await this.saveEditButton.click();
+    });
+  }
+
+  async readCustomerName(): Promise<string | null> {
+    return step('读取 Recall 客名', async () => {
+      const text = ((await this.customerName.textContent()) ?? '').trim();
+      return text || null;
     });
   }
 }

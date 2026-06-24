@@ -22,6 +22,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <button data-testid="edit-save" hidden>Save Layout</button>
       <button data-testid="edit-cancel" hidden>Cancel</button>
       <button data-testid="home-togo">Togo</button>
+      <button data-testid="home-dine-in">Dine In</button>
+      <button data-testid="home-pickup">Pickup</button>
       <button data-testid="home-recall">Recall</button>
       <button data-testid="home-admin">Admin</button>
       <button data-testid="home-reservation">Reservation</button>
@@ -54,8 +56,17 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <div data-testid="order-item-price">0</div>
       <button data-testid="order-send-kitchen">Send Kitchen</button>
       <button data-testid="order-settle">Settle</button>
+      <button data-testid="settle-cash">Cash</button>
       <button data-testid="order-void-item">Void Item</button>
       <button data-testid="item-discount-10">10% Discount</button>
+      <input data-testid="order-tip" />
+      <button data-testid="split-even">Split Even</button>
+      <button data-testid="split-combine">Combine Split</button>
+      <input data-testid="open-food-name" />
+      <input data-testid="open-food-price" />
+      <button data-testid="open-food-no-tax">Open Food No Tax</button>
+      <button data-testid="order-pickup">Pickup</button>
+      <button data-testid="pickup-info-submit">Submit Pickup Info</button>
       <input data-testid="modify-note-name" />
       <input data-testid="modify-note-price" />
       <button data-testid="modify-save">Save Modify</button>
@@ -72,6 +83,15 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
     </section>
     <section data-testid="recall-page" hidden>
       <button data-testid="recall-recent-order">Recent Order</button>
+      <button data-testid="recall-previous-order">Previous Order</button>
+      <button data-testid="recall-sub-order">Sub Order</button>
+      <button data-testid="recall-combine-split">Combine Split</button>
+      <button data-testid="recall-edit">Edit</button>
+      <input data-testid="recall-guest-name" />
+      <button data-testid="recall-save-edit">Save Edit</button>
+      <div data-testid="recall-order-tip"></div>
+      <div data-testid="recall-order-status"></div>
+      <div data-testid="recall-customer-name"></div>
       <div data-testid="recall-order-items"></div>
     </section>
     <section data-testid="report-password-panel" hidden>
@@ -137,6 +157,12 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let latestSavedOrderItems = [];
       let currentItemOption = null;
       let latestSavedItemOption = null;
+      let currentOrderTip = 0;
+      let currentSplitPartTip = null;
+      let currentOrderStatus = '';
+      let currentCustomerName = null;
+      let savedOrders = [];
+      let selectedRecallOrder = null;
       let reservations = [];
       let mainFunctions = ['Dine In', 'Drawer', 'To Go', 'Delivery'];
       let hiddenFunctions = ['Admin', 'Session'];
@@ -171,8 +197,16 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const orderItemPrice = document.querySelector('[data-testid="order-item-price"]');
       const orderSendKitchenButton = document.querySelector('[data-testid="order-send-kitchen"]');
       const orderSettleButton = document.querySelector('[data-testid="order-settle"]');
+      const settleCashButton = document.querySelector('[data-testid="settle-cash"]');
       const orderVoidItemButton = document.querySelector('[data-testid="order-void-item"]');
       const itemDiscountButton = document.querySelector('[data-testid="item-discount-10"]');
+      const orderTipInput = document.querySelector('[data-testid="order-tip"]');
+      const splitEvenButton = document.querySelector('[data-testid="split-even"]');
+      const openFoodNameInput = document.querySelector('[data-testid="open-food-name"]');
+      const openFoodPriceInput = document.querySelector('[data-testid="open-food-price"]');
+      const openFoodNoTaxButton = document.querySelector('[data-testid="open-food-no-tax"]');
+      const orderPickupButton = document.querySelector('[data-testid="order-pickup"]');
+      const pickupInfoSubmitButton = document.querySelector('[data-testid="pickup-info-submit"]');
       const modifyNoteNameInput = document.querySelector('[data-testid="modify-note-name"]');
       const modifyNotePriceInput = document.querySelector('[data-testid="modify-note-price"]');
       const modifySaveButton = document.querySelector('[data-testid="modify-save"]');
@@ -185,6 +219,15 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const managerPasswordSubmitButton = document.querySelector('[data-testid="manager-password-submit"]');
       const recallPage = document.querySelector('[data-testid="recall-page"]');
       const recallRecentOrderButton = document.querySelector('[data-testid="recall-recent-order"]');
+      const recallPreviousOrderButton = document.querySelector('[data-testid="recall-previous-order"]');
+      const recallSubOrderButton = document.querySelector('[data-testid="recall-sub-order"]');
+      const recallCombineSplitButton = document.querySelector('[data-testid="recall-combine-split"]');
+      const recallEditButton = document.querySelector('[data-testid="recall-edit"]');
+      const recallGuestNameInput = document.querySelector('[data-testid="recall-guest-name"]');
+      const recallSaveEditButton = document.querySelector('[data-testid="recall-save-edit"]');
+      const recallOrderTip = document.querySelector('[data-testid="recall-order-tip"]');
+      const recallOrderStatus = document.querySelector('[data-testid="recall-order-status"]');
+      const recallCustomerName = document.querySelector('[data-testid="recall-customer-name"]');
       const recallOrderItems = document.querySelector('[data-testid="recall-order-items"]');
       const reportPasswordPanel = document.querySelector('[data-testid="report-password-panel"]');
       const reportPasswordInput = document.querySelector('[data-testid="report-password"]');
@@ -322,9 +365,57 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         });
       }
 
+      function resetCurrentOrder() {
+        currentOrderItems = [];
+        currentItemOption = null;
+        currentOrderTip = 0;
+        currentSplitPartTip = null;
+        currentOrderStatus = '';
+        currentCustomerName = null;
+        customerInfoPopup.hidden = true;
+        managerPasswordPopup.hidden = true;
+        renderOrderAmounts();
+        renderOrderMenu();
+        const effectiveLanguage = currentLanguage === 'Chinese' || userDefaultLanguage === 'Chinese' ? 'Chinese' : 'Default';
+        openFoodCategory.textContent = effectiveLanguage === 'Chinese' ? '自定义菜\\nauto_fix' : 'Custom Food\\nauto_fix';
+      }
+
+      function saveCurrentOrder() {
+        const order = {
+          items: [...currentOrderItems],
+          itemOption: currentItemOption,
+          tip: currentOrderTip,
+          splitTip: currentSplitPartTip,
+          status: currentOrderStatus,
+          customerName: currentCustomerName,
+        };
+        savedOrders.push(order);
+        latestSavedOrderItems = [...order.items];
+        latestSavedItemOption = order.itemOption;
+        selectedRecallOrder = order;
+        return order;
+      }
+
+      function selectRecallOrder(order) {
+        selectedRecallOrder = order || null;
+        latestSavedOrderItems = selectedRecallOrder ? [...selectedRecallOrder.items] : [];
+        latestSavedItemOption = selectedRecallOrder?.itemOption || null;
+        renderRecallOrderItems();
+      }
+
       function renderRecallOrderItems() {
         recallOrderItems.innerHTML = '';
-        latestSavedOrderItems.forEach((item) => {
+        const order = selectedRecallOrder || {
+          items: latestSavedOrderItems,
+          itemOption: latestSavedItemOption,
+          tip: 0,
+          status: '',
+          customerName: null,
+        };
+        recallOrderTip.textContent = String(order.tip || 0);
+        recallOrderStatus.textContent = order.status || '';
+        recallCustomerName.textContent = order.customerName || '';
+        order.items.forEach((item) => {
           const row = document.createElement('div');
           row.dataset.testid = 'recall-order-item';
           row.dataset.name = item.name;
@@ -333,12 +424,12 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           row.textContent = item.name + ' $' + item.price.toFixed(2);
           recallOrderItems.appendChild(row);
         });
-        if (latestSavedItemOption) {
+        if (order.itemOption) {
           const option = document.createElement('div');
           option.dataset.testid = 'recall-item-option';
-          option.dataset.name = latestSavedItemOption.name;
-          option.dataset.price = String(latestSavedItemOption.price);
-          option.textContent = latestSavedItemOption.name + ' $' + latestSavedItemOption.price.toFixed(2);
+          option.dataset.name = order.itemOption.name;
+          option.dataset.price = String(order.itemOption.price);
+          option.textContent = order.itemOption.name + ' $' + order.itemOption.price.toFixed(2);
           recallOrderItems.appendChild(option);
         }
       }
@@ -503,25 +594,49 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       });
       document.querySelector('[data-testid="home-togo"]').addEventListener('click', () => {
         showPanel('order');
-        currentOrderItems = [];
-        currentItemOption = null;
-        customerInfoPopup.hidden = true;
-        managerPasswordPopup.hidden = true;
-        renderOrderAmounts();
-        renderOrderMenu();
-        const effectiveLanguage = currentLanguage === 'Chinese' || userDefaultLanguage === 'Chinese' ? 'Chinese' : 'Default';
-        openFoodCategory.textContent = effectiveLanguage === 'Chinese' ? '自定义菜\\nauto_fix' : 'Custom Food\\nauto_fix';
+        resetCurrentOrder();
+      });
+      document.querySelector('[data-testid="home-dine-in"]').addEventListener('click', () => {
+        showPanel('order');
+        resetCurrentOrder();
+      });
+      document.querySelector('[data-testid="home-pickup"]').addEventListener('click', () => {
+        showPanel('order');
+        resetCurrentOrder();
       });
       document.querySelector('[data-testid="home-recall"]').addEventListener('click', () => {
         showPanel('recall');
       });
       orderSaveButton.addEventListener('click', () => {
-        latestSavedOrderItems = [...currentOrderItems];
-        latestSavedItemOption = currentItemOption;
+        saveCurrentOrder();
       });
       orderSendKitchenButton.addEventListener('click', () => {});
       orderSettleButton.addEventListener('click', () => {
         customerInfoPopup.hidden = false;
+      });
+      settleCashButton.addEventListener('click', () => {
+        currentOrderStatus = 'Paid';
+        saveCurrentOrder();
+      });
+      orderTipInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          currentOrderTip = Number(orderTipInput.value || '0') / 100;
+        }
+      });
+      splitEvenButton.addEventListener('click', () => {
+        currentSplitPartTip = Number((currentOrderTip / 2).toFixed(2));
+      });
+      openFoodNoTaxButton.addEventListener('click', () => {
+        const name = openFoodNameInput.value || 'Open Food';
+        const price = Number(openFoodPriceInput.value || '0');
+        currentOrderItems.push({ name, price, state: '', taxRate: 0 });
+        renderOrderAmounts();
+      });
+      orderPickupButton.addEventListener('click', () => {
+        currentCustomerName = null;
+      });
+      pickupInfoSubmitButton.addEventListener('click', () => {
+        currentCustomerName = null;
       });
       customerSubmitButton.addEventListener('click', () => {
         if (customerNameInput.value && customerPhoneInput.value) {
@@ -550,7 +665,25 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         };
       });
       recallRecentOrderButton.addEventListener('click', () => {
-        renderRecallOrderItems();
+        selectRecallOrder(savedOrders[savedOrders.length - 1]);
+      });
+      recallPreviousOrderButton.addEventListener('click', () => {
+        selectRecallOrder(savedOrders[savedOrders.length - 2]);
+      });
+      recallSubOrderButton.addEventListener('click', () => {
+        recallOrderTip.textContent = String(selectedRecallOrder?.splitTip || 0);
+      });
+      recallCombineSplitButton.addEventListener('click', () => {
+        recallOrderTip.textContent = String(selectedRecallOrder?.tip || 0);
+      });
+      recallEditButton.addEventListener('click', () => {
+        recallGuestNameInput.value = '';
+      });
+      recallSaveEditButton.addEventListener('click', () => {
+        if (selectedRecallOrder && recallGuestNameInput.value) {
+          selectedRecallOrder.customerName = '(' + recallGuestNameInput.value + ')';
+          recallCustomerName.textContent = selectedRecallOrder.customerName;
+        }
       });
       document.querySelector('[data-testid="home-reservation"]').addEventListener('click', () => {
         showPanel('reservation');

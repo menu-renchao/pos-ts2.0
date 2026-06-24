@@ -21,6 +21,16 @@ export type ItemDiscountResult = {
   discountedPrice: number;
 };
 
+export type SplitTipResult = {
+  firstSubOrderTip: number;
+  combinedTip: number;
+};
+
+export type PickupGuestNameResult = {
+  latestOrderCustomerName: string | null;
+  previousOrderCustomerName: string | null;
+};
+
 export class OrderEntryFlow {
   constructor(
     private readonly homePage: PosHomePage,
@@ -100,11 +110,68 @@ export class OrderEntryFlow {
     return this.recallPage.readFirstItemOption();
   }
 
+  async splitTipEvenlyAndCombine(homeUrl: string): Promise<SplitTipResult> {
+    await this.openDineInOrderAndAddDish(homeUrl, groupSwitchDish);
+    await this.orderDishesPage.addTip(200);
+    await this.orderDishesPage.splitEvenly(2);
+    await this.orderDishesPage.saveOrder();
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.openFirstSubOrder();
+    const firstSubOrderTip = await this.recallPage.readOrderTip();
+    await this.recallPage.combineSplitOrders();
+    const combinedTip = await this.recallPage.readOrderTip();
+    return { firstSubOrderTip, combinedTip };
+  }
+
+  async payOpenFoodWithoutTax(homeUrl: string): Promise<string> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.openFoodWithoutTax('no tax', 100);
+    await this.orderDishesPage.settleByCash();
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    return this.recallPage.readOrderStatus();
+  }
+
+  async editPreviousPickupGuestNameWithoutAffectingLatest(homeUrl: string): Promise<PickupGuestNameResult> {
+    await this.homePage.open(homeUrl);
+    await this.createPickupOrder();
+    await this.createPickupOrder();
+    await this.homePage.clickRecall();
+    await this.recallPage.openPreviousOrder();
+    await this.recallPage.clickEdit();
+    await this.recallPage.editGuestName('ren');
+    await this.recallPage.saveEdit();
+    await this.recallPage.openRecentOrder();
+    const latestOrderCustomerName = await this.recallPage.readCustomerName();
+    await this.recallPage.openPreviousOrder();
+    const previousOrderCustomerName = await this.recallPage.readCustomerName();
+    return { latestOrderCustomerName, previousOrderCustomerName };
+  }
+
   private async openOrderAndAddDish(homeUrl: string, dish: DishSample): Promise<void> {
     await this.homePage.open(homeUrl);
     await this.homePage.clickTogo();
     await this.orderDishesPage.selectMenuGroup(dish.group);
     await this.orderDishesPage.selectMenuCategory(dish.category);
     await this.orderDishesPage.addMenuItem(dish.name);
+  }
+
+  private async openDineInOrderAndAddDish(homeUrl: string, dish: DishSample): Promise<void> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(dish.group);
+    await this.orderDishesPage.selectMenuCategory(dish.category);
+    await this.orderDishesPage.addMenuItem(dish.name);
+  }
+
+  private async createPickupOrder(): Promise<void> {
+    await this.homePage.clickPickup();
+    await this.orderDishesPage.startPickupOrder();
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.saveOrder();
   }
 }

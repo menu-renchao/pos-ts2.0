@@ -487,6 +487,9 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 | stage0/test_order_page.py | TestOrderPage | `test_no_permission_void_item` manager password permits void item | tests/stage0/order-page.spec.ts | `OrderEntryFlow.voidItemWithManagerPassword` |
 | stage0/test_order_page.py | TestOrderPage | `test_edit_price_support_discount` item edit price supports discount | tests/stage0/order-page.spec.ts | `OrderEntryFlow.applyItemDiscountAndReadPrice` |
 | stage0/test_order_page.py | TestOrderPage | `test_add_note_by_modify` Modify note persists to recalled item option | tests/stage0/order-page.spec.ts | `OrderEntryFlow.addModifyNoteAndReadRecallOption` |
+| stage0/test_order_page.py | TestOrderPage | `test_split_tip_combine_check` add tip, split evenly, recall suborder, combine split order | tests/stage0/order-page.spec.ts | `OrderEntryFlow.splitTipEvenlyAndCombine` |
+| stage0/test_order_page.py | TestOrderPage | `test_open_food_no_tax` Open Food without tax can be paid by cash and recalled as Paid | tests/stage0/order-page.spec.ts | `OrderEntryFlow.payOpenFoodWithoutTax` |
+| stage0/test_order_page.py | TestOrderPage | `test_pick_up_order_no_repeat_name` two no-name Pickup orders keep guest-name edits isolated | tests/stage0/order-page.spec.ts | `OrderEntryFlow.editPreviousPickupGuestNameWithoutAffectingLatest` |
 | stage0/test_order_page.py | all `Test*` classes | add dishes, modify items, save orders, validate order totals | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createTogoOrder` |
 | stage0/test_order_settle.py | all `Test*` classes | create payable orders before settlement | tests/stage0/order-settle.spec.ts | `OrderEntryFlow.createTogoOrder` |
 
@@ -521,6 +524,9 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Manager password allows void item and Recall shows `Voided`.
 - Item discount changes item price to the expected discounted amount.
 - Modify note persists note name and price into Recall item options.
+- Split-tip flow shows half tip on the first suborder and the original full tip after combining suborders.
+- No-tax Open Food flow completes cash payment and Recall shows order status `Paid`.
+- Pickup guest-name edit flow leaves the latest no-name order blank while the previous edited order shows `(ren)`.
 
 ### Page Responsibilities
 
@@ -530,7 +536,8 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `OrderSummarySection` owns numeric summary reads and line-item reads.
 - `RecallPage` owns latest saved-order selection and line-item reads for source cases that verify saved orders.
 - `OrderDishesPage` owns order tax reads, customer-info popup actions, manager password popup actions, item discount action, and Modify note entry.
-- `RecallPage` owns recalled item state and option reads.
+- `OrderDishesPage` owns tip input, split-even action, Open Food no-tax entry, cash payment action, and Pickup info submission.
+- `RecallPage` owns recalled item state, option reads, suborder tip reads, split-order combine action, order status reads, order selection, guest-name edit, and customer-name reads.
 
 ### Client/Data Responsibilities
 
@@ -549,6 +556,10 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Stub manager password `11` marks the current item as `Voided`.
 - Stub item discount applies a 10% reduction to the current item price.
 - Stub Modify note persists note name and price to the saved order option.
+- Stub tip entry treats the source integer cents value as dollars after dividing by 100, so `200` becomes `2.00`.
+- Stub split-even records a first-suborder tip of half the current order tip and combines back to the full original tip.
+- Stub cash settlement stores the current order as `Paid` and makes it available in Recall.
+- Stub Pickup order creation stores multiple orders in one browser page session so editing the previous order does not mutate the latest order.
 
 ### Live Gaps
 

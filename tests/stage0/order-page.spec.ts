@@ -122,4 +122,48 @@ test.describe('POS 点单页面', () => {
     expect(note.name).toBe('This is a test note');
     expect(note.price).toBe(1.23);
   });
+
+  test('点单加小费平分订单后合并子单应恢复完整小费金额', {
+    annotation: [jiraIssue('POS-39762')],
+  }, async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.splitTipEvenlyAndCombine(environment.posHomeUrl);
+
+    expect(result.firstSubOrderTip).toBe(1);
+    expect(result.combinedTip).toBe(2);
+  });
+
+  test('Open Food 不选择税时可现金付款并在 Recall 展示 Paid', {
+    annotation: [jiraIssue('POS-42011')],
+  }, async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const status = await orderEntryFlow.payOpenFoodWithoutTax(environment.posHomeUrl);
+
+    expect(status).toBe('Paid');
+  });
+
+  test('连续创建两个无姓名 Pickup 订单后修改前一单客名不影响后一单', {
+    annotation: [jiraIssue('POS-42943')],
+  }, async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.editPreviousPickupGuestNameWithoutAffectingLatest(environment.posHomeUrl);
+
+    expect(result.latestOrderCustomerName).toBeNull();
+    expect(result.previousOrderCustomerName).toBe('(ren)');
+  });
 });

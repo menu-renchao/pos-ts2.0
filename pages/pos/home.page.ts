@@ -11,6 +11,8 @@ export class PosHomePage extends PageObject {
   readonly adminButton: Locator;
   readonly reservationButton: Locator;
   readonly deliveryButton: Locator;
+  readonly dineInButton: Locator;
+  readonly pickupButton: Locator;
   readonly passwordInput: Locator;
   readonly savePasswordButton: Locator;
 
@@ -50,6 +52,8 @@ export class PosHomePage extends PageObject {
     this.adminButton = page.getByTestId('home-admin');
     this.reservationButton = page.getByTestId('home-reservation');
     this.deliveryButton = page.getByTestId('home-delivery');
+    this.dineInButton = page.getByTestId('home-dine-in');
+    this.pickupButton = page.getByTestId('home-pickup');
     this.passwordInput = page.getByTestId('employee-password');
     this.savePasswordButton = page.getByTestId('employee-password-save');
     this.backToWorkButton = page.getByTestId('clock-back-to-work');
@@ -147,6 +151,20 @@ export class PosHomePage extends PageObject {
   async clickTogo(): Promise<void> {
     await step('从首页进入 To Go 点单页', async () => {
       await this.togoButton.click();
+      await expect(this.orderPageRoot).toBeVisible();
+    });
+  }
+
+  async clickDineIn(): Promise<void> {
+    await step('从首页进入 Dine In 点单页', async () => {
+      await this.dineInButton.click();
+      await expect(this.orderPageRoot).toBeVisible();
+    });
+  }
+
+  async clickPickup(): Promise<void> {
+    await step('从首页进入 Pickup 点单页', async () => {
+      await this.pickupButton.click();
       await expect(this.orderPageRoot).toBeVisible();
     });
   }

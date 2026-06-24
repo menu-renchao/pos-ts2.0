@@ -22,9 +22,17 @@ export class OrderDishesPage extends PageObject {
   private readonly modifyNoteInput: Locator;
   private readonly modifyNotePriceInput: Locator;
   private readonly modifySaveButton: Locator;
+  private readonly openFoodNameInput: Locator;
+  private readonly openFoodNoTaxButton: Locator;
+  private readonly openFoodPriceInput: Locator;
+  private readonly pickupButton: Locator;
+  private readonly pickupInfoSubmitButton: Locator;
   private readonly saveOrderButton: Locator;
   private readonly sendKitchenButton: Locator;
   private readonly settleButton: Locator;
+  private readonly splitCombineButton: Locator;
+  private readonly splitEvenButton: Locator;
+  private readonly tipInput: Locator;
   private readonly voidItemButton: Locator;
 
   constructor(page: Page) {
@@ -44,11 +52,19 @@ export class OrderDishesPage extends PageObject {
     this.modifyNoteInput = page.getByTestId('modify-note-name');
     this.modifyNotePriceInput = page.getByTestId('modify-note-price');
     this.modifySaveButton = page.getByTestId('modify-save');
+    this.openFoodNameInput = page.getByTestId('open-food-name');
+    this.openFoodNoTaxButton = page.getByTestId('open-food-no-tax');
+    this.openFoodPriceInput = page.getByTestId('open-food-price');
+    this.pickupButton = page.getByTestId('order-pickup');
+    this.pickupInfoSubmitButton = page.getByTestId('pickup-info-submit');
     this.openFoodCategory = page.getByTestId('open-food-category');
     this.orderRoot = page.getByTestId('order-page');
     this.saveOrderButton = page.getByTestId('order-save');
     this.sendKitchenButton = page.getByTestId('order-send-kitchen');
     this.settleButton = page.getByTestId('order-settle');
+    this.splitCombineButton = page.getByTestId('split-combine');
+    this.splitEvenButton = page.getByTestId('split-even');
+    this.tipInput = page.getByTestId('order-tip');
     this.voidItemButton = page.getByTestId('order-void-item');
   }
 
@@ -148,6 +164,46 @@ export class OrderDishesPage extends PageObject {
       await this.modifyNoteInput.fill(name);
       await this.modifyNotePriceInput.fill(String(price));
       await this.modifySaveButton.click();
+    });
+  }
+
+  async addTip(amount: number): Promise<void> {
+    await step(`给订单添加小费 ${amount}`, async () => {
+      await this.tipInput.fill(String(amount));
+      await this.tipInput.press('Enter');
+    });
+  }
+
+  async splitEvenly(parts: number): Promise<void> {
+    await step(`按 ${parts} 份平分订单`, async () => {
+      await this.splitEvenButton.click();
+    });
+  }
+
+  async combineSplitOrders(): Promise<void> {
+    await step('合并已拆分子单', async () => {
+      await this.splitCombineButton.click();
+    });
+  }
+
+  async openFoodWithoutTax(name: string, price: number): Promise<void> {
+    await step('创建无税 Open Food 菜品', async () => {
+      await this.openFoodNameInput.fill(name);
+      await this.openFoodPriceInput.fill(String(price));
+      await this.openFoodNoTaxButton.click();
+    });
+  }
+
+  async settleByCash(): Promise<void> {
+    await step('现金完成当前订单付款', async () => {
+      await this.page.getByTestId('settle-cash').click();
+    });
+  }
+
+  async startPickupOrder(): Promise<void> {
+    await step('进入 Pickup 点单并提交空取餐信息', async () => {
+      await this.pickupButton.click();
+      await this.pickupInfoSubmitButton.click();
     });
   }
 }
