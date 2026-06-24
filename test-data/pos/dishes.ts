@@ -201,6 +201,15 @@ export const posNameDisplayDish: DishSample = {
 
 export const posNameDisplayValue = 'migration-pos-name';
 
+export const unitPriceDish: DishSample = {
+  id: 'dish-migration-unit-price-item',
+  name: 'migration-unit-price-item',
+  price: 10,
+  category: 'hn_cate',
+  group: 'Lunch',
+  taxRate: 0.0825,
+};
+
 export const editableComboDish = {
   name: 'EditPriceCombo',
   group: 'MansuperGroup',
@@ -249,6 +258,7 @@ export const defaultMenuGroup: MenuGroupSample = {
     chineseInitialSearchDish,
     requiredKdsDish,
     posNameDisplayDish,
+    unitPriceDish,
     {
       id: 'dish-combo-max',
       name: comboMaxModifyDish.name,

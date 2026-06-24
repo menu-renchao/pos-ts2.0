@@ -22,6 +22,8 @@ export class OrderDishesPage extends PageObject {
   private readonly itemPriceSubmitButton: Locator;
   private readonly itemQuantityInput: Locator;
   private readonly itemQuantitySubmitButton: Locator;
+  private readonly unitPriceInput: Locator;
+  private readonly unitPriceSubmitButton: Locator;
   private readonly itemTax: Locator;
   private readonly comboOptionCount: Locator;
   private readonly globalOptionArea: Locator;
@@ -124,6 +126,8 @@ export class OrderDishesPage extends PageObject {
     this.itemPriceSubmitButton = page.getByTestId('item-price-submit');
     this.itemQuantityInput = page.getByTestId('order-item-quantity');
     this.itemQuantitySubmitButton = page.getByTestId('order-item-quantity-submit');
+    this.unitPriceInput = page.getByTestId('order-unit-price-input');
+    this.unitPriceSubmitButton = page.getByTestId('order-unit-price-submit');
     this.itemTax = page.getByTestId('order-tax');
     this.comboOptionCount = page.getByTestId('combo-option-count');
     this.globalOptionArea = page.getByTestId('global-option-area');
@@ -256,6 +260,18 @@ export class OrderDishesPage extends PageObject {
   async addMenuItem(itemName: string): Promise<void> {
     await step(`添加点单菜品 ${itemName}`, async () => {
       await this.menuItems.filter({ hasText: exactText(itemName) }).click();
+    });
+  }
+
+  async isUnitPriceInputVisible(): Promise<boolean> {
+    return step('判断称重菜输入框是否展示', async () => this.unitPriceInput.isVisible());
+  }
+
+  async inputUnitPriceAndReadSelectedPrice(unitPriceInput: number): Promise<number> {
+    return step(`输入称重菜重量 ${unitPriceInput} 并读取价格`, async () => {
+      await this.unitPriceInput.fill(String(unitPriceInput));
+      await this.unitPriceSubmitButton.click();
+      return this.readSelectedItemPrice();
     });
   }
 

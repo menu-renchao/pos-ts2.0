@@ -1025,6 +1025,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 | source_file | source_class | source_test_pattern | target_spec | target_flow_method |
 |---|---|---|---|---|
 | stage1/test_admin_menu.py | TestAdminMenu | `test_copy_global_option_to_other_product_line` POS Global Option Group copy to Emenu Menu | tests/stage1/admin-menu.spec.ts | `AdminMenuFlow.copyPosGlobalOptionGroupToEmenuAndReadCount` |
+| stage1/test_admin_menu.py | TestAdminMenu | `test_set_item_into_unit_price_item` unit-price item order preserves original price per weight | tests/stage1/admin-menu.spec.ts | `AdminMenuFlow.orderUnitPriceItemAndReadPrice` |
 
 ### Preconditions
 
@@ -1033,6 +1034,8 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - The source product line is `POS Menu`.
 - The target product line is `Emenu Menu`.
 - The copied group is `Global Option Group`.
+- POS-33919 uses deterministic test data `unitPriceDish` instead of the source fixture's random item name.
+- POS-33919 source `MenuAPI.create_dish(..., unit_price=True)` setup is represented by `AdminPage.configureUnitPriceItem` in round-one offline mode.
 
 ### Steps
 
@@ -1041,10 +1044,15 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 3. Copy `POS Menu` / `Global Option Group` to `Emenu Menu`.
 4. Enter `Emenu Menu` / `Global Option Group`.
 5. Read the copied group's category count.
+6. For POS-33919, configure `migration-unit-price-item` as a unit-price item with base price `10.00`.
+7. Enter Dine In, select the configured group/category, and add the unit-price item.
+8. Verify the unit-price input is visible, input `200`, and read the current item price.
 
 ### Expected Assertions
 
 - POS-31467 verifies the copied `Emenu Menu` / `Global Option Group` category count is greater than 0.
+- POS-33919 verifies the unit-price input exists after ordering the configured item.
+- POS-33919 verifies input `200` computes item price `20.00`, preserving original unit price `10.00` at weight `2.00`.
 
 ### Page Responsibilities
 
@@ -1052,17 +1060,23 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `AdminPage.clearProductItem` owns clearing the target product line group.
 - `AdminPage.copyGroupToProductLine` owns copying the source product line group to the target product line.
 - `AdminPage.readGroupCategoryCount` owns entering the target group and reading category count.
+- `AdminPage.configureUnitPriceItem` owns the round-one unit-price item setup.
+- `OrderDishesPage.selectMenuGroup`, `OrderDishesPage.selectMenuCategory`, `OrderDishesPage.addMenuItem`, `OrderDishesPage.isUnitPriceInputVisible`, and `OrderDishesPage.inputUnitPriceAndReadSelectedPrice` own the POS-33919 order-side verification.
 
 ### Client/Data Responsibilities
 
 - No live client is called in round one.
 - The offline POS stub owns product line/group/category state for `POS Menu` and `Emenu Menu`.
+- `test-data/pos/dishes.ts` owns `unitPriceDish` with source-equivalent base price `10.00`.
+- Live POS-33919 should use the real `MenuAPI`/`TaxAPI` fixture path or confirmed Admin Menu UI selectors before being marked live verified.
 
 ### Stub Behavior
 
 - Offline harness starts with `POS Menu` / `Global Option Group` containing categories.
 - Clearing `Emenu Menu` / `Global Option Group` removes all categories.
 - Copying from POS to Emenu clones the source categories into the target product line.
+- Offline harness stores Admin-created unit-price items in page memory for the current test.
+- Unit-price item ordering shows a dedicated unit-price input; submitting `200` stores quantity `2.00` and recalculates price from base unit price.
 
 ### Live Gaps
 
@@ -1070,3 +1084,5 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 |---|---|---|
 | selector | Admin Menu uses live iframe/product-line/group/category controls not verified in round one | Confirm stable selectors or request `data-testid` |
 | workflow | Live copy may require confirmation dialogs or async save behavior | Add deterministic waits for copy completion and target group refresh |
+| data | POS-33919 source creates a random taxed unit-price dish through MenuAPI/TaxAPI | Reuse real API setup or define seeded deterministic menu data |
+| selector | Scale/tare/unit-price order UI selectors need live confirmation | Confirm stable selectors for unit-price input, tare display, and selected item price |

@@ -30,6 +30,11 @@ export class AdminPage extends PageObject {
   private readonly menuCopyGroupButton: Locator;
   private readonly menuEnterGroupButton: Locator;
   private readonly menuGroupCategoryCount: Locator;
+  private readonly unitPriceItemGroupInput: Locator;
+  private readonly unitPriceItemCategoryInput: Locator;
+  private readonly unitPriceItemNameInput: Locator;
+  private readonly unitPriceItemPriceInput: Locator;
+  private readonly unitPriceItemSaveButton: Locator;
   private readonly menuModeSelect: Locator;
   private readonly roundingStrategySelect: Locator;
   private readonly saveSettingsButton: Locator;
@@ -65,6 +70,11 @@ export class AdminPage extends PageObject {
     this.menuCopyGroupButton = page.getByTestId('admin-menu-copy-group');
     this.menuEnterGroupButton = page.getByTestId('admin-menu-enter-group');
     this.menuGroupCategoryCount = page.getByTestId('admin-menu-group-category-count');
+    this.unitPriceItemGroupInput = page.getByTestId('admin-unit-price-item-group');
+    this.unitPriceItemCategoryInput = page.getByTestId('admin-unit-price-item-category');
+    this.unitPriceItemNameInput = page.getByTestId('admin-unit-price-item-name');
+    this.unitPriceItemPriceInput = page.getByTestId('admin-unit-price-item-price');
+    this.unitPriceItemSaveButton = page.getByTestId('admin-unit-price-item-save');
     this.menuModeSelect = page.getByTestId('admin-menu-mode');
     this.roundingStrategySelect = page.getByTestId('admin-rounding-strategy');
     this.saveSettingsButton = page.getByTestId('admin-save-settings');
@@ -225,6 +235,17 @@ export class AdminPage extends PageObject {
       await this.menuGroupNameInput.fill(groupName);
       await this.menuEnterGroupButton.click();
       return Number((await this.menuGroupCategoryCount.textContent()) ?? '0');
+    });
+  }
+
+  async configureUnitPriceItem(group: string, category: string, itemName: string, price: number): Promise<void> {
+    await step(`配置称重菜 ${itemName}`, async () => {
+      await expect(this.adminRoot).toBeVisible();
+      await this.unitPriceItemGroupInput.fill(group);
+      await this.unitPriceItemCategoryInput.fill(category);
+      await this.unitPriceItemNameInput.fill(itemName);
+      await this.unitPriceItemPriceInput.fill(String(price));
+      await this.unitPriceItemSaveButton.click();
     });
   }
 }

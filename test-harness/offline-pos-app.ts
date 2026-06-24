@@ -114,6 +114,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <input data-testid="admin-menu-source-product-line" />
       <input data-testid="admin-menu-target-product-line" />
       <input data-testid="admin-menu-group-name" />
+      <input data-testid="admin-unit-price-item-group" />
+      <input data-testid="admin-unit-price-item-category" />
+      <input data-testid="admin-unit-price-item-name" />
+      <input data-testid="admin-unit-price-item-price" />
+      <button data-testid="admin-unit-price-item-save">Save Unit Price Item</button>
       <button data-testid="admin-menu-clear-group">Clear Product Group</button>
       <button data-testid="admin-menu-copy-group">Copy Product Group</button>
       <button data-testid="admin-menu-enter-group">Enter Product Group</button>
@@ -156,6 +161,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <input data-testid="order-guest-name" />
       <input data-testid="order-item-quantity" />
       <button data-testid="order-item-quantity-submit">Submit Quantity</button>
+      <input data-testid="order-unit-price-input" hidden />
+      <button data-testid="order-unit-price-submit" hidden>Submit Unit Price</button>
       <input data-testid="order-search" />
       <button data-testid="order-search-clear">Clear Search</button>
       <div data-testid="order-search-result"></div>
@@ -504,6 +511,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           'Global Option Group': ['Legacy Emenu Option'],
         },
       };
+      let adminCreatedMenuItems = [];
       let savedOrders = [];
       let nextOrderNumber = 100000;
       let selectedRecallOrder = null;
@@ -558,6 +566,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const adminMenuSourceProductLineInput = document.querySelector('[data-testid="admin-menu-source-product-line"]');
       const adminMenuTargetProductLineInput = document.querySelector('[data-testid="admin-menu-target-product-line"]');
       const adminMenuGroupNameInput = document.querySelector('[data-testid="admin-menu-group-name"]');
+      const adminUnitPriceItemGroupInput = document.querySelector('[data-testid="admin-unit-price-item-group"]');
+      const adminUnitPriceItemCategoryInput = document.querySelector('[data-testid="admin-unit-price-item-category"]');
+      const adminUnitPriceItemNameInput = document.querySelector('[data-testid="admin-unit-price-item-name"]');
+      const adminUnitPriceItemPriceInput = document.querySelector('[data-testid="admin-unit-price-item-price"]');
+      const adminUnitPriceItemSaveButton = document.querySelector('[data-testid="admin-unit-price-item-save"]');
       const adminMenuClearGroupButton = document.querySelector('[data-testid="admin-menu-clear-group"]');
       const adminMenuCopyGroupButton = document.querySelector('[data-testid="admin-menu-copy-group"]');
       const adminMenuEnterGroupButton = document.querySelector('[data-testid="admin-menu-enter-group"]');
@@ -591,6 +604,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const itemPriceSubmitButton = document.querySelector('[data-testid="item-price-submit"]');
       const itemQuantityInput = document.querySelector('[data-testid="order-item-quantity"]');
       const itemQuantitySubmitButton = document.querySelector('[data-testid="order-item-quantity-submit"]');
+      const unitPriceInput = document.querySelector('[data-testid="order-unit-price-input"]');
+      const unitPriceSubmitButton = document.querySelector('[data-testid="order-unit-price-submit"]');
       const orderOptions = document.querySelector('[data-testid="order-options"]');
       const orderSubOptions = document.querySelector('[data-testid="order-sub-options"]');
       const orderSendKitchenButton = document.querySelector('[data-testid="order-send-kitchen"]');
@@ -1155,6 +1170,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           quantity: 1,
           category: dish.category || '',
           inventorySku: dish.inventorySku || '',
+          unitPriceItem: Boolean(dish.unitPriceItem),
           state: '',
           sentToKitchen: false,
           inKitchenQuantity: 0,
@@ -1258,6 +1274,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           { name: 'combo_max', price: 20, group: 'crm_group', category: 'crm_cat', comboSubItems: ['item', 'item_option'] },
           { name: 'ComboOptionTest', price: 10, group: 'MansuperGroup', category: 'MansuperCat', comboSubItems: ['combo-no-option-item'] },
           { name: 'combo-option-item', price: 10, group: 'MansuperGroup', category: 'MansuperCat' },
+          ...adminCreatedMenuItems,
         ];
       }
 
@@ -1326,6 +1343,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         orderItemCount.textContent = formatItemCount(currentOrderItems);
         orderItemPrice.textContent = String(currentOrderItems[0]?.price || 0);
         itemQuantityInput.value = String(currentOrderItems[currentOrderItems.length - 1]?.quantity || 1);
+        const selectedItem = currentOrderItems[selectedOrderItemIndex] || currentOrderItems[currentOrderItems.length - 1];
+        const unitPriceVisible = Boolean(selectedItem?.unitPriceItem);
+        unitPriceInput.hidden = !unitPriceVisible;
+        unitPriceSubmitButton.hidden = !unitPriceVisible;
         renderOrderItemRows();
         comboOptionCount.textContent = String(currentComboOptionCount);
         globalOptionListCountValue.textContent = String(currentGlobalOptionCount);
@@ -1893,6 +1914,18 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       document.querySelector('[data-testid="home-admin"]').addEventListener('click', () => {
         showPanel('admin');
       });
+      adminUnitPriceItemSaveButton.addEventListener('click', () => {
+        const itemName = adminUnitPriceItemNameInput.value;
+        adminCreatedMenuItems = adminCreatedMenuItems.filter((dish) => dish.name !== itemName);
+        adminCreatedMenuItems.push({
+          name: itemName,
+          price: Number(adminUnitPriceItemPriceInput.value || '0'),
+          group: adminUnitPriceItemGroupInput.value,
+          category: adminUnitPriceItemCategoryInput.value,
+          unitPriceItem: true,
+        });
+        renderOrderMenu();
+      });
       adminMenuClearGroupButton.addEventListener('click', () => {
         const productLine = adminMenuTargetProductLineInput.value;
         const groupName = adminMenuGroupNameInput.value;
@@ -2458,6 +2491,15 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           }
           selectedItem.quantity = quantity;
           selectedItem.price = roundMoney(Number(selectedItem.unitPrice || selectedItem.price || 0) * quantity);
+          renderOrderAmounts();
+        }
+      });
+      unitPriceSubmitButton.addEventListener('click', () => {
+        const selectedItem = currentOrderItems[selectedOrderItemIndex] || currentOrderItems[currentOrderItems.length - 1];
+        if (selectedItem?.unitPriceItem) {
+          const weight = Number(unitPriceInput.value || '0') / 100;
+          selectedItem.quantity = weight;
+          selectedItem.price = roundMoney(Number(selectedItem.unitPrice || selectedItem.price || 0) * weight);
           renderOrderAmounts();
         }
       });
