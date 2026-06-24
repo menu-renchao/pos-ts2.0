@@ -111,6 +111,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         <button data-testid="crm-redeem-delete">Delete Redeem</button>
         <div data-testid="crm-redeem-discount-option">10% Off</div>
         <div data-testid="crm-redeem-discount-option">20% Off</div>
+        <button data-testid="crm-redeem-amount-10">$10.00</button>
         <button data-testid="crm-redeem-discount">10% Off</button>
         <button data-testid="crm-redeem-discount-20">20% Off</button>
         <button data-testid="crm-redeem-discount-30">30% Off</button>
@@ -297,6 +298,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let currentCrmMember = null;
       let currentCrmDiscountRate = 0;
       let currentCrmDiscountMaxAmount = null;
+      let currentCrmFixedRewardAmount = 0;
+      let currentCrmPointDeduction = 0;
       let currentHasRedeemItem = false;
       let currentRedeemControlsLocked = false;
       let currentSettlementSelectMode = false;
@@ -380,6 +383,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const crmMemberSearchInput = document.querySelector('[data-testid="crm-member-search"]');
       const crmMemberOptionButton = document.querySelector('[data-testid="crm-member-option"]');
       const crmRedeemAddNewLoyaltyButton = document.querySelector('[data-testid="crm-redeem-add-new-loyalty"]');
+      const crmRedeemAmount10Button = document.querySelector('[data-testid="crm-redeem-amount-10"]');
       const crmRemoveMemberButton = document.querySelector('[data-testid="crm-remove-member"]');
       const crmRedeemDeleteButton = document.querySelector('[data-testid="crm-redeem-delete"]');
       const crmRedeemDiscountButton = document.querySelector('[data-testid="crm-redeem-discount"]');
@@ -703,6 +707,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           subtotal,
           crmDiscountRate: currentCrmDiscountRate,
           crmDiscountMaxAmount: currentCrmDiscountMaxAmount,
+          crmFixedRewardAmount: currentCrmFixedRewardAmount,
         });
         orderTax.textContent = String(Number((itemCount * 0.6).toFixed(2)));
         orderSubtotal.textContent = String(Number(subtotal.toFixed(2)));
@@ -727,9 +732,40 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       }
 
       function calculateRewardDiscount(order) {
+        if (Number(order?.crmFixedRewardAmount || 0) > 0) {
+          return Number((Math.min(Number(order?.subtotal || 0), Number(order.crmFixedRewardAmount)) * -1).toFixed(2));
+        }
         const discount = Number((Number(order?.subtotal || 0) * Number(order?.crmDiscountRate || 0)).toFixed(2));
         const cappedDiscount = order?.crmDiscountMaxAmount == null ? discount : Math.min(discount, Number(order.crmDiscountMaxAmount));
         return Number((cappedDiscount * -1).toFixed(2));
+      }
+
+      function earnPointsForSubtotal(subtotal) {
+        return Math.floor(Number(subtotal || 0) / 10) * 10;
+      }
+
+      function refundCurrentCrmPointDeduction() {
+        if (!currentCrmPointDeduction) {
+          return;
+        }
+        const member = selectedMemberRecord();
+        if (member) {
+          member.points += currentCrmPointDeduction;
+          currentCrmMember = member;
+        }
+        currentCrmPointDeduction = 0;
+        renderCurrentCrmState();
+      }
+
+      function applyCurrentCrmPointDeduction(points) {
+        refundCurrentCrmPointDeduction();
+        const member = selectedMemberRecord();
+        if (member) {
+          member.points -= points;
+          currentCrmMember = member;
+          currentCrmPointDeduction = points;
+        }
+        renderCurrentCrmState();
       }
 
       function formatRewardDiscount(amount, discountRate) {
@@ -794,6 +830,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         currentCrmMember = null;
         currentCrmDiscountRate = 0;
         currentCrmDiscountMaxAmount = null;
+        currentCrmFixedRewardAmount = 0;
+        currentCrmPointDeduction = 0;
         currentHasRedeemItem = false;
         currentRedeemControlsLocked = false;
         currentSettlementSelectMode = false;
@@ -819,6 +857,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           currentEditingOrder.crmMember = currentCrmMember ? { ...currentCrmMember } : null;
           currentEditingOrder.crmDiscountRate = currentCrmDiscountRate;
           currentEditingOrder.crmDiscountMaxAmount = currentCrmDiscountMaxAmount;
+          currentEditingOrder.crmFixedRewardAmount = currentCrmFixedRewardAmount;
+          currentEditingOrder.crmPointDeduction = currentCrmPointDeduction;
           currentEditingOrder.hasRedeemItem = currentHasRedeemItem;
           currentEditingOrder.rewardDiscount = calculateRewardDiscount(currentEditingOrder);
           currentEditingOrder = null;
@@ -837,6 +877,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           crmMember: selectedMemberRecord(),
           crmDiscountRate: currentCrmDiscountRate,
           crmDiscountMaxAmount: currentCrmDiscountMaxAmount,
+          crmFixedRewardAmount: currentCrmFixedRewardAmount,
+          crmPointDeduction: currentCrmPointDeduction,
           hasRedeemItem: currentHasRedeemItem,
           rewardDiscount: 0,
           guestPhone: currentDeliveryInfoRows[0] || '',
@@ -1205,7 +1247,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         currentOrderStatus = 'Paid';
         const member = selectedMemberRecord();
         if (member) {
-          member.points += 20;
+          member.points += earnPointsForSubtotal(Number(orderSubtotal.textContent || '0'));
+          currentCrmMember = member;
         }
         saveCurrentOrder();
       });
@@ -1222,20 +1265,38 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       });
       crmMemberOptionButton.addEventListener('click', () => {
         const member = crmMembers.find((item) => item.phone === crmMemberSearchInput.value);
+        if (member && currentCrmMember && member.phone !== currentCrmMember.phone) {
+          refundCurrentCrmPointDeduction();
+          currentCrmDiscountRate = 0;
+          currentCrmDiscountMaxAmount = null;
+          currentCrmFixedRewardAmount = 0;
+        }
         currentCrmMember = member || null;
         renderCurrentCrmState();
       });
       crmRemoveMemberButton.addEventListener('click', () => {
+        refundCurrentCrmPointDeduction();
         currentCrmMember = null;
         renderCurrentCrmState();
+      });
+      crmRedeemAmount10Button.addEventListener('click', () => {
+        currentCrmDiscountRate = 0;
+        currentCrmDiscountMaxAmount = null;
+        currentCrmFixedRewardAmount = 10;
+        applyCurrentCrmPointDeduction(10);
+        renderOrderAmounts();
       });
       crmRedeemDiscountButton.addEventListener('click', () => {
         currentCrmDiscountRate = 0.1;
         currentCrmDiscountMaxAmount = null;
+        currentCrmFixedRewardAmount = 0;
+        applyCurrentCrmPointDeduction(10);
         renderOrderAmounts();
         if (selectedRecallOrder) {
           selectedRecallOrder.crmDiscountRate = currentCrmDiscountRate;
           selectedRecallOrder.crmDiscountMaxAmount = currentCrmDiscountMaxAmount;
+          selectedRecallOrder.crmFixedRewardAmount = currentCrmFixedRewardAmount;
+          selectedRecallOrder.crmPointDeduction = currentCrmPointDeduction;
           selectedRecallOrder.rewardDiscount = calculateRewardDiscount(selectedRecallOrder);
           renderRecallOrderItems();
         }
@@ -1243,15 +1304,13 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       crmRedeemDiscount20Button.addEventListener('click', () => {
         currentCrmDiscountRate = 0.2;
         currentCrmDiscountMaxAmount = null;
-        const member = selectedMemberRecord();
-        if (member) {
-          member.points -= 15;
-          currentCrmMember = member;
-          renderCurrentCrmState();
-        }
+        currentCrmFixedRewardAmount = 0;
+        applyCurrentCrmPointDeduction(15);
         if (selectedRecallOrder) {
           selectedRecallOrder.crmDiscountRate = currentCrmDiscountRate;
           selectedRecallOrder.crmDiscountMaxAmount = currentCrmDiscountMaxAmount;
+          selectedRecallOrder.crmFixedRewardAmount = currentCrmFixedRewardAmount;
+          selectedRecallOrder.crmPointDeduction = currentCrmPointDeduction;
           selectedRecallOrder.rewardDiscount = calculateRewardDiscount(selectedRecallOrder);
           renderRecallOrderItems();
         }
@@ -1260,22 +1319,28 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       crmRedeemDiscount30Button.addEventListener('click', () => {
         currentCrmDiscountRate = 0.3;
         currentCrmDiscountMaxAmount = 1;
+        currentCrmFixedRewardAmount = 0;
         renderOrderAmounts();
         if (selectedRecallOrder) {
           selectedRecallOrder.crmDiscountRate = currentCrmDiscountRate;
           selectedRecallOrder.crmDiscountMaxAmount = currentCrmDiscountMaxAmount;
+          selectedRecallOrder.crmFixedRewardAmount = currentCrmFixedRewardAmount;
           selectedRecallOrder.rewardDiscount = calculateRewardDiscount(selectedRecallOrder);
           renderRecallOrderItems();
         }
         renderOrderAmounts();
       });
       crmRedeemDeleteButton.addEventListener('click', () => {
+        refundCurrentCrmPointDeduction();
         currentCrmDiscountRate = 0;
         currentCrmDiscountMaxAmount = null;
+        currentCrmFixedRewardAmount = 0;
         renderOrderAmounts();
         if (selectedRecallOrder) {
           selectedRecallOrder.crmDiscountRate = 0;
           selectedRecallOrder.crmDiscountMaxAmount = null;
+          selectedRecallOrder.crmFixedRewardAmount = 0;
+          selectedRecallOrder.crmPointDeduction = 0;
           selectedRecallOrder.rewardDiscount = 0;
           renderRecallOrderItems();
         }
@@ -1451,7 +1516,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         if (selectedRecallOrder) {
           selectedRecallOrder.status = 'Paid';
           if (selectedRecallOrder.crmMember) {
-            selectedRecallOrder.crmMember.points += 20;
+            selectedRecallOrder.crmMember.points += earnPointsForSubtotal(selectedRecallOrder.subtotal);
           }
           renderRecallOrderItems();
         }
@@ -1465,6 +1530,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           currentCrmMember = selectedRecallOrder.crmMember ? { ...selectedRecallOrder.crmMember } : null;
           currentCrmDiscountRate = selectedRecallOrder.crmDiscountRate || 0;
           currentCrmDiscountMaxAmount = selectedRecallOrder.crmDiscountMaxAmount ?? null;
+          currentCrmFixedRewardAmount = selectedRecallOrder.crmFixedRewardAmount || 0;
+          currentCrmPointDeduction = selectedRecallOrder.crmPointDeduction || 0;
           currentHasRedeemItem = Boolean(selectedRecallOrder.hasRedeemItem);
           currentRedeemControlsLocked = Boolean(selectedRecallOrder.hasRedeemItem);
           currentSettlementSelectMode = false;

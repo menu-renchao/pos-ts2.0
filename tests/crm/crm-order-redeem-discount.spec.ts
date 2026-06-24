@@ -55,6 +55,26 @@ test.describe('CRM 订单 Redeem Discount', () => {
     expect(result.rewardBeforeReduce).toBe(-Number((result.subtotalBeforeReduce * 0.1).toFixed(2)));
     expect(result.rewardAfterReduceText).toBe('-0.00');
   });
+
+  test('POS-29608 Redeem Fixed Amount 应先扣减积分并在支付后回补到原始积分', async ({ environment, page }) => {
+    const crmRedeemDiscountFlow = createCrmOrderRedeemDiscountFlow(page);
+
+    const result = await crmRedeemDiscountFlow.redeemFixedAmountPayAndReadPointBalance(environment.posHomeUrl);
+
+    expect(result.pointsAfterRedeem).toBe(result.pointsBeforeRedeem - 10);
+    expect(result.pointsAfterPayment).toBe(result.pointsBeforeRedeem);
+    expect(result.adminPointsAfterPayment).toBe(result.pointsAfterPayment);
+  });
+
+  test('POS-29578 Redeem 10% Off 应先扣减积分并在支付后回补到原始积分', async ({ environment, page }) => {
+    const crmRedeemDiscountFlow = createCrmOrderRedeemDiscountFlow(page);
+
+    const result = await crmRedeemDiscountFlow.redeemPercentageDiscountPayAndReadPointBalance(environment.posHomeUrl);
+
+    expect(result.pointsAfterRedeem).toBe(result.pointsBeforeRedeem - 10);
+    expect(result.pointsAfterPayment).toBe(result.pointsBeforeRedeem);
+    expect(result.adminPointsAfterPayment).toBe(result.pointsAfterPayment);
+  });
 });
 
 function createCrmOrderRedeemDiscountFlow(page: Page): CrmOrderRedeemDiscountFlow {
