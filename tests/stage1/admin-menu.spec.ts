@@ -175,4 +175,22 @@ test.describe('stage1 admin menu migration', () => {
       expect(prices.afterMemberPrice).toBe(89);
     },
   );
+
+  test(
+    'POS-37831 批量基于会员价减 1 后会员点菜应展示新会员价',
+    {
+      annotation: jiraIssue('POS-37831'),
+    },
+    async ({ environment, page }) => {
+      const flow = new AdminMenuFlow(new PosHomePage(page), new AdminPage(page), new OrderDishesPage(page));
+
+      const prices = await flow.batchReduceBenefitMemberPriceThenReadOrderPrices(
+        environment.posHomeUrl,
+        new PosCrmPage(page),
+      );
+
+      expect(prices.beforeMemberPrice).toBe(8);
+      expect(prices.afterMemberPrice).toBe(5);
+    },
+  );
 });
