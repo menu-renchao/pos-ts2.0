@@ -1,0 +1,25 @@
+{
+  "name": "pos-ts2.0",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "playwright test",
+    "test:list": "playwright test --list --pass-with-no-tests",
+    "test:offline": "cross-env POS_TEST_MODE=offline CLIENT_MODE=stub playwright test --pass-with-no-tests",
+    "unit": "tsx --test \"**/*.test.ts\" && node --test tools\\migration-audit.test.mjs",
+    "audit:migration": "node --test tools\\migration-audit.test.mjs && node tools\\migration-audit.mjs",
+    "lint": "eslint . --ext .ts"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.45.0",
+    "@types/node": "^20.14.0",
+    "@typescript-eslint/eslint-plugin": "^7.13.0",
+    "@typescript-eslint/parser": "^7.13.0",
+    "cross-env": "^7.0.3",
+    "eslint": "^8.57.0",
+    "tsx": "^4.15.0",
+    "typescript": "^5.4.0"
+  }
+}
