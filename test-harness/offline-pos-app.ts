@@ -87,6 +87,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
     <section data-testid="recall-page" hidden>
       <button data-testid="recall-recent-order">Recent Order</button>
       <button data-testid="recall-previous-order">Previous Order</button>
+      <div data-testid="recall-parent-order"></div>
       <button data-testid="recall-sub-order">Sub Order</button>
       <button data-testid="recall-combine-split">Combine Split</button>
       <button data-testid="recall-edit">Edit</button>
@@ -101,6 +102,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         <button data-testid="split-even-order">Even Split</button>
         <button data-testid="split-by-item">Split By Item</button>
         <button data-testid="split-by-seat">Split By Seat</button>
+        <button data-testid="split-by-drag">Split By Drag</button>
         <button data-testid="split-add-suborder">Add Suborder</button>
         <input data-testid="split-amount-input" />
         <input data-testid="split-amount-input" />
@@ -109,7 +111,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         <button data-testid="split-unsplit">Unsplit</button>
         <div data-testid="split-item-prices"></div>
         <div data-testid="split-order-prices"></div>
+        <button data-testid="split-sub-order-settle">Settle Suborder</button>
+        <button data-testid="sub-order-cash-pay">Cash Pay Suborder</button>
       </section>
+      <div data-testid="recall-sub-orders"></div>
       <button data-testid="recall-split">Split</button>
     </section>
     <section data-testid="report-password-panel" hidden>
@@ -183,6 +188,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let selectedRecallOrder = null;
       let draftSplitPrices = [];
       let draftSplitItemPrices = [];
+      let selectedSubOrderIndex = null;
       let reservations = [];
       let mainFunctions = ['Dine In', 'Drawer', 'To Go', 'Delivery'];
       let hiddenFunctions = ['Admin', 'Session'];
@@ -253,11 +259,13 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const recallCustomerName = document.querySelector('[data-testid="recall-customer-name"]');
       const recallOrderTotal = document.querySelector('[data-testid="recall-order-total"]');
       const recallOrderItems = document.querySelector('[data-testid="recall-order-items"]');
+      const recallParentOrder = document.querySelector('[data-testid="recall-parent-order"]');
       const recallSplitButton = document.querySelector('[data-testid="recall-split"]');
       const splitPanel = document.querySelector('[data-testid="split-panel"]');
       const splitEvenOrderButton = document.querySelector('[data-testid="split-even-order"]');
       const splitByItemButton = document.querySelector('[data-testid="split-by-item"]');
       const splitBySeatButton = document.querySelector('[data-testid="split-by-seat"]');
+      const splitByDragButton = document.querySelector('[data-testid="split-by-drag"]');
       const splitAmountInputs = document.querySelectorAll('[data-testid="split-amount-input"]');
       const splitAddSuborderButton = document.querySelector('[data-testid="split-add-suborder"]');
       const splitSaveButton = document.querySelector('[data-testid="split-save"]');
@@ -265,6 +273,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const splitUnsplitButton = document.querySelector('[data-testid="split-unsplit"]');
       const splitItemPrices = document.querySelector('[data-testid="split-item-prices"]');
       const splitOrderPrices = document.querySelector('[data-testid="split-order-prices"]');
+      const splitSubOrderSettleButton = document.querySelector('[data-testid="split-sub-order-settle"]');
+      const subOrderCashPayButton = document.querySelector('[data-testid="sub-order-cash-pay"]');
+      const recallSubOrders = document.querySelector('[data-testid="recall-sub-orders"]');
       const reportPasswordPanel = document.querySelector('[data-testid="report-password-panel"]');
       const reportPasswordInput = document.querySelector('[data-testid="report-password"]');
       const reportPasswordSaveButton = document.querySelector('[data-testid="report-password-save"]');
@@ -442,6 +453,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           status: currentOrderStatus,
           customerName: currentCustomerName,
           splitOrderPrices: [],
+          subOrderStatuses: [],
         };
         savedOrders.push(order);
         latestSavedOrderItems = [...order.items];
@@ -481,6 +493,21 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         });
       }
 
+      function renderSubOrders(order) {
+        recallSubOrders.innerHTML = '';
+        (order?.subOrderStatuses || []).forEach((status, index) => {
+          const card = document.createElement('button');
+          card.dataset.testid = 'recall-sub-order-card';
+          card.dataset.status = status;
+          card.textContent = 'Sub Order ' + (index + 1);
+          card.addEventListener('click', () => {
+            selectedSubOrderIndex = index;
+            recallOrderStatus.textContent = order.subOrderStatuses[index];
+          });
+          recallSubOrders.appendChild(card);
+        });
+      }
+
       function renderRecallOrderItems() {
         recallOrderItems.innerHTML = '';
         const order = selectedRecallOrder || {
@@ -494,8 +521,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         recallOrderStatus.textContent = order.status || '';
         recallCustomerName.textContent = order.customerName || '';
         recallOrderTotal.textContent = String(orderTotal(order));
+        recallParentOrder.style.backgroundColor = order.parentBackground || '';
+        recallParentOrder.dataset.background = order.parentBackground || '';
         renderSplitPrices(order.splitOrderPrices || []);
         renderSplitItemPrices(draftSplitItemPrices);
+        renderSubOrders(order);
         order.items.forEach((item) => {
           const row = document.createElement('div');
           row.dataset.testid = 'recall-order-item';
@@ -792,6 +822,15 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         renderSplitItemPrices(draftSplitItemPrices);
         renderSplitPrices(draftSplitPrices);
       });
+      splitByDragButton.addEventListener('click', () => {
+        if (selectedRecallOrder) {
+          selectedRecallOrder.subOrderStatuses = ['New Order', 'New Order'];
+          selectedRecallOrder.parentBackground = 'rgba(33, 150, 243, 1)';
+        }
+        recallParentOrder.style.backgroundColor = selectedRecallOrder?.parentBackground || '';
+        recallParentOrder.dataset.background = selectedRecallOrder?.parentBackground || '';
+        renderSubOrders(selectedRecallOrder);
+      });
       splitAddSuborderButton.addEventListener('click', () => {});
       splitSaveButton.addEventListener('click', () => {
         if (selectedRecallOrder) {
@@ -820,6 +859,15 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           renderSplitPrices(draftSplitPrices);
           renderSplitItemPrices(draftSplitItemPrices);
         });
+      });
+      splitSubOrderSettleButton.addEventListener('click', () => {
+        selectedSubOrderIndex = 0;
+      });
+      subOrderCashPayButton.addEventListener('click', () => {
+        if (selectedRecallOrder && selectedSubOrderIndex !== null) {
+          selectedRecallOrder.subOrderStatuses[selectedSubOrderIndex] = 'Paid';
+        }
+        renderSubOrders(selectedRecallOrder);
       });
       document.querySelector('[data-testid="home-reservation"]').addEventListener('click', () => {
         showPanel('reservation');

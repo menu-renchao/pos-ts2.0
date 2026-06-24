@@ -503,6 +503,8 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 | stage0/test_order_page.py | TestOrderPage | `test_add_split_by_seat` seat split creates suborders matching item prices | tests/stage0/order-page.spec.ts | `OrderEntryFlow.splitDineInOrderBySeatAndReadSummary` |
 | stage0/test_order_page.py | TestOrderPage | `test_add_split_by_amount` amount split creates suborders matching entered amounts | tests/stage0/order-page.spec.ts | `OrderEntryFlow.splitOrderByAmountAndReadSummary` |
 | stage0/test_order_page.py | TestOrderPage | `test_cancel_split` unsplit restores the original order total | tests/stage0/order-page.spec.ts | `OrderEntryFlow.cancelEvenSplitAndReadTotals` |
+| stage0/test_order_page.py | TestOrderPage | `test_even_item` Dine In item split creates suborders matching item prices | tests/stage0/order-page.spec.ts | `OrderEntryFlow.splitDineInOrderByItemAndReadSummary` |
+| stage0/test_order_page.py | TestOrderPage | `test_order_split_by_drag` drag split paid first child order and preserves remaining child/parent state | tests/stage0/order-page.spec.ts | `OrderEntryFlow.splitOrderByDragPayFirstSubOrderAndReadStatuses` |
 | stage0/test_order_page.py | all `Test*` classes | add dishes, modify items, save orders, validate order totals | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createTogoOrder` |
 | stage0/test_order_settle.py | all `Test*` classes | create payable orders before settlement | tests/stage0/order-settle.spec.ts | `OrderEntryFlow.createTogoOrder` |
 
@@ -546,6 +548,8 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Item split and seat split return two child orders whose amounts match the selected item amounts.
 - Amount split returns child-order amounts equal to the source-entered amounts `2` and `8.6`.
 - Cancel split removes split child orders and preserves the original order total.
+- Dine In item split returns two child orders whose amounts match the selected item amounts.
+- Drag split marks the first suborder paid after cash payment, leaves the second suborder as `New Order`, and keeps the parent order highlighted with `rgba(33, 150, 243, 1)`.
 
 ### Page Responsibilities
 
@@ -557,7 +561,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `OrderDishesPage` owns order tax reads, customer-info popup actions, manager password popup actions, item discount action, and Modify note entry.
 - `OrderDishesPage` owns tip input, split-even action, Open Food no-tax entry, cash payment action, and Pickup info submission.
 - `OrderDishesPage` owns option and sub-option selection plus current ordered-item name/price reads.
-- `RecallPage` owns recalled item state, option reads, suborder tip reads, split-order combine action, order status reads, order selection, guest-name edit, customer-name reads, order total reads, split panel entry, even/item/seat/amount split actions, split save/confirm/unsplit actions, and split price reads.
+- `RecallPage` owns recalled item state, option reads, suborder tip reads, split-order combine action, order status reads, order selection, guest-name edit, customer-name reads, order total reads, split panel entry, even/item/seat/amount/drag split actions, split save/confirm/unsplit actions, suborder settlement/payment actions, suborder status reads, parent-card background reads, and split price reads.
 
 ### Client/Data Responsibilities
 
@@ -589,6 +593,8 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Stub item and seat split use the first two saved item prices as child-order prices.
 - Stub amount split reads typed amount inputs and stores them as child-order prices after the source-equivalent save and confirmation path.
 - Stub unsplit clears saved child-order prices while keeping the recalled order total unchanged.
+- Stub Dine In item split reuses the two saved item prices as child-order prices.
+- Stub drag split creates two child orders, cash payment changes the first child to `Paid`, the second child remains `New Order`, and the parent card stores the source highlight color as a stable readable value.
 
 ### Live Gaps
 

@@ -54,6 +54,12 @@ export type CancelSplitSummary = {
   totalAfterCancel: number;
 };
 
+export type DragSplitPaymentStatusResult = {
+  firstSubOrderStatus: string;
+  secondSubOrderStatus: string;
+  parentOrderBackground: string;
+};
+
 export class OrderEntryFlow {
   constructor(
     private readonly homePage: PosHomePage,
@@ -228,6 +234,16 @@ export class OrderEntryFlow {
     return { splitOrderCount: splitOrderPrices.length, splitItemPrices, splitOrderPrices };
   }
 
+  async splitDineInOrderByItemAndReadSummary(homeUrl: string): Promise<ItemSplitSummary> {
+    await this.openOrderAndAddTwoDishes(homeUrl, true);
+    await this.recallPage.openSplitOrder();
+    await this.recallPage.splitByItem();
+    const splitItemPrices = await this.recallPage.readSplitItemPrices();
+    await this.recallPage.saveSplit();
+    const splitOrderPrices = await this.recallPage.readSplitOrderPrices();
+    return { splitOrderCount: splitOrderPrices.length, splitItemPrices, splitOrderPrices };
+  }
+
   async splitOrderByAmountAndReadSummary(homeUrl: string, amounts: readonly number[]): Promise<ItemSplitSummary> {
     await this.openOrderAndAddDish(homeUrl, groupSwitchDish);
     await this.orderDishesPage.saveOrder();
@@ -253,6 +269,31 @@ export class OrderEntryFlow {
       splitOrderCountBeforeCancel: splitSummary.splitOrderCount,
       totalAfterCancel,
     };
+  }
+
+  async splitOrderByDragPayFirstSubOrderAndReadStatuses(
+    homeUrl: string,
+  ): Promise<DragSplitPaymentStatusResult> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.saveOrder();
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.openSplitOrder();
+    await this.recallPage.splitByDrag();
+    await this.recallPage.settleSubOrder(1);
+    await this.recallPage.payCurrentSubOrderByCash();
+    await this.recallPage.openSubOrder(1);
+    const firstSubOrderStatus = await this.recallPage.readOrderStatus();
+    await this.recallPage.openSubOrder(2);
+    const secondSubOrderStatus = await this.recallPage.readOrderStatus();
+    const parentOrderBackground = await this.recallPage.readParentOrderBackground();
+    return { firstSubOrderStatus, secondSubOrderStatus, parentOrderBackground };
   }
 
   private async openOrderAndAddDish(homeUrl: string, dish: DishSample): Promise<void> {

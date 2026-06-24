@@ -29,6 +29,7 @@ export class RecallPage extends PageObject {
   private readonly guestNameInput: Locator;
   private readonly itemSplitButton: Locator;
   private readonly orderTotal: Locator;
+  private readonly parentOrderCard: Locator;
   private readonly orderStatus: Locator;
   private readonly orderTip: Locator;
   private readonly previousOrderButton: Locator;
@@ -37,8 +38,11 @@ export class RecallPage extends PageObject {
   private readonly saveSplitButton: Locator;
   private readonly seatSplitButton: Locator;
   private readonly splitButton: Locator;
+  private readonly splitByDragButton: Locator;
   private readonly splitItemPrices: Locator;
   private readonly splitOrderPrices: Locator;
+  private readonly subOrderCards: Locator;
+  private readonly subOrderSettleButton: Locator;
   private readonly unsplitButton: Locator;
   private readonly subOrderButton: Locator;
 
@@ -57,6 +61,7 @@ export class RecallPage extends PageObject {
     this.guestNameInput = page.getByTestId('recall-guest-name');
     this.itemSplitButton = page.getByTestId('split-by-item');
     this.orderTotal = page.getByTestId('recall-order-total');
+    this.parentOrderCard = page.getByTestId('recall-parent-order');
     this.orderStatus = page.getByTestId('recall-order-status');
     this.orderTip = page.getByTestId('recall-order-tip');
     this.previousOrderButton = page.getByTestId('recall-previous-order');
@@ -65,8 +70,11 @@ export class RecallPage extends PageObject {
     this.saveSplitButton = page.getByTestId('split-save');
     this.seatSplitButton = page.getByTestId('split-by-seat');
     this.splitButton = page.getByTestId('recall-split');
+    this.splitByDragButton = page.getByTestId('split-by-drag');
     this.splitItemPrices = page.getByTestId('split-item-price');
     this.splitOrderPrices = page.getByTestId('split-order-price');
+    this.subOrderCards = page.getByTestId('recall-sub-order-card');
+    this.subOrderSettleButton = page.getByTestId('split-sub-order-settle');
     this.unsplitButton = page.getByTestId('split-unsplit');
     this.subOrderButton = page.getByTestId('recall-sub-order');
   }
@@ -205,6 +213,37 @@ export class RecallPage extends PageObject {
         await this.amountInputs.nth(index).fill(String(amount));
       }
     });
+  }
+
+  async splitByDrag(): Promise<void> {
+    await step('在 Recall 通过拖拽方式分单', async () => {
+      await this.splitByDragButton.click();
+    });
+  }
+
+  async settleSubOrder(index: number): Promise<void> {
+    await step(`结算第 ${index} 个子单`, async () => {
+      await this.subOrderSettleButton.click();
+    });
+  }
+
+  async payCurrentSubOrderByCash(): Promise<void> {
+    await step('现金支付当前子单', async () => {
+      await this.page.getByTestId('sub-order-cash-pay').click();
+    });
+  }
+
+  async openSubOrder(index: number): Promise<void> {
+    await step(`打开第 ${index} 个子单`, async () => {
+      await this.subOrderCards.nth(index - 1).click();
+    });
+  }
+
+  async readParentOrderBackground(): Promise<string> {
+    return step('读取 Recall 母单背景色', async () =>
+      (await this.parentOrderCard.getAttribute('data-background')) ??
+      (await this.parentOrderCard.evaluate((node) => getComputedStyle(node).backgroundColor)),
+    );
   }
 
   async saveSplit(): Promise<void> {

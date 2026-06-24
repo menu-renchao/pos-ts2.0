@@ -355,4 +355,31 @@ test.describe('POS 点单页面', () => {
     expect(result.splitOrderCountBeforeCancel).toBe(2);
     expect(result.totalAfterCancel).toBe(result.originalTotal);
   });
+
+  test('Dine In 按菜平分时每个子单金额应等于对应菜品金额', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.splitDineInOrderByItemAndReadSummary(environment.posHomeUrl);
+
+    expect(result.splitOrderCount).toBe(2);
+    expect(result.splitOrderPrices).toEqual(result.splitItemPrices);
+  });
+
+  test('拖拽分单支付第一个子单后应保留子单状态和母单背景色', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.splitOrderByDragPayFirstSubOrderAndReadStatuses(environment.posHomeUrl);
+
+    expect(result.firstSubOrderStatus).toBe('Paid');
+    expect(result.secondSubOrderStatus).toBe('New Order');
+    expect(result.parentOrderBackground).toBe('rgba(33, 150, 243, 1)');
+  });
 });
