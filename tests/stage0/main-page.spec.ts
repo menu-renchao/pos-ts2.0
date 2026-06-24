@@ -1,4 +1,5 @@
 import { test, expect } from '../../fixtures/base-test.js';
+import { DeliveryFlow } from '../../flows/pos/delivery.flow.js';
 import { HomeFunctionLayoutFlow } from '../../flows/pos/home-function-layout.flow.js';
 import { LanguagePreferenceFlow } from '../../flows/pos/language-preference.flow.js';
 import { PosEntryFlow } from '../../flows/pos/pos-entry.flow.js';
@@ -7,12 +8,14 @@ import { ReportingFlow } from '../../flows/pos/reporting.flow.js';
 import { StaffClockFlow } from '../../flows/pos/staff-clock.flow.js';
 import { SupportInfoFlow } from '../../flows/pos/support-info.flow.js';
 import { AdminPage } from '../../pages/pos/admin.page.js';
+import { DeliveryPage } from '../../pages/pos/delivery.page.js';
 import { PosHomePage } from '../../pages/pos/home.page.js';
 import { OrderDishesPage } from '../../pages/pos/order-dishes.page.js';
 import { ReportPage } from '../../pages/pos/report.page.js';
 import { ReservationPage } from '../../pages/pos/reservation.page.js';
 import { SupportPage } from '../../pages/pos/support.page.js';
 import { homeFunctions, sessionMoveError } from '../../test-data/pos/home-functions.js';
+import { deliveryAddressSample } from '../../test-data/pos/delivery.js';
 import { languageOptions } from '../../test-data/pos/languages.js';
 import { expectedPatchInfo } from '../../test-data/pos/support-info.js';
 import { invalidEmployeePassword, validEmployeePassword } from '../../test-data/pos/permissions.js';
@@ -194,5 +197,31 @@ test.describe('POS 首页', () => {
 
     expect(supportInfo.version).toBe(expectedPatchInfo.version);
     expect(supportInfo.patchVersion).toBe(expectedPatchInfo.patchVersion);
+  });
+
+  test('Delivery 删除电话和姓名后应从历史订单切回用户列表', {
+    annotation: [jiraIssue('POS-34018')],
+  }, async ({ environment, page }) => {
+    const deliveryFlow = new DeliveryFlow(new PosHomePage(page), new DeliveryPage(page));
+
+    const result = await deliveryFlow.verifyPhoneAndNameDeletionReselectsCustomerList(environment.posHomeUrl);
+
+    expect(result.initialOrderListExists).toBe(true);
+    expect(result.afterPhoneDelete.orderListExists).toBe(false);
+    expect(result.afterPhoneDelete.customerListExists).toBe(true);
+    expect(result.afterReselectOrderListExists).toBe(true);
+    expect(result.afterNameDelete.orderListExists).toBe(false);
+    expect(result.afterNameDelete.customerListExists).toBe(true);
+  });
+
+  test('Delivery 输入地址关键字应关联历史订单地址', {
+    annotation: [jiraIssue('POS-37847')],
+  }, async ({ environment, page }) => {
+    const deliveryFlow = new DeliveryFlow(new PosHomePage(page), new DeliveryPage(page));
+
+    const result = await deliveryFlow.searchHistoricalOrderByAddress(environment.posHomeUrl, deliveryAddressSample);
+
+    expect(result.orderCount).toBeGreaterThan(0);
+    expect(result.orderInfo).toContain(deliveryAddressSample);
   });
 });

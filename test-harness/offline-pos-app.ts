@@ -25,6 +25,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <button data-testid="home-recall">Recall</button>
       <button data-testid="home-admin">Admin</button>
       <button data-testid="home-reservation">Reservation</button>
+      <button data-testid="home-delivery">Delivery</button>
       <button data-testid="home-report">Report</button>
       <button data-testid="home-support">Support</button>
       <input data-testid="employee-password" type="password" />
@@ -53,6 +54,18 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
     <section data-testid="report-page" hidden>
       <h1>Report</h1>
     </section>
+    <section data-testid="delivery-page" hidden>
+      <input data-testid="delivery-phone" />
+      <input data-testid="delivery-name" />
+      <input data-testid="delivery-address" />
+      <button data-testid="delivery-history-customer">History Customer</button>
+      <button data-testid="delivery-phone-delete">Delete Phone</button>
+      <button data-testid="delivery-name-delete">Delete Name</button>
+      <button data-testid="delivery-seed-address-order">Seed Address Order</button>
+      <div data-testid="delivery-order-list" hidden data-count="0"></div>
+      <div data-testid="delivery-customer-list"></div>
+      <div data-testid="delivery-order-info"></div>
+    </section>
     <section data-testid="support-page" hidden>
       <div data-testid="support-version">Voffline-fast</div>
       <div data-testid="support-patch-version">7</div>
@@ -79,6 +92,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let currentLanguage = localStorage.getItem('currentLanguage') || 'Default';
       let userDefaultLanguage = localStorage.getItem('userDefaultLanguage') || 'Default';
       let clockState = 'off';
+      let deliveryHistoricalAddress = '';
       let reservations = [];
       let mainFunctions = ['Dine In', 'Drawer', 'To Go', 'Delivery'];
       let hiddenFunctions = ['Admin', 'Session'];
@@ -110,6 +124,17 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const reportPasswordSaveButton = document.querySelector('[data-testid="report-password-save"]');
       const reportPage = document.querySelector('[data-testid="report-page"]');
       const supportPage = document.querySelector('[data-testid="support-page"]');
+      const deliveryPage = document.querySelector('[data-testid="delivery-page"]');
+      const deliveryPhoneInput = document.querySelector('[data-testid="delivery-phone"]');
+      const deliveryNameInput = document.querySelector('[data-testid="delivery-name"]');
+      const deliveryAddressInput = document.querySelector('[data-testid="delivery-address"]');
+      const deliveryHistoryCustomerButton = document.querySelector('[data-testid="delivery-history-customer"]');
+      const deliveryPhoneDeleteButton = document.querySelector('[data-testid="delivery-phone-delete"]');
+      const deliveryNameDeleteButton = document.querySelector('[data-testid="delivery-name-delete"]');
+      const deliverySeedAddressOrderButton = document.querySelector('[data-testid="delivery-seed-address-order"]');
+      const deliveryOrderList = document.querySelector('[data-testid="delivery-order-list"]');
+      const deliveryCustomerList = document.querySelector('[data-testid="delivery-customer-list"]');
+      const deliveryOrderInfo = document.querySelector('[data-testid="delivery-order-info"]');
       const reservationPage = document.querySelector('[data-testid="reservation-page"]');
       const reservationPartyInput = document.querySelector('[data-testid="reservation-party-name"]');
       const reservationPhoneInput = document.querySelector('[data-testid="reservation-phone"]');
@@ -152,11 +177,30 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
 
       function showPanel(panel) {
         adminPage.hidden = panel !== 'admin';
+        deliveryPage.hidden = panel !== 'delivery';
         orderPage.hidden = panel !== 'order';
         reportPasswordPanel.hidden = panel !== 'report-password';
         reportPage.hidden = panel !== 'report';
         supportPage.hidden = panel !== 'support';
         reservationPage.hidden = panel !== 'reservation';
+      }
+
+      function showDeliveryOrders(orderInfo = '') {
+        deliveryOrderList.hidden = false;
+        deliveryOrderList.dataset.count = '1';
+        deliveryOrderList.textContent = 'Historical order';
+        deliveryCustomerList.hidden = true;
+        deliveryCustomerList.textContent = '';
+        deliveryOrderInfo.textContent = orderInfo;
+      }
+
+      function showDeliveryCustomers() {
+        deliveryOrderList.hidden = true;
+        deliveryOrderList.dataset.count = '0';
+        deliveryOrderList.textContent = '';
+        deliveryCustomerList.hidden = false;
+        deliveryCustomerList.textContent = 'Customer list';
+        deliveryOrderInfo.textContent = '';
       }
 
       function updateReservationStatusRead(partyName) {
@@ -325,6 +369,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       document.querySelector('[data-testid="home-reservation"]').addEventListener('click', () => {
         showPanel('reservation');
       });
+      document.querySelector('[data-testid="home-delivery"]').addEventListener('click', () => {
+        showPanel('delivery');
+      });
       document.querySelector('[data-testid="home-report"]').addEventListener('click', () => {
         showPanel('report-password');
       });
@@ -335,6 +382,25 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       });
       document.querySelector('[data-testid="home-support"]').addEventListener('click', () => {
         showPanel('support');
+      });
+      deliveryHistoryCustomerButton.addEventListener('click', () => {
+        showDeliveryOrders('Historical order for ' + deliveryPhoneInput.value);
+      });
+      deliveryPhoneDeleteButton.addEventListener('click', () => {
+        deliveryPhoneInput.value = deliveryPhoneInput.value.slice(0, -1);
+        showDeliveryCustomers();
+      });
+      deliveryNameDeleteButton.addEventListener('click', () => {
+        deliveryNameInput.value = deliveryNameInput.value.slice(0, -2);
+        showDeliveryCustomers();
+      });
+      deliverySeedAddressOrderButton.addEventListener('click', () => {
+        deliveryHistoricalAddress = deliveryAddressInput.value;
+      });
+      deliveryAddressInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' && deliveryHistoricalAddress.includes(deliveryAddressInput.value)) {
+          showDeliveryOrders(deliveryHistoricalAddress);
+        }
       });
       reservationAddButton.addEventListener('click', () => {
         reservations.push({

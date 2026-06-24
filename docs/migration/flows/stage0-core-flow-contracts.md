@@ -364,6 +364,61 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 | filesystem | Source Python case creates a local fastversion patch file under the POS install directory | Add live setup/cleanup contract for the Windows install path before live smoke |
 | selector | Real support panel version and patch selectors must be confirmed against live DOM | Replace stub selectors with stable live selectors or request instrumentation |
 
+## DeliveryFlow
+
+### Source Coverage
+
+| source_file | source_class | source_test_pattern | target_spec | target_flow_method |
+|---|---|---|---|---|
+| stage0/test_main_page.py | TestMainPage | `test_delivery_delete_phone_reselect` Delivery phone/name deletion toggles history order and customer list | tests/stage0/main-page.spec.ts | `DeliveryFlow.verifyPhoneAndNameDeletionReselectsCustomerList` |
+| stage0/test_main_page.py | TestMainPage | `test_delivery_order_asso_with_address` Delivery address keyword finds historical order | tests/stage0/main-page.spec.ts | `DeliveryFlow.searchHistoricalOrderByAddress` |
+
+### Preconditions
+
+- POS home is opened through `PosHomePage.open`.
+- Delivery is entered through the home Delivery button.
+- Delivery customer and address samples come from `test-data/pos/delivery.ts`.
+- Stub mode stores historical order and customer list state in the current page.
+
+### Steps
+
+1. For phone/name reselection, enter Delivery, fill phone and name, choose a history customer, and read order-list state.
+2. Delete the last phone digit and read order-list/customer-list state.
+3. Re-select the history customer and read order-list state again.
+4. Delete the name suffix and read order-list/customer-list state again.
+5. For address association, seed a historical Delivery order address, search by the source keyword, and read order count and order info.
+
+### Expected Assertions
+
+- Selecting a history customer shows the historical order list.
+- Deleting phone hides the order list and shows the customer list.
+- Re-selecting the history customer restores the order list.
+- Deleting name hides the order list and shows the customer list.
+- Address keyword search returns at least one historical order and the order info contains the full address.
+
+### Page Responsibilities
+
+- `PosHomePage` owns Delivery entry.
+- `DeliveryPage` owns Delivery customer input, history customer selection, phone/name deletion, address search, list state reads, and historical order info reads.
+
+### Client/Data Responsibilities
+
+- `test-data/pos/delivery.ts` owns canonical Delivery phone, name, and address samples.
+- No DB/API client is required for first-round offline Delivery behavior; the source order setup is represented by deterministic stub state.
+
+### Stub Behavior
+
+- Stub Delivery history selection toggles visible state between order list and customer list.
+- Stub address seeding remembers one historical order address for the current test page.
+- Stub address search returns the historical order when the stored address contains the typed keyword.
+
+### Live Gaps
+
+| gap | reason | required before verified |
+|---|---|---|
+| selector | Real Delivery phone/name/address, history customer, order-list, and customer-list selectors must be confirmed against live DOM | Replace stub selectors with stable live selectors or request instrumentation |
+| data | Live historical Delivery order setup may require API/DB setup | Add setup/cleanup contract for historical Delivery orders before live smoke |
+
 ## OrderEntryFlow
 
 ### Source Coverage
