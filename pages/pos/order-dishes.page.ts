@@ -361,6 +361,14 @@ export class OrderDishesPage extends PageObject {
     });
   }
 
+  async addPricedGlobalOptionListItem(): Promise<number> {
+    return step('点击带价格的 Global Option 列表 Add 并读取价格', async () => {
+      const optionPrice = Number((await this.globalOptionListAddButton.getAttribute('data-price')) ?? '0');
+      await this.globalOptionListAddButton.click();
+      return optionPrice;
+    });
+  }
+
   async setGlobalOptionListCount(count: number): Promise<void> {
     await step(`设置 Global Option 列表数量为 ${count}`, async () => {
       await this.globalOptionListCountButton.click();

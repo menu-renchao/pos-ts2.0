@@ -138,7 +138,7 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 | crm/test_crm_points_calculation.py | TestCrmPointsCalculation | `test_redeem_refund_order` | tests/crm/crm-points-calculation.spec.ts | `CrmPointsCalculationFlow.refundPaidMemberOrderAndReadPoints` |
 | crm/test_crm_points_calculation.py | TestCrmPointsCalculation | `test_earn_points_rules_by_spent_pos_order` | tests/crm/crm-points-calculation.spec.ts | `CrmPointsCalculationFlow.earnPointsForPaidMemberOrderAndReadPoints` |
 | crm/test_crm_points_calculation.py | TestCrmPointsCalculation | `test_login_member_redeem_point` | tests/crm/crm-points-calculation.spec.ts | `CrmPointsCalculationFlow.joinEmailMemberAndReadInitialPoints` |
-| crm/test_crm_points_calculation.py | TestCrmPointsCalculation | `test_redeem_free_item_modify_global_option` | tests/crm/crm-points-calculation.spec.ts | not-started |
+| crm/test_crm_points_calculation.py | TestCrmPointsCalculation | `test_redeem_free_item_modify_global_option` | tests/crm/crm-points-calculation.spec.ts | `CrmPointsCalculationFlow.redeemFreeItemModifyGlobalOptionAndReadPrices` |
 
 ### Preconditions
 
@@ -175,6 +175,7 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 24. `CrmPointsCalculationFlow.refundPaidMemberOrderAndReadPoints`: create a Dine In order, attach `crmSourceRewardMember`, add `groupSwitchDish`, save, recall, pay all by cash, reopen the recent order, read Recall point balance, refund the paid order, read Recall point balance again, then read the same member in Admin CRM Loyalty.
 25. `CrmPointsCalculationFlow.earnPointsForPaidMemberOrderAndReadPoints`: create a Dine In order, attach `crmSourceRewardMember`, read the POS header point balance, add `groupSwitchDish`, save, recall, pay all by cash, reopen the recent order, and read the Recall point balance.
 26. `CrmPointsCalculationFlow.joinEmailMemberAndReadInitialPoints`: open the home Join Member registration, create an email-only member with deterministic first and last name, open Admin CRM Loyalty Member List, search by the created email, and read the displayed email plus points.
+27. `CrmPointsCalculationFlow.redeemFreeItemModifyGlobalOptionAndReadPrices`: create a Dine In order, attach `crmSourceRewardMember`, redeem `crmRedeemItemDish`, quit Redeem, open Global Option Modify for the redeemed item, add a priced global option, then read the option price, current item price, and current subtotal.
 
 ### Expected Assertions
 
@@ -203,6 +204,7 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 - POS-29963 verifies paid-order Refund keeps the payment-time point balance in Recall and Admin CRM Loyalty.
 - POS-29991 verifies paid-order earning adds the deterministic single-order points to the pre-payment POS header balance.
 - POS-29330 verifies a newly created email-only Join Member record appears in Admin CRM Loyalty with 1000 initial points.
+- POS-29991 verifies Redeem Free Item Global Option Add updates the redeemed item price and current subtotal to the selected option price.
 
 ### Page Responsibilities
 
@@ -228,6 +230,7 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 - `RecallPage.voidPaidOrder`, `RecallPage.refundPaidOrder`, and `RecallPage.readCrmPointBalance` own paid-order void/refund point-balance checks for POS-29961 and POS-29963.
 - `PosCrmPage.readHeaderPointBalance` and `RecallPage.readCrmPointBalance` own before/after point reads for POS-29991.
 - `PosCrmPage.openJoinMemberRegistration`, `PosCrmPage.fillJoinMemberEmail`, `PosCrmPage.submitJoinMember`, and `PosCrmPage.readMemberSearchPointResult` own email-member initial point checks for POS-29330.
+- `OrderDishesPage.openGlobalOptionModify`, `OrderDishesPage.addPricedGlobalOptionListItem`, `OrderDishesPage.readSelectedOrderItem`, and `OrderDishesPage.readSubtotal` own redeemed-item Global Option price checks for POS-29991.
 
 ### Client/Data Responsibilities
 
@@ -244,6 +247,7 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 - `StubCrmRewardClient.calculateDiscount` supports optional maximum discount caps for source CRM loyalty reward rules.
 - `test-data/crm/members.ts` owns `crmRewardSettings.pointsPerPaidOrder` for paid-order void expected point deduction.
 - `StubCrmMemberClient.nextUniqueEmail` supplies deterministic email-only member input for POS-29330, and `test-data/crm/members.ts` owns `crmNewMemberInitialPoints`.
+- `test-data/pos/dishes.ts` owns `crmRedeemItemDish` and `pricedGlobalOption` for the redeemed-item modify path.
 
 ### Stub Behavior
 
@@ -270,6 +274,7 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 - Offline paid-order Refund marks the recalled order refunded without changing CRM points, matching the source assertions that Recall and Admin balances remain equal to the payment-time balance.
 - Offline paid-order earning uses the same deterministic subtotal rule as the void/refund paths; a single `groupSwitchDish` order earns 10 points.
 - Offline Join Member creation seeds new members with 1000 points so Admin CRM Loyalty search reflects the source initial-point rule.
+- Offline Global Option Add exposes `data-price` and applies that price to the current redeemed item so the order item price and subtotal are recalculated from the selected option.
 
 ### Live Gaps
 

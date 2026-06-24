@@ -45,6 +45,15 @@ test.describe('CRM 积分计算', () => {
     expect(result.memberEmail).toBe(result.createdEmail);
     expect(result.memberPoints).toBe(crmNewMemberInitialPoints);
   });
+
+  test('POS-29991 Redeem Free Item 添加 Global Option 后应按 option price 更新菜品和小计', async ({ environment, page }) => {
+    const crmPointsCalculationFlow = createCrmPointsCalculationFlow(page);
+
+    const result = await crmPointsCalculationFlow.redeemFreeItemModifyGlobalOptionAndReadPrices(environment.posHomeUrl);
+
+    expect(result.orderedItemPrice).toBe(result.optionPrice);
+    expect(result.subtotal).toBe(result.orderedItemPrice);
+  });
 });
 
 function createCrmPointsCalculationFlow(page: Page): CrmPointsCalculationFlow {

@@ -55,6 +55,11 @@ export const crmRedeemItemDish: DishSample = {
   taxRate: 0,
 };
 
+export const pricedGlobalOption = {
+  name: 'Global Option Add',
+  price: 1.5,
+} as const;
+
 export const categoryOptionDish: OptionOrderSample = {
   id: 'dish-category-option-pork',
   name: 'Category Option Pork',

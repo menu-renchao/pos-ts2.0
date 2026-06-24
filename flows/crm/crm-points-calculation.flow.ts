@@ -5,7 +5,7 @@ import type { PosHomePage } from '../../pages/pos/home.page.js';
 import type { OrderDishesPage } from '../../pages/pos/order-dishes.page.js';
 import type { RecallPage } from '../../pages/pos/recall.page.js';
 import { crmSourceRewardMember, crmRewardSettings } from '../../test-data/crm/members.js';
-import { groupSwitchDish } from '../../test-data/pos/dishes.js';
+import { crmRedeemItemDish, groupSwitchDish } from '../../test-data/pos/dishes.js';
 
 export type PaidOrderVoidPointResult = {
   readonly pointsAfterPayment: number;
@@ -30,6 +30,12 @@ export type JoinEmailMemberInitialPointResult = {
   readonly createdEmail: string;
   readonly memberEmail: string;
   readonly memberPoints: number;
+};
+
+export type RedeemFreeItemModifyGlobalOptionPriceResult = {
+  readonly optionPrice: number;
+  readonly orderedItemPrice: number;
+  readonly subtotal: number;
 };
 
 export class CrmPointsCalculationFlow {
@@ -97,6 +103,29 @@ export class CrmPointsCalculationFlow {
       createdEmail,
       memberEmail: await this.posCrmPage.readMemberSearchEmailResult(),
       memberPoints: Number(await this.posCrmPage.readMemberSearchPointResult()),
+    };
+  }
+
+  async redeemFreeItemModifyGlobalOptionAndReadPrices(
+    homeUrl: string,
+  ): Promise<RedeemFreeItemModifyGlobalOptionPriceResult> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    this.crmRewardClient.findMemberByPhone(crmSourceRewardMember.phone);
+    await this.posCrmPage.openRedeem();
+    await this.posCrmPage.selectMemberByPhone(crmSourceRewardMember.phone);
+    await this.posCrmPage.openRedeem();
+    await this.posCrmPage.applyRedeemItem(crmRedeemItemDish.name);
+    await this.posCrmPage.quitRedeem();
+    await this.orderDishesPage.openGlobalOptionModify();
+    const optionPrice = await this.orderDishesPage.addPricedGlobalOptionListItem();
+    const orderedItem = await this.orderDishesPage.readSelectedOrderItem();
+    const subtotal = await this.orderDishesPage.readSubtotal();
+
+    return {
+      optionPrice,
+      orderedItemPrice: orderedItem.price,
+      subtotal,
     };
   }
 

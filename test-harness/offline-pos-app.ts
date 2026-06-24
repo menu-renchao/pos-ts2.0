@@ -131,7 +131,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <button data-testid="order-void-item">Void Item</button>
       <button data-testid="order-modify">Modify</button>
       <button data-testid="global-option-no">Global Option No</button>
-      <button data-testid="global-option-list-add">Global Option Add</button>
+      <button data-testid="global-option-list-add" data-price="1.5">Global Option Add</button>
       <button data-testid="global-option-list-count">Global Option Count</button>
       <button data-testid="global-option-list-reduce">Global Option Reduce</button>
       <input data-testid="global-option-count-input" />
@@ -1446,7 +1446,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         renderOrderAmounts();
       });
       globalOptionListAddButton.addEventListener('click', () => {
+        const optionPrice = Number(globalOptionListAddButton.dataset.price || '0');
         currentGlobalOptionCount += 1;
+        if (currentOrderItems[0]) {
+          currentOrderItems[0].price = optionPrice;
+        }
         globalOptionArea.hidden = false;
         renderOrderAmounts();
       });
