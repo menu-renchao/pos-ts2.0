@@ -25,6 +25,8 @@ export class OrderDishesPage extends PageObject {
   private readonly openFoodNameInput: Locator;
   private readonly openFoodNoTaxButton: Locator;
   private readonly openFoodPriceInput: Locator;
+  private readonly orderItemName: Locator;
+  private readonly orderOptions: Locator;
   private readonly pickupButton: Locator;
   private readonly pickupInfoSubmitButton: Locator;
   private readonly saveOrderButton: Locator;
@@ -32,6 +34,7 @@ export class OrderDishesPage extends PageObject {
   private readonly settleButton: Locator;
   private readonly splitCombineButton: Locator;
   private readonly splitEvenButton: Locator;
+  private readonly subOptions: Locator;
   private readonly tipInput: Locator;
   private readonly voidItemButton: Locator;
 
@@ -55,6 +58,8 @@ export class OrderDishesPage extends PageObject {
     this.openFoodNameInput = page.getByTestId('open-food-name');
     this.openFoodNoTaxButton = page.getByTestId('open-food-no-tax');
     this.openFoodPriceInput = page.getByTestId('open-food-price');
+    this.orderItemName = page.getByTestId('order-item-name');
+    this.orderOptions = page.getByTestId('order-option');
     this.pickupButton = page.getByTestId('order-pickup');
     this.pickupInfoSubmitButton = page.getByTestId('pickup-info-submit');
     this.openFoodCategory = page.getByTestId('open-food-category');
@@ -64,6 +69,7 @@ export class OrderDishesPage extends PageObject {
     this.settleButton = page.getByTestId('order-settle');
     this.splitCombineButton = page.getByTestId('split-combine');
     this.splitEvenButton = page.getByTestId('split-even');
+    this.subOptions = page.getByTestId('order-sub-option');
     this.tipInput = page.getByTestId('order-tip');
     this.voidItemButton = page.getByTestId('order-void-item');
   }
@@ -151,6 +157,32 @@ export class OrderDishesPage extends PageObject {
 
   async readSelectedItemPrice(): Promise<number> {
     return step('读取当前菜品价格', async () => Number((await this.itemPrice.textContent()) ?? '0'));
+  }
+
+  async readSelectedOrderItem(): Promise<{ name: string; price: number }> {
+    return step('读取当前已点菜品名称和价格', async () => {
+      await expect(this.orderItemName).toBeVisible();
+      return {
+        name: (await this.orderItemName.textContent()) ?? '',
+        price: Number((await this.itemPrice.textContent()) ?? '0'),
+      };
+    });
+  }
+
+  async selectOptions(optionNames: readonly string[] = []): Promise<void> {
+    await step(`选择菜品 Option ${optionNames.join(', ') || '无'}`, async () => {
+      for (const optionName of optionNames) {
+        await this.orderOptions.filter({ hasText: optionName }).click();
+      }
+    });
+  }
+
+  async selectSubOptions(subOptionNames: readonly string[] = []): Promise<void> {
+    await step(`选择菜品二级 Option ${subOptionNames.join(', ') || '无'}`, async () => {
+      for (const subOptionName of subOptionNames) {
+        await this.subOptions.filter({ hasText: subOptionName }).click();
+      }
+    });
   }
 
   async applyItemDiscount(): Promise<void> {

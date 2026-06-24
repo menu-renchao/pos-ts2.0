@@ -53,7 +53,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <div data-testid="order-menu-categories"></div>
       <div data-testid="order-menu-items"></div>
       <div data-testid="order-tax">0</div>
+      <div data-testid="order-item-name"></div>
       <div data-testid="order-item-price">0</div>
+      <div data-testid="order-options"></div>
+      <div data-testid="order-sub-options"></div>
       <button data-testid="order-send-kitchen">Send Kitchen</button>
       <button data-testid="order-settle">Settle</button>
       <button data-testid="settle-cash">Cash</button>
@@ -194,7 +197,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const orderMenuItems = document.querySelector('[data-testid="order-menu-items"]');
       const orderSaveButton = document.querySelector('[data-testid="order-save"]');
       const orderTax = document.querySelector('[data-testid="order-tax"]');
+      const orderItemName = document.querySelector('[data-testid="order-item-name"]');
       const orderItemPrice = document.querySelector('[data-testid="order-item-price"]');
+      const orderOptions = document.querySelector('[data-testid="order-options"]');
+      const orderSubOptions = document.querySelector('[data-testid="order-sub-options"]');
       const orderSendKitchenButton = document.querySelector('[data-testid="order-send-kitchen"]');
       const orderSettleButton = document.querySelector('[data-testid="order-settle"]');
       const settleCashButton = document.querySelector('[data-testid="settle-cash"]');
@@ -336,13 +342,29 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           { name: 'Group Switch Beef', price: 11.25, group: 'Lunch Menu', category: 'Lunch Entree' },
           { name: 'Category Switch Fish', price: 13.5, group: 'Dinner Menu', category: 'Seafood' },
           { name: 'Discountable Burger', price: 10, group: 'Dinner Menu', category: 'Burgers' },
+          { name: 'Category Option Pork', price: 9.5, group: '', category: 'Category Option' },
+          { name: '蒙古鸡', price: 10.25, group: '', category: 'KDS鸡肉类午餐' },
+          { name: 'Item Option Pork', price: 12, group: 'Dinner Menu', category: 'Item Options' },
+          { name: 'Item Option Seafood', price: 12.75, group: 'Dinner Menu', category: 'Item Options' },
         ];
       }
 
       function renderOrderAmounts() {
         const itemCount = currentOrderItems.filter((item) => item.state !== 'Voided').length;
         orderTax.textContent = String(Number((itemCount * 0.6).toFixed(2)));
+        orderItemName.textContent = currentOrderItems[0]?.name || '';
         orderItemPrice.textContent = String(currentOrderItems[0]?.price || 0);
+      }
+
+      function renderOptionControls() {
+        orderOptions.innerHTML = '';
+        ['Pork', 'Seafood'].forEach((optionName) => {
+          orderOptions.appendChild(createButton('order-option', optionName, () => {}));
+        });
+        orderSubOptions.innerHTML = '';
+        ['Spicy'].forEach((subOptionName) => {
+          orderSubOptions.appendChild(createButton('order-sub-option', subOptionName, () => {}));
+        });
       }
 
       function renderOrderMenu() {
@@ -353,7 +375,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           orderMenuGroups.appendChild(createButton('order-menu-group', group, () => {}));
         });
         orderMenuCategories.innerHTML = '';
-        ['Lunch Entree', 'Seafood', 'Burgers'].forEach((category) => {
+        ['Lunch Entree', 'Seafood', 'Burgers', 'Category Option', 'KDS鸡肉类午餐', 'Item Options'].forEach((category) => {
           orderMenuCategories.appendChild(createButton('order-menu-category', category, () => {}));
         });
         orderMenuItems.innerHTML = '';
@@ -363,6 +385,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
             renderOrderAmounts();
           }));
         });
+        renderOptionControls();
       }
 
       function resetCurrentOrder() {

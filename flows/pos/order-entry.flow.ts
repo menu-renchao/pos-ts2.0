@@ -1,7 +1,7 @@
 import type { PosHomePage } from '../../pages/pos/home.page.js';
 import type { OrderDishesPage } from '../../pages/pos/order-dishes.page.js';
 import type { RecalledItemOption, RecalledOrderItem, RecallPage } from '../../pages/pos/recall.page.js';
-import type { DishSample } from '../../test-data/pos/domain-types.js';
+import type { DishSample, OptionOrderSample } from '../../test-data/pos/domain-types.js';
 import { discountableDish, groupSwitchDish, categorySwitchDish } from '../../test-data/pos/dishes.js';
 import { languageOptions } from '../../test-data/pos/languages.js';
 
@@ -29,6 +29,11 @@ export type SplitTipResult = {
 export type PickupGuestNameResult = {
   latestOrderCustomerName: string | null;
   previousOrderCustomerName: string | null;
+};
+
+export type OptionOrderRecallResult = {
+  orderedItem: RecalledOrderItem;
+  recalledItems: RecalledOrderItem[];
 };
 
 export class OrderEntryFlow {
@@ -148,6 +153,28 @@ export class OrderEntryFlow {
     await this.recallPage.openPreviousOrder();
     const previousOrderCustomerName = await this.recallPage.readCustomerName();
     return { latestOrderCustomerName, previousOrderCustomerName };
+  }
+
+  async createOptionOrderAndReadRecall(
+    homeUrl: string,
+    optionOrder: OptionOrderSample,
+  ): Promise<OptionOrderRecallResult> {
+    await this.homePage.open(homeUrl);
+    if (optionOrder.language === 'Chinese') {
+      await this.homePage.switchLanguage(languageOptions.chinese);
+    }
+    await this.homePage.clickTogo();
+    await this.orderDishesPage.selectMenuGroup(optionOrder.group);
+    await this.orderDishesPage.selectMenuCategory(optionOrder.category);
+    await this.orderDishesPage.addMenuItem(optionOrder.name);
+    await this.orderDishesPage.selectOptions(optionOrder.optionNames);
+    await this.orderDishesPage.selectSubOptions(optionOrder.subOptionNames);
+    const orderedItem = await this.orderDishesPage.readSelectedOrderItem();
+    await this.orderDishesPage.saveOrder();
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    const recalledItems = await this.recallPage.readAllOrderItems();
+    return { orderedItem, recalledItems };
   }
 
   private async openOrderAndAddDish(homeUrl: string, dish: DishSample): Promise<void> {

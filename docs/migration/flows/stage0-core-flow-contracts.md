@@ -490,6 +490,14 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 | stage0/test_order_page.py | TestOrderPage | `test_split_tip_combine_check` add tip, split evenly, recall suborder, combine split order | tests/stage0/order-page.spec.ts | `OrderEntryFlow.splitTipEvenlyAndCombine` |
 | stage0/test_order_page.py | TestOrderPage | `test_open_food_no_tax` Open Food without tax can be paid by cash and recalled as Paid | tests/stage0/order-page.spec.ts | `OrderEntryFlow.payOpenFoodWithoutTax` |
 | stage0/test_order_page.py | TestOrderPage | `test_pick_up_order_no_repeat_name` two no-name Pickup orders keep guest-name edits isolated | tests/stage0/order-page.spec.ts | `OrderEntryFlow.editPreviousPickupGuestNameWithoutAffectingLatest` |
+| stage0/test_order_page.py | TestOrderPage | `test_order_category_option` category-level option selection saves the same item to Recall | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createOptionOrderAndReadRecall` |
+| stage0/test_order_page.py | TestOrderPage | `test_order_category_chinese` Chinese category item saves the same item to Recall | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createOptionOrderAndReadRecall` |
+| stage0/test_order_page.py | TestOrderPage | `test_order_category_sub_option` category-level option with sub-option saves the same item to Recall | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createOptionOrderAndReadRecall` |
+| stage0/test_order_page.py | TestOrderPage | `test_order_category_no_sub_option` category-level option without sub-option saves the same item to Recall | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createOptionOrderAndReadRecall` |
+| stage0/test_order_page.py | TestOrderPage | `test_order_item_no_sub_option` item-level option without sub-option saves the same item to Recall | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createOptionOrderAndReadRecall` |
+| stage0/test_order_page.py | TestOrderPage | `test_order_item_option` item-level option selection saves the same item to Recall | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createOptionOrderAndReadRecall` |
+| stage0/test_order_page.py | TestOrderPage | `test_order_item_no_option` item-level option omitted saves the base item to Recall | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createOptionOrderAndReadRecall` |
+| stage0/test_order_page.py | TestOrderPage | `test_order_item_sub_option` item-level option with sub-option saves the same item to Recall | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createOptionOrderAndReadRecall` |
 | stage0/test_order_page.py | all `Test*` classes | add dishes, modify items, save orders, validate order totals | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createTogoOrder` |
 | stage0/test_order_settle.py | all `Test*` classes | create payable orders before settlement | tests/stage0/order-settle.spec.ts | `OrderEntryFlow.createTogoOrder` |
 
@@ -527,6 +535,8 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Split-tip flow shows half tip on the first suborder and the original full tip after combining suborders.
 - No-tax Open Food flow completes cash payment and Recall shows order status `Paid`.
 - Pickup guest-name edit flow leaves the latest no-name order blank while the previous edited order shows `(ren)`.
+- Option-order flows preserve source behavior by comparing the order-page returned item name and price with the single recalled item after save.
+- Chinese category option flow switches UI language before ordering and still preserves the same recalled item name and price.
 
 ### Page Responsibilities
 
@@ -537,11 +547,13 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `RecallPage` owns latest saved-order selection and line-item reads for source cases that verify saved orders.
 - `OrderDishesPage` owns order tax reads, customer-info popup actions, manager password popup actions, item discount action, and Modify note entry.
 - `OrderDishesPage` owns tip input, split-even action, Open Food no-tax entry, cash payment action, and Pickup info submission.
+- `OrderDishesPage` owns option and sub-option selection plus current ordered-item name/price reads.
 - `RecallPage` owns recalled item state, option reads, suborder tip reads, split-order combine action, order status reads, order selection, guest-name edit, and customer-name reads.
 
 ### Client/Data Responsibilities
 
 - `test-data/pos/dishes.ts` owns dish, combo, option, and inventory sample data.
+- `test-data/pos/dishes.ts` owns category-level and item-level option order samples, including Chinese category and optional sub-option variants.
 - `test-data/pos/payments.ts` owns expected payment/tender values reused by settlement.
 - `StubPosOrderClient` or `StubPosDbClient` owns generated order identity in stub mode.
 
@@ -560,6 +572,8 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Stub split-even records a first-suborder tip of half the current order tip and combines back to the full original tip.
 - Stub cash settlement stores the current order as `Paid` and makes it available in Recall.
 - Stub Pickup order creation stores multiple orders in one browser page session so editing the previous order does not mutate the latest order.
+- Stub order menu renders category-level and item-level option sample dishes plus Chinese category sample dishes.
+- Stub option and sub-option controls are deterministic UI actions; first-round assertions validate the source-observed item name/price preservation rather than live option-pricing internals.
 
 ### Live Gaps
 

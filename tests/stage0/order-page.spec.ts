@@ -3,7 +3,19 @@ import { OrderEntryFlow } from '../../flows/pos/order-entry.flow.js';
 import { PosHomePage } from '../../pages/pos/home.page.js';
 import { OrderDishesPage } from '../../pages/pos/order-dishes.page.js';
 import { RecallPage } from '../../pages/pos/recall.page.js';
-import { categorySwitchDish, chineseMenuGroups, groupSwitchDish } from '../../test-data/pos/dishes.js';
+import {
+  categoryNoSubOptionDish,
+  categoryOptionDish,
+  categorySubOptionDish,
+  categorySwitchDish,
+  chineseCategoryDish,
+  chineseMenuGroups,
+  groupSwitchDish,
+  itemNoOptionDish,
+  itemNoSubOptionDish,
+  itemOptionDish,
+  itemSubOptionDish,
+} from '../../test-data/pos/dishes.js';
 import { validEmployeePassword } from '../../test-data/pos/permissions.js';
 import { jiraIssue } from '../../utils/jira.js';
 
@@ -165,5 +177,117 @@ test.describe('POS 点单页面', () => {
 
     expect(result.latestOrderCustomerName).toBeNull();
     expect(result.previousOrderCustomerName).toBe('(ren)');
+  });
+
+  test('选择类级 Option 后保存订单应在 Recall 保留菜名和价格', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.createOptionOrderAndReadRecall(environment.posHomeUrl, categoryOptionDish);
+
+    expect(result.recalledItems).toHaveLength(1);
+    expect(result.recalledItems[0]?.name).toBe(result.orderedItem.name);
+    expect(result.recalledItems[0]?.price).toBe(result.orderedItem.price);
+  });
+
+  test('中文类菜品保存订单后应在 Recall 保留菜名和价格', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.createOptionOrderAndReadRecall(environment.posHomeUrl, chineseCategoryDish);
+
+    expect(result.recalledItems).toHaveLength(1);
+    expect(result.recalledItems[0]?.name).toBe(result.orderedItem.name);
+    expect(result.recalledItems[0]?.price).toBe(result.orderedItem.price);
+  });
+
+  test('选择类级 Option 和二级 Option 后保存订单应在 Recall 保留菜名和价格', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.createOptionOrderAndReadRecall(environment.posHomeUrl, categorySubOptionDish);
+
+    expect(result.recalledItems).toHaveLength(1);
+    expect(result.recalledItems[0]?.name).toBe(result.orderedItem.name);
+    expect(result.recalledItems[0]?.price).toBe(result.orderedItem.price);
+  });
+
+  test('只选择类级 Option 未选二级 Option 时 Recall 应保留菜名和价格', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.createOptionOrderAndReadRecall(environment.posHomeUrl, categoryNoSubOptionDish);
+
+    expect(result.recalledItems).toHaveLength(1);
+    expect(result.recalledItems[0]?.name).toBe(result.orderedItem.name);
+    expect(result.recalledItems[0]?.price).toBe(result.orderedItem.price);
+  });
+
+  test('菜品带二级 Option 但只选择一级 Option 时 Recall 应保留菜名和价格', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.createOptionOrderAndReadRecall(environment.posHomeUrl, itemNoSubOptionDish);
+
+    expect(result.recalledItems).toHaveLength(1);
+    expect(result.recalledItems[0]?.name).toBe(result.orderedItem.name);
+    expect(result.recalledItems[0]?.price).toBe(result.orderedItem.price);
+  });
+
+  test('选择菜品级 Option 后保存订单应在 Recall 保留菜名和价格', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.createOptionOrderAndReadRecall(environment.posHomeUrl, itemOptionDish);
+
+    expect(result.recalledItems).toHaveLength(1);
+    expect(result.recalledItems[0]?.name).toBe(result.orderedItem.name);
+    expect(result.recalledItems[0]?.price).toBe(result.orderedItem.price);
+  });
+
+  test('菜品级 Option 未选择时 Recall 应保留基础菜名和价格', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.createOptionOrderAndReadRecall(environment.posHomeUrl, itemNoOptionDish);
+
+    expect(result.recalledItems).toHaveLength(1);
+    expect(result.recalledItems[0]?.name).toBe(result.orderedItem.name);
+    expect(result.recalledItems[0]?.price).toBe(result.orderedItem.price);
+  });
+
+  test('选择菜品级 Option 和二级 Option 后 Recall 应保留菜名和价格', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.createOptionOrderAndReadRecall(environment.posHomeUrl, itemSubOptionDish);
+
+    expect(result.recalledItems).toHaveLength(1);
+    expect(result.recalledItems[0]?.name).toBe(result.orderedItem.name);
+    expect(result.recalledItems[0]?.price).toBe(result.orderedItem.price);
   });
 });

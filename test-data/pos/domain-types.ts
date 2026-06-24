@@ -11,6 +11,12 @@ export type DishSample = {
   taxRate?: number;
 };
 
+export type OptionOrderSample = DishSample & {
+  optionNames?: readonly string[];
+  subOptionNames?: readonly string[];
+  language?: 'Default' | 'Chinese';
+};
+
 export type MenuGroupSample = {
   id: string;
   name: string;
