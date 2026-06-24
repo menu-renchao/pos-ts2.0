@@ -57,6 +57,62 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 |---|---|---|
 | selector | Real POS home password and button selectors must be confirmed against the live DOM | Replace provisional locators with stable `data-testid` or documented semantic locators |
 
+## HomeFunctionLayoutFlow
+
+### Source Coverage
+
+| source_file | source_class | source_test_pattern | target_spec | target_flow_method |
+|---|---|---|---|---|
+| stage0/test_main_page.py | TestMainPage | `test_move_admin_to_main` saved Admin/Drawer swap | tests/stage0/main-page.spec.ts | `HomeFunctionLayoutFlow.moveFunctionToMainAndSave` |
+| stage0/test_main_page.py | TestMainPage | `test_move_dinein_and_togo` Dine In and To Go swap with restore | tests/stage0/main-page.spec.ts | `HomeFunctionLayoutFlow.swapDineInAndTogo` |
+| stage0/test_main_page.py | TestMainPage | `test_move_admin_to_main_no_save` unsaved Admin/Drawer swap | tests/stage0/main-page.spec.ts | `HomeFunctionLayoutFlow.previewMoveFunctionWithoutSaving` |
+| stage0/test_main_page.py | TestMainPage | `test_move_session_to_main` protected Session cannot move to main | tests/stage0/main-page.spec.ts | `HomeFunctionLayoutFlow.rejectMoveSessionToMain` |
+| stage0/test_main_page.py | TestMainPage | `test_move_session_to_more` protected Session cannot move to more | tests/stage0/main-page.spec.ts | `HomeFunctionLayoutFlow.rejectMoveSessionToMore` |
+
+### Preconditions
+
+- POS home is opened through `PosHomePage.open`.
+- Editable home function cards and hidden function cards are available through UI locators.
+- Function names come from `test-data/pos/home-functions.ts`.
+- Stub mode represents saved layout in the browser page state only; it does not persist layout across tests.
+
+### Steps
+
+1. Enter home function edit mode from the POS home page.
+2. Select source-equivalent function cards in the same order used by the Python helper calls.
+3. Save or cancel according to the source case.
+4. For Session protected moves, click the target movement control and read the visible toast.
+5. Restore changed layout after cases that intentionally modify a saved position.
+
+### Expected Assertions
+
+- Saved Admin/Drawer swap shows Admin on the home page and removes Drawer from the home page.
+- Saved Dine In/To Go swap changes the first home function to To Go, then restore changes it back to Dine In.
+- Unsaved Admin/Drawer swap leaves Admin hidden and Drawer visible on the home page.
+- Session movement attempts show `Can't move this button to/from hide area`.
+
+### Page Responsibilities
+
+- `PosHomePage` owns edit mode entry, save/cancel actions, card selection, movement controls, home-card reads, and toast reads.
+- `PosHomePage` does not mutate test state directly; it only drives page interactions and reads rendered state.
+
+### Client/Data Responsibilities
+
+- `test-data/pos/home-functions.ts` owns canonical function names and the protected Session movement error text.
+- No DB/API client is required for the first-round offline layout-edit behavior.
+
+### Stub Behavior
+
+- Stub home page keeps a committed layout and a draft layout to preserve the source distinction between save and no-save behavior.
+- Protected Session moves always return the source toast text and do not change draft or committed layout.
+
+### Live Gaps
+
+| gap | reason | required before verified |
+|---|---|---|
+| selector | Real edit-mode controls and card selectors must be confirmed against live DOM | Replace stub `data-testid` selectors with stable live selectors or request instrumentation |
+| persistence | Live layout persistence may be tenant/user scoped | Add live setup/teardown or API reset for layout state before smoke execution |
+
 ## OrderEntryFlow
 
 ### Source Coverage
