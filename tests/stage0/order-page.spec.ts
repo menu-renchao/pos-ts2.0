@@ -764,4 +764,37 @@ test.describe('POS 点单页面', () => {
 
     expect(subtotal).toBe(44.27);
   });
+
+  test('POS-35129 关闭小数数量后输入 2.55 应按 255 展示', {
+    annotation: [jiraIssue('POS-35129')],
+  }, async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.enterDecimalQuantityWhenDecimalCountDisabled(environment.posHomeUrl);
+
+    expect(result.dishQuantity).toBe('255');
+  });
+
+  test('POS-35660 自动合并同菜时小数数量菜添加两个 Global Option 应拆行并保持总额', {
+    annotation: [jiraIssue('POS-35660')],
+  }, async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.addGlobalOptionsToDecimalCombinedItemAndReadTotals(environment.posHomeUrl);
+
+    expect(result.firstDishQuantity).toBe('0.3');
+    expect(result.secondDishQuantity).toBe('2');
+    expect(result.secondDishPrice).toBeCloseTo(result.optionPrice * 2 + result.itemUnitPrice * 2, 2);
+    expect(result.recallTotal).toBe(result.totalBeforeSave);
+  });
 });

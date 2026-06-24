@@ -530,6 +530,8 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 | stage0/test_order_page.py | TestOrderPage | `test_item_count_decimal_special_price1` three special-price decimal quantity items save with expected Recall subtotal | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createDecimalSpecialPriceOrderAndReadRecallSubtotal` |
 | stage0/test_order_page.py | TestOrderPage | `test_item_count_decimal_special_price2` two special-price decimal quantity items save with expected Recall subtotal | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createDecimalSpecialPriceOrderAndReadRecallSubtotal` |
 | stage0/test_order_page.py | TestOrderPage | `test_item_count_decimal_special_price3` three special-price items with partial decimal quantities save with expected Recall subtotal | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createDecimalSpecialPriceOrderAndReadRecallSubtotal` |
+| stage0/test_order_page.py | TestOrderPage | `test_item_count_decimal_close` decimal quantity input is treated as non-decimal digits when decimal count is disabled | tests/stage0/order-page.spec.ts | `OrderEntryFlow.enterDecimalQuantityWhenDecimalCountDisabled` |
+| stage0/test_order_page.py | TestOrderPage | `test_item_count_decimal_combine_item_add_option` decimal quantity same-item combine with Global Option splits quantities and preserves total after Recall | tests/stage0/order-page.spec.ts | `OrderEntryFlow.addGlobalOptionsToDecimalCombinedItemAndReadTotals` |
 | stage0/test_order_page.py | all `Test*` classes | add dishes, modify items, save orders, validate order totals | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createTogoOrder` |
 | stage0/test_order_settle.py | all `Test*` classes | create payable orders before settlement | tests/stage0/order-settle.spec.ts | `OrderEntryFlow.createTogoOrder` |
 
@@ -565,6 +567,8 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 20. For decimal drag split behavior, enable Count Can Be Decimal, create a To Go order with first item quantity `2.55`, capture its total, add a second item with quantity `2`, save, open Recall split panel, drag split so the decimal item is isolated in suborder 2, open that suborder, and read quantity and total.
 21. For decimal combine behavior, enable Count Can Be Decimal, create two saved To Go orders with quantities `2.55`, open the latest Recall order, combine the previous order into it, then read both dish quantities and the combined total.
 22. For decimal special-price behavior, enable Count Can Be Decimal, create a To Go order, add each source-equivalent dish, select the added order line, set the requested special price, optionally set the requested decimal quantity, save, open Recall, and read subtotal.
+23. For disabled decimal-count behavior, disable Count Can Be Decimal, create a To Go order, enter quantity `2.55`, and read the first order-line quantity as rendered by the order page.
+24. For decimal combined-item Global Option behavior, enable Count Can Be Decimal and Auto Same Status combine, create a To Go order, set special price `7.95`, set quantity `2.3`, add a priced Global Option, read both split line quantities and the second-line price, save, open Recall, and compare saved total with Recall total.
 
 ### Expected Assertions
 
@@ -613,6 +617,8 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Decimal drag split flow verifies the isolated suborder dish quantity contains `2.55` and the suborder total equals the captured first-item total.
 - Decimal combine flow verifies both combined order dish quantities are `2.55` and the combined total equals the two source order totals within cents tolerance.
 - Decimal special-price flow verifies source POS-33600 subtotal outputs: `64.24` for `6.50 x 2.55 + 5.50 x 3.66 + 7.50 x 3.67`, `23.78` for `6.50 x 1.5 + 5.50 x 2.55`, and `44.27` for `6.50 x 2.55 + 5.50 x 3.67 + 7.50 x 1`.
+- Disabled decimal-count flow verifies entering `2.55` renders quantity `255`.
+- Decimal combined-item Global Option flow verifies quantities split into `0.3` and `2`, the second-line price equals `optionPrice * 2 + itemUnitPrice * 2`, and the Recall total equals the pre-save order total.
 
 ### Page Responsibilities
 
@@ -634,6 +640,8 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `OrderDishesPage` owns Hold/Delay print actions, printed-item void/reduce permission prompt reads, manager password submission, order line-count reads, first-line quantity/name/color reads, and same-dish add actions.
 - `OrderDishesPage` owns reduce action, option/list visibility reads, menu-item visibility reads, decimal quantity input, and item-count reads.
 - `OrderDishesPage` owns decimal order subtotal reads used as source-equivalent item/order totals before split or combine.
+- `OrderDishesPage` owns order-line quantity/price reads for decimal disabled and Global Option split-line assertions.
+- `OrderDishesPage` owns Global Option priced Add behavior for the decimal combined-item path.
 - `AdminPage` owns Search Menu enable/disable persistence, staff Void Printed Item permission, same-item combine mode, separate-same-item setting behavior, Automatically Redirect After Reduce Items, and Count Can Be Decimal.
 - `RecallPage` owns recalled item state, option reads, suborder tip reads, split-order combine action, order status reads, order selection, guest-name edit, customer-name reads, order total reads, split panel entry, even/item/seat/amount/drag split actions, split save/confirm/unsplit actions, suborder settlement/payment actions, suborder status reads, parent-card background reads, and split price reads.
 - `RecallPage` owns Recall subtotal reads for source cases that verify post-save subtotal instead of the active order page.
@@ -646,6 +654,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `test-data/pos/dishes.ts` owns category-level and item-level option order samples, including Chinese category and optional sub-option variants.
 - `test-data/pos/dishes.ts` owns POS/EMENU search-item names and the stable non-combo dish used to enter Global Option Modify flows.
 - `test-data/pos/dishes.ts` owns `groupSwitchDish`, `categorySwitchDish`, and `categoryOptionDish` as the POS-33600 source-equivalent special-price decimal quantity dishes.
+- `test-data/pos/dishes.ts` owns `pricedGlobalOption` as the source-equivalent Global Option price used by POS-35660.
 - `test-data/pos/dishes.ts` owns the default POS Search Menu item `Broccoli Garlic Sauce`.
 - `test-data/pos/admin-settings.ts` owns canonical POS menu mode, Search Menu, same-item combine mode, separate-same-item, and permission setting values.
 - `test-data/pos/admin-settings.ts` owns Automatically Redirect After Reduce Items and Count Can Be Decimal setting names.
@@ -685,6 +694,8 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Stub special-price update replaces the selected item price, and the 50% discount floors to cents so `5.85` becomes `2.92`, matching the source assertion.
 - Stub order-line clicks update the selected order item so special-price and quantity edits apply to the source-equivalent dish line rather than always the first or latest dish.
 - Stub decimal special-price line totals use explicit half-up cents rounding before subtotal aggregation so `5.50 x 2.55` becomes `14.03` and `7.50 x 3.67` becomes `27.53`, matching the source POS subtotal assertions.
+- Stub disabled Count Can Be Decimal removes the decimal point from quantity input so `2.55` renders as `255`.
+- Stub Auto Same Status + decimal quantity + Global Option Add splits the source item into a decimal remainder line and an integer option line; the integer line price includes item unit price times quantity plus option price times quantity.
 - Stub Delivery create-order copies the entered phone, name, address, Apt, city, state, zip, and note into the order Info panel after navigating to the order page.
 - Stub combo option state starts at four options for the migrated combo sample and decrements by one for each reduce action.
 - Stub menu mode is stored in browser-local state so refresh keeps the selected mode inside the current test.

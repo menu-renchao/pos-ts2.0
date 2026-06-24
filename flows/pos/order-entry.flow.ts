@@ -162,6 +162,20 @@ export type DecimalSpecialPriceLine = {
   quantity?: number;
 };
 
+export type DecimalCountDisabledResult = {
+  dishQuantity: string;
+};
+
+export type DecimalCombinedOptionResult = {
+  firstDishQuantity: string;
+  secondDishQuantity: string;
+  secondDishPrice: number;
+  optionPrice: number;
+  itemUnitPrice: number;
+  totalBeforeSave: number;
+  recallTotal: number;
+};
+
 export class OrderEntryFlow {
   constructor(
     private readonly homePage: PosHomePage,
@@ -802,6 +816,55 @@ export class OrderEntryFlow {
     await this.homePage.clickRecall();
     await this.recallPage.openRecentOrder();
     return this.recallPage.readOrderSubtotal();
+  }
+
+  async enterDecimalQuantityWhenDecimalCountDisabled(homeUrl: string): Promise<DecimalCountDisabledResult> {
+    if (!this.adminPage) {
+      throw new Error('AdminPage is required for decimal count setup');
+    }
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.setCountCanBeDecimal(false);
+    await this.homePage.refresh();
+    await this.homePage.clickTogo();
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.changeSelectedItemQuantity(2.55);
+    const dishQuantity = await this.orderDishesPage.readOrderLineQuantity(1);
+    return { dishQuantity };
+  }
+
+  async addGlobalOptionsToDecimalCombinedItemAndReadTotals(homeUrl: string): Promise<DecimalCombinedOptionResult> {
+    await this.enableDecimalCount(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage?.setCombineSameItem(combineSameItemModes.autoSameStatus, false);
+    await this.homePage.refresh();
+    await this.homePage.clickTogo();
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.changeSelectedItemPrice(7.95);
+    const itemUnitPrice = await this.orderDishesPage.readSelectedItemPrice();
+    await this.orderDishesPage.changeSelectedItemQuantity(2.3);
+    await this.orderDishesPage.openGlobalOptionModify();
+    const optionPrice = await this.orderDishesPage.addPricedGlobalOptionListItem();
+    const firstDishQuantity = await this.orderDishesPage.readOrderLineQuantity(1);
+    const secondDishQuantity = await this.orderDishesPage.readOrderLineQuantity(2);
+    const secondDishPrice = await this.orderDishesPage.readOrderLinePrice(2);
+    const totalBeforeSave = await this.orderDishesPage.readSubtotal();
+    await this.orderDishesPage.saveOrder();
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    const recallTotal = await this.recallPage.readOrderTotal();
+    await this.restoreSameItemSettings();
+    return {
+      firstDishQuantity,
+      secondDishQuantity,
+      secondDishPrice,
+      optionPrice,
+      itemUnitPrice,
+      totalBeforeSave,
+      recallTotal,
+    };
   }
 
   private async openOrderAndAddDish(homeUrl: string, dish: DishSample): Promise<void> {

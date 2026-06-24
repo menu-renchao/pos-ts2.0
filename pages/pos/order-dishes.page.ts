@@ -519,6 +519,16 @@ export class OrderDishesPage extends PageObject {
     return step('读取点单首行菜品数量', async () => (await this.orderLineItems.first().getAttribute('data-quantity')) ?? '');
   }
 
+  async readOrderLineQuantity(index: number): Promise<string> {
+    return step(`读取点单第 ${index} 行菜品数量`, async () => (await this.orderLineItems.nth(index - 1).getAttribute('data-quantity')) ?? '');
+  }
+
+  async readOrderLinePrice(index: number): Promise<number> {
+    return step(`读取点单第 ${index} 行菜品价格`, async () =>
+      Number((await this.orderLineItems.nth(index - 1).getAttribute('data-price')) ?? '0'),
+    );
+  }
+
   async readFirstItemName(): Promise<string> {
     return step('读取点单首行菜品名称', async () => ((await this.orderLineItems.first().textContent()) ?? '').trim());
   }

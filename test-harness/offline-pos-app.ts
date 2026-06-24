@@ -372,7 +372,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let currentSeparateSameItem = localStorage.getItem('currentSeparateSameItem') !== 'false';
       let currentStaffCanVoidPrintedItem = localStorage.getItem('currentStaffCanVoidPrintedItem') !== 'false';
       let currentAutoRedirectAfterReduce = localStorage.getItem('currentAutoRedirectAfterReduce') !== 'false';
-      let currentCountCanBeDecimal = localStorage.getItem('currentCountCanBeDecimal') === 'true';
+      let currentCountCanBeDecimal = localStorage.getItem('currentCountCanBeDecimal') !== 'false';
       let currentCrmMember = null;
       let currentCrmDiscountRate = 0;
       let currentCrmDiscountMaxAmount = null;
@@ -1017,6 +1017,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           row.dataset.testid = 'order-line-item';
           row.dataset.index = String(orderIndex);
           row.dataset.quantity = String(item.quantity || 1);
+          row.dataset.price = String(item.price || 0);
           row.dataset.color = itemLineColor(item);
           row.dataset.selected = orderIndex === selectedOrderItemIndex ? 'true' : 'false';
           row.style.color = itemLineColor(item);
@@ -1864,8 +1865,26 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       globalOptionListAddButton.addEventListener('click', () => {
         const optionPrice = Number(globalOptionListAddButton.dataset.price || '0');
         currentGlobalOptionCount += 1;
-        if (currentOrderItems[0]) {
-          currentOrderItems[0].price = optionPrice;
+        const selectedIndex = selectedOrderItemIndex >= 0 ? selectedOrderItemIndex : 0;
+        const selectedItem = currentOrderItems[selectedIndex];
+        if (selectedItem) {
+          const selectedQuantity = Number(selectedItem.quantity || 1);
+          const selectedUnitPrice = Number(selectedItem.unitPrice || selectedItem.price || 0);
+          if (currentCombineSameItemMode === 'auto-same-status' && selectedQuantity > 1 && !Number.isInteger(selectedQuantity)) {
+            const integerQuantity = Math.floor(selectedQuantity);
+            const decimalQuantity = roundMoney(selectedQuantity - integerQuantity);
+            selectedItem.quantity = decimalQuantity;
+            selectedItem.price = roundMoney(selectedUnitPrice * decimalQuantity);
+            currentOrderItems.splice(selectedIndex + 1, 0, {
+              ...selectedItem,
+              quantity: integerQuantity,
+              price: roundMoney(selectedUnitPrice * integerQuantity + optionPrice * integerQuantity),
+              unitPrice: selectedUnitPrice,
+            });
+            selectedOrderItemIndex = selectedIndex + 1;
+          } else {
+            selectedItem.price = optionPrice;
+          }
         }
         globalOptionArea.hidden = false;
         renderOrderAmounts();
@@ -1916,7 +1935,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       itemQuantitySubmitButton.addEventListener('click', () => {
         const selectedItem = currentOrderItems[selectedOrderItemIndex] || currentOrderItems[currentOrderItems.length - 1];
         if (selectedItem) {
-          const quantity = Number(itemQuantityInput.value || '1');
+          const rawQuantity = itemQuantityInput.value || '1';
+          const quantity = currentCountCanBeDecimal ? Number(rawQuantity) : Number(rawQuantity.replace('.', ''));
           if (quantity === 0 && shouldRequirePrintedItemPassword(selectedItem)) {
             requestPrintedItemPassword(selectedOrderItemIndex >= 0 ? selectedOrderItemIndex : currentOrderItems.length - 1);
             return;
