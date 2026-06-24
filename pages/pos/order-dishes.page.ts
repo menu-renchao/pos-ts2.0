@@ -69,6 +69,8 @@ export class OrderDishesPage extends PageObject {
   private readonly settleButton: Locator;
   private readonly settleCashButton: Locator;
   private readonly settleBackupCardButton: Locator;
+  private readonly settleCardAlert: Locator;
+  private readonly settleCardSearchButton: Locator;
   private readonly settleCreditButton: Locator;
   private readonly settleGiftCardButton: Locator;
   private readonly settleLoyaltyCardButton: Locator;
@@ -172,6 +174,8 @@ export class OrderDishesPage extends PageObject {
     this.settleButton = page.getByTestId('order-settle');
     this.settleCashButton = page.getByTestId('settle-cash');
     this.settleBackupCardButton = page.getByTestId('settle-backup-card');
+    this.settleCardAlert = page.getByTestId('settle-card-alert');
+    this.settleCardSearchButton = page.getByTestId('settle-card-search');
     this.settleCreditButton = page.getByTestId('settle-credit');
     this.settleGiftCardButton = page.getByTestId('settle-gift-card');
     this.settleLoyaltyCardButton = page.getByTestId('settle-loyalty-card');
@@ -358,6 +362,22 @@ export class OrderDishesPage extends PageObject {
     return step('点击现金全额并读取付款按钮顺序', async () => {
       await this.settleCashButton.click();
       return (await this.settlePayBarActions.allTextContents()).map((text) => text.trim()).filter(Boolean);
+    });
+  }
+
+  async searchGiftCardWithoutInfoAndReadAlert(): Promise<string> {
+    return step('礼品卡空条件查询并读取提示', async () => {
+      await this.settleGiftCardButton.click();
+      await this.settleCardSearchButton.click();
+      return ((await this.settleCardAlert.textContent()) ?? '').trim();
+    });
+  }
+
+  async searchLoyaltyCardWithoutInfoAndReadAlert(): Promise<string> {
+    return step('会员卡空条件查询并读取提示', async () => {
+      await this.settleLoyaltyCardButton.click();
+      await this.settleCardSearchButton.click();
+      return ((await this.settleCardAlert.textContent()) ?? '').trim();
     });
   }
 

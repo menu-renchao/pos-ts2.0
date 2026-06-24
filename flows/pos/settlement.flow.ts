@@ -120,6 +120,26 @@ export class SettlementFlow {
     return this.orderDishesPage.clickCashTenderAndReadPayActionOrder();
   }
 
+  async searchGiftCardWithoutInfoAndReadAlert(homeUrl: string): Promise<string> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup('Lunch');
+    await this.orderDishesPage.selectMenuCategory('Chicken Lunch E');
+    await this.orderDishesPage.addMenuItem('superman item1');
+    await this.orderDishesPage.clickSettle();
+    return this.orderDishesPage.searchGiftCardWithoutInfoAndReadAlert();
+  }
+
+  async searchLoyaltyCardWithoutInfoAndReadAlert(homeUrl: string): Promise<string> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup('Lunch');
+    await this.orderDishesPage.selectMenuCategory('Chicken Lunch E');
+    await this.orderDishesPage.addMenuItem('superman item1');
+    await this.orderDishesPage.clickSettle();
+    return this.orderDishesPage.searchLoyaltyCardWithoutInfoAndReadAlert();
+  }
+
   private async payByCreditAddTwoTipsAndReadRecall(
     homeUrl: string,
     secondTipMethod: RecallTipMethod,

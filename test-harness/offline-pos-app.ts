@@ -174,6 +174,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <button data-testid="settle-credit">Credit</button>
       <button data-testid="settle-loyalty-card">Loyalty Card</button>
       <button data-testid="settle-gift-card">Gift Card</button>
+      <button data-testid="settle-card-search">Search Card</button>
+      <div data-testid="settle-card-alert"></div>
       <button data-testid="settle-backup-card">Backup Card</button>
       <button data-testid="settle-self-card">Self Card</button>
       <button data-testid="settle-even-pay">Even Pay</button>
@@ -433,6 +435,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let currentSplitPartTip = null;
       let currentOrderStatus = '';
       let currentOrderType = 'togo';
+      let currentCardTender = '';
       let currentCustomerName = null;
       let currentDeliveryInfoRows = [];
       let currentComboOptionCount = 0;
@@ -577,6 +580,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const settleCreditButton = document.querySelector('[data-testid="settle-credit"]');
       const settleGiftCardButton = document.querySelector('[data-testid="settle-gift-card"]');
       const settleLoyaltyCardButton = document.querySelector('[data-testid="settle-loyalty-card"]');
+      const settleCardSearchButton = document.querySelector('[data-testid="settle-card-search"]');
+      const settleCardAlert = document.querySelector('[data-testid="settle-card-alert"]');
       const settleSelfCardButton = document.querySelector('[data-testid="settle-self-card"]');
       const settleEvenPayButton = document.querySelector('[data-testid="settle-even-pay"]');
       const settleSelectMemberButton = document.querySelector('[data-testid="settle-select-member"]');
@@ -1444,6 +1449,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         currentSplitPartTip = null;
         currentOrderStatus = '';
         currentOrderType = 'togo';
+        currentCardTender = '';
         currentCategoryName = '';
         currentCategoryNameText.textContent = '';
         currentCustomerName = null;
@@ -2076,10 +2082,17 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         settleCurrentOrder('credit');
       });
       settleLoyaltyCardButton.addEventListener('click', () => {
+        currentCardTender = 'loyalty_card';
         settleCurrentOrder('loyalty_card');
       });
       settleGiftCardButton.addEventListener('click', () => {
+        currentCardTender = 'gift_card';
         settleCurrentOrder('gift_card');
+      });
+      settleCardSearchButton.addEventListener('click', () => {
+        settleCardAlert.textContent = currentCardTender === 'loyalty_card'
+          ? "No./Name/Phone No./Email can't all be empty"
+          : "No./Name/Phone No. can't all be empty";
       });
       settleBackupCardButton.addEventListener('click', () => {
         settleCurrentOrder('backup_card');

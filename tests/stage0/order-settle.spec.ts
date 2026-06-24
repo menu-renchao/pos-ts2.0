@@ -127,4 +127,42 @@ test.describe('stage0 order settlement migration', () => {
       expect(payActions).toEqual(['Pay & Print', 'Pay']);
     },
   );
+
+  test(
+    "POS-32910 礼品卡空条件查询应提示 No./Name/Phone No. can't all be empty",
+    {
+      annotation: jiraIssue('POS-32910'),
+    },
+    async ({ environment, page }) => {
+      const flow = new SettlementFlow(
+        new PosHomePage(page),
+        new AdminPage(page),
+        new OrderDishesPage(page),
+        new RecallPage(page),
+      );
+
+      const alert = await flow.searchGiftCardWithoutInfoAndReadAlert(environment.posHomeUrl);
+
+      expect(alert).toBe("No./Name/Phone No. can't all be empty");
+    },
+  );
+
+  test(
+    "POS-32907 会员卡空条件查询应提示 No./Name/Phone No./Email can't all be empty",
+    {
+      annotation: jiraIssue('POS-32907'),
+    },
+    async ({ environment, page }) => {
+      const flow = new SettlementFlow(
+        new PosHomePage(page),
+        new AdminPage(page),
+        new OrderDishesPage(page),
+        new RecallPage(page),
+      );
+
+      const alert = await flow.searchLoyaltyCardWithoutInfoAndReadAlert(environment.posHomeUrl);
+
+      expect(alert).toBe("No./Name/Phone No./Email can't all be empty");
+    },
+  );
 });

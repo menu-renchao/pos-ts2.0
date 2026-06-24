@@ -814,6 +814,8 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 | stage0/test_order_settle.py | TestOrderSettle | `test_add_tip_two` 信用卡付清后连续追加 credit/cash tip | tests/stage0/order-settle.spec.ts | `SettlementFlow.addTipsAfterCreditPaymentAndReadRecall` |
 | stage0/test_order_settle.py | TestOrderSettle | `test_multi_pay_tip` 部分现金支付后加 tip 重算未付金额 | tests/stage0/order-settle.spec.ts | `SettlementFlow.addTipAfterPartialCashPaymentAndReadUnpaidAmount` |
 | stage0/test_order_settle.py | TestOrderSettle | `test_pay_button_order` Dine In 现金付款条 Pay & Print / Pay 顺序 | tests/stage0/order-settle.spec.ts | `SettlementFlow.readDineInCashPaymentActionOrder` |
+| stage0/test_order_settle.py | TestOrderSettle | `test_search_gift_card_no_info` Gift Card 空条件查询提示 | tests/stage0/order-settle.spec.ts | `SettlementFlow.searchGiftCardWithoutInfoAndReadAlert` |
+| stage0/test_order_settle.py | TestOrderSettle | `test_search_loyalty_card_no_info` Loyalty Card 空条件查询提示 | tests/stage0/order-settle.spec.ts | `SettlementFlow.searchLoyaltyCardWithoutInfoAndReadAlert` |
 | stage0/test_order_settle.py | all `Test*` classes | remaining cash, credit, discount, tax, total, and order completion settlement paths | tests/stage0/order-settle.spec.ts | pending |
 
 ### Preconditions
@@ -828,6 +830,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `test_add_tip_two` starts from a fully credit-card paid Dine In order and validates both source parameter branches from a fresh order state.
 - `test_multi_pay_tip` starts from a tax-exempt 10.00 Dine In order so the source formula `total - 5.00 + 2.00` is deterministic.
 - `test_pay_button_order` verifies Dine In cash payment action ordering after selecting the cash tender.
+- `test_search_gift_card_no_info` and `test_search_loyalty_card_no_info` verify card-query validation without requiring a real card service.
 
 ### Steps
 
@@ -841,6 +844,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 8. For `test_add_tip_two`, pay a Dine In order by credit card, open the latest Recall order, add a 1.00 credit tip, then add a 2.00 second tip once as credit and once as cash/non-credit from independent fresh orders.
 9. For `test_multi_pay_tip`, change the selected item price to 10.00, void item tax, enter settlement, pay 5.00 by cash, add a 2.00 settlement tip, and read the remaining unpaid amount.
 10. For `test_pay_button_order`, enter Dine In, add the default non-combo item, enter settlement, select cash, and read the payment bar actions in display order.
+11. For POS-32910/POS-32907, enter Dine In, add the default non-combo item, enter settlement, select Gift Card or Loyalty Card, click Search without entering identity fields, and read the validation alert.
 
 ### Expected Assertions
 
@@ -852,6 +856,8 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - POS-19046/POS-19049 verify that the order remains `Paid`, a second credit tip replaces the prior credit tip with displayed tip `2.00`, and a second cash/non-credit tip accumulates to displayed tip `3.00`.
 - POS-23319 verifies the settlement unpaid amount is recalculated to `7.00` after partial cash payment `5.00` and settlement tip `2.00` on a 10.00 tax-exempt order.
 - POS-31881 verifies the Dine In cash pay bar action order is exactly `Pay & Print` followed by `Pay`.
+- POS-32910 verifies Gift Card empty search shows `No./Name/Phone No. can't all be empty`.
+- POS-32907 verifies Loyalty Card empty search shows `No./Name/Phone No./Email can't all be empty`.
 - Remaining settlement cases must assert source subtotal, tax, discount, charge, tip, tender, change, and total when migrated.
 - Completed order is visible in recall or final confirmation when required.
 - Payment method-specific behavior is preserved or documented as a live gap.
@@ -866,6 +872,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `RecallPage.addTipAfterCreditPayment` owns the post-credit-paid tip entry and tip tender method selection used by POS-19046/POS-19049.
 - `OrderDishesPage.modifySettlementPaymentAmount`, `OrderDishesPage.addSettlementTip`, and `OrderDishesPage.readSettlementUnpaidAmount` own the POS-23319 partial-payment recalculation checks.
 - `OrderDishesPage.clickCashTenderAndReadPayActionOrder` owns the POS-31881 cash pay bar ordering check.
+- `OrderDishesPage.searchGiftCardWithoutInfoAndReadAlert` and `OrderDishesPage.searchLoyaltyCardWithoutInfoAndReadAlert` own card search validation prompts.
 
 ### Client/Data Responsibilities
 
@@ -876,6 +883,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - The offline POS stub models credit tip as replacement and cash/non-credit tip as additive so POS-19046/POS-19049 can be verified without a live payment device.
 - The offline POS stub tracks the partial paid amount on the settlement page and recalculates unpaid amount after settlement tip entry for POS-23319.
 - The offline POS stub renders the cash pay bar actions in source order so POS-31881 can validate ordering without a live payment screen.
+- The offline POS stub records the selected card tender and returns the source validation alert when Search is clicked with empty card identity fields.
 
 ### Stub Behavior
 
