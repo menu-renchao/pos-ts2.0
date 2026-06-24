@@ -122,6 +122,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         <button data-testid="crm-redeem-item">CRM Redeem Item</button>
         <button data-testid="crm-redeem-quit">Quit Redeem</button>
         <button data-testid="crm-redeem-split">Split Redeem Order</button>
+        <button data-testid="crm-split-drag">Drag Split CRM Order</button>
         <button data-testid="crm-split-even">Even Split CRM Order</button>
         <button data-testid="crm-split-save">Save CRM Split</button>
       </section>
@@ -401,6 +402,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const crmRedeemItemButton = document.querySelector('[data-testid="crm-redeem-item"]');
       const crmRedeemQuitButton = document.querySelector('[data-testid="crm-redeem-quit"]');
       const crmRedeemSplitButton = document.querySelector('[data-testid="crm-redeem-split"]');
+      const crmSplitDragButton = document.querySelector('[data-testid="crm-split-drag"]');
       const crmSplitEvenButton = document.querySelector('[data-testid="crm-split-even"]');
       const crmSplitSaveButton = document.querySelector('[data-testid="crm-split-save"]');
       const crmMemberName = document.querySelector('[data-testid="crm-member-name"]');
@@ -1392,6 +1394,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       });
       crmRedeemSplitButton.addEventListener('click', () => {
         crmRedeemPanel.hidden = false;
+      });
+      crmSplitDragButton.addEventListener('click', () => {
+        currentSplitPartTip = 0;
       });
       crmSplitEvenButton.addEventListener('click', () => {
         currentSplitPartTip = 0;

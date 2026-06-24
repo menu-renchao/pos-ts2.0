@@ -163,6 +163,13 @@ export class RecallPage extends PageObject {
     });
   }
 
+  async readRedeemItemPrice(): Promise<number> {
+    return step('读取 Recall 子单赠菜价格', async () => {
+      const items = await this.readAllOrderItems();
+      return items.find((item) => item.name === 'CRM Redeem Item')?.price ?? NaN;
+    });
+  }
+
   async openFirstSubOrder(): Promise<void> {
     await step('打开 Recall 第一个子单', async () => {
       await this.subOrderButton.click();
