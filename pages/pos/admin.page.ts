@@ -7,7 +7,9 @@ import { PageObject } from '../shared/page-object.js';
 
 export class AdminPage extends PageObject {
   private readonly adminRoot: Locator;
+  private readonly autoRedirectAfterReduceSelect: Locator;
   private readonly combineSameItemSelect: Locator;
+  private readonly countCanBeDecimalSelect: Locator;
   private readonly defaultKeyboardSelect: Locator;
   private readonly languageSelect: Locator;
   private readonly menuModeSelect: Locator;
@@ -20,7 +22,9 @@ export class AdminPage extends PageObject {
   constructor(page: Page) {
     super(page);
     this.adminRoot = page.getByTestId('admin-page');
+    this.autoRedirectAfterReduceSelect = page.getByTestId('admin-auto-redirect-after-reduce');
     this.combineSameItemSelect = page.getByTestId('admin-combine-same-item');
+    this.countCanBeDecimalSelect = page.getByTestId('admin-count-can-be-decimal');
     this.defaultKeyboardSelect = page.getByTestId('admin-default-keyboard');
     this.languageSelect = page.getByTestId('user-default-language');
     this.menuModeSelect = page.getByTestId('admin-menu-mode');
@@ -75,6 +79,22 @@ export class AdminPage extends PageObject {
     await step(`设置 Staff Void Printed Item 权限为 ${enabled ? '开启' : '关闭'}`, async () => {
       await expect(this.adminRoot).toBeVisible();
       await this.staffVoidPrintedItemSelect.selectOption(enabled ? 'true' : 'false');
+      await this.saveSettingsButton.click();
+    });
+  }
+
+  async setAutomaticallyRedirectAfterReduceItems(enabled: boolean): Promise<void> {
+    await step(`设置减菜后自动跳转为 ${enabled ? '开启' : '关闭'}`, async () => {
+      await expect(this.adminRoot).toBeVisible();
+      await this.autoRedirectAfterReduceSelect.selectOption(enabled ? 'true' : 'false');
+      await this.saveSettingsButton.click();
+    });
+  }
+
+  async setCountCanBeDecimal(enabled: boolean): Promise<void> {
+    await step(`设置菜品数量支持小数为 ${enabled ? '开启' : '关闭'}`, async () => {
+      await expect(this.adminRoot).toBeVisible();
+      await this.countCanBeDecimalSelect.selectOption(enabled ? 'true' : 'false');
       await this.saveSettingsButton.click();
     });
   }

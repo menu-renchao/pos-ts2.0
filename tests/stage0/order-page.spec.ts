@@ -644,4 +644,35 @@ test.describe('POS 点单页面', () => {
     expect(result.firstItemName).toContain('(1In Kitchen)');
     expect(result.firstItemColor).toContain('rgba(113, 9, 9, 1)');
   });
+
+  test('POS-34842 关闭减菜自动跳转后当前菜减到 0 应停留原 Category', {
+    annotation: [jiraIssue('POS-34842')],
+  }, async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.reduceItemWithAutoRedirectDisabled(environment.posHomeUrl);
+
+    expect(result.orderItemOptionListVisible).toBe(false);
+    expect(result.originalCategoryItemStillVisible).toBe(true);
+  });
+
+  test('POS-33186 支持小数数量时 1.25 菜品连续 Reduce 两次后数量应归零', {
+    annotation: [jiraIssue('POS-33186')],
+  }, async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.reduceDecimalQuantityToZero(environment.posHomeUrl);
+
+    expect(result.itemCountAfterReduce).toBe('0');
+  });
 });

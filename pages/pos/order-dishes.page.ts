@@ -501,6 +501,14 @@ export class OrderDishesPage extends PageObject {
     return step('读取点单菜品行数', async () => this.orderLineItems.count());
   }
 
+  async isOrderItemOptionListVisible(): Promise<boolean> {
+    return step('判断当前菜品 option 列表是否展示', async () => this.page.getByTestId('order-options').isVisible());
+  }
+
+  async isMenuItemVisible(itemName: string): Promise<boolean> {
+    return step(`判断菜单菜品 ${itemName} 是否展示`, async () => this.menuItems.filter({ hasText: exactText(itemName) }).isVisible());
+  }
+
   async readFirstItemQuantity(): Promise<string> {
     return step('读取点单首行菜品数量', async () => (await this.orderLineItems.first().getAttribute('data-quantity')) ?? '');
   }

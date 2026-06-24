@@ -523,6 +523,8 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 | stage0/test_order_page.py | TestOrderPage | `test_combine_same_item_dont_automatically_combine` same dish does not combine when Dont Combine is configured | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createThreeSameItemsWithoutAutoCombine` |
 | stage0/test_order_page.py | TestOrderPage | `test_combine_same_item_automatically_combine` same dish with different kitchen status stays on separate lines | tests/stage0/order-page.spec.ts | `OrderEntryFlow.addSameItemAfterKitchenWithSameStatusCombine` |
 | stage0/test_order_page.py | TestOrderPage | `test_combine_same_item_combine_include_in_kitchen` same dish combines into sent kitchen line with quantity, In Kitchen marker, and red color | tests/stage0/order-page.spec.ts | `OrderEntryFlow.addSameItemAfterKitchenWithIncludeKitchenCombine` |
+| stage0/test_order_page.py | TestOrderPage | `test_automatically_redirect_after_reduce_items_close` reduce-to-zero stays on original category when auto redirect is disabled | tests/stage0/order-page.spec.ts | `OrderEntryFlow.reduceItemWithAutoRedirectDisabled` |
+| stage0/test_order_page.py | TestOrderPage | `test_item_count_decimal_reduce` decimal quantity reduces to zero after repeated Reduce actions | tests/stage0/order-page.spec.ts | `OrderEntryFlow.reduceDecimalQuantityToZero` |
 | stage0/test_order_page.py | all `Test*` classes | add dishes, modify items, save orders, validate order totals | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createTogoOrder` |
 | stage0/test_order_settle.py | all `Test*` classes | create payable orders before settlement | tests/stage0/order-settle.spec.ts | `OrderEntryFlow.createTogoOrder` |
 
@@ -553,6 +555,8 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 15. For Dont Combine same-item behavior, set combine mode to Dont Combine and separate same item off, add the same dish three times, read order line count, save, then restore same-item settings.
 16. For Auto Combine same-status behavior, set combine mode to Auto Same Status and separate same item off, send the first same dish to kitchen, Recall edit, add the same dish again, read order line count, save, then restore settings.
 17. For Include Kitchen combine behavior, set combine mode to Include Kitchen and separate same item off, send the first same dish to kitchen, Recall edit, add the same dish again, then read line count, first-line quantity, first-line name, and first-line color.
+18. For reduce auto-redirect disabled behavior, disable Automatically Redirect After Reduce Items, add two adjacent dishes from different categories, reduce the active item to zero, verify the option/list area is gone, verify the original category dish is still visible, then restore the setting.
+19. For decimal reduce behavior, enable Count Can Be Decimal, create a To Go order, set the item quantity to `1.25`, click Reduce twice, and read the item count as `0`.
 
 ### Expected Assertions
 
@@ -596,6 +600,8 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Dont Combine mode verifies adding the same dish three times creates three visible order lines.
 - Auto Same Status mode verifies a sent-kitchen line and a newly added unsent line are not combined, leaving two visible order lines.
 - Include Kitchen mode verifies the sent-kitchen and newly added same dish combine into one visible line with quantity `2`, name containing `(1In Kitchen)`, and color `rgba(113, 9, 9, 1)`.
+- Auto-redirect disabled reduce flow verifies reducing to zero hides the current option/list area and keeps the source category item visible.
+- Decimal reduce flow verifies quantity `1.25` can be reduced twice and the rendered order count becomes `0`.
 
 ### Page Responsibilities
 
@@ -614,7 +620,8 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `OrderDishesPage` owns menu search input, search result reads, search clear, order-page exit, Global Option Modify entry, Add/Count/Reduce actions, Modify-area visibility reads, and Global Option count reads.
 - `OrderDishesPage` owns guest-name input, Search Menu class reads, item-count reads, source integer-cent tip entry, large-tip toast reads, and credit-payment action for order-page paths.
 - `OrderDishesPage` owns Hold/Delay print actions, printed-item void/reduce permission prompt reads, manager password submission, order line-count reads, first-line quantity/name/color reads, and same-dish add actions.
-- `AdminPage` owns Search Menu enable/disable persistence, staff Void Printed Item permission, same-item combine mode, and separate-same-item setting behavior.
+- `OrderDishesPage` owns reduce action, option/list visibility reads, menu-item visibility reads, decimal quantity input, and item-count reads.
+- `AdminPage` owns Search Menu enable/disable persistence, staff Void Printed Item permission, same-item combine mode, separate-same-item setting behavior, Automatically Redirect After Reduce Items, and Count Can Be Decimal.
 - `RecallPage` owns recalled item state, option reads, suborder tip reads, split-order combine action, order status reads, order selection, guest-name edit, customer-name reads, order total reads, split panel entry, even/item/seat/amount/drag split actions, split save/confirm/unsplit actions, suborder settlement/payment actions, suborder status reads, parent-card background reads, and split price reads.
 - `RecallPage` owns Recall subtotal reads for source cases that verify post-save subtotal instead of the active order page.
 - `RecallPage` owns Recall item-count reads, recalled tip reads, and post-credit large-tip entry/toast reads.
@@ -626,6 +633,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `test-data/pos/dishes.ts` owns POS/EMENU search-item names and the stable non-combo dish used to enter Global Option Modify flows.
 - `test-data/pos/dishes.ts` owns the default POS Search Menu item `Broccoli Garlic Sauce`.
 - `test-data/pos/admin-settings.ts` owns canonical POS menu mode, Search Menu, same-item combine mode, separate-same-item, and permission setting values.
+- `test-data/pos/admin-settings.ts` owns Automatically Redirect After Reduce Items and Count Can Be Decimal setting names.
 - `test-data/pos/permissions.ts` owns the source-equivalent staff `1` password `123` and manager password `11`.
 - `test-data/pos/delivery.ts` owns the Delivery customer/address/note sample used by the Delivery order Info assertion.
 - `test-data/pos/languages.ts` owns canonical language and keyboard-related values reused by language and Open Food paths.
@@ -678,6 +686,8 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Stub same-item combine mode `dont-combine` keeps each repeated dish as its own order line even when separate-same-item is disabled.
 - Stub same-item combine mode `auto-same-status` combines only same-status unsent lines, so a sent-kitchen line and a newly added unsent line stay separate.
 - Stub same-item combine mode `include-kitchen` combines the newly added same dish into the sent-kitchen line, keeps the source `(1In Kitchen)` marker, quantity `2`, and red color `rgba(113, 9, 9, 1)`.
+- Stub auto-redirect-after-reduce disabled hides the order option/list container when a reduced item reaches zero and leaves the menu category item visible.
+- Stub decimal count setting allows quantity `1.25`; each Reduce subtracts one until quantity reaches zero, and order count renders `0`.
 
 ### Live Gaps
 

@@ -72,6 +72,14 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         <option value="true">true</option>
         <option value="false">false</option>
       </select>
+      <select data-testid="admin-auto-redirect-after-reduce">
+        <option value="true">true</option>
+        <option value="false">false</option>
+      </select>
+      <select data-testid="admin-count-can-be-decimal">
+        <option value="true">true</option>
+        <option value="false">false</option>
+      </select>
       <button data-testid="admin-save-settings">Save Settings</button>
       <button data-testid="admin-member-list">CRM Loyalty</button>
       <section data-testid="member-list-permission-popup" hidden>
@@ -362,6 +370,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let currentCombineSameItemMode = localStorage.getItem('currentCombineSameItemMode') || 'dont-combine';
       let currentSeparateSameItem = localStorage.getItem('currentSeparateSameItem') !== 'false';
       let currentStaffCanVoidPrintedItem = localStorage.getItem('currentStaffCanVoidPrintedItem') !== 'false';
+      let currentAutoRedirectAfterReduce = localStorage.getItem('currentAutoRedirectAfterReduce') !== 'false';
+      let currentCountCanBeDecimal = localStorage.getItem('currentCountCanBeDecimal') === 'true';
       let currentCrmMember = null;
       let currentCrmDiscountRate = 0;
       let currentCrmDiscountMaxAmount = null;
@@ -418,7 +428,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const backToWorkButton = document.querySelector('[data-testid="clock-back-to-work"]');
       const checkoutButton = document.querySelector('[data-testid="clock-checkout"]');
       const adminPage = document.querySelector('[data-testid="admin-page"]');
+      const autoRedirectAfterReduceSelect = document.querySelector('[data-testid="admin-auto-redirect-after-reduce"]');
       const combineSameItemSelect = document.querySelector('[data-testid="admin-combine-same-item"]');
+      const countCanBeDecimalSelect = document.querySelector('[data-testid="admin-count-can-be-decimal"]');
       const joinMemberButton = document.querySelector('[data-testid="home-join-member"]');
       const joinMemberRegistration = document.querySelector('[data-testid="join-member-registration"]');
       const joinMemberFirstNameInput = document.querySelector('[data-testid="join-member-first-name"]');
@@ -1080,6 +1092,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
 
       function renderOptionControls() {
         orderOptions.innerHTML = '';
+        orderOptions.hidden = false;
         ['Pork', 'Seafood'].forEach((optionName) => {
           orderOptions.appendChild(createButton('order-option', optionName, () => {}));
         });
@@ -1490,11 +1503,15 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         currentCombineSameItemMode = combineSameItemSelect.value;
         currentSeparateSameItem = separateSameItemSelect.value !== 'false';
         currentStaffCanVoidPrintedItem = staffVoidPrintedItemSelect.value !== 'false';
+        currentAutoRedirectAfterReduce = autoRedirectAfterReduceSelect.value !== 'false';
+        currentCountCanBeDecimal = countCanBeDecimalSelect.value === 'true';
         localStorage.setItem('currentMenuMode', currentMenuMode);
         localStorage.setItem('currentSearchMenuEnabled', String(currentSearchMenuEnabled));
         localStorage.setItem('currentCombineSameItemMode', currentCombineSameItemMode);
         localStorage.setItem('currentSeparateSameItem', String(currentSeparateSameItem));
         localStorage.setItem('currentStaffCanVoidPrintedItem', String(currentStaffCanVoidPrintedItem));
+        localStorage.setItem('currentAutoRedirectAfterReduce', String(currentAutoRedirectAfterReduce));
+        localStorage.setItem('currentCountCanBeDecimal', String(currentCountCanBeDecimal));
       });
       adminMemberListButton.addEventListener('click', () => {
         if (currentEmployeePassword === '123') {
@@ -1795,6 +1812,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           } else {
             currentOrderItems[0].quantity = 0;
             currentOrderItems[0].price = 0;
+          }
+          if (!currentAutoRedirectAfterReduce && Number(currentOrderItems[0].quantity || 0) === 0) {
+            orderOptions.hidden = true;
           }
           renderOrderAmounts();
         }
@@ -2191,6 +2211,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       combineSameItemSelect.value = currentCombineSameItemMode;
       separateSameItemSelect.value = String(currentSeparateSameItem);
       staffVoidPrintedItemSelect.value = String(currentStaffCanVoidPrintedItem);
+      autoRedirectAfterReduceSelect.value = String(currentAutoRedirectAfterReduce);
+      countCanBeDecimalSelect.value = String(currentCountCanBeDecimal);
       renderClockControls();
     </script>
   </body>

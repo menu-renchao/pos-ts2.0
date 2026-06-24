@@ -130,6 +130,15 @@ export type SameItemCombineResult = {
   firstItemColor?: string;
 };
 
+export type ReduceRedirectResult = {
+  orderItemOptionListVisible: boolean;
+  originalCategoryItemStillVisible: boolean;
+};
+
+export type DecimalReduceResult = {
+  itemCountAfterReduce: string;
+};
+
 export class OrderEntryFlow {
   constructor(
     private readonly homePage: PosHomePage,
@@ -647,6 +656,48 @@ export class OrderEntryFlow {
     await this.orderDishesPage.saveOrder();
     await this.restoreSameItemSettings();
     return { itemLineCount, firstItemQuantity, firstItemName, firstItemColor };
+  }
+
+  async reduceItemWithAutoRedirectDisabled(homeUrl: string): Promise<ReduceRedirectResult> {
+    if (!this.adminPage) {
+      throw new Error('AdminPage is required for auto redirect setup');
+    }
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.setAutomaticallyRedirectAfterReduceItems(false);
+    await this.homePage.refresh();
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.selectMenuGroup(categorySwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(categorySwitchDish.category);
+    await this.orderDishesPage.addMenuItem(categorySwitchDish.name);
+    await this.orderDishesPage.reduceSelectedItemQuantity();
+    const orderItemOptionListVisible = await this.orderDishesPage.isOrderItemOptionListVisible();
+    const originalCategoryItemStillVisible = await this.orderDishesPage.isMenuItemVisible(categorySwitchDish.name);
+    await this.homePage.clickAdmin();
+    await this.adminPage.setAutomaticallyRedirectAfterReduceItems(true);
+    await this.homePage.refresh();
+    return { orderItemOptionListVisible, originalCategoryItemStillVisible };
+  }
+
+  async reduceDecimalQuantityToZero(homeUrl: string): Promise<DecimalReduceResult> {
+    if (!this.adminPage) {
+      throw new Error('AdminPage is required for decimal count setup');
+    }
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.setCountCanBeDecimal(true);
+    await this.homePage.refresh();
+    await this.homePage.clickTogo();
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.changeSelectedItemQuantity(1.25);
+    await this.orderDishesPage.reduceSelectedItemQuantity();
+    await this.orderDishesPage.reduceSelectedItemQuantity();
+    const itemCountAfterReduce = await this.orderDishesPage.readItemCount();
+    return { itemCountAfterReduce };
   }
 
   private async openOrderAndAddDish(homeUrl: string, dish: DishSample): Promise<void> {

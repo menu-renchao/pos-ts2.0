@@ -6,6 +6,8 @@ export const adminSettings = {
   menuMode: 'menuMode',
   combineSameItem: 'combineSameItem',
   voidPrintedItemPermission: 'voidPrintedItemPermission',
+  automaticallyRedirectAfterReduceItems: 'automaticallyRedirectAfterReduceItems',
+  countCanBeDecimal: 'countCanBeDecimal',
 } as const;
 
 export type AdminSettingName = (typeof adminSettings)[keyof typeof adminSettings];
