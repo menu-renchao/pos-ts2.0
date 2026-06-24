@@ -298,6 +298,8 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 | crm/test_crm_copy_move_order.py | TestCRMCopyItem | `test_recall_pay_order_redeem_discount` | tests/crm/crm-copy-move-order.spec.ts | `CrmOrderTransferFlow.payRecalledOrderWithRedeemDiscount` |
 | crm/test_crm_split_crm_order.py | TestSplitCrmOrder | `test_split_order_redeem_item` | tests/crm/crm-split-order.spec.ts | `CrmSplitOrderFlow.splitRedeemItemOrderByDragAndReadRedeemPrices` |
 | crm/test_crm_split_crm_order.py | TestSplitCrmOrder | `test_split_order_pay_suborder` | tests/crm/crm-split-order.spec.ts | `CrmSplitOrderFlow.paySplitMemberSubordersAndReadPoints` |
+| crm/test_crm_split_crm_order.py | TestSplitCrmOrder | `test_split_order_redeem_discount_suborder` | tests/crm/crm-split-order.spec.ts | `CrmSplitOrderFlow.payDiscountedDragSplitSuborderAndReadMemberState` |
+| crm/test_crm_split_crm_order.py | TestSplitCrmOrder | `test_split_order_redeem_discount_suborder_pay` | tests/crm/crm-split-order.spec.ts | `CrmSplitOrderFlow.payDiscountedEvenSplitSuborderAndReadMemberState` |
 
 ### Preconditions
 
@@ -320,6 +322,8 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 9. For `CrmOrderTransferFlow.payRecalledOrderWithRedeemDiscount`, save a member order, recall it, enter payment, apply percentage redeem discount, pay cash, and read price summary.
 10. For `CrmSplitOrderFlow.splitRedeemItemOrderByDragAndReadRedeemPrices`, create a To Go member order, redeem a free item, add two regular dishes, open CRM split, drag split into two suborders, save, recall the order, open each suborder, and read the CRM Redeem Item price.
 11. For `CrmSplitOrderFlow.paySplitMemberSubordersAndReadPoints`, create a Dine In member order with two regular dishes, record the pre-payment point balance, drag split into two suborders, save, recall the order, pay suborder 1 and suborder 2 by cash, reopen suborder 1, and read the CRM point balance.
+12. For `CrmSplitOrderFlow.payDiscountedDragSplitSuborderAndReadMemberState`, create a Dine In member order, record point balance and member name, apply `10% Off`, add two regular dishes, drag split, save, recall suborder 1, pay it by cash, reopen suborder 1, and read CRM point balance plus member name.
+13. For `CrmSplitOrderFlow.payDiscountedEvenSplitSuborderAndReadMemberState`, create a Dine In member order, record point balance and member name, apply `10% Off`, add two regular dishes, even split, save, recall suborder 1, pay it by cash, reopen suborder 1, and read CRM point balance plus member name.
 
 ### Expected Assertions
 
@@ -334,6 +338,8 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 - `test_recall_pay_order_redeem_discount`: Recall payment discount recalculates Reward as negative 10% of subtotal.
 - `test_split_order_redeem_item`: both split suborders keep the CRM Redeem Item price at 0.00 after drag split.
 - `test_split_order_pay_suborder`: paying both no-discount suborders earns 20 total points for the attached member.
+- `test_split_order_redeem_discount_suborder`: paying a drag-split discounted suborder keeps points at pre-discount balance minus 10 and preserves the attached member name.
+- `test_split_order_redeem_discount_suborder_pay`: paying an even-split discounted suborder keeps points at pre-discount balance minus 10 and preserves the attached member name.
 
 ### Page Responsibilities
 
@@ -345,7 +351,8 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 - `SplitOrderPage.splitEvenly` and `SplitOrderPage.save` own the CRM redeem split save path used by POS-29869.
 - `RecallPage.combineCrmOrder`, `RecallPage.readCrmPointBalance`, `RecallPage.readCrmMemberName`, `RecallPage.readOrderPriceSummary`, `RecallPage.settleAllByCash`, `RecallPage.cancelAllCondition`, `RecallPage.clickSettle`, `RecallPage.applyRedeemDiscount`, `RecallPage.payCurrentOrderByCash`, `RecallPage.isMoveOrderVisible`, and `RecallPage.isMoveItemVisible` own Recall-side CRM transfer and payment reads.
 - `SplitOrderPage.splitByDrag`, `SplitOrderPage.save`, `RecallPage.openSubOrder`, and `RecallPage.readRedeemItemPrice` own CRM split-order redeem item price verification.
-- `RecallPage.settleAllByCash` and `RecallPage.readCrmPointBalance` own CRM split suborder payment and point-balance verification.
+- `RecallPage.settleAllByCash`, `RecallPage.readCrmPointBalance`, and `RecallPage.readCrmMemberName` own CRM split suborder payment, point-balance, and member-name verification.
+- `SplitOrderPage.splitByDrag`, `SplitOrderPage.splitEvenly`, and `SplitOrderPage.save` own the discounted CRM suborder split paths for POS-29820 and POS-29817.
 
 ### Client/Data Responsibilities
 
@@ -359,6 +366,7 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 - `test-data/pos/dishes.ts` owns `groupSwitchDish`, `categorySwitchDish`, and `crmRedeemItemDish`.
 - `CrmSplitOrderFlow` uses `crmSourceRewardMember`, `crmRedeemItemDish`, `groupSwitchDish`, and `categorySwitchDish` for POS-29806 split setup.
 - `CrmSplitOrderFlow.paySplitMemberSubordersAndReadPoints` uses `crmRewardSettings.pointsPerPaidOrder` semantics through deterministic offline suborder earnings.
+- `CrmSplitOrderFlow.payDiscountedDragSplitSuborderAndReadMemberState` and `CrmSplitOrderFlow.payDiscountedEvenSplitSuborderAndReadMemberState` use `crmSourceRewardMember`, `groupSwitchDish`, `categorySwitchDish`, and `crmRewardSettings.discountName` for POS-29820 and POS-29817 discounted suborder payment setup.
 
 ### Stub Behavior
 
@@ -370,6 +378,7 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 - Offline redeem-item orders hide Move Order and Move Item controls after split/recall.
 - Offline CRM split-by-drag creates two suborders through the same saved order state as even split; redeemed item rows retain price 0 in each recalled suborder.
 - Offline Recall cash payment detects an active suborder and awards 10 points per unpaid no-discount suborder, preventing duplicate earnings on repeat clicks.
+- Offline Recall cash payment detects discounted CRM suborders and does not award payment points, so the 10-point redeem-discount deduction remains visible after paying and reopening the suborder.
 
 ### Live Gaps
 

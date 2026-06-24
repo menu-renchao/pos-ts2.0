@@ -25,6 +25,24 @@ test.describe('CRM 分单', () => {
 
     expect(result.pointsAfterAllSubordersPaid).toBe(result.pointsBeforePayment + result.earnedPoints);
   });
+
+  test('POS-29820 Redeem Discount 拖动分单支付子单后应保持扣减 10 积分和会员名', async ({ environment, page }) => {
+    const crmSplitOrderFlow = createCrmSplitOrderFlow(page);
+
+    const result = await crmSplitOrderFlow.payDiscountedDragSplitSuborderAndReadMemberState(environment.posHomeUrl);
+
+    expect(result.pointsAfterSuborderPayment).toBe(result.pointsBeforeDiscount - result.discountPointDeduction);
+    expect(result.memberNameAfterSuborderPayment).toBe(result.memberNameBeforeSplit);
+  });
+
+  test('POS-29817 Redeem Discount 平均分单支付子单后应保持扣减 10 积分和会员名', async ({ environment, page }) => {
+    const crmSplitOrderFlow = createCrmSplitOrderFlow(page);
+
+    const result = await crmSplitOrderFlow.payDiscountedEvenSplitSuborderAndReadMemberState(environment.posHomeUrl);
+
+    expect(result.pointsAfterSuborderPayment).toBe(result.pointsBeforeDiscount - result.discountPointDeduction);
+    expect(result.memberNameAfterSuborderPayment).toBe(result.memberNameBeforeSplit);
+  });
 });
 
 function createCrmSplitOrderFlow(page: Page): CrmSplitOrderFlow {
