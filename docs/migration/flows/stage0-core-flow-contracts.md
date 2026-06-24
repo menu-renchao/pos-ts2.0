@@ -1017,3 +1017,56 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 |---|---|---|
 | selector | Recall list and order-detail selectors need live confirmation | Confirm stable selectors or request `data-testid` |
 | state | Live ordering and recall may be eventually consistent | Add deterministic wait/read contract without `waitForTimeout` |
+
+## AdminMenuFlow
+
+### Source Coverage
+
+| source_file | source_class | source_test_pattern | target_spec | target_flow_method |
+|---|---|---|---|---|
+| stage1/test_admin_menu.py | TestAdminMenu | `test_copy_global_option_to_other_product_line` POS Global Option Group copy to Emenu Menu | tests/stage1/admin-menu.spec.ts | `AdminMenuFlow.copyPosGlobalOptionGroupToEmenuAndReadCount` |
+
+### Preconditions
+
+- POS home is opened through `PosHomePage.open`.
+- Admin is entered through the POS home Admin button.
+- The source product line is `POS Menu`.
+- The target product line is `Emenu Menu`.
+- The copied group is `Global Option Group`.
+
+### Steps
+
+1. Open POS home and enter Admin.
+2. Clear `Emenu Menu` / `Global Option Group`.
+3. Copy `POS Menu` / `Global Option Group` to `Emenu Menu`.
+4. Enter `Emenu Menu` / `Global Option Group`.
+5. Read the copied group's category count.
+
+### Expected Assertions
+
+- POS-31467 verifies the copied `Emenu Menu` / `Global Option Group` category count is greater than 0.
+
+### Page Responsibilities
+
+- `PosHomePage.clickAdmin` owns navigation into Admin.
+- `AdminPage.clearProductItem` owns clearing the target product line group.
+- `AdminPage.copyGroupToProductLine` owns copying the source product line group to the target product line.
+- `AdminPage.readGroupCategoryCount` owns entering the target group and reading category count.
+
+### Client/Data Responsibilities
+
+- No live client is called in round one.
+- The offline POS stub owns product line/group/category state for `POS Menu` and `Emenu Menu`.
+
+### Stub Behavior
+
+- Offline harness starts with `POS Menu` / `Global Option Group` containing categories.
+- Clearing `Emenu Menu` / `Global Option Group` removes all categories.
+- Copying from POS to Emenu clones the source categories into the target product line.
+
+### Live Gaps
+
+| gap | reason | required before verified |
+|---|---|---|
+| selector | Admin Menu uses live iframe/product-line/group/category controls not verified in round one | Confirm stable selectors or request `data-testid` |
+| workflow | Live copy may require confirmation dialogs or async save behavior | Add deterministic waits for copy completion and target group refresh |

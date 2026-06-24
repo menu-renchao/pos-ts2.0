@@ -23,6 +23,13 @@ export class AdminPage extends PageObject {
   private readonly kdsItemPosNameInput: Locator;
   private readonly kdsItemPosNameSaveButton: Locator;
   private readonly languageSelect: Locator;
+  private readonly menuSourceProductLineInput: Locator;
+  private readonly menuTargetProductLineInput: Locator;
+  private readonly menuGroupNameInput: Locator;
+  private readonly menuClearGroupButton: Locator;
+  private readonly menuCopyGroupButton: Locator;
+  private readonly menuEnterGroupButton: Locator;
+  private readonly menuGroupCategoryCount: Locator;
   private readonly menuModeSelect: Locator;
   private readonly roundingStrategySelect: Locator;
   private readonly saveSettingsButton: Locator;
@@ -51,6 +58,13 @@ export class AdminPage extends PageObject {
     this.kdsItemPosNameInput = page.getByTestId('admin-kds-pos-name');
     this.kdsItemPosNameSaveButton = page.getByTestId('admin-kds-pos-name-save');
     this.languageSelect = page.getByTestId('user-default-language');
+    this.menuSourceProductLineInput = page.getByTestId('admin-menu-source-product-line');
+    this.menuTargetProductLineInput = page.getByTestId('admin-menu-target-product-line');
+    this.menuGroupNameInput = page.getByTestId('admin-menu-group-name');
+    this.menuClearGroupButton = page.getByTestId('admin-menu-clear-group');
+    this.menuCopyGroupButton = page.getByTestId('admin-menu-copy-group');
+    this.menuEnterGroupButton = page.getByTestId('admin-menu-enter-group');
+    this.menuGroupCategoryCount = page.getByTestId('admin-menu-group-category-count');
     this.menuModeSelect = page.getByTestId('admin-menu-mode');
     this.roundingStrategySelect = page.getByTestId('admin-rounding-strategy');
     this.saveSettingsButton = page.getByTestId('admin-save-settings');
@@ -182,6 +196,35 @@ export class AdminPage extends PageObject {
       await this.itemNameInput.fill(itemName);
       await this.itemChineseNameInput.fill(chineseName);
       await this.itemChineseNameSaveButton.click();
+    });
+  }
+
+  async clearProductItem(productLine: string, groupName: string): Promise<void> {
+    await step(`清空 ${productLine} 的 ${groupName}`, async () => {
+      await expect(this.adminRoot).toBeVisible();
+      await this.menuTargetProductLineInput.fill(productLine);
+      await this.menuGroupNameInput.fill(groupName);
+      await this.menuClearGroupButton.click();
+    });
+  }
+
+  async copyGroupToProductLine(sourceProductLine: string, groupName: string, targetProductLine: string): Promise<void> {
+    await step(`复制 ${sourceProductLine} 的 ${groupName} 到 ${targetProductLine}`, async () => {
+      await expect(this.adminRoot).toBeVisible();
+      await this.menuSourceProductLineInput.fill(sourceProductLine);
+      await this.menuTargetProductLineInput.fill(targetProductLine);
+      await this.menuGroupNameInput.fill(groupName);
+      await this.menuCopyGroupButton.click();
+    });
+  }
+
+  async readGroupCategoryCount(productLine: string, groupName: string): Promise<number> {
+    return step(`读取 ${productLine} 的 ${groupName} 分类数量`, async () => {
+      await expect(this.adminRoot).toBeVisible();
+      await this.menuTargetProductLineInput.fill(productLine);
+      await this.menuGroupNameInput.fill(groupName);
+      await this.menuEnterGroupButton.click();
+      return Number((await this.menuGroupCategoryCount.textContent()) ?? '0');
     });
   }
 }

@@ -111,6 +111,13 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <input data-testid="admin-item-name" />
       <input data-testid="admin-item-chinese-name" />
       <button data-testid="admin-item-chinese-name-save">Save Item Chinese Name</button>
+      <input data-testid="admin-menu-source-product-line" />
+      <input data-testid="admin-menu-target-product-line" />
+      <input data-testid="admin-menu-group-name" />
+      <button data-testid="admin-menu-clear-group">Clear Product Group</button>
+      <button data-testid="admin-menu-copy-group">Copy Product Group</button>
+      <button data-testid="admin-menu-enter-group">Enter Product Group</button>
+      <div data-testid="admin-menu-group-category-count">0</div>
       <button data-testid="admin-save-settings">Save Settings</button>
       <button data-testid="admin-member-list">CRM Loyalty</button>
       <section data-testid="member-list-permission-popup" hidden>
@@ -489,6 +496,14 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const registeredMembers = [
         { phone: '6467337557', displayPhone: '+16467337557', firstName: 'Existing', lastName: 'Member' },
       ];
+      const adminMenuGroups = {
+        'POS Menu': {
+          'Global Option Group': ['Default Option Category', 'Sauce Category'],
+        },
+        'Emenu Menu': {
+          'Global Option Group': ['Legacy Emenu Option'],
+        },
+      };
       let savedOrders = [];
       let nextOrderNumber = 100000;
       let selectedRecallOrder = null;
@@ -540,6 +555,13 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const adminItemNameInput = document.querySelector('[data-testid="admin-item-name"]');
       const adminItemChineseNameInput = document.querySelector('[data-testid="admin-item-chinese-name"]');
       const adminItemChineseNameSaveButton = document.querySelector('[data-testid="admin-item-chinese-name-save"]');
+      const adminMenuSourceProductLineInput = document.querySelector('[data-testid="admin-menu-source-product-line"]');
+      const adminMenuTargetProductLineInput = document.querySelector('[data-testid="admin-menu-target-product-line"]');
+      const adminMenuGroupNameInput = document.querySelector('[data-testid="admin-menu-group-name"]');
+      const adminMenuClearGroupButton = document.querySelector('[data-testid="admin-menu-clear-group"]');
+      const adminMenuCopyGroupButton = document.querySelector('[data-testid="admin-menu-copy-group"]');
+      const adminMenuEnterGroupButton = document.querySelector('[data-testid="admin-menu-enter-group"]');
+      const adminMenuGroupCategoryCount = document.querySelector('[data-testid="admin-menu-group-category-count"]');
       const joinMemberButton = document.querySelector('[data-testid="home-join-member"]');
       const joinMemberRegistration = document.querySelector('[data-testid="join-member-registration"]');
       const joinMemberFirstNameInput = document.querySelector('[data-testid="join-member-first-name"]');
@@ -829,6 +851,14 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         breakButton.hidden = clockState !== 'clocked-in';
         backToWorkButton.hidden = clockState !== 'on-break';
         checkoutButton.hidden = clockState === 'off';
+      }
+
+      function adminMenuCategories(productLine, groupName) {
+        return adminMenuGroups[productLine]?.[groupName] || [];
+      }
+
+      function renderAdminMenuGroupCount(productLine, groupName) {
+        adminMenuGroupCategoryCount.textContent = String(adminMenuCategories(productLine, groupName).length);
       }
 
       function showPanel(panel) {
@@ -1862,6 +1892,24 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       });
       document.querySelector('[data-testid="home-admin"]').addEventListener('click', () => {
         showPanel('admin');
+      });
+      adminMenuClearGroupButton.addEventListener('click', () => {
+        const productLine = adminMenuTargetProductLineInput.value;
+        const groupName = adminMenuGroupNameInput.value;
+        adminMenuGroups[productLine] = adminMenuGroups[productLine] || {};
+        adminMenuGroups[productLine][groupName] = [];
+        renderAdminMenuGroupCount(productLine, groupName);
+      });
+      adminMenuCopyGroupButton.addEventListener('click', () => {
+        const sourceProductLine = adminMenuSourceProductLineInput.value;
+        const targetProductLine = adminMenuTargetProductLineInput.value;
+        const groupName = adminMenuGroupNameInput.value;
+        adminMenuGroups[targetProductLine] = adminMenuGroups[targetProductLine] || {};
+        adminMenuGroups[targetProductLine][groupName] = [...adminMenuCategories(sourceProductLine, groupName)];
+        renderAdminMenuGroupCount(targetProductLine, groupName);
+      });
+      adminMenuEnterGroupButton.addEventListener('click', () => {
+        renderAdminMenuGroupCount(adminMenuTargetProductLineInput.value, adminMenuGroupNameInput.value);
       });
       saveLanguageButton.addEventListener('click', () => {
         userDefaultLanguage = languageSelect.value;
