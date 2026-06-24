@@ -2444,6 +2444,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
             renderRecallOrderItems();
             return;
           }
+          selectedRecallOrder.semiPaidBeforeFinalPayment = Boolean(selectedRecallOrder.partialPaid);
           selectedRecallOrder.status = 'Paid';
           selectedRecallOrder.partialPaid = false;
           if (selectedRecallOrder.crmMember) {
@@ -2462,8 +2463,15 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       });
       recallVoidPaidOrderButton.addEventListener('click', () => {
         if (selectedRecallOrder?.crmMember && selectedRecallOrder.status === 'Paid') {
-          selectedRecallOrder.status = selectedRecallOrder.items?.some((item) => item.sentToKitchen) ? 'Printed' : 'Voided';
+          selectedRecallOrder.status = selectedRecallOrder.semiPaidBeforeFinalPayment
+            ? 'Semi-Paid'
+            : selectedRecallOrder.items?.some((item) => item.sentToKitchen) ? 'Printed' : 'Voided';
           selectedRecallOrder.crmMember.points -= earnPointsForSubtotal(selectedRecallOrder.subtotal);
+          renderRecallOrderItems();
+          return;
+        }
+        if (selectedRecallOrder?.status === 'Paid' && selectedRecallOrder.semiPaidBeforeFinalPayment) {
+          selectedRecallOrder.status = 'Semi-Paid';
           renderRecallOrderItems();
           return;
         }

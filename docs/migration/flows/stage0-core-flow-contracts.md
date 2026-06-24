@@ -810,6 +810,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 |---|---|---|---|---|
 | stage0/test_order_settle.py | TestOrderSettle | `test_round` 13 组 rounding/payment 参数 | tests/stage0/order-settle.spec.ts | `SettlementFlow.payRoundedOrderAndReadRecall` |
 | stage0/test_order_settle.py | TestOrderSettle | `test_gift_card_void` loyalty card 全额支付后 void 支付记录 | tests/stage0/order-settle.spec.ts | `SettlementFlow.voidFullyLoyaltyPaidAutoSentOrderAndReadStatus` |
+| stage0/test_order_settle.py | TestOrderSettle | `test_gift_card_semi_pay` loyalty card 半支付、现金补齐、void 支付记录 | tests/stage0/order-settle.spec.ts | `SettlementFlow.voidCompletedSemiPaidLoyaltyOrderAndReadStatus` |
 | stage0/test_order_settle.py | all `Test*` classes | remaining cash, credit, discount, tax, total, and order completion settlement paths | tests/stage0/order-settle.spec.ts | pending |
 
 ### Preconditions
@@ -830,6 +831,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 4. Pay through the source payment type: cash, loyalty card, gift card, backup card, or self card.
 5. Open Recall, open the latest order, cancel payment-condition filters, then read final status and total.
 6. For `test_gift_card_void`, pay the auto-sent Dine In order by loyalty card, open Recall, void the payment record, and read the order status.
+7. For `test_gift_card_semi_pay`, split payment evenly into 2 parts, pay the first part by loyalty card, reopen the order in Recall, pay the remaining amount by cash, void the last payment record, and read the order status.
 
 ### Expected Assertions
 
@@ -837,6 +839,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Recall total text matches the exact source expectation, including trailing zero values such as `1.10` and `0.10`.
 - Recall status is `Paid` after every payment type.
 - POS-16539 verifies that voiding the payment record for a fully loyalty-card paid, auto-sent order changes status back to `Printed`.
+- POS-16540 verifies that voiding the final payment record for an order that was previously semi-paid changes status back to `Semi-Paid`.
 - Remaining settlement cases must assert source subtotal, tax, discount, charge, tip, tender, change, and total when migrated.
 - Completed order is visible in recall or final confirmation when required.
 - Payment method-specific behavior is preserved or documented as a live gap.
@@ -847,6 +850,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `AdminPage.setClickSettleAutoSend` owns the click-settle auto-send setting used before POS-16539 order creation.
 - `OrderDishesPage` owns order creation, item price change, item tax void, order charge, settlement entry, and payment-method buttons.
 - `RecallPage` owns post-payment order lookup when the source verifies recall state.
+- `RecallPage.clickSettle`, `RecallPage.payCurrentOrderByCash`, and `RecallPage.voidPaidOrder` own the POS-16540 remaining-payment and pay-record void path.
 
 ### Client/Data Responsibilities
 
@@ -861,6 +865,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Offline rounding applies only to the paid settlement total persisted to Recall; ordinary unpaid totals retain existing item/tip/reward calculation behavior.
 - `nearest_5` and `nearest_10` round down to the lower 5-cent or 10-cent boundary, while `nearest_5_or_10` rounds to the nearest 5-cent boundary, matching the migrated source expectations.
 - Offline click-settle auto-send marks order items as sent to kitchen before payment completion, so voiding the payment record removes payment while preserving the printed order state.
+- Offline semi-pay stores whether the final payment completed a previously partial order; voiding that final payment restores `Semi-Paid`.
 - Non-cash card/device payment buttons return deterministic paid success unless the source case explicitly validates device failure.
 
 ### Live Gaps

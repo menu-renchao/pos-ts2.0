@@ -48,4 +48,23 @@ test.describe('stage0 order settlement migration', () => {
       expect(status).toBe('Printed');
     },
   );
+
+  test(
+    'POS-16540 loyalty card 半支付订单完成现金支付后 void 支付记录应回到 Semi-Paid',
+    {
+      annotation: jiraIssue('POS-16540'),
+    },
+    async ({ environment, page }) => {
+      const flow = new SettlementFlow(
+        new PosHomePage(page),
+        new AdminPage(page),
+        new OrderDishesPage(page),
+        new RecallPage(page),
+      );
+
+      const status = await flow.voidCompletedSemiPaidLoyaltyOrderAndReadStatus(environment.posHomeUrl);
+
+      expect(status).toBe('Semi-Paid');
+    },
+  );
 });
