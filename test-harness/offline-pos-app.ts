@@ -85,6 +85,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         <option value="true">true</option>
         <option value="false">false</option>
       </select>
+      <select data-testid="admin-kds-category-required">
+        <option value="true">true</option>
+        <option value="false">false</option>
+      </select>
       <button data-testid="admin-save-settings">Save Settings</button>
       <button data-testid="admin-member-list">CRM Loyalty</button>
       <section data-testid="member-list-permission-popup" hidden>
@@ -109,6 +113,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
     </section>
     <section data-testid="order-page" hidden>
       <div data-testid="open-food-category"></div>
+      <div data-testid="current-category-name"></div>
       <div data-testid="order-menu-groups"></div>
       <div data-testid="order-menu-categories"></div>
       <div data-testid="order-menu-items"></div>
@@ -386,6 +391,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let currentStaffCanAddNote = localStorage.getItem('currentStaffCanAddNote') !== 'false';
       let currentAutoRedirectAfterReduce = localStorage.getItem('currentAutoRedirectAfterReduce') !== 'false';
       let currentCountCanBeDecimal = localStorage.getItem('currentCountCanBeDecimal') !== 'false';
+      let currentKdsCategoryRequired = localStorage.getItem('currentKdsCategoryRequired') === 'true';
+      let currentCategoryName = '';
       let currentCrmMember = null;
       let currentCrmDiscountRate = 0;
       let currentCrmDiscountMaxAmount = null;
@@ -447,6 +454,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const autoRedirectAfterReduceSelect = document.querySelector('[data-testid="admin-auto-redirect-after-reduce"]');
       const combineSameItemSelect = document.querySelector('[data-testid="admin-combine-same-item"]');
       const countCanBeDecimalSelect = document.querySelector('[data-testid="admin-count-can-be-decimal"]');
+      const kdsCategoryRequiredSelect = document.querySelector('[data-testid="admin-kds-category-required"]');
       const joinMemberButton = document.querySelector('[data-testid="home-join-member"]');
       const joinMemberRegistration = document.querySelector('[data-testid="join-member-registration"]');
       const joinMemberFirstNameInput = document.querySelector('[data-testid="join-member-first-name"]');
@@ -456,6 +464,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const joinMemberSaveButton = document.querySelector('[data-testid="join-member-save"]');
       const joinMemberError = document.querySelector('[data-testid="join-member-error"]');
       const orderPage = document.querySelector('[data-testid="order-page"]');
+      const currentCategoryNameText = document.querySelector('[data-testid="current-category-name"]');
       const orderMenuGroups = document.querySelector('[data-testid="order-menu-groups"]');
       const orderMenuCategories = document.querySelector('[data-testid="order-menu-categories"]');
       const orderMenuItems = document.querySelector('[data-testid="order-menu-items"]');
@@ -721,6 +730,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         supportPage.hidden = panel !== 'support';
         messageCenter.hidden = panel !== 'message-center';
         reservationPage.hidden = panel !== 'reservation';
+        if (panel === 'order') {
+          history.replaceState(null, '', '#/orderDishes');
+        } else if (panel === 'home') {
+          history.replaceState(null, '', '#/home');
+        }
       }
 
       function normalizePhone(phone) {
@@ -910,6 +924,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           price: dish.price,
           unitPrice: dish.price,
           quantity: 1,
+          category: dish.category || '',
           inventorySku: dish.inventorySku || '',
           state: '',
           sentToKitchen: false,
@@ -1004,6 +1019,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           { name: 'Item Option Pork', price: 12, group: 'Dinner Menu', category: 'Item Options' },
           { name: 'Item Option Seafood', price: 12.75, group: 'Dinner Menu', category: 'Item Options' },
           { name: 'AA', number: 'AA', price: 10, group: 'Dinner Menu', category: 'Chicken Lunch E' },
+          { name: 'Mongolian Chicken', price: 10, group: 'Lunch', category: 'KDS' },
         ];
       }
 
@@ -1149,8 +1165,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           orderMenuGroups.appendChild(createButton('order-menu-group', group, () => {}));
         });
         orderMenuCategories.innerHTML = '';
-        ['Chicken Lunch E', 'Lunch Entree', 'Seafood', 'Burgers', 'Category Option', 'KDS鸡肉类午餐', 'Item Options'].forEach((category) => {
-          orderMenuCategories.appendChild(createButton('order-menu-category', category, () => {}));
+        ['Chicken Lunch E', 'Lunch Entree', 'Seafood', 'Burgers', 'Category Option', 'KDS鸡肉类午餐', 'Item Options', 'KDS'].forEach((category) => {
+          orderMenuCategories.appendChild(createButton('order-menu-category', category, () => {
+            currentCategoryName = category;
+            currentCategoryNameText.textContent = currentCategoryName;
+          }));
         });
         orderMenuItems.innerHTML = '';
         menuData().forEach((dish) => {
@@ -1169,6 +1188,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         currentSplitPartTip = null;
         currentOrderStatus = '';
         currentOrderType = 'togo';
+        currentCategoryName = '';
+        currentCategoryNameText.textContent = '';
         currentCustomerName = null;
         currentDeliveryInfoRows = [];
         currentComboOptionCount = 0;
@@ -1204,6 +1225,13 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
 
       function saveCurrentOrder() {
         currentCustomerName = orderGuestNameInput.value || currentCustomerName;
+        if (currentKdsCategoryRequired && !activeOrderItems().some((item) => item.category === 'KDS')) {
+          currentCategoryName = 'KDS';
+          currentCategoryNameText.textContent = currentCategoryName;
+          orderSaveAlert.textContent = 'Required category KDS is missing.';
+          history.replaceState(null, '', '#/orderDishes');
+          return null;
+        }
         const previousDeductedQuantity = Number(currentEditingOrder?.inventoryDeductedQuantity || 0);
         const shortage = inventoryShortage(currentOrderItems, previousDeductedQuantity);
         if (shortage) {
@@ -1260,6 +1288,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         latestSavedOrderItems = [...order.items];
         latestSavedItemOption = order.itemOption;
         selectedRecallOrder = order;
+        history.replaceState(null, '', '#/home');
         return order;
       }
 
@@ -1557,6 +1586,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         currentStaffCanAddNote = staffNoteSelect.value !== 'false';
         currentAutoRedirectAfterReduce = autoRedirectAfterReduceSelect.value !== 'false';
         currentCountCanBeDecimal = countCanBeDecimalSelect.value === 'true';
+        currentKdsCategoryRequired = kdsCategoryRequiredSelect.value === 'true';
         localStorage.setItem('currentMenuMode', currentMenuMode);
         localStorage.setItem('currentSearchMenuEnabled', String(currentSearchMenuEnabled));
         localStorage.setItem('currentCombineSameItemMode', currentCombineSameItemMode);
@@ -1565,6 +1595,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         localStorage.setItem('currentStaffCanAddNote', String(currentStaffCanAddNote));
         localStorage.setItem('currentAutoRedirectAfterReduce', String(currentAutoRedirectAfterReduce));
         localStorage.setItem('currentCountCanBeDecimal', String(currentCountCanBeDecimal));
+        localStorage.setItem('currentKdsCategoryRequired', String(currentKdsCategoryRequired));
       });
       adminMemberListButton.addEventListener('click', () => {
         if (currentEmployeePassword === '123') {
@@ -2345,6 +2376,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       staffNoteSelect.value = String(currentStaffCanAddNote);
       autoRedirectAfterReduceSelect.value = String(currentAutoRedirectAfterReduce);
       countCanBeDecimalSelect.value = String(currentCountCanBeDecimal);
+      kdsCategoryRequiredSelect.value = String(currentKdsCategoryRequired);
       renderClockControls();
     </script>
   </body>

@@ -11,6 +11,7 @@ export class AdminPage extends PageObject {
   private readonly combineSameItemSelect: Locator;
   private readonly countCanBeDecimalSelect: Locator;
   private readonly defaultKeyboardSelect: Locator;
+  private readonly kdsCategoryRequiredSelect: Locator;
   private readonly languageSelect: Locator;
   private readonly menuModeSelect: Locator;
   private readonly saveSettingsButton: Locator;
@@ -27,6 +28,7 @@ export class AdminPage extends PageObject {
     this.combineSameItemSelect = page.getByTestId('admin-combine-same-item');
     this.countCanBeDecimalSelect = page.getByTestId('admin-count-can-be-decimal');
     this.defaultKeyboardSelect = page.getByTestId('admin-default-keyboard');
+    this.kdsCategoryRequiredSelect = page.getByTestId('admin-kds-category-required');
     this.languageSelect = page.getByTestId('user-default-language');
     this.menuModeSelect = page.getByTestId('admin-menu-mode');
     this.saveSettingsButton = page.getByTestId('admin-save-settings');
@@ -105,6 +107,14 @@ export class AdminPage extends PageObject {
     await step(`设置菜品数量支持小数为 ${enabled ? '开启' : '关闭'}`, async () => {
       await expect(this.adminRoot).toBeVisible();
       await this.countCanBeDecimalSelect.selectOption(enabled ? 'true' : 'false');
+      await this.saveSettingsButton.click();
+    });
+  }
+
+  async setKdsCategoryRequired(enabled: boolean): Promise<void> {
+    await step(`设置 KDS Category Required 为 ${enabled ? '开启' : '关闭'}`, async () => {
+      await expect(this.adminRoot).toBeVisible();
+      await this.kdsCategoryRequiredSelect.selectOption(enabled ? 'true' : 'false');
       await this.saveSettingsButton.click();
     });
   }

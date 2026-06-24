@@ -863,4 +863,21 @@ test.describe('POS 点单页面', () => {
     expect(result.permissionToast).toContain('You do not have permission NOTE, please enter the password!');
     expect(result.noteText).toBe('子菜的备注信息');
   });
+
+  test('POS-42060 必选 KDS Category 未满足时保存应停留点单页并自动跳转', {
+    annotation: [jiraIssue('POS-42060')],
+  }, async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.requireKdsCategoryBeforeSave(environment.posHomeUrl);
+
+    expect(result.categoryAfterRejectedSave).toBe('KDS');
+    expect(result.urlAfterRejectedSave).toContain('orderDishes');
+    expect(result.urlAfterCompletedSave).not.toContain('orderDishes');
+  });
 });

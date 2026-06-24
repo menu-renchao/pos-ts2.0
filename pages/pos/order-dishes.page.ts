@@ -14,6 +14,7 @@ export class OrderDishesPage extends PageObject {
   private readonly customerSubmitButton: Locator;
   private readonly openFoodCategory: Locator;
   private readonly orderRoot: Locator;
+  private readonly currentCategoryName: Locator;
   private readonly itemDiscountButton: Locator;
   private readonly itemHalfDiscountButton: Locator;
   private readonly itemPrice: Locator;
@@ -140,6 +141,7 @@ export class OrderDishesPage extends PageObject {
     this.pickupInfoSubmitButton = page.getByTestId('pickup-info-submit');
     this.openFoodCategory = page.getByTestId('open-food-category');
     this.orderRoot = page.getByTestId('order-page');
+    this.currentCategoryName = page.getByTestId('current-category-name');
     this.saveOrderButton = page.getByTestId('order-save');
     this.saveOrderAlert = page.getByTestId('order-save-alert');
     this.sendKitchenButton = page.getByTestId('order-send-kitchen');
@@ -177,6 +179,17 @@ export class OrderDishesPage extends PageObject {
       await expect(this.orderRoot).toBeVisible();
       return (await this.openFoodCategory.textContent()) ?? '';
     });
+  }
+
+  async readCurrentCategoryName(): Promise<string> {
+    return step('读取当前点单 Category 名称', async () => {
+      await expect(this.orderRoot).toBeVisible();
+      return ((await this.currentCategoryName.textContent()) ?? '').trim();
+    });
+  }
+
+  async readCurrentUrl(): Promise<string> {
+    return step('读取当前页面 URL', async () => this.page.url());
   }
 
   async readMenuGroups(): Promise<string[]> {

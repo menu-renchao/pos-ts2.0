@@ -143,6 +143,15 @@ export const numberedNameConflictDish: DishSample = {
   taxRate: 0.0825,
 };
 
+export const requiredKdsDish: DishSample = {
+  id: 'dish-required-kds-mongolian-chicken',
+  name: 'Mongolian Chicken',
+  price: 10,
+  category: 'KDS',
+  group: 'Lunch',
+  taxRate: 0.0825,
+};
+
 export const defaultMenuGroup: MenuGroupSample = {
   id: 'group-migration-menu',
   name: 'Migration Menu',
@@ -157,5 +166,6 @@ export const defaultMenuGroup: MenuGroupSample = {
     itemNoSubOptionDish,
     itemOptionDish,
     numberedNameConflictDish,
+    requiredKdsDish,
   ],
 };

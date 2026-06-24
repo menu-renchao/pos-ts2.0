@@ -12,6 +12,7 @@ import {
   categorySwitchDish,
   menuModeSearchItems,
   numberedNameConflictDish,
+  requiredKdsDish,
 } from '../../test-data/pos/dishes.js';
 import { deliveryOrderInfoSample } from '../../test-data/pos/delivery.js';
 import { languageOptions } from '../../test-data/pos/languages.js';
@@ -134,6 +135,12 @@ export type VoidPrintedItemPermissionResult = {
 export type ComboSubItemNotePermissionResult = {
   permissionToast: string;
   noteText: string;
+};
+
+export type RequiredCategorySaveResult = {
+  categoryAfterRejectedSave: string;
+  urlAfterRejectedSave: string;
+  urlAfterCompletedSave: string;
 };
 
 export type SameItemCombineResult = {
@@ -707,6 +714,32 @@ export class OrderEntryFlow {
     await this.adminPage.setStaffNotePermission(true);
     await this.homePage.refresh();
     return { permissionToast, noteText };
+  }
+
+  async requireKdsCategoryBeforeSave(homeUrl: string): Promise<RequiredCategorySaveResult> {
+    if (!this.adminPage) {
+      throw new Error('AdminPage is required for category Required setup');
+    }
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.setKdsCategoryRequired(true);
+    await this.homePage.refresh();
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.saveOrder();
+    const categoryAfterRejectedSave = await this.orderDishesPage.readCurrentCategoryName();
+    const urlAfterRejectedSave = await this.orderDishesPage.readCurrentUrl();
+    await this.orderDishesPage.selectMenuGroup(requiredKdsDish.group);
+    await this.orderDishesPage.selectMenuCategory(requiredKdsDish.category);
+    await this.orderDishesPage.addMenuItem(requiredKdsDish.name);
+    await this.orderDishesPage.saveOrder();
+    const urlAfterCompletedSave = await this.orderDishesPage.readCurrentUrl();
+    await this.homePage.clickAdmin();
+    await this.adminPage.setKdsCategoryRequired(false);
+    await this.homePage.refresh();
+    return { categoryAfterRejectedSave, urlAfterRejectedSave, urlAfterCompletedSave };
   }
 
   async createThreeSameItemsWithoutAutoCombine(homeUrl: string): Promise<SameItemCombineResult> {
