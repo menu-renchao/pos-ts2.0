@@ -797,4 +797,21 @@ test.describe('POS 点单页面', () => {
     expect(result.secondDishPrice).toBeCloseTo(result.optionPrice * 2 + result.itemUnitPrice * 2, 2);
     expect(result.recallTotal).toBe(result.totalBeforeSave);
   });
+
+  test('POS-22640 自定义 Delivery 订单保存后 Recall 打印应显示 Reprint 并生成三份输出', {
+    annotation: [jiraIssue('POS-22640')],
+  }, async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      undefined,
+      new DeliveryPage(page),
+    );
+
+    const result = await orderEntryFlow.printCustomDeliveryOrderAndReadPrintState(environment.posHomeUrl);
+
+    expect(result.reprintVisible).toBe(true);
+    expect(result.printFileCount).toBe(3);
+  });
 });

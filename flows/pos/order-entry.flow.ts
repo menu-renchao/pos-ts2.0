@@ -2,7 +2,7 @@ import type { PosHomePage } from '../../pages/pos/home.page.js';
 import type { AdminPage } from '../../pages/pos/admin.page.js';
 import type { DeliveryPage } from '../../pages/pos/delivery.page.js';
 import type { OrderDishesPage } from '../../pages/pos/order-dishes.page.js';
-import type { RecalledItemOption, RecalledOrderItem, RecallPage } from '../../pages/pos/recall.page.js';
+import type { RecalledItemOption, RecalledOrderItem, RecallPage, RecallPrintState } from '../../pages/pos/recall.page.js';
 import type { DishSample, OptionOrderSample } from '../../test-data/pos/domain-types.js';
 import { combineSameItemModes, menuModes } from '../../test-data/pos/admin-settings.js';
 import {
@@ -865,6 +865,22 @@ export class OrderEntryFlow {
       totalBeforeSave,
       recallTotal,
     };
+  }
+
+  async printCustomDeliveryOrderAndReadPrintState(homeUrl: string): Promise<RecallPrintState> {
+    if (!this.deliveryPage) {
+      throw new Error('DeliveryPage is required for custom Delivery order creation');
+    }
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickCustomDelivery();
+    await this.deliveryPage.createDeliveryOrder(deliveryOrderInfoSample);
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.saveOrder();
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    return this.recallPage.printOrderAndReadState();
   }
 
   private async openOrderAndAddDish(homeUrl: string, dish: DishSample): Promise<void> {

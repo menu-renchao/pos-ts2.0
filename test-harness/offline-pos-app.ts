@@ -28,6 +28,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <button data-testid="home-admin">Admin</button>
       <button data-testid="home-join-member">Join Member</button>
       <button data-testid="home-reservation">Reservation</button>
+      <button data-testid="home-custom-delivery">Custom Delivery</button>
       <button data-testid="home-delivery">Delivery</button>
       <button data-testid="home-report">Report</button>
       <button data-testid="home-support">Support</button>
@@ -268,6 +269,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <button data-testid="recall-cancel-condition">Cancel Condition</button>
       <button data-testid="recall-move-order">Move Order</button>
       <button data-testid="recall-move-item">Move Item</button>
+      <button data-testid="recall-print">Print</button>
+      <button data-testid="recall-reprint" hidden>Reprint</button>
+      <div data-testid="recall-print-file-count">0</div>
       <div data-testid="recall-order-items"></div>
       <section data-testid="split-panel" hidden>
         <button data-testid="split-even-order">Even Split</button>
@@ -583,6 +587,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const recallCancelConditionButton = document.querySelector('[data-testid="recall-cancel-condition"]');
       const recallMoveOrderButton = document.querySelector('[data-testid="recall-move-order"]');
       const recallMoveItemButton = document.querySelector('[data-testid="recall-move-item"]');
+      const recallPrintButton = document.querySelector('[data-testid="recall-print"]');
+      const recallReprintButton = document.querySelector('[data-testid="recall-reprint"]');
+      const recallPrintFileCount = document.querySelector('[data-testid="recall-print-file-count"]');
       const recallOrderItems = document.querySelector('[data-testid="recall-order-items"]');
       const recallParentOrder = document.querySelector('[data-testid="recall-parent-order"]');
       const recallSplitButton = document.querySelector('[data-testid="recall-split"]');
@@ -1575,6 +1582,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         resetCurrentOrder();
         currentOrderType = 'pickup';
       });
+      document.querySelector('[data-testid="home-custom-delivery"]').addEventListener('click', () => {
+        showPanel('delivery');
+        resetCurrentOrder();
+        currentOrderType = 'custom-delivery';
+      });
       document.querySelector('[data-testid="home-recall"]').addEventListener('click', () => {
         showPanel('recall');
       });
@@ -2078,6 +2090,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           selectedRecallOrder.customerName = '(' + recallGuestNameInput.value + ')';
           recallCustomerName.textContent = selectedRecallOrder.customerName;
         }
+      });
+      recallPrintButton.addEventListener('click', () => {
+        recallReprintButton.hidden = false;
+        recallPrintFileCount.textContent = '3';
       });
       recallSplitButton.addEventListener('click', () => {
         splitPanel.hidden = false;

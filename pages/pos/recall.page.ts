@@ -24,6 +24,11 @@ export type RecallCrmOrderHeader = {
   orderPoints: string;
 };
 
+export type RecallPrintState = {
+  reprintVisible: boolean;
+  printFileCount: number;
+};
+
 export class RecallPage extends PageObject {
   private readonly recentOrderButton: Locator;
   private readonly recalledOptions: Locator;
@@ -50,6 +55,8 @@ export class RecallPage extends PageObject {
   private readonly orderTipToast: Locator;
   private readonly itemCount: Locator;
   private readonly previousOrderButton: Locator;
+  private readonly printButton: Locator;
+  private readonly printFileCount: Locator;
   private readonly recallCashButton: Locator;
   private readonly recallCancelConditionButton: Locator;
   private readonly recallCrmCombineButton: Locator;
@@ -74,6 +81,7 @@ export class RecallPage extends PageObject {
   private readonly voidPaidOrderButton: Locator;
   private readonly voidOrderButton: Locator;
   private readonly restoreInventoryCheckbox: Locator;
+  private readonly reprintButton: Locator;
   private readonly subOrderButton: Locator;
 
   constructor(page: Page) {
@@ -103,6 +111,8 @@ export class RecallPage extends PageObject {
     this.orderTipToast = page.getByTestId('recall-tip-toast');
     this.itemCount = page.getByTestId('recall-item-count');
     this.previousOrderButton = page.getByTestId('recall-previous-order');
+    this.printButton = page.getByTestId('recall-print');
+    this.printFileCount = page.getByTestId('recall-print-file-count');
     this.recallCashButton = page.getByTestId('recall-cash');
     this.recallCancelConditionButton = page.getByTestId('recall-cancel-condition');
     this.recallCrmCombineButton = page.getByTestId('recall-crm-combine-order');
@@ -127,6 +137,7 @@ export class RecallPage extends PageObject {
     this.voidPaidOrderButton = page.getByTestId('recall-void-paid-order');
     this.voidOrderButton = page.getByTestId('recall-void-order');
     this.restoreInventoryCheckbox = page.getByTestId('recall-restore-inventory');
+    this.reprintButton = page.getByTestId('recall-reprint');
     this.subOrderButton = page.getByTestId('recall-sub-order');
   }
 
@@ -199,6 +210,16 @@ export class RecallPage extends PageObject {
 
   async readOrderTipText(): Promise<string> {
     return step('读取 Recall 订单小费文本', async () => ((await this.orderTip.textContent()) ?? '').trim());
+  }
+
+  async printOrderAndReadState(): Promise<RecallPrintState> {
+    return step('打印 Recall 订单并读取打印状态', async () => {
+      await this.printButton.click();
+      return {
+        reprintVisible: await this.reprintButton.isVisible(),
+        printFileCount: Number((await this.printFileCount.textContent()) ?? '0'),
+      };
+    });
   }
 
   async readItemCount(): Promise<string> {

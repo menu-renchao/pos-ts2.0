@@ -10,6 +10,7 @@ export class PosHomePage extends PageObject {
   readonly recallButton: Locator;
   readonly adminButton: Locator;
   readonly reservationButton: Locator;
+  readonly customDeliveryButton: Locator;
   readonly deliveryButton: Locator;
   readonly dineInButton: Locator;
   readonly pickupButton: Locator;
@@ -51,6 +52,7 @@ export class PosHomePage extends PageObject {
     this.recallButton = page.getByTestId('home-recall');
     this.adminButton = page.getByTestId('home-admin');
     this.reservationButton = page.getByTestId('home-reservation');
+    this.customDeliveryButton = page.getByTestId('home-custom-delivery');
     this.deliveryButton = page.getByTestId('home-delivery');
     this.dineInButton = page.getByTestId('home-dine-in');
     this.pickupButton = page.getByTestId('home-pickup');
@@ -186,6 +188,13 @@ export class PosHomePage extends PageObject {
   async clickDelivery(): Promise<void> {
     await step('从首页进入 Delivery 页面', async () => {
       await this.deliveryButton.click();
+      await expect(this.page.getByTestId('delivery-page')).toBeVisible();
+    });
+  }
+
+  async clickCustomDelivery(): Promise<void> {
+    await step('从首页进入自定义 Delivery 页面', async () => {
+      await this.customDeliveryButton.click();
       await expect(this.page.getByTestId('delivery-page')).toBeVisible();
     });
   }
