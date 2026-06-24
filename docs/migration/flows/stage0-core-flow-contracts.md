@@ -816,6 +816,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 | stage0/test_order_settle.py | TestOrderSettle | `test_pay_button_order` Dine In 现金付款条 Pay & Print / Pay 顺序 | tests/stage0/order-settle.spec.ts | `SettlementFlow.readDineInCashPaymentActionOrder` |
 | stage0/test_order_settle.py | TestOrderSettle | `test_search_gift_card_no_info` Gift Card 空条件查询提示 | tests/stage0/order-settle.spec.ts | `SettlementFlow.searchGiftCardWithoutInfoAndReadAlert` |
 | stage0/test_order_settle.py | TestOrderSettle | `test_search_loyalty_card_no_info` Loyalty Card 空条件查询提示 | tests/stage0/order-settle.spec.ts | `SettlementFlow.searchLoyaltyCardWithoutInfoAndReadAlert` |
+| stage0/test_order_settle.py | TestOrderSettle | `test_credit_card_fail_then_cash_payment` 信用卡失败记录订单改用现金支付后 Recall 现金筛选 | tests/stage0/order-settle.spec.ts | `SettlementFlow.paySavedCreditFailureOrderByCashAndReadRecallCashFilter` |
 | stage0/test_order_settle.py | all `Test*` classes | remaining cash, credit, discount, tax, total, and order completion settlement paths | tests/stage0/order-settle.spec.ts | pending |
 
 ### Preconditions
@@ -831,6 +832,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `test_multi_pay_tip` starts from a tax-exempt 10.00 Dine In order so the source formula `total - 5.00 + 2.00` is deterministic.
 - `test_pay_button_order` verifies Dine In cash payment action ordering after selecting the cash tender.
 - `test_search_gift_card_no_info` and `test_search_loyalty_card_no_info` verify card-query validation without requiring a real card service.
+- `test_credit_card_fail_then_cash_payment` starts from a saved Dine In order with source-equivalent `crm_group` / `crm_cat` / `item`; first-round offline mode uses an explicit stub action for the original DB credit-card failure record.
 
 ### Steps
 
@@ -845,6 +847,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 9. For `test_multi_pay_tip`, change the selected item price to 10.00, void item tax, enter settlement, pay 5.00 by cash, add a 2.00 settlement tip, and read the remaining unpaid amount.
 10. For `test_pay_button_order`, enter Dine In, add the default non-combo item, enter settlement, select cash, and read the payment bar actions in display order.
 11. For POS-32910/POS-32907, enter Dine In, add the default non-combo item, enter settlement, select Gift Card or Loyalty Card, click Search without entering identity fields, and read the validation alert.
+12. For POS-44417, enter Dine In, add `item` from `crm_group` / `crm_cat`, save the order, open the latest Recall order, read its order number, mark the credit-card failure record in stub mode, settle by cash from Recall, then apply the Recall cash payment-type filter and read the filtered order number.
 
 ### Expected Assertions
 
@@ -858,6 +861,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - POS-31881 verifies the Dine In cash pay bar action order is exactly `Pay & Print` followed by `Pay`.
 - POS-32910 verifies Gift Card empty search shows `No./Name/Phone No. can't all be empty`.
 - POS-32907 verifies Loyalty Card empty search shows `No./Name/Phone No./Email can't all be empty`.
+- POS-44417 verifies the Recall cash payment-type filter returns the same order number that was saved before the credit-card failure record and cash fallback payment.
 - Remaining settlement cases must assert source subtotal, tax, discount, charge, tip, tender, change, and total when migrated.
 - Completed order is visible in recall or final confirmation when required.
 - Payment method-specific behavior is preserved or documented as a live gap.
@@ -873,6 +877,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `OrderDishesPage.modifySettlementPaymentAmount`, `OrderDishesPage.addSettlementTip`, and `OrderDishesPage.readSettlementUnpaidAmount` own the POS-23319 partial-payment recalculation checks.
 - `OrderDishesPage.clickCashTenderAndReadPayActionOrder` owns the POS-31881 cash pay bar ordering check.
 - `OrderDishesPage.searchGiftCardWithoutInfoAndReadAlert` and `OrderDishesPage.searchLoyaltyCardWithoutInfoAndReadAlert` own card search validation prompts.
+- `RecallPage.readOrderNumber`, `RecallPage.markCurrentOrderCreditCardFailure`, and `RecallPage.filterCashPaymentTypeAndReadOrderNumber` own POS-44417 order identity, credit-card failure-record marker, and payment-type filter verification.
 
 ### Client/Data Responsibilities
 
@@ -884,6 +889,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - The offline POS stub tracks the partial paid amount on the settlement page and recalculates unpaid amount after settlement tip entry for POS-23319.
 - The offline POS stub renders the cash pay bar actions in source order so POS-31881 can validate ordering without a live payment screen.
 - The offline POS stub records the selected card tender and returns the source validation alert when Search is clicked with empty card identity fields.
+- The offline POS stub assigns deterministic order numbers to saved orders, records an explicit credit-card failure marker for POS-44417, persists cash as the final payment type, and returns the matching order number from the Recall cash payment-type filter.
 
 ### Stub Behavior
 
@@ -893,6 +899,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Offline click-settle auto-send marks order items as sent to kitchen before payment completion, so voiding the payment record removes payment while preserving the printed order state.
 - Offline semi-pay stores whether the final payment completed a previously partial order; voiding that final payment restores `Semi-Paid`.
 - Non-cash card/device payment buttons return deterministic paid success unless the source case explicitly validates device failure.
+- POS-44417 keeps the real `PosDBFunction.add_credit_card_payment_failure_record(order_id)` dependency as a live gap; offline verification covers the surrounding UI behavior and the cash-filter assertion.
 
 ### Live Gaps
 

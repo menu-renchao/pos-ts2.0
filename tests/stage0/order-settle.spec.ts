@@ -165,4 +165,23 @@ test.describe('stage0 order settlement migration', () => {
       expect(alert).toBe("No./Name/Phone No./Email can't all be empty");
     },
   );
+
+  test(
+    'POS-44417 信用卡失败订单改用现金支付后 Recall 现金筛选应找到原订单',
+    {
+      annotation: jiraIssue('POS-44417'),
+    },
+    async ({ environment, page }) => {
+      const flow = new SettlementFlow(
+        new PosHomePage(page),
+        new AdminPage(page),
+        new OrderDishesPage(page),
+        new RecallPage(page),
+      );
+
+      const result = await flow.paySavedCreditFailureOrderByCashAndReadRecallCashFilter(environment.posHomeUrl);
+
+      expect(result.filteredOrderNumber).toBe(result.savedOrderNumber);
+    },
+  );
 });

@@ -51,6 +51,7 @@ export class RecallPage extends PageObject {
   private readonly parentOrderCard: Locator;
   private readonly orderStatus: Locator;
   private readonly orderSubtotal: Locator;
+  private readonly orderNumber: Locator;
   private readonly orderReward: Locator;
   private readonly orderTip: Locator;
   private readonly orderTipInput: Locator;
@@ -61,6 +62,7 @@ export class RecallPage extends PageObject {
   private readonly previousOrderButton: Locator;
   private readonly printButton: Locator;
   private readonly printFileCount: Locator;
+  private readonly creditFailureRecordButton: Locator;
   private readonly recallCashButton: Locator;
   private readonly recallCancelConditionButton: Locator;
   private readonly recallCrmCombineButton: Locator;
@@ -87,6 +89,8 @@ export class RecallPage extends PageObject {
   private readonly restoreInventoryCheckbox: Locator;
   private readonly reprintButton: Locator;
   private readonly subOrderButton: Locator;
+  private readonly cashPaymentTypeFilterButton: Locator;
+  private readonly paymentTypeOrderNumber: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -109,6 +113,7 @@ export class RecallPage extends PageObject {
     this.parentOrderCard = page.getByTestId('recall-parent-order');
     this.orderStatus = page.getByTestId('recall-order-status');
     this.orderSubtotal = page.getByTestId('recall-order-subtotal');
+    this.orderNumber = page.getByTestId('recall-order-number');
     this.orderReward = page.getByTestId('recall-order-reward');
     this.orderTip = page.getByTestId('recall-order-tip');
     this.orderTipInput = page.getByTestId('recall-tip-input');
@@ -119,6 +124,7 @@ export class RecallPage extends PageObject {
     this.previousOrderButton = page.getByTestId('recall-previous-order');
     this.printButton = page.getByTestId('recall-print');
     this.printFileCount = page.getByTestId('recall-print-file-count');
+    this.creditFailureRecordButton = page.getByTestId('recall-credit-failure-record');
     this.recallCashButton = page.getByTestId('recall-cash');
     this.recallCancelConditionButton = page.getByTestId('recall-cancel-condition');
     this.recallCrmCombineButton = page.getByTestId('recall-crm-combine-order');
@@ -145,6 +151,8 @@ export class RecallPage extends PageObject {
     this.restoreInventoryCheckbox = page.getByTestId('recall-restore-inventory');
     this.reprintButton = page.getByTestId('recall-reprint');
     this.subOrderButton = page.getByTestId('recall-sub-order');
+    this.cashPaymentTypeFilterButton = page.getByTestId('recall-payment-type-cash');
+    this.paymentTypeOrderNumber = page.getByTestId('recall-payment-type-order-number');
   }
 
   async openRecentOrder(): Promise<void> {
@@ -265,6 +273,10 @@ export class RecallPage extends PageObject {
     return step('读取 Recall 订单状态', async () => (await this.orderStatus.textContent()) ?? '');
   }
 
+  async readOrderNumber(): Promise<string> {
+    return step('读取 Recall 订单号', async () => ((await this.orderNumber.textContent()) ?? '').trim());
+  }
+
   async openPreviousOrder(): Promise<void> {
     await step('打开 Recall 前一笔订单', async () => {
       await this.previousOrderButton.click();
@@ -344,6 +356,19 @@ export class RecallPage extends PageObject {
   async payCurrentOrderByCash(): Promise<void> {
     await step('Recall 当前订单现金支付', async () => {
       await this.recallCashButton.click();
+    });
+  }
+
+  async markCurrentOrderCreditCardFailure(): Promise<void> {
+    await step('标记 Recall 当前订单存在信用卡失败记录', async () => {
+      await this.creditFailureRecordButton.click();
+    });
+  }
+
+  async filterCashPaymentTypeAndReadOrderNumber(): Promise<string> {
+    return step('Recall 按现金支付类型筛选并读取订单号', async () => {
+      await this.cashPaymentTypeFilterButton.click();
+      return ((await this.paymentTypeOrderNumber.textContent()) ?? '').trim();
     });
   }
 

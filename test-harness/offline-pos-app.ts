@@ -309,6 +309,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <button data-testid="recall-tip-submit">Add Tip</button>
       <div data-testid="recall-tip-toast"></div>
       <div data-testid="recall-item-count"></div>
+      <div data-testid="recall-order-number"></div>
       <div data-testid="recall-order-status"></div>
       <div data-testid="recall-customer-name"></div>
       <div data-testid="recall-guest-phone"></div>
@@ -322,7 +323,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <button data-testid="recall-crm-combine-order">Combine CRM Order</button>
       <button data-testid="recall-settle">Settle</button>
       <button data-testid="recall-crm-redeem-discount">10% Off</button>
+      <button data-testid="recall-credit-failure-record">Credit Failure Record</button>
       <button data-testid="recall-cash">Cash</button>
+      <button data-testid="recall-payment-type-cash">Cash Filter</button>
+      <div data-testid="recall-payment-type-order-number"></div>
       <button data-testid="recall-void-paid-order">Void Paid Order</button>
       <label>
         <input data-testid="recall-restore-inventory" type="checkbox" checked />
@@ -486,6 +490,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         { phone: '6467337557', displayPhone: '+16467337557', firstName: 'Existing', lastName: 'Member' },
       ];
       let savedOrders = [];
+      let nextOrderNumber = 100000;
       let selectedRecallOrder = null;
       let draftSplitPrices = [];
       let draftSplitItemPrices = [];
@@ -698,13 +703,17 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const recallTipSubmitButton = document.querySelector('[data-testid="recall-tip-submit"]');
       const recallTipToast = document.querySelector('[data-testid="recall-tip-toast"]');
       const recallItemCount = document.querySelector('[data-testid="recall-item-count"]');
+      const recallOrderNumber = document.querySelector('[data-testid="recall-order-number"]');
       const recallCrmMemberName = document.querySelector('[data-testid="recall-crm-member-name"]');
       const recallCrmPointBalance = document.querySelector('[data-testid="recall-crm-point-balance"]');
       const recallCrmCombineInput = document.querySelector('[data-testid="recall-crm-combine-order-no"]');
       const recallCrmCombineButton = document.querySelector('[data-testid="recall-crm-combine-order"]');
       const recallSettleButton = document.querySelector('[data-testid="recall-settle"]');
       const recallCrmRedeemDiscountButton = document.querySelector('[data-testid="recall-crm-redeem-discount"]');
+      const recallCreditFailureRecordButton = document.querySelector('[data-testid="recall-credit-failure-record"]');
       const recallCashButton = document.querySelector('[data-testid="recall-cash"]');
+      const recallPaymentTypeCashButton = document.querySelector('[data-testid="recall-payment-type-cash"]');
+      const recallPaymentTypeOrderNumber = document.querySelector('[data-testid="recall-payment-type-order-number"]');
       const recallVoidPaidOrderButton = document.querySelector('[data-testid="recall-void-paid-order"]');
       const recallRestoreInventoryCheckbox = document.querySelector('[data-testid="recall-restore-inventory"]');
       const recallVoidOrderButton = document.querySelector('[data-testid="recall-void-order"]');
@@ -1215,6 +1224,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           { name: 'hn_normal_item1', searchKeyword: 'ptc', price: 10, group: 'Lunch', category: 'hn_cate' },
           { name: 'Mongolian Chicken', price: 10, group: 'Lunch', category: 'KDS' },
           { name: 'Pos Name Test', price: 10, group: 'Lunch', category: 'KDS' },
+          { name: 'item', price: 10, group: 'crm_group', category: 'crm_cat' },
           { name: 'combo_max', price: 20, group: 'crm_group', category: 'crm_cat', comboSubItems: ['item', 'item_option'] },
           { name: 'ComboOptionTest', price: 10, group: 'MansuperGroup', category: 'MansuperCat', comboSubItems: ['combo-no-option-item'] },
           { name: 'combo-option-item', price: 10, group: 'MansuperGroup', category: 'MansuperCat' },
@@ -1522,6 +1532,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           return selectedRecallOrder;
         }
         const order = {
+          orderNumber: String(nextOrderNumber++),
           items: [...currentOrderItems],
           itemOption: currentItemOption,
           tip: currentOrderTip,
@@ -1546,7 +1557,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           subOrderItems: [],
           subOrderStatuses: [],
           inventoryDeductedQuantity: 0,
-          orderType: currentOrderType,
+          paymentType: '',
+          hasCreditFailure: false,
         };
         order.rewardDiscount = calculateRewardDiscount(order);
         applyInventoryDelta(order, currentOrderItems);
@@ -1653,6 +1665,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           status: '',
           customerName: null,
         };
+        recallOrderNumber.textContent = order.orderNumber || '';
         recallOrderTip.textContent = formatTip(order.tip || 0);
         recallOrderStatus.textContent = order.status || '';
         recallCustomerName.textContent = order.customerName || '';
@@ -2481,6 +2494,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           renderRecallOrderItems();
         }
       });
+      recallCreditFailureRecordButton.addEventListener('click', () => {
+        if (selectedRecallOrder) {
+          selectedRecallOrder.hasCreditFailure = true;
+        }
+      });
       recallCashButton.addEventListener('click', () => {
         if (selectedRecallOrder) {
           if (selectedRecallOrder.subOrderStatuses?.length && selectedSubOrderIndex !== null) {
@@ -2496,11 +2514,18 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           selectedRecallOrder.semiPaidBeforeFinalPayment = Boolean(selectedRecallOrder.partialPaid);
           selectedRecallOrder.status = 'Paid';
           selectedRecallOrder.partialPaid = false;
+          selectedRecallOrder.paymentType = 'cash';
           if (selectedRecallOrder.crmMember) {
             selectedRecallOrder.crmMember.points += earnPointsForSubtotal(selectedRecallOrder.subtotal);
           }
           renderRecallOrderItems();
         }
+      });
+      recallPaymentTypeCashButton.addEventListener('click', () => {
+        const order = [...savedOrders].reverse().find((candidate) => (
+          candidate.paymentType === 'cash' && candidate.hasCreditFailure
+        ));
+        recallPaymentTypeOrderNumber.textContent = order?.orderNumber || '';
       });
       recallTipSubmitButton.addEventListener('click', () => {
         if (selectedRecallOrder) {

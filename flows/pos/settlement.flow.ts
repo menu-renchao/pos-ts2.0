@@ -19,6 +19,11 @@ export type PaidOrderTwoTipRecallStates = {
   cashTip: PaidOrderTipRecallState;
 };
 
+export type CashPaymentRecallFilterResult = {
+  savedOrderNumber: string;
+  filteredOrderNumber: string;
+};
+
 export class SettlementFlow {
   constructor(
     private readonly homePage: PosHomePage,
@@ -138,6 +143,26 @@ export class SettlementFlow {
     await this.orderDishesPage.addMenuItem('superman item1');
     await this.orderDishesPage.clickSettle();
     return this.orderDishesPage.searchLoyaltyCardWithoutInfoAndReadAlert();
+  }
+
+  async paySavedCreditFailureOrderByCashAndReadRecallCashFilter(
+    homeUrl: string,
+  ): Promise<CashPaymentRecallFilterResult> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup('crm_group');
+    await this.orderDishesPage.selectMenuCategory('crm_cat');
+    await this.orderDishesPage.addMenuItem('item');
+    await this.orderDishesPage.saveOrder();
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    const savedOrderNumber = await this.recallPage.readOrderNumber();
+    await this.recallPage.markCurrentOrderCreditCardFailure();
+    await this.recallPage.clickSettle();
+    await this.recallPage.payCurrentOrderByCash();
+    const filteredOrderNumber = await this.recallPage.filterCashPaymentTypeAndReadOrderNumber();
+
+    return { savedOrderNumber, filteredOrderNumber };
   }
 
   private async payByCreditAddTwoTipsAndReadRecall(
