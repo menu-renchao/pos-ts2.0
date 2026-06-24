@@ -1,12 +1,22 @@
 import type { AdminPage } from '../../pages/pos/admin.page.js';
 import type { PosHomePage } from '../../pages/pos/home.page.js';
 import type { OrderDishesPage } from '../../pages/pos/order-dishes.page.js';
-import type { RecallPage } from '../../pages/pos/recall.page.js';
+import type { RecallPage, RecallTipMethod } from '../../pages/pos/recall.page.js';
 import type { RoundingSettlementCase, SettlementPaymentType } from '../../test-data/pos/settlement.js';
 
 export type RoundedSettlementRecallState = {
   status: string;
   totalText: string;
+};
+
+export type PaidOrderTipRecallState = {
+  status: string;
+  tipText: string;
+};
+
+export type PaidOrderTwoTipRecallStates = {
+  creditTip: PaidOrderTipRecallState;
+  cashTip: PaidOrderTipRecallState;
 };
 
 export class SettlementFlow {
@@ -76,6 +86,35 @@ export class SettlementFlow {
     await this.recallPage.payCurrentOrderByCash();
     await this.recallPage.voidPaidOrder();
     return this.recallPage.readOrderStatus();
+  }
+
+  async addTipsAfterCreditPaymentAndReadRecall(homeUrl: string): Promise<PaidOrderTwoTipRecallStates> {
+    return {
+      creditTip: await this.payByCreditAddTwoTipsAndReadRecall(homeUrl, 'credit'),
+      cashTip: await this.payByCreditAddTwoTipsAndReadRecall(homeUrl, 'cash'),
+    };
+  }
+
+  private async payByCreditAddTwoTipsAndReadRecall(
+    homeUrl: string,
+    secondTipMethod: RecallTipMethod,
+  ): Promise<PaidOrderTipRecallState> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup('Lunch');
+    await this.orderDishesPage.selectMenuCategory('Chicken Lunch E');
+    await this.orderDishesPage.addMenuItem('superman item1');
+    await this.orderDishesPage.clickSettle();
+    await this.orderDishesPage.settleByCredit();
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.addTipAfterCreditPayment(100, 'credit');
+    await this.recallPage.addTipAfterCreditPayment(200, secondTipMethod);
+
+    return {
+      status: await this.recallPage.readOrderStatus(),
+      tipText: await this.recallPage.readOrderTipText(),
+    };
   }
 
   private async payCurrentOrder(paymentType: SettlementPaymentType): Promise<void> {

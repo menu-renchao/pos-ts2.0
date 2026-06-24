@@ -29,6 +29,8 @@ export type RecallPrintState = {
   printFileCount: number;
 };
 
+export type RecallTipMethod = 'credit' | 'cash';
+
 export class RecallPage extends PageObject {
   private readonly recentOrderButton: Locator;
   private readonly recalledOptions: Locator;
@@ -52,6 +54,7 @@ export class RecallPage extends PageObject {
   private readonly orderReward: Locator;
   private readonly orderTip: Locator;
   private readonly orderTipInput: Locator;
+  private readonly orderTipMethod: Locator;
   private readonly orderTipSubmitButton: Locator;
   private readonly orderTipToast: Locator;
   private readonly itemCount: Locator;
@@ -109,6 +112,7 @@ export class RecallPage extends PageObject {
     this.orderReward = page.getByTestId('recall-order-reward');
     this.orderTip = page.getByTestId('recall-order-tip');
     this.orderTipInput = page.getByTestId('recall-tip-input');
+    this.orderTipMethod = page.getByTestId('recall-tip-method');
     this.orderTipSubmitButton = page.getByTestId('recall-tip-submit');
     this.orderTipToast = page.getByTestId('recall-tip-toast');
     this.itemCount = page.getByTestId('recall-item-count');
@@ -235,10 +239,18 @@ export class RecallPage extends PageObject {
     return step('读取 Recall 菜品总数量', async () => ((await this.itemCount.textContent()) ?? '').trim());
   }
 
-  async addTipAfterCreditPaymentAndReadToast(amount: number): Promise<string> {
-    return step(`Recall 已支付订单追加小费 ${amount} 并读取提示`, async () => {
+  async addTipAfterCreditPayment(amount: number, method: RecallTipMethod = 'credit'): Promise<void> {
+    await step(`Recall 已支付订单追加 ${method} 小费 ${amount}`, async () => {
+      await this.orderTipMethod.selectOption(method);
       await this.orderTipInput.fill(String(amount));
+      await new Promise((resolve) => setTimeout(resolve, 200));
       await this.orderTipSubmitButton.click();
+    });
+  }
+
+  async addTipAfterCreditPaymentAndReadToast(amount: number, method: RecallTipMethod = 'credit'): Promise<string> {
+    return step(`Recall 已支付订单追加 ${method} 小费 ${amount} 并读取提示`, async () => {
+      await this.addTipAfterCreditPayment(amount, method);
       return ((await this.orderTipToast.textContent()) ?? '').trim();
     });
   }

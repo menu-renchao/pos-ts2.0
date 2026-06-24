@@ -292,6 +292,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <input data-testid="recall-guest-name" />
       <button data-testid="recall-save-edit">Save Edit</button>
       <div data-testid="recall-order-tip"></div>
+      <select data-testid="recall-tip-method">
+        <option value="credit">Credit Tip</option>
+        <option value="cash">Cash Tip</option>
+      </select>
       <input data-testid="recall-tip-input" />
       <button data-testid="recall-tip-submit">Add Tip</button>
       <div data-testid="recall-tip-toast"></div>
@@ -674,6 +678,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const recallOrderSubtotal = document.querySelector('[data-testid="recall-order-subtotal"]');
       const recallOrderReward = document.querySelector('[data-testid="recall-order-reward"]');
       const recallOrderTotal = document.querySelector('[data-testid="recall-order-total"]');
+      const recallTipMethod = document.querySelector('[data-testid="recall-tip-method"]');
       const recallTipInput = document.querySelector('[data-testid="recall-tip-input"]');
       const recallTipSubmitButton = document.querySelector('[data-testid="recall-tip-submit"]');
       const recallTipToast = document.querySelector('[data-testid="recall-tip-toast"]');
@@ -2456,8 +2461,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       recallTipSubmitButton.addEventListener('click', () => {
         if (selectedRecallOrder) {
           const tipInCents = Number(recallTipInput.value || '0');
+          const tipAmount = tipInCents / 100;
           recallTipToast.textContent = largeTipToast(tipInCents, orderTotal({ ...selectedRecallOrder, tip: 0 }));
-          selectedRecallOrder.tip = tipInCents / 100;
+          selectedRecallOrder.tip = recallTipMethod.value === 'cash'
+            ? roundMoney(Number(selectedRecallOrder.tip || 0) + tipAmount)
+            : tipAmount;
           renderRecallOrderItems();
         }
       });

@@ -67,4 +67,26 @@ test.describe('stage0 order settlement migration', () => {
       expect(status).toBe('Semi-Paid');
     },
   );
+
+  test(
+    'POS-19046, POS-19049 信用卡支付后两次追加信用卡或现金 tip 应保持 Paid 并显示正确小费',
+    {
+      annotation: jiraIssues(['POS-19046', 'POS-19049']),
+    },
+    async ({ environment, page }) => {
+      const flow = new SettlementFlow(
+        new PosHomePage(page),
+        new AdminPage(page),
+        new OrderDishesPage(page),
+        new RecallPage(page),
+      );
+
+      const recallStates = await flow.addTipsAfterCreditPaymentAndReadRecall(environment.posHomeUrl);
+
+      expect(recallStates.creditTip.status).toBe('Paid');
+      expect(recallStates.creditTip.tipText).toBe('2.00');
+      expect(recallStates.cashTip.status).toBe('Paid');
+      expect(recallStates.cashTip.tipText).toBe('3.00');
+    },
+  );
 });
