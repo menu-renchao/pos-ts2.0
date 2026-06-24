@@ -10,6 +10,12 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 |---|---|---|---|---|
 | crm/test_crm_join_member.py | TestJoinMember | `test_join_member_*`, `test_jump_member_*`, `test_search_by_phone_only_finds_cloud_members` | tests/crm/crm-join-member.spec.ts | `CrmMemberFlow.joinMember`, `CrmMemberFlow.searchMemberByPhone`, `CrmMemberFlow.openMemberProfile` |
 | crm/test_crm_order.py | TestCRMOrder | `test_join_member_*`, `test_order_select_phone`, `test_settle_select_member`, `test_settle_switch_member` | tests/crm/crm-order.spec.ts | `CrmMemberFlow.attachMemberToOrder`, `CrmMemberFlow.switchSettlementMember` |
+| crm/test_crm_join_member.py | TestJoinMember | `test_join_member_first_name_last_name` | tests/crm/crm-join-member.spec.ts | `CrmMemberFlow.validateJoinMemberRequiresPhoneOrEmail` |
+| crm/test_crm_join_member.py | TestJoinMember | `test_join_member_phone_is_exist` | tests/crm/crm-join-member.spec.ts | `CrmMemberFlow.validateDuplicatePhoneRejected` |
+| crm/test_crm_join_member.py | TestJoinMember | `test_join_member_phone` | tests/crm/crm-join-member.spec.ts | `CrmMemberFlow.joinMemberByPhoneAndSearchInMemberList` |
+| crm/test_crm_join_member.py | TestJoinMember | `test_jump_member_page` | tests/crm/crm-join-member.spec.ts | `CrmMemberFlow.openMemberListWithPermission` |
+| crm/test_crm_join_member.py | TestJoinMember | `test_jump_member_no_permission` | tests/crm/crm-join-member.spec.ts | `CrmMemberFlow.openMemberListWithManagerOverride` |
+| crm/test_crm_join_member.py | TestJoinMember | `test_search_by_phone_only_finds_cloud_members` | tests/crm/crm-join-member.spec.ts | `CrmMemberFlow.searchRedeemPhoneFindsCloudMemberOnly` |
 
 ### Preconditions
 
@@ -17,6 +23,8 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 - CRM member data is provided by typed factories, not inline timestamps in specs.
 - Phone and email uniqueness is represented by CRM client state in stub mode.
 - Permission-sensitive member lookup cases use explicit staff/permission fixture state.
+- Join Member registration errors are read from POS UI, not inferred in the spec.
+- The cloud/local duplicate phone search case uses seeded `existingCrmMember` and `localOnlyMember` with the same phone.
 
 ### Steps
 
@@ -25,6 +33,12 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 3. Create or search for the member using source-equivalent input data.
 4. Attach, switch, or open the member profile according to the source case.
 5. Read member identity, permission result, and visible member state.
+6. `CrmMemberFlow.validateJoinMemberRequiresPhoneOrEmail`: open Join Member, fill first and last name only, save, read validation error.
+7. `CrmMemberFlow.validateDuplicatePhoneRejected`: open Join Member, fill seeded duplicate phone and name, save, read duplicate validation error.
+8. `CrmMemberFlow.joinMemberByPhoneAndSearchInMemberList`: create a deterministic phone member, open Admin CRM Loyalty, search the member list, read the phone result.
+9. `CrmMemberFlow.openMemberListWithPermission`: open Admin CRM Loyalty as a permitted employee and verify Member List display.
+10. `CrmMemberFlow.openMemberListWithManagerOverride`: log in as a no-permission employee, open Admin CRM Loyalty, submit manager password, verify Member List display.
+11. `CrmMemberFlow.searchRedeemPhoneFindsCloudMemberOnly`: open Dine In, open Redeem, search the shared phone, and assert the cloud member result.
 
 ### Expected Assertions
 
@@ -32,24 +46,41 @@ These contracts gate migration for all active source rows under `crm/*.py`.
 - Existing phone conflicts and cloud-member-only search behavior are preserved.
 - Member selection on order or settlement page updates the active order context.
 - Permission-denied member navigation produces the expected blocked state.
+- First/last-name-only registration returns `At least one phone and email is required`.
+- Duplicate phone registration returns `Phone or email already be registered.`.
+- Phone-only registration appears in Member List with a `+1` phone prefix.
+- CRM Loyalty navigation displays Member List directly for permitted users and after manager override for no-permission users.
+- Redeem phone search returns `cloud member` and excludes the local member with the same phone.
 
 ### Page Responsibilities
 
 - `PosCrmPage` owns POS-side member dialog controls and reads.
 - `CrmLoginPage`, `BusinessChoosePage`, and `LoyaltyMemberPage` own CRM web-side login, business selection, and member profile reads.
 - `SettlementPage` owns settlement-side member selection controls.
+- `PosCrmPage.openJoinMemberRegistration`, `PosCrmPage.isJoinMemberRegistrationVisible`, `PosCrmPage.fillJoinMemberName`, `PosCrmPage.fillJoinMemberPhone`, `PosCrmPage.submitJoinMember`, and `PosCrmPage.readJoinMemberError` own Join Member registration.
+- `PosCrmPage.openMemberListFromAdmin`, `PosCrmPage.submitMemberListPermissionPassword`, `PosCrmPage.isMemberListVisible`, `PosCrmPage.searchMember`, and `PosCrmPage.readMemberSearchPhoneResult` own Admin CRM Loyalty member list behavior.
+- `PosCrmPage.openRedeem` and `PosCrmPage.searchRedeemMemberByPhone` own POS order-side Redeem member lookup.
+- `PosHomePage.logout`, `PosHomePage.inputEmployeePassword`, `PosHomePage.clickAdmin`, and `PosHomePage.clickDineIn` provide the source-equivalent navigation context.
 
 ### Client/Data Responsibilities
 
 - `test-data/crm/members.ts` owns member samples and factories.
 - `StubCrmMemberClient` owns member uniqueness, cloud-member source, reward balance, and lookup state.
 - `StubPosOrderClient` owns the active order/member association in stub mode.
+- `StubCrmMemberClient.duplicatePhoneInput` supplies the duplicate phone used by POS-29341.
+- `StubCrmMemberClient.nextUniquePhone` supplies deterministic phone-only registration data.
+- `StubCrmMemberClient.cloudMemberSearchPhone` and `StubCrmMemberClient.findCloudMemberByPhone` define the cloud-only Redeem lookup behavior.
+- `test-data/crm/members.ts` owns `duplicateJoinMemberPhone`, `existingCrmMember`, `localOnlyMember`, and `cloudOnlySearchPhone`.
 
 ### Stub Behavior
 
 - Stub member creation stores deterministic member records in memory.
 - Stub lookup distinguishes POS-local and cloud member records when a source case requires that distinction.
 - Stub mode does not log in to the live CRM web app.
+- Offline Join Member validation rejects missing phone/email and duplicate phone before writing member state.
+- Offline successful phone registration stores a member that Admin CRM Loyalty search can find with a `+1` prefix.
+- Offline Admin CRM Loyalty displays a permission password prompt for employee password `123`, then opens Member List after password `11`.
+- Offline Redeem search returns only the cloud member when cloud and local members share the same phone.
 
 ### Live Gaps
 

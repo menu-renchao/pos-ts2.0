@@ -26,6 +26,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <button data-testid="home-pickup">Pickup</button>
       <button data-testid="home-recall">Recall</button>
       <button data-testid="home-admin">Admin</button>
+      <button data-testid="home-join-member">Join Member</button>
       <button data-testid="home-reservation">Reservation</button>
       <button data-testid="home-delivery">Delivery</button>
       <button data-testid="home-report">Report</button>
@@ -55,6 +56,23 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         <option value="EMENU">EMENU</option>
       </select>
       <button data-testid="admin-save-settings">Save Settings</button>
+      <button data-testid="admin-member-list">CRM Loyalty</button>
+      <section data-testid="member-list-permission-popup" hidden>
+        <input data-testid="member-list-permission-password" type="password" />
+        <button data-testid="member-list-permission-submit">Submit Member Permission</button>
+      </section>
+      <section data-testid="crm-member-list" hidden>
+        <input data-testid="crm-member-list-search" />
+        <div data-testid="crm-member-search-phone-result"></div>
+      </section>
+    </section>
+    <section data-testid="join-member-registration" hidden>
+      <input data-testid="join-member-first-name" />
+      <input data-testid="join-member-last-name" />
+      <input data-testid="join-member-phone" />
+      <input data-testid="join-member-email" />
+      <button data-testid="join-member-save">Save Join Member</button>
+      <div data-testid="join-member-error" role="alert"></div>
     </section>
     <section data-testid="order-page" hidden>
       <div data-testid="open-food-category"></div>
@@ -260,9 +278,15 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let currentCrmMember = null;
       let currentCrmDiscountRate = 0;
       let currentHasRedeemItem = false;
+      let currentEmployeePassword = '11';
       const crmMembers = [
         { phone: '(64)673-37557', name: 'CRM Member A', points: 100 },
         { phone: '(92)923-69168', name: 'CRM Member B', points: 80 },
+        { phone: '(93)422-11234', name: 'cloud member', points: 100, source: 'cloud' },
+        { phone: '(93)422-11234', name: 'local member', points: 100, source: 'local' },
+      ];
+      const registeredMembers = [
+        { phone: '6467337557', displayPhone: '+16467337557', firstName: 'Existing', lastName: 'Member' },
       ];
       let savedOrders = [];
       let selectedRecallOrder = null;
@@ -294,6 +318,14 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const backToWorkButton = document.querySelector('[data-testid="clock-back-to-work"]');
       const checkoutButton = document.querySelector('[data-testid="clock-checkout"]');
       const adminPage = document.querySelector('[data-testid="admin-page"]');
+      const joinMemberButton = document.querySelector('[data-testid="home-join-member"]');
+      const joinMemberRegistration = document.querySelector('[data-testid="join-member-registration"]');
+      const joinMemberFirstNameInput = document.querySelector('[data-testid="join-member-first-name"]');
+      const joinMemberLastNameInput = document.querySelector('[data-testid="join-member-last-name"]');
+      const joinMemberPhoneInput = document.querySelector('[data-testid="join-member-phone"]');
+      const joinMemberEmailInput = document.querySelector('[data-testid="join-member-email"]');
+      const joinMemberSaveButton = document.querySelector('[data-testid="join-member-save"]');
+      const joinMemberError = document.querySelector('[data-testid="join-member-error"]');
       const orderPage = document.querySelector('[data-testid="order-page"]');
       const orderMenuGroups = document.querySelector('[data-testid="order-menu-groups"]');
       const orderMenuCategories = document.querySelector('[data-testid="order-menu-categories"]');
@@ -452,6 +484,13 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const saveLanguageButton = document.querySelector('[data-testid="save-user-default-language"]');
       const menuModeSelect = document.querySelector('[data-testid="admin-menu-mode"]');
       const saveSettingsButton = document.querySelector('[data-testid="admin-save-settings"]');
+      const adminMemberListButton = document.querySelector('[data-testid="admin-member-list"]');
+      const memberListPermissionPopup = document.querySelector('[data-testid="member-list-permission-popup"]');
+      const memberListPermissionPasswordInput = document.querySelector('[data-testid="member-list-permission-password"]');
+      const memberListPermissionSubmitButton = document.querySelector('[data-testid="member-list-permission-submit"]');
+      const crmMemberList = document.querySelector('[data-testid="crm-member-list"]');
+      const crmMemberListSearchInput = document.querySelector('[data-testid="crm-member-list-search"]');
+      const crmMemberSearchPhoneResult = document.querySelector('[data-testid="crm-member-search-phone-result"]');
       const openFoodCategory = document.querySelector('[data-testid="open-food-category"]');
       const passwordInput = document.querySelector('[data-testid="employee-password"]');
       const saveButton = document.querySelector('[data-testid="employee-password-save"]');
@@ -481,6 +520,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       function showPanel(panel) {
         adminPage.hidden = panel !== 'admin';
         deliveryPage.hidden = panel !== 'delivery';
+        joinMemberRegistration.hidden = panel !== 'join-member';
         orderPage.hidden = panel !== 'order';
         recallPage.hidden = panel !== 'recall';
         reportPasswordPanel.hidden = panel !== 'report-password';
@@ -488,6 +528,37 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         supportPage.hidden = panel !== 'support';
         messageCenter.hidden = panel !== 'message-center';
         reservationPage.hidden = panel !== 'reservation';
+      }
+
+      function normalizePhone(phone) {
+        return (phone || '').replace(/\D/g, '');
+      }
+
+      function openCrmMemberList() {
+        crmMemberList.hidden = false;
+        memberListPermissionPopup.hidden = true;
+      }
+
+      function saveJoinMember() {
+        const phone = normalizePhone(joinMemberPhoneInput.value);
+        const email = joinMemberEmailInput.value.trim();
+        if (!phone && !email) {
+          joinMemberError.textContent = 'At least one phone and email is required';
+          return;
+        }
+        if (registeredMembers.some((member) => normalizePhone(member.phone) === phone || (email && member.email === email))) {
+          joinMemberError.textContent = 'Phone or email already be registered.';
+          return;
+        }
+        registeredMembers.push({
+          phone,
+          email,
+          displayPhone: phone ? '+1' + phone : '',
+          firstName: joinMemberFirstNameInput.value,
+          lastName: joinMemberLastNameInput.value,
+        });
+        joinMemberError.textContent = '';
+        joinMemberRegistration.hidden = true;
       }
 
       function showDeliveryOrders(orderInfo = '') {
@@ -859,6 +930,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           return;
         }
         toast.textContent = '';
+        currentEmployeePassword = passwordInput.value;
         document.body.dataset.employeeContext = 'accepted';
       });
       switchChineseButton.addEventListener('click', () => {
@@ -873,6 +945,17 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       });
       logoutButton.addEventListener('click', () => {
         document.body.dataset.employeeContext = 'logged-out';
+      });
+      joinMemberButton.addEventListener('click', () => {
+        joinMemberFirstNameInput.value = '';
+        joinMemberLastNameInput.value = '';
+        joinMemberPhoneInput.value = '';
+        joinMemberEmailInput.value = '';
+        joinMemberError.textContent = '';
+        showPanel('join-member');
+      });
+      joinMemberSaveButton.addEventListener('click', () => {
+        saveJoinMember();
       });
       checkInButton.addEventListener('click', () => {
         if (clockState === 'off') {
@@ -907,6 +990,24 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       saveSettingsButton.addEventListener('click', () => {
         currentMenuMode = menuModeSelect.value;
         localStorage.setItem('currentMenuMode', currentMenuMode);
+      });
+      adminMemberListButton.addEventListener('click', () => {
+        if (currentEmployeePassword === '123') {
+          memberListPermissionPopup.hidden = false;
+          crmMemberList.hidden = true;
+          return;
+        }
+        openCrmMemberList();
+      });
+      memberListPermissionSubmitButton.addEventListener('click', () => {
+        if (memberListPermissionPasswordInput.value === '11') {
+          openCrmMemberList();
+        }
+      });
+      crmMemberListSearchInput.addEventListener('input', () => {
+        const query = normalizePhone(crmMemberListSearchInput.value);
+        const member = registeredMembers.find((item) => normalizePhone(item.phone) === query);
+        crmMemberSearchPhoneResult.textContent = member?.displayPhone || '';
       });
       document.querySelector('[data-testid="home-togo"]').addEventListener('click', () => {
         showPanel('order');

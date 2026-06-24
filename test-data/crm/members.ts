@@ -41,6 +41,36 @@ export const crmRewardSettings = {
   pointsPerPaidOrder: 10,
 } as const;
 
+export type CrmMemberRecord = {
+  readonly firstName: string;
+  readonly lastName: string;
+  readonly phone: string;
+  readonly email?: string;
+  readonly displayName: string;
+  readonly source: 'cloud' | 'local';
+};
+
+export const existingCrmMember: CrmMemberRecord = {
+  firstName: 'cloud',
+  lastName: 'member',
+  phone: '(93)422-11234',
+  email: 'cloud.member@example.test',
+  displayName: 'cloud member',
+  source: 'cloud',
+};
+
+export const localOnlyMember: CrmMemberRecord = {
+  firstName: 'local',
+  lastName: 'member',
+  phone: '(93)422-11234',
+  email: 'local.member@example.test',
+  displayName: 'local member',
+  source: 'local',
+};
+
+export const duplicateJoinMemberPhone = '6467337557';
+export const cloudOnlySearchPhone = '(93)422-11234';
+
 export function createUniqueCrmMember() {
   return {
     ...createUniqueCustomer('CrmMember'),

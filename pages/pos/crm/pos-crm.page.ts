@@ -5,9 +5,22 @@ import { step } from '../../../utils/step.js';
 import { PageObject } from '../../shared/page-object.js';
 
 export class PosCrmPage extends PageObject {
+  private readonly adminMemberListButton: Locator;
+  private readonly joinFirstNameInput: Locator;
+  private readonly joinLastNameInput: Locator;
+  private readonly joinMemberButton: Locator;
+  private readonly joinMemberError: Locator;
+  private readonly joinMemberPhoneInput: Locator;
+  private readonly joinMemberRegistrationBox: Locator;
+  private readonly joinMemberSaveButton: Locator;
+  private readonly memberList: Locator;
+  private readonly memberListPermissionInput: Locator;
+  private readonly memberListPermissionSubmitButton: Locator;
+  private readonly memberListSearchInput: Locator;
+  private readonly memberSearchPhoneResult: Locator;
   private readonly memberName: Locator;
   private readonly memberOption: Locator;
-  private readonly memberSearchInput: Locator;
+  private readonly redeemMemberSearchInput: Locator;
   private readonly pointBalance: Locator;
   private readonly redeemButton: Locator;
   private readonly redeemDiscountButton: Locator;
@@ -19,9 +32,22 @@ export class PosCrmPage extends PageObject {
 
   constructor(page: Page) {
     super(page);
+    this.adminMemberListButton = page.getByTestId('admin-member-list');
+    this.joinFirstNameInput = page.getByTestId('join-member-first-name');
+    this.joinLastNameInput = page.getByTestId('join-member-last-name');
+    this.joinMemberButton = page.getByTestId('home-join-member');
+    this.joinMemberError = page.getByTestId('join-member-error');
+    this.joinMemberPhoneInput = page.getByTestId('join-member-phone');
+    this.joinMemberRegistrationBox = page.getByTestId('join-member-registration');
+    this.joinMemberSaveButton = page.getByTestId('join-member-save');
+    this.memberList = page.getByTestId('crm-member-list');
+    this.memberListPermissionInput = page.getByTestId('member-list-permission-password');
+    this.memberListPermissionSubmitButton = page.getByTestId('member-list-permission-submit');
+    this.memberListSearchInput = page.getByTestId('crm-member-list-search');
+    this.memberSearchPhoneResult = page.getByTestId('crm-member-search-phone-result');
     this.memberName = page.getByTestId('crm-member-name');
     this.memberOption = page.getByTestId('crm-member-option');
-    this.memberSearchInput = page.getByTestId('crm-member-search');
+    this.redeemMemberSearchInput = page.getByTestId('crm-member-search');
     this.pointBalance = page.getByTestId('crm-point-balance');
     this.redeemButton = page.getByTestId('crm-redeem');
     this.redeemDiscountButton = page.getByTestId('crm-redeem-discount');
@@ -39,11 +65,53 @@ export class PosCrmPage extends PageObject {
     });
   }
 
+  async openJoinMemberRegistration(): Promise<void> {
+    await step('打开 Join Member 注册弹框', async () => {
+      await this.joinMemberButton.click();
+      await expect(this.joinMemberRegistrationBox).toBeVisible();
+    });
+  }
+
+  async isJoinMemberRegistrationVisible(): Promise<boolean> {
+    return step('判断 Join Member 注册弹框是否展示', async () => this.joinMemberRegistrationBox.isVisible());
+  }
+
+  async fillJoinMemberName(firstName: string, lastName: string): Promise<void> {
+    await step('填写 Join Member 姓名', async () => {
+      await this.joinFirstNameInput.fill(firstName);
+      await this.joinLastNameInput.fill(lastName);
+    });
+  }
+
+  async fillJoinMemberPhone(phone: string): Promise<void> {
+    await step(`填写 Join Member 电话 ${phone}`, async () => {
+      await this.joinMemberPhoneInput.fill(phone);
+    });
+  }
+
+  async submitJoinMember(): Promise<void> {
+    await step('保存 Join Member 注册信息', async () => {
+      await this.joinMemberSaveButton.click();
+    });
+  }
+
+  async readJoinMemberError(): Promise<string> {
+    return step('读取 Join Member 注册失败原因', async () => ((await this.joinMemberError.textContent()) ?? '').trim());
+  }
+
   async selectMemberByPhone(phone: string): Promise<void> {
     await step(`选择 CRM 会员 ${phone}`, async () => {
-      await this.memberSearchInput.fill(phone);
+      await this.redeemMemberSearchInput.fill(phone);
       await this.memberOption.click();
       await expect(this.memberName).toBeVisible();
+    });
+  }
+
+  async searchRedeemMemberByPhone(phone: string): Promise<string> {
+    return step(`Redeem 按电话搜索会员 ${phone}`, async () => {
+      await this.redeemMemberSearchInput.fill(phone);
+      await this.memberOption.click();
+      return this.readMemberName();
     });
   }
 
@@ -80,5 +148,33 @@ export class PosCrmPage extends PageObject {
 
   async readMemberName(): Promise<string> {
     return step('读取 CRM 会员名称', async () => ((await this.memberName.textContent()) ?? '').trim());
+  }
+
+  async openMemberListFromAdmin(): Promise<void> {
+    await step('从 Admin 打开 CRM Loyalty Member List', async () => {
+      await this.adminMemberListButton.click();
+    });
+  }
+
+  async submitMemberListPermissionPassword(password: string): Promise<void> {
+    await step('输入 Member List 权限密码', async () => {
+      await this.memberListPermissionInput.fill(password);
+      await this.memberListPermissionSubmitButton.click();
+      await expect(this.memberList).toBeVisible();
+    });
+  }
+
+  async isMemberListVisible(): Promise<boolean> {
+    return step('判断 CRM Member List 是否展示', async () => this.memberList.isVisible());
+  }
+
+  async searchMember(member: string): Promise<void> {
+    await step(`在 CRM Member List 搜索 ${member}`, async () => {
+      await this.memberListSearchInput.fill(member);
+    });
+  }
+
+  async readMemberSearchPhoneResult(): Promise<string> {
+    return step('读取 CRM Member List 电话搜索结果', async () => ((await this.memberSearchPhoneResult.textContent()) ?? '').trim());
   }
 }
