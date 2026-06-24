@@ -8,6 +8,7 @@ import { combineSameItemModes, menuModes } from '../../test-data/pos/admin-setti
 import {
   categoryOptionDish,
   discountableDish,
+  editableComboDish,
   groupSwitchDish,
   categorySwitchDish,
   menuModeSearchItems,
@@ -153,6 +154,12 @@ export type PercentChargeResult = {
 export type PosNameDisplayResult = {
   posNameVisible: boolean;
   orderedItemName: string;
+};
+
+export type ComboSubItemEditPriceResult = {
+  subtotalBeforeEdit: string;
+  subtotalAfterAdjustableEdit: string;
+  fixedSubItemSupportsEditPrice: boolean;
 };
 
 export type SameItemCombineResult = {
@@ -795,6 +802,25 @@ export class OrderEntryFlow {
     await this.adminPage.setKdsItemPosName(posNameDisplayDish.name, '');
     await this.homePage.refresh();
     return { posNameVisible, orderedItemName };
+  }
+
+  async editQuickComboSubItemPriceAndReadSubtotal(homeUrl: string): Promise<ComboSubItemEditPriceResult> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(editableComboDish.group);
+    await this.orderDishesPage.selectMenuCategory(editableComboDish.category);
+    await this.orderDishesPage.addQuickCombo(editableComboDish.name);
+    const subtotalBeforeEdit = await this.orderDishesPage.readSubtotalText();
+    await this.orderDishesPage.selectOrderedComboSubItem(editableComboDish.name, editableComboDish.editableSubItem);
+    await this.orderDishesPage.editSelectedComboSubItemPrice(editableComboDish.editPriceInput);
+    const subtotalAfterAdjustableEdit = await this.orderDishesPage.readSubtotalText();
+    await this.orderDishesPage.selectOrderedComboSubItem(editableComboDish.name, editableComboDish.fixedSubItem);
+    const fixedSubItemSupportsEditPrice = await this.orderDishesPage.selectedComboSubItemSupportsEditPrice();
+    return {
+      subtotalBeforeEdit,
+      subtotalAfterAdjustableEdit,
+      fixedSubItemSupportsEditPrice,
+    };
   }
 
   async createThreeSameItemsWithoutAutoCombine(homeUrl: string): Promise<SameItemCombineResult> {

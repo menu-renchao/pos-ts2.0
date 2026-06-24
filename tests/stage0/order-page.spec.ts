@@ -912,4 +912,21 @@ test.describe('POS 点单页面', () => {
     expect(result.posNameVisible).toBe(true);
     expect(result.orderedItemName).toBe('Pos Name Test');
   });
+
+  test('POS-42061 套餐可调子菜支持改价且固定子菜不支持改价', {
+    annotation: [jiraIssue('POS-42061')],
+  }, async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.editQuickComboSubItemPriceAndReadSubtotal(environment.posHomeUrl);
+
+    expect(result.subtotalBeforeEdit).toBe('$30.20');
+    expect(result.subtotalAfterAdjustableEdit).toBe('$40.20');
+    expect(result.fixedSubItemSupportsEditPrice).toBe(false);
+  });
 });

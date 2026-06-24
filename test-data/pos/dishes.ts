@@ -163,6 +163,17 @@ export const posNameDisplayDish: DishSample = {
 
 export const posNameDisplayValue = 'migration-pos-name';
 
+export const editableComboDish = {
+  name: 'EditPriceCombo',
+  group: 'MansuperGroup',
+  category: 'MansuperCat',
+  initialSubtotalText: '$30.20',
+  editedSubtotalText: '$40.20',
+  editableSubItem: 'ITEM1',
+  fixedSubItem: 'ITEM3',
+  editPriceInput: '1200',
+} as const;
+
 export const defaultMenuGroup: MenuGroupSample = {
   id: 'group-migration-menu',
   name: 'Migration Menu',

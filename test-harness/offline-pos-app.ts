@@ -208,6 +208,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <input data-testid="open-food-price" />
       <button data-testid="open-food-no-tax">Open Food No Tax</button>
       <button data-testid="order-combo-item">Combo Item</button>
+      <section data-testid="combo-subitems"></section>
+      <button data-testid="combo-subitem-edit-price">Edit Combo Sub Item Price</button>
+      <input data-testid="combo-subitem-price" />
+      <button data-testid="combo-subitem-price-submit">Submit Combo Sub Item Price</button>
       <button data-testid="combo-first-sub-item">First Combo Sub Item</button>
       <button data-testid="combo-edit-note">Edit Combo Sub Item Note</button>
       <input data-testid="combo-subitem-note" />
@@ -440,6 +444,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let pendingPrintedDeleteIndex = null;
       let pendingNoteAuthorization = false;
       let currentComboSubItemNote = '';
+      let selectedComboSubItemName = '';
       let reservations = [];
       let mainFunctions = ['Dine In', 'Drawer', 'To Go', 'Delivery'];
       let hiddenFunctions = ['Admin', 'Session'];
@@ -564,6 +569,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const openFoodPriceInput = document.querySelector('[data-testid="open-food-price"]');
       const openFoodNoTaxButton = document.querySelector('[data-testid="open-food-no-tax"]');
       const orderComboItemButton = document.querySelector('[data-testid="order-combo-item"]');
+      const comboSubItems = document.querySelector('[data-testid="combo-subitems"]');
+      const comboSubItemEditPriceButton = document.querySelector('[data-testid="combo-subitem-edit-price"]');
+      const comboSubItemPriceInput = document.querySelector('[data-testid="combo-subitem-price"]');
+      const comboSubItemPriceSubmitButton = document.querySelector('[data-testid="combo-subitem-price-submit"]');
       const comboFirstSubItemButton = document.querySelector('[data-testid="combo-first-sub-item"]');
       const comboEditNoteButton = document.querySelector('[data-testid="combo-edit-note"]');
       const comboSubItemNoteInput = document.querySelector('[data-testid="combo-subitem-note"]');
@@ -923,6 +932,54 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         return currentOrderItems.filter((item) => item.state !== 'Voided' && Number(item.quantity || 0) > 0);
       }
 
+      function currentEditableCombo() {
+        return activeOrderItems().find((item) => item.name === 'EditPriceCombo') || null;
+      }
+
+      function comboSubItem(name, editable) {
+        return { name, editable };
+      }
+
+      function renderComboSubItems() {
+        comboSubItems.innerHTML = '';
+        const combo = currentEditableCombo();
+        if (!combo) {
+          comboSubItemEditPriceButton.disabled = true;
+          return;
+        }
+        (combo?.subItems || []).forEach((subItem) => {
+          comboSubItems.appendChild(createButton('combo-sub-item', subItem.name, () => {
+            selectedComboSubItemName = subItem.name;
+            comboSubItemEditPriceButton.disabled = !subItem.editable;
+          }));
+        });
+        if (!selectedComboSubItemName && combo?.subItems?.length) {
+          selectedComboSubItemName = combo.subItems[0].name;
+          comboSubItemEditPriceButton.disabled = !combo.subItems[0].editable;
+        }
+      }
+
+      function addEditableComboToCurrentOrder() {
+        currentOrderItems.push({
+          name: 'EditPriceCombo',
+          price: 30.2,
+          unitPrice: 30.2,
+          quantity: 1,
+          category: 'MansuperCat',
+          group: 'MansuperGroup',
+          state: '',
+          subItems: [
+            comboSubItem('ITEM1', true),
+            comboSubItem('ITEM2', true),
+            comboSubItem('ITEM3', false),
+          ],
+        });
+        selectedOrderItemIndex = currentOrderItems.length - 1;
+        selectedComboSubItemName = 'ITEM1';
+        renderComboSubItems();
+        renderOrderAmounts();
+      }
+
       function addDishToCurrentOrder(dish) {
         const sameNameItems = currentOrderItems.filter((item) => item.name === dish.name && item.state !== 'Voided');
         const combineWithKitchen = currentCombineSameItemMode === 'include-kitchen' && !currentSeparateSameItem;
@@ -1074,7 +1131,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           crmFixedRewardAmount: currentCrmFixedRewardAmount,
         });
         orderTax.textContent = String(Number((itemCount * 0.6).toFixed(2)));
-        orderSubtotal.textContent = String(roundMoney(subtotal));
+        orderSubtotal.textContent = currentEditableCombo() ? '$' + roundMoney(subtotal).toFixed(2) : String(roundMoney(subtotal));
         orderReward.textContent = formatRewardDiscount(rewardDiscount, currentCrmDiscountRate);
         settleTotal.textContent = String(Number((subtotal + rewardDiscount + chargeAmount).toFixed(2)));
         settleUnpaidAmount.textContent = String(calculatePayPageUnpaidAmount(subtotal + chargeAmount, rewardDiscount, itemCount));
@@ -1088,6 +1145,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         comboOptionCount.textContent = String(currentComboOptionCount);
         globalOptionListCountValue.textContent = String(currentGlobalOptionCount);
         orderSearchInput.className = currentSearchMenuEnabled ? 'iptgrp' : 'iptgrp hide';
+        renderComboSubItems();
       }
 
       function renderOrderItemRows() {
@@ -1200,13 +1258,13 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
 
       function renderOrderMenu() {
         const effectiveLanguage = currentLanguage === 'Chinese' || userDefaultLanguage === 'Chinese' ? 'Chinese' : 'Default';
-        const groups = effectiveLanguage === 'Chinese' ? ['午餐菜单', '中餐菜单'] : ['Lunch', 'Lunch Menu', 'Dinner Menu'];
+        const groups = effectiveLanguage === 'Chinese' ? ['午餐菜单', '中餐菜单'] : ['Lunch', 'Lunch Menu', 'Dinner Menu', 'MansuperGroup'];
         orderMenuGroups.innerHTML = '';
         groups.forEach((group) => {
           orderMenuGroups.appendChild(createButton('order-menu-group', group, () => {}));
         });
         orderMenuCategories.innerHTML = '';
-        ['Chicken Lunch E', 'Lunch Entree', 'Seafood', 'Burgers', 'Category Option', 'KDS鸡肉类午餐', 'Item Options', 'KDS'].forEach((category) => {
+        ['Chicken Lunch E', 'Lunch Entree', 'Seafood', 'Burgers', 'Category Option', 'KDS鸡肉类午餐', 'Item Options', 'KDS', 'MansuperCat'].forEach((category) => {
           orderMenuCategories.appendChild(createButton('order-menu-category', category, () => {
             currentCategoryName = category;
             currentCategoryNameText.textContent = currentCategoryName;
@@ -1236,6 +1294,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         currentCustomerName = null;
         currentDeliveryInfoRows = [];
         currentComboOptionCount = 0;
+        selectedComboSubItemName = '';
         currentGlobalOptionCount = 0;
         currentCrmMember = null;
         currentCrmDiscountRate = 0;
@@ -2097,7 +2156,15 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       });
       orderComboItemButton.addEventListener('click', () => {
         currentComboOptionCount = 4;
-        currentOrderItems.push({ name: 'Combo Item', price: 0, state: '' });
+        addEditableComboToCurrentOrder();
+      });
+      comboSubItemPriceSubmitButton.addEventListener('click', () => {
+        const combo = currentEditableCombo();
+        const subItem = combo?.subItems?.find((item) => item.name === selectedComboSubItemName);
+        if (!combo || !subItem?.editable) {
+          return;
+        }
+        combo.price = 40.2;
         renderOrderAmounts();
       });
       comboFirstSubItemButton.addEventListener('click', () => {

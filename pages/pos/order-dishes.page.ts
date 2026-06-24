@@ -90,6 +90,10 @@ export class OrderDishesPage extends PageObject {
   private readonly comboSubItemNoteText: Locator;
   private readonly comboFirstSubItemButton: Locator;
   private readonly comboOptionReduceButton: Locator;
+  private readonly comboSubItems: Locator;
+  private readonly comboSubItemPriceInput: Locator;
+  private readonly comboSubItemPriceSubmitButton: Locator;
+  private readonly comboSubItemEditPriceButton: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -178,6 +182,10 @@ export class OrderDishesPage extends PageObject {
     this.comboSubItemNoteText = page.getByTestId('combo-subitem-note-text');
     this.comboFirstSubItemButton = page.getByTestId('combo-first-sub-item');
     this.comboOptionReduceButton = page.getByTestId('combo-option-reduce');
+    this.comboSubItems = page.getByTestId('combo-sub-item');
+    this.comboSubItemPriceInput = page.getByTestId('combo-subitem-price');
+    this.comboSubItemPriceSubmitButton = page.getByTestId('combo-subitem-price-submit');
+    this.comboSubItemEditPriceButton = page.getByTestId('combo-subitem-edit-price');
   }
 
   async readOpenFoodCategoryName(): Promise<string> {
@@ -424,6 +432,10 @@ export class OrderDishesPage extends PageObject {
     return step('读取当前订单小计', async () => Number((await this.subtotal.textContent()) ?? '0'));
   }
 
+  async readSubtotalText(): Promise<string> {
+    return step('读取当前订单小计文案', async () => ((await this.subtotal.textContent()) ?? '').trim());
+  }
+
   async readRewardText(): Promise<string> {
     return step('读取当前订单 Reward Discount 文案', async () => ((await this.orderReward.textContent()) ?? '').trim());
   }
@@ -635,6 +647,30 @@ export class OrderDishesPage extends PageObject {
     await step(`添加包含 ${optionCount} 个 Option 的 Combo`, async () => {
       await this.comboItemButton.click();
     });
+  }
+
+  async addQuickCombo(comboName: string): Promise<void> {
+    await step(`添加 Quick Combo ${comboName}`, async () => {
+      await this.comboItemButton.click();
+    });
+  }
+
+  async selectOrderedComboSubItem(comboName: string, subItemName: string): Promise<void> {
+    await step(`选择套餐 ${comboName} 子菜 ${subItemName}`, async () => {
+      await this.comboSubItems.filter({ hasText: exactText(subItemName) }).click();
+    });
+  }
+
+  async editSelectedComboSubItemPrice(priceInput: string): Promise<void> {
+    await step(`修改已选套餐子菜价格为 ${priceInput}`, async () => {
+      await expect(this.comboSubItemEditPriceButton).toBeEnabled();
+      await this.comboSubItemPriceInput.fill(priceInput);
+      await this.comboSubItemPriceSubmitButton.click();
+    });
+  }
+
+  async selectedComboSubItemSupportsEditPrice(): Promise<boolean> {
+    return step('判断已选套餐子菜是否支持改价', async () => this.comboSubItemEditPriceButton.isEnabled());
   }
 
   async reduceComboOption(): Promise<void> {
