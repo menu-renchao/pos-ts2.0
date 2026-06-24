@@ -12,6 +12,7 @@ export class PosHomePage extends PageObject {
   readonly passwordInput: Locator;
   readonly savePasswordButton: Locator;
 
+  private readonly adminPageRoot: Locator;
   private readonly cancelEditButton: Locator;
   private readonly editButton: Locator;
   private readonly hiddenFunctionCards: Locator;
@@ -21,13 +22,16 @@ export class PosHomePage extends PageObject {
   private readonly loginToast: Locator;
   private readonly mainAddButton: Locator;
   private readonly moreAddButton: Locator;
+  private readonly orderPageRoot: Locator;
   private readonly saveEditButton: Locator;
   private readonly toast: Locator;
+  private readonly welcomeText: Locator;
   private readonly homeRoot: Locator;
 
   constructor(page: Page) {
     super(page);
     this.homeRoot = page.getByTestId('pos-home');
+    this.adminPageRoot = page.getByTestId('admin-page');
     this.togoButton = page.getByTestId('home-togo');
     this.recallButton = page.getByTestId('home-recall');
     this.adminButton = page.getByTestId('home-admin');
@@ -41,8 +45,10 @@ export class PosHomePage extends PageObject {
     this.homeFunctionCards = page.getByTestId('home-function-card');
     this.mainAddButton = page.getByTestId('edit-main-add');
     this.moreAddButton = page.getByTestId('edit-more-add');
+    this.orderPageRoot = page.getByTestId('order-page');
     this.saveEditButton = page.getByTestId('edit-save');
     this.toast = page.getByTestId('home-toast');
+    this.welcomeText = page.getByTestId('welcome-text');
     this.loginToast = page.getByTestId('login-toast');
   }
 
@@ -56,12 +62,15 @@ export class PosHomePage extends PageObject {
   async inputEmployeePassword(password: string): Promise<void> {
     await step('输入员工密码并提交', async () => {
       await this.passwordInput.fill(password);
-      await waitUntil(async () => (await this.passwordInput.inputValue()) === password, {
-        description: '员工密码输入稳定',
-        intervalMs: 25,
-        timeoutMs: 1_000,
-      });
+      await this.waitForPasswordValue(password);
       await this.savePasswordButton.click();
+    });
+  }
+
+  async inputEmployeePasswordWithoutSave(password: string): Promise<void> {
+    await step('输入员工密码但不保存', async () => {
+      await this.passwordInput.fill(password);
+      await this.waitForPasswordValue(password);
     });
   }
 
@@ -75,6 +84,45 @@ export class PosHomePage extends PageObject {
 
   async readPasswordValue(): Promise<string> {
     return step('读取员工密码输入框内容', async () => this.passwordInput.inputValue());
+  }
+
+  async refresh(): Promise<void> {
+    await step('刷新 POS 首页', async () => {
+      await this.page.reload();
+      await expect(this.homeRoot).toBeVisible();
+    });
+  }
+
+  async switchLanguage(language: string): Promise<void> {
+    await step(`切换首页语言为 ${language}`, async () => {
+      await this.page.getByTestId(`switch-language-${language}`).click();
+      await expect(this.welcomeText).toBeVisible();
+    });
+  }
+
+  async readWelcomeText(): Promise<string> {
+    return step('读取首页欢迎语', async () => (await this.welcomeText.textContent()) ?? '');
+  }
+
+  async clickAdmin(): Promise<void> {
+    await step('打开 Admin 页面', async () => {
+      await this.adminButton.click();
+      await expect(this.adminPageRoot).toBeVisible();
+    });
+  }
+
+  async logout(): Promise<void> {
+    await step('退出当前员工登录态', async () => {
+      await this.page.getByTestId('home-logout').click();
+      await expect(this.passwordInput).toBeVisible();
+    });
+  }
+
+  async clickTogo(): Promise<void> {
+    await step('从首页进入 To Go 点单页', async () => {
+      await this.togoButton.click();
+      await expect(this.orderPageRoot).toBeVisible();
+    });
   }
 
   async clickEdit(): Promise<void> {
@@ -139,6 +187,14 @@ export class PosHomePage extends PageObject {
     return step('读取首页提示文案', async () => {
       await expect(this.toast).toBeVisible();
       return (await this.toast.textContent()) ?? '';
+    });
+  }
+
+  private async waitForPasswordValue(password: string): Promise<void> {
+    await waitUntil(async () => (await this.passwordInput.inputValue()) === password, {
+      description: '员工密码输入稳定',
+      intervalMs: 25,
+      timeoutMs: 1_000,
     });
   }
 }

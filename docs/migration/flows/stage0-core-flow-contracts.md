@@ -113,6 +113,59 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 | selector | Real edit-mode controls and card selectors must be confirmed against live DOM | Replace stub `data-testid` selectors with stable live selectors or request instrumentation |
 | persistence | Live layout persistence may be tenant/user scoped | Add live setup/teardown or API reset for layout state before smoke execution |
 
+## LanguagePreferenceFlow
+
+### Source Coverage
+
+| source_file | source_class | source_test_pattern | target_spec | target_flow_method |
+|---|---|---|---|---|
+| stage0/test_main_page.py | TestMainPage | `test_chinese_language` manual Chinese language persists after refresh | tests/stage0/main-page.spec.ts | `LanguagePreferenceFlow.switchChineseAndReadWelcome` |
+| stage0/test_main_page.py | TestMainPage | `test_user_default_chinese_language` user default Chinese opens To Go in Chinese without password save | tests/stage0/main-page.spec.ts | `LanguagePreferenceFlow.enterTogoWithDefaultLanguage` |
+
+### Preconditions
+
+- POS home is opened through `PosHomePage.open`.
+- Language names come from `test-data/pos/languages.ts`.
+- Employee password comes from `test-data/pos/permissions.ts`.
+- Stub mode stores current language and user default language in browser-local state for the current test context.
+
+### Steps
+
+1. For manual language switching, open POS home, switch to Chinese, refresh, read welcome text, and restore Default.
+2. For user default language, open Admin from POS home and save Chinese as the user default language.
+3. Return to POS home, log out, enter employee password without clicking Save, then enter To Go.
+4. Read the rendered Open Food category text from the order page.
+
+### Expected Assertions
+
+- Manual Chinese mode still renders welcome text containing `欢迎您` after refresh.
+- User default Chinese mode renders To Go order page category text as `自定义菜` after removing the source `auto_fix` suffix.
+
+### Page Responsibilities
+
+- `PosHomePage` owns language switching, refresh, welcome text reads, Admin entry, logout, password entry, and To Go entry.
+- `AdminPage` owns user default language selection and save.
+- `OrderDishesPage` owns order page category reads.
+
+### Client/Data Responsibilities
+
+- `test-data/pos/languages.ts` owns canonical language option names.
+- `test-data/pos/permissions.ts` owns the employee password used for the no-save entry path.
+- No DB/API client is required for first-round offline language behavior; the original DB cleanup is represented as test-context-local stub state.
+
+### Stub Behavior
+
+- Stub current language persists across page refresh through browser storage.
+- Stub user default language affects To Go rendering even when the employee password is typed but not saved.
+- Stub state is isolated by Playwright test context and does not persist across tests.
+
+### Live Gaps
+
+| gap | reason | required before verified |
+|---|---|---|
+| selector | Real language switch, user default language, and order category selectors must be confirmed against live DOM | Replace stub selectors with stable live selectors or request instrumentation |
+| cleanup | Live user default language writes DB-backed config | Add API/DB cleanup contract before live smoke |
+
 ## OrderEntryFlow
 
 ### Source Coverage

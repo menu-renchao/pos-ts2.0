@@ -3,8 +3,15 @@ import type { OfflinePosState } from './offline-pos-state.js';
 export function renderOfflinePosHome(_state: OfflinePosState): string {
   return `<!doctype html>
 <html lang="en">
+  <head>
+    <meta charset="utf-8" />
+  </head>
   <body>
     <main data-testid="pos-home">
+      <div data-testid="welcome-text"></div>
+      <button data-testid="switch-language-Chinese">Chinese</button>
+      <button data-testid="switch-language-Default">Default</button>
+      <button data-testid="home-logout">Logout</button>
       <button data-testid="edit-home-functions">Edit</button>
       <button data-testid="more-functions">More</button>
       <section data-testid="home-function-cards"></section>
@@ -21,8 +28,20 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <div data-testid="login-toast" role="status"></div>
       <div data-testid="home-toast" role="status"></div>
     </main>
+    <section data-testid="admin-page" hidden>
+      <select data-testid="user-default-language">
+        <option value="Default">Default</option>
+        <option value="Chinese">Chinese</option>
+      </select>
+      <button data-testid="save-user-default-language">Save Language</button>
+    </section>
+    <section data-testid="order-page" hidden>
+      <div data-testid="open-food-category"></div>
+    </section>
     <script>
       const sessionMoveError = "Can't move this button to/from hide area";
+      let currentLanguage = localStorage.getItem('currentLanguage') || 'Default';
+      let userDefaultLanguage = localStorage.getItem('userDefaultLanguage') || 'Default';
       let mainFunctions = ['Dine In', 'Drawer', 'To Go', 'Delivery'];
       let hiddenFunctions = ['Admin', 'Session'];
       let draftMainFunctions = [...mainFunctions];
@@ -37,9 +56,24 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const saveEditButton = document.querySelector('[data-testid="edit-save"]');
       const cancelEditButton = document.querySelector('[data-testid="edit-cancel"]');
       const homeToast = document.querySelector('[data-testid="home-toast"]');
+      const welcomeText = document.querySelector('[data-testid="welcome-text"]');
+      const switchChineseButton = document.querySelector('[data-testid="switch-language-Chinese"]');
+      const switchDefaultButton = document.querySelector('[data-testid="switch-language-Default"]');
+      const logoutButton = document.querySelector('[data-testid="home-logout"]');
+      const adminPage = document.querySelector('[data-testid="admin-page"]');
+      const orderPage = document.querySelector('[data-testid="order-page"]');
+      const languageSelect = document.querySelector('[data-testid="user-default-language"]');
+      const saveLanguageButton = document.querySelector('[data-testid="save-user-default-language"]');
+      const openFoodCategory = document.querySelector('[data-testid="open-food-category"]');
       const passwordInput = document.querySelector('[data-testid="employee-password"]');
       const saveButton = document.querySelector('[data-testid="employee-password-save"]');
       const toast = document.querySelector('[data-testid="login-toast"]');
+
+      function renderLanguage() {
+        const effectiveLanguage = currentLanguage === 'Chinese' || userDefaultLanguage === 'Chinese' ? 'Chinese' : 'Default';
+        welcomeText.textContent = effectiveLanguage === 'Chinese' ? '欢迎您' : 'Welcome';
+        languageSelect.value = userDefaultLanguage;
+      }
 
       function renderFunctionCards() {
         mainList.innerHTML = '';
@@ -139,7 +173,36 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         toast.textContent = '';
         document.body.dataset.employeeContext = 'accepted';
       });
+      switchChineseButton.addEventListener('click', () => {
+        currentLanguage = 'Chinese';
+        localStorage.setItem('currentLanguage', currentLanguage);
+        renderLanguage();
+      });
+      switchDefaultButton.addEventListener('click', () => {
+        currentLanguage = 'Default';
+        localStorage.setItem('currentLanguage', currentLanguage);
+        renderLanguage();
+      });
+      logoutButton.addEventListener('click', () => {
+        document.body.dataset.employeeContext = 'logged-out';
+      });
+      document.querySelector('[data-testid="home-admin"]').addEventListener('click', () => {
+        adminPage.hidden = false;
+        orderPage.hidden = true;
+      });
+      saveLanguageButton.addEventListener('click', () => {
+        userDefaultLanguage = languageSelect.value;
+        localStorage.setItem('userDefaultLanguage', userDefaultLanguage);
+        renderLanguage();
+      });
+      document.querySelector('[data-testid="home-togo"]').addEventListener('click', () => {
+        adminPage.hidden = true;
+        orderPage.hidden = false;
+        const effectiveLanguage = currentLanguage === 'Chinese' || userDefaultLanguage === 'Chinese' ? 'Chinese' : 'Default';
+        openFoodCategory.textContent = effectiveLanguage === 'Chinese' ? '自定义菜\\nauto_fix' : 'Custom Food\\nauto_fix';
+      });
       renderFunctionCards();
+      renderLanguage();
     </script>
   </body>
 </html>`;
