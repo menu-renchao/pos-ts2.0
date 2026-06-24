@@ -513,6 +513,11 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 | stage0/test_order_page.py | TestOrderPage | `test_modify_add` global option Add keeps the Modify area visible | tests/stage0/order-page.spec.ts | `OrderEntryFlow.addGlobalOptionAndReadModifyArea` |
 | stage0/test_order_page.py | TestOrderPage | `test_modify_count` global option count changes to five and zero keep the Modify area visible | tests/stage0/order-page.spec.ts | `OrderEntryFlow.changeGlobalOptionCountsAndReadModifyArea` |
 | stage0/test_order_page.py | TestOrderPage | `test_modify_reduce` global option reduce actions down to zero keep the Modify area visible | tests/stage0/order-page.spec.ts | `OrderEntryFlow.reduceGlobalOptionToZeroAndReadModifyArea` |
+| stage0/test_order_page.py | TestOrderPage | `test_order_with_name` guest name appears on Recall card and edit page | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createDineInOrderWithGuestNameAndReadRecall` |
+| stage0/test_order_page.py | TestOrderPage | `test_search_menu_off` Search Menu hidden/off and enabled/default search result | tests/stage0/order-page.spec.ts | `OrderEntryFlow.toggleSearchMenuAndSearchDefaultItem` |
+| stage0/test_order_page.py | TestOrderPage | `test_item_count` integer item count persists after save and Recall | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createOrderWithIntegerItemCountAndReadRecall` |
+| stage0/test_order_page.py | TestOrderPage | `test_order_big_tip` pre-save large tip warning and Recall tip persistence | tests/stage0/order-page.spec.ts | `OrderEntryFlow.addLargeTipBeforeSaveAndReadRecall` |
+| stage0/test_order_page.py | TestOrderPage | `test_order_after_big_tip` post-credit large tip warning and tip persistence | tests/stage0/order-page.spec.ts | `OrderEntryFlow.addLargeTipAfterCreditPaymentAndReadRecall` |
 | stage0/test_order_page.py | all `Test*` classes | add dishes, modify items, save orders, validate order totals | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createTogoOrder` |
 | stage0/test_order_settle.py | all `Test*` classes | create payable orders before settlement | tests/stage0/order-settle.spec.ts | `OrderEntryFlow.createTogoOrder` |
 
@@ -533,6 +538,11 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 5. Read order summary values as numbers.
 6. Save or continue to settlement according to the source case.
 7. When the source validates Recall, open Recall through POS home and read the latest saved order.
+8. For guest-name Dine In, fill the generated customer name, save the order, read the Recall card customer name, click Edit, and read the editable customer name again.
+9. For Search Menu setting behavior, set Search Menu off in Admin, refresh, enter Dine In, read the search input class as hidden, restore Search Menu on, refresh, enter Dine In, search the default POS item, and read the search result.
+10. For integer item count behavior, add two source-equivalent items, change the latest item quantity to `3`, read the order-page count as `4`, save, open Recall, and read the recalled count as `4`.
+11. For pre-save large-tip behavior, add a To Go item, compute the source integer-cent tip as `floor(total * 100 / 2) + 100`, add the tip, read the over-50-percent warning, save, open Recall, and read the persisted tip.
+12. For post-credit large-tip behavior, create and credit-pay a To Go order, open Recall, compute the source integer-cent tip from the recalled total, add the tip after payment, read the over-50-percent warning, and read the persisted tip.
 
 ### Expected Assertions
 
@@ -566,6 +576,11 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Modify Add flow opens a non-combo Dine In item, opens the Global Option Modify area, clicks Add, and verifies the Modify area remains visible.
 - Modify Count flow opens a non-combo Dine In item, opens Global Option Modify, sets option count to `5`, verifies the Modify area, sets count to `0`, verifies the Modify area again, and reads option count `0`.
 - Modify Reduce flow opens a non-combo Dine In item, opens Global Option Modify, sets option count to `2`, verifies the Modify area, reduces twice, verifies the Modify area again, and reads option count `0`.
+- Guest-name order flow verifies the source generated name appears on the Recall card and again after entering the recalled order edit page.
+- Search Menu off/on flow verifies disabled Search Menu renders class `iptgrp hide`, enabled Search Menu renders class `iptgrp`, and searching `Broccoli Garlic Sauce` returns that item.
+- Item-count flow verifies the active order count and recalled order count both equal `4` after adding one item plus another item with quantity `3`.
+- Pre-save large-tip flow verifies the warning text `The tip is more than 50% of the meal. Confirm to add?` and the recalled tip value computed from the source integer-cent formula.
+- Post-credit large-tip flow verifies the same large-tip warning after credit payment and the recalled tip value after adding the tip from Recall.
 
 ### Page Responsibilities
 
@@ -582,15 +597,19 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `DeliveryPage` owns Delivery order customer/address/note form entry and create-order submission.
 - `OrderDishesPage` owns Open Food keyboard input, item special-price input, 50% discount action, Delivery Info reads, combo add/reduce actions, and combo option-count reads.
 - `OrderDishesPage` owns menu search input, search result reads, search clear, order-page exit, Global Option Modify entry, Add/Count/Reduce actions, Modify-area visibility reads, and Global Option count reads.
+- `OrderDishesPage` owns guest-name input, Search Menu class reads, item-count reads, source integer-cent tip entry, large-tip toast reads, and credit-payment action for order-page paths.
+- `AdminPage` owns Search Menu enable/disable persistence for source setting behavior.
 - `RecallPage` owns recalled item state, option reads, suborder tip reads, split-order combine action, order status reads, order selection, guest-name edit, customer-name reads, order total reads, split panel entry, even/item/seat/amount/drag split actions, split save/confirm/unsplit actions, suborder settlement/payment actions, suborder status reads, parent-card background reads, and split price reads.
 - `RecallPage` owns Recall subtotal reads for source cases that verify post-save subtotal instead of the active order page.
+- `RecallPage` owns Recall item-count reads, recalled tip reads, and post-credit large-tip entry/toast reads.
 
 ### Client/Data Responsibilities
 
 - `test-data/pos/dishes.ts` owns dish, combo, option, and inventory sample data.
 - `test-data/pos/dishes.ts` owns category-level and item-level option order samples, including Chinese category and optional sub-option variants.
 - `test-data/pos/dishes.ts` owns POS/EMENU search-item names and the stable non-combo dish used to enter Global Option Modify flows.
-- `test-data/pos/admin-settings.ts` owns canonical POS menu mode values.
+- `test-data/pos/dishes.ts` owns the default POS Search Menu item `Broccoli Garlic Sauce`.
+- `test-data/pos/admin-settings.ts` owns canonical POS menu mode and Search Menu setting values.
 - `test-data/pos/delivery.ts` owns the Delivery customer/address/note sample used by the Delivery order Info assertion.
 - `test-data/pos/languages.ts` owns canonical language and keyboard-related values reused by language and Open Food paths.
 - `test-data/pos/payments.ts` owns expected payment/tender values reused by settlement.
@@ -631,6 +650,11 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Stub order exit hides the order panel and leaves home controls available for the next Admin entry.
 - Stub Global Option Modify area stays visible after Add, Count, and Reduce actions.
 - Stub Global Option count can be set directly and reduce never goes below zero.
+- Stub guest-name entry is copied into the saved order, rendered on the Recall card, and restored into the order edit field.
+- Stub Search Menu setting is stored in browser-local state and drives the order search input class as `iptgrp hide` or `iptgrp`.
+- Stub item count sums non-voided item quantities and renders the same count on the active order page and Recall.
+- Stub large-tip handling accepts the source integer-cent value, converts it to dollars for persisted tip text, and renders the source warning when the tip exceeds 50% of the meal total.
+- Stub credit payment saves the order as paid, after which Recall can add and persist a post-credit tip.
 
 ### Live Gaps
 

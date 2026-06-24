@@ -44,6 +44,10 @@ export class RecallPage extends PageObject {
   private readonly orderSubtotal: Locator;
   private readonly orderReward: Locator;
   private readonly orderTip: Locator;
+  private readonly orderTipInput: Locator;
+  private readonly orderTipSubmitButton: Locator;
+  private readonly orderTipToast: Locator;
+  private readonly itemCount: Locator;
   private readonly previousOrderButton: Locator;
   private readonly recallCashButton: Locator;
   private readonly recallCancelConditionButton: Locator;
@@ -93,6 +97,10 @@ export class RecallPage extends PageObject {
     this.orderSubtotal = page.getByTestId('recall-order-subtotal');
     this.orderReward = page.getByTestId('recall-order-reward');
     this.orderTip = page.getByTestId('recall-order-tip');
+    this.orderTipInput = page.getByTestId('recall-tip-input');
+    this.orderTipSubmitButton = page.getByTestId('recall-tip-submit');
+    this.orderTipToast = page.getByTestId('recall-tip-toast');
+    this.itemCount = page.getByTestId('recall-item-count');
     this.previousOrderButton = page.getByTestId('recall-previous-order');
     this.recallCashButton = page.getByTestId('recall-cash');
     this.recallCancelConditionButton = page.getByTestId('recall-cancel-condition');
@@ -182,6 +190,22 @@ export class RecallPage extends PageObject {
 
   async readOrderTip(): Promise<number> {
     return step('读取 Recall 订单小费', async () => Number((await this.orderTip.textContent()) ?? '0'));
+  }
+
+  async readOrderTipText(): Promise<string> {
+    return step('读取 Recall 订单小费文本', async () => ((await this.orderTip.textContent()) ?? '').trim());
+  }
+
+  async readItemCount(): Promise<string> {
+    return step('读取 Recall 菜品总数量', async () => ((await this.itemCount.textContent()) ?? '').trim());
+  }
+
+  async addTipAfterCreditPaymentAndReadToast(amount: number): Promise<string> {
+    return step(`Recall 已支付订单追加小费 ${amount} 并读取提示`, async () => {
+      await this.orderTipInput.fill(String(amount));
+      await this.orderTipSubmitButton.click();
+      return ((await this.orderTipToast.textContent()) ?? '').trim();
+    });
   }
 
   async combineSplitOrders(): Promise<void> {

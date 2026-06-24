@@ -497,4 +497,71 @@ test.describe('POS 点单页面', () => {
     expect(result.modifyAreaVisibleAfterReduce).toBe(true);
     expect(result.optionCountAfterReduce).toBe(0);
   });
+
+  test('POS-31409 下单页和订单详情卡片应展示用户信息', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.createDineInOrderWithGuestNameAndReadRecall(environment.posHomeUrl, 'guest31409');
+
+    expect(result.nameOnRecallCard).toContain('guest31409');
+    expect(result.nameInOrderEdit).toContain('guest31409');
+  });
+
+  test('POS-33447 POS-33456 Search Menu 关闭时隐藏搜索框并在开启后可搜索默认菜品', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.toggleSearchMenuAndSearchDefaultItem(environment.posHomeUrl);
+
+    expect(result.searchClassWhenDisabled).toBe('iptgrp hide');
+    expect(result.searchClassWhenEnabled).toBe('iptgrp');
+    expect(result.searchResult).toBe('Broccoli Garlic Sauce');
+  });
+
+  test('POS-32905 点单菜品总数量累加为整数并在 Recall 保持', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.createOrderWithIntegerItemCountAndReadRecall(environment.posHomeUrl);
+
+    expect(result.itemCountBeforeSave).toBe('4');
+    expect(result.itemCountAfterRecall).toBe('4');
+  });
+
+  test('POS-33110 点单页添加超过订单 50% 的小费应提示并在 Recall 保留小费', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.addLargeTipBeforeSaveAndReadRecall(environment.posHomeUrl);
+
+    expect(result.tipToast).toBe('The tip is more than 50% of the meal. Confirm to add?');
+    expect(result.recallTip).toBe(result.expectedTip);
+  });
+
+  test('POS-33122 信用卡付款后添加超过订单 50% 的小费应提示并保留小费', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.addLargeTipAfterCreditPaymentAndReadRecall(environment.posHomeUrl);
+
+    expect(result.tipToast).toBe('The tip is more than 50% of the meal. Confirm to add?');
+    expect(result.recallTip).toBe(result.expectedTip);
+  });
 });

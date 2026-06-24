@@ -12,6 +12,7 @@ export class AdminPage extends PageObject {
   private readonly menuModeSelect: Locator;
   private readonly saveSettingsButton: Locator;
   private readonly saveLanguageButton: Locator;
+  private readonly searchMenuSelect: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -21,6 +22,7 @@ export class AdminPage extends PageObject {
     this.menuModeSelect = page.getByTestId('admin-menu-mode');
     this.saveSettingsButton = page.getByTestId('admin-save-settings');
     this.saveLanguageButton = page.getByTestId('save-user-default-language');
+    this.searchMenuSelect = page.getByTestId('admin-search-menu');
   }
 
   async setUserDefaultLanguage(language: string): Promise<void> {
@@ -42,6 +44,14 @@ export class AdminPage extends PageObject {
     await step(`设置 POS 菜单模式为 ${menuMode}`, async () => {
       await expect(this.adminRoot).toBeVisible();
       await this.menuModeSelect.selectOption(menuMode);
+      await this.saveSettingsButton.click();
+    });
+  }
+
+  async setSearchMenu(enabled: boolean): Promise<void> {
+    await step(`设置 Search Menu 为 ${enabled ? '开启' : '关闭'}`, async () => {
+      await expect(this.adminRoot).toBeVisible();
+      await this.searchMenuSelect.selectOption(enabled ? 'true' : 'false');
       await this.saveSettingsButton.click();
     });
   }

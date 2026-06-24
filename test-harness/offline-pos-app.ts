@@ -55,6 +55,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         <option value="POS">POS</option>
         <option value="EMENU">EMENU</option>
       </select>
+      <select data-testid="admin-search-menu">
+        <option value="true">true</option>
+        <option value="false">false</option>
+      </select>
       <button data-testid="admin-save-settings">Save Settings</button>
       <button data-testid="admin-member-list">CRM Loyalty</button>
       <section data-testid="member-list-permission-popup" hidden>
@@ -86,7 +90,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <div data-testid="order-subtotal">0</div>
       <div data-testid="order-reward">0</div>
       <div data-testid="order-item-name"></div>
+      <div data-testid="order-item-count">0</div>
       <div data-testid="order-item-price">0</div>
+      <input data-testid="order-guest-name" />
       <input data-testid="order-item-quantity" />
       <button data-testid="order-item-quantity-submit">Submit Quantity</button>
       <input data-testid="order-search" />
@@ -102,6 +108,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <div data-testid="settle-total">0</div>
       <div data-testid="settle-unpaid-amount">0</div>
       <button data-testid="settle-cash">Cash</button>
+      <button data-testid="settle-credit">Credit</button>
       <button data-testid="settle-even-pay">Even Pay</button>
       <button data-testid="settle-select-member">Select Member</button>
       <button data-testid="settle-switch-member">Switch Member</button>
@@ -144,6 +151,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <button data-testid="item-discount-10">10% Discount</button>
       <button data-testid="item-discount-50">50% Discount</button>
       <input data-testid="order-tip" />
+      <div data-testid="order-tip-toast"></div>
       <button data-testid="split-even">Split Even</button>
       <button data-testid="split-combine">Combine Split</button>
       <button data-testid="order-open-food">Open Food</button>
@@ -208,6 +216,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <input data-testid="recall-guest-name" />
       <button data-testid="recall-save-edit">Save Edit</button>
       <div data-testid="recall-order-tip"></div>
+      <input data-testid="recall-tip-input" />
+      <button data-testid="recall-tip-submit">Add Tip</button>
+      <div data-testid="recall-tip-toast"></div>
+      <div data-testid="recall-item-count"></div>
       <div data-testid="recall-order-status"></div>
       <div data-testid="recall-customer-name"></div>
       <div data-testid="recall-guest-phone"></div>
@@ -330,6 +342,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let currentComboOptionCount = 0;
       let currentGlobalOptionCount = 0;
       let currentMenuMode = localStorage.getItem('currentMenuMode') || 'POS';
+      let currentSearchMenuEnabled = localStorage.getItem('currentSearchMenuEnabled') !== 'false';
       let currentCrmMember = null;
       let currentCrmDiscountRate = 0;
       let currentCrmDiscountMaxAmount = null;
@@ -402,7 +415,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const orderSubtotal = document.querySelector('[data-testid="order-subtotal"]');
       const orderReward = document.querySelector('[data-testid="order-reward"]');
       const orderItemName = document.querySelector('[data-testid="order-item-name"]');
+      const orderItemCount = document.querySelector('[data-testid="order-item-count"]');
       const orderItemPrice = document.querySelector('[data-testid="order-item-price"]');
+      const orderGuestNameInput = document.querySelector('[data-testid="order-guest-name"]');
       const orderSearchInput = document.querySelector('[data-testid="order-search"]');
       const orderSearchClearButton = document.querySelector('[data-testid="order-search-clear"]');
       const orderSearchResult = document.querySelector('[data-testid="order-search-result"]');
@@ -418,6 +433,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const settleTotal = document.querySelector('[data-testid="settle-total"]');
       const settleUnpaidAmount = document.querySelector('[data-testid="settle-unpaid-amount"]');
       const settleCashButton = document.querySelector('[data-testid="settle-cash"]');
+      const settleCreditButton = document.querySelector('[data-testid="settle-credit"]');
       const settleEvenPayButton = document.querySelector('[data-testid="settle-even-pay"]');
       const settleSelectMemberButton = document.querySelector('[data-testid="settle-select-member"]');
       const settleSwitchMemberButton = document.querySelector('[data-testid="settle-switch-member"]');
@@ -457,6 +473,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const itemDiscountButton = document.querySelector('[data-testid="item-discount-10"]');
       const itemHalfDiscountButton = document.querySelector('[data-testid="item-discount-50"]');
       const orderTipInput = document.querySelector('[data-testid="order-tip"]');
+      const orderTipToast = document.querySelector('[data-testid="order-tip-toast"]');
       const splitEvenButton = document.querySelector('[data-testid="split-even"]');
       const orderOpenFoodButton = document.querySelector('[data-testid="order-open-food"]');
       const openFoodKeyboardTextInput = document.querySelector('[data-testid="open-food-keyboard-text"]');
@@ -511,6 +528,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const recallOrderSubtotal = document.querySelector('[data-testid="recall-order-subtotal"]');
       const recallOrderReward = document.querySelector('[data-testid="recall-order-reward"]');
       const recallOrderTotal = document.querySelector('[data-testid="recall-order-total"]');
+      const recallTipInput = document.querySelector('[data-testid="recall-tip-input"]');
+      const recallTipSubmitButton = document.querySelector('[data-testid="recall-tip-submit"]');
+      const recallTipToast = document.querySelector('[data-testid="recall-tip-toast"]');
+      const recallItemCount = document.querySelector('[data-testid="recall-item-count"]');
       const recallCrmMemberName = document.querySelector('[data-testid="recall-crm-member-name"]');
       const recallCrmPointBalance = document.querySelector('[data-testid="recall-crm-point-balance"]');
       const recallCrmCombineInput = document.querySelector('[data-testid="recall-crm-combine-order-no"]');
@@ -588,6 +609,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const languageSelect = document.querySelector('[data-testid="user-default-language"]');
       const saveLanguageButton = document.querySelector('[data-testid="save-user-default-language"]');
       const menuModeSelect = document.querySelector('[data-testid="admin-menu-mode"]');
+      const searchMenuSelect = document.querySelector('[data-testid="admin-search-menu"]');
       const saveSettingsButton = document.querySelector('[data-testid="admin-save-settings"]');
       const adminMemberListButton = document.querySelector('[data-testid="admin-member-list"]');
       const memberListPermissionPopup = document.querySelector('[data-testid="member-list-permission-popup"]');
@@ -765,6 +787,26 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           .reduce((total, item) => total + Number(item.quantity || 1), 0);
       }
 
+      function orderItemQuantityTotal(items) {
+        return (items || [])
+          .filter((item) => item.state !== 'Voided')
+          .reduce((total, item) => total + Number(item.quantity ?? 1), 0);
+      }
+
+      function formatItemCount(items) {
+        const count = orderItemQuantityTotal(items);
+        return Number.isInteger(count) ? String(count) : String(count);
+      }
+
+      function formatTip(amount) {
+        return Number(amount || 0).toFixed(2);
+      }
+
+      function largeTipToast(amountInCents, total) {
+        const tipAmount = Number(amountInCents || 0) / 100;
+        return tipAmount > Number(total || 0) * 0.5 ? 'The tip is more than 50% of the meal. Confirm to add?' : '';
+      }
+
       function firstTrackedInventoryItem(items) {
         return (items || []).find((item) => item.inventorySku && item.state !== 'Voided') || null;
       }
@@ -838,10 +880,12 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         settleTotal.textContent = String(Number((subtotal + rewardDiscount).toFixed(2)));
         settleUnpaidAmount.textContent = String(calculatePayPageUnpaidAmount(subtotal, rewardDiscount, itemCount));
         orderItemName.textContent = currentOrderItems[0]?.name || '';
+        orderItemCount.textContent = formatItemCount(currentOrderItems);
         orderItemPrice.textContent = String(currentOrderItems[0]?.price || 0);
         itemQuantityInput.value = String(currentOrderItems[currentOrderItems.length - 1]?.quantity || 1);
         comboOptionCount.textContent = String(currentComboOptionCount);
         globalOptionListCountValue.textContent = String(currentGlobalOptionCount);
+        orderSearchInput.className = currentSearchMenuEnabled ? 'iptgrp' : 'iptgrp hide';
       }
 
       function renderCurrentCrmState() {
@@ -982,6 +1026,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         orderSearchInput.value = '';
         orderSearchResult.textContent = '';
         orderSaveAlert.textContent = '';
+        orderGuestNameInput.value = '';
+        orderTipInput.value = '';
+        orderTipToast.textContent = '';
         globalOptionArea.hidden = true;
         crmRedeemPanel.hidden = true;
         customerInfoPopup.hidden = true;
@@ -995,6 +1042,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       }
 
       function saveCurrentOrder() {
+        currentCustomerName = orderGuestNameInput.value || currentCustomerName;
         const previousDeductedQuantity = Number(currentEditingOrder?.inventoryDeductedQuantity || 0);
         const shortage = inventoryShortage(currentOrderItems, previousDeductedQuantity);
         if (shortage) {
@@ -1121,9 +1169,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           status: '',
           customerName: null,
         };
-        recallOrderTip.textContent = String(order.tip || 0);
+        recallOrderTip.textContent = formatTip(order.tip || 0);
         recallOrderStatus.textContent = order.status || '';
         recallCustomerName.textContent = order.customerName || '';
+        recallItemCount.textContent = formatItemCount(order.items || []);
         recallGuestPhone.textContent = formatRecallPhone(order.guestPhone || '');
         recallGuestAddress.textContent = order.guestAddress || '';
         recallOrderSubtotal.textContent = String(order.subtotal ?? orderTotal(order));
@@ -1329,7 +1378,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       });
       saveSettingsButton.addEventListener('click', () => {
         currentMenuMode = menuModeSelect.value;
+        currentSearchMenuEnabled = searchMenuSelect.value !== 'false';
         localStorage.setItem('currentMenuMode', currentMenuMode);
+        localStorage.setItem('currentSearchMenuEnabled', String(currentSearchMenuEnabled));
       });
       adminMemberListButton.addEventListener('click', () => {
         if (currentEmployeePassword === '123') {
@@ -1449,6 +1500,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           member.points += earnPointsForSubtotal(Number(orderSubtotal.textContent || '0'));
           currentCrmMember = member;
         }
+        saveCurrentOrder();
+      });
+      settleCreditButton.addEventListener('click', () => {
+        currentOrderStatus = 'Paid';
         saveCurrentOrder();
       });
       crmRedeemButton.addEventListener('click', () => {
@@ -1575,7 +1630,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       });
       orderTipInput.addEventListener('keydown', (event) => {
         if (event.key === 'Enter') {
-          currentOrderTip = Number(orderTipInput.value || '0') / 100;
+          const tipInCents = Number(orderTipInput.value || '0');
+          orderTipToast.textContent = largeTipToast(tipInCents, Number(settleTotal.textContent || orderSubtotal.textContent || '0'));
+          currentOrderTip = tipInCents / 100;
         }
       });
       splitEvenButton.addEventListener('click', () => {
@@ -1754,6 +1811,14 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           renderRecallOrderItems();
         }
       });
+      recallTipSubmitButton.addEventListener('click', () => {
+        if (selectedRecallOrder) {
+          const tipInCents = Number(recallTipInput.value || '0');
+          recallTipToast.textContent = largeTipToast(tipInCents, orderTotal({ ...selectedRecallOrder, tip: 0 }));
+          selectedRecallOrder.tip = tipInCents / 100;
+          renderRecallOrderItems();
+        }
+      });
       recallVoidPaidOrderButton.addEventListener('click', () => {
         if (selectedRecallOrder?.crmMember && selectedRecallOrder.status === 'Paid') {
           selectedRecallOrder.status = 'Voided';
@@ -1782,6 +1847,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         if (selectedRecallOrder) {
           currentOrderItems = [...selectedRecallOrder.items];
           currentItemOption = selectedRecallOrder.itemOption || null;
+          currentCustomerName = selectedRecallOrder.customerName || null;
+          orderGuestNameInput.value = selectedRecallOrder.customerName || '';
           currentCrmMember = selectedRecallOrder.crmMember ? { ...selectedRecallOrder.crmMember } : null;
           currentCrmDiscountRate = selectedRecallOrder.crmDiscountRate || 0;
           currentCrmDiscountMaxAmount = selectedRecallOrder.crmDiscountMaxAmount ?? null;
@@ -1983,6 +2050,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       });
       renderFunctionCards();
       renderLanguage();
+      searchMenuSelect.value = String(currentSearchMenuEnabled);
       renderClockControls();
     </script>
   </body>

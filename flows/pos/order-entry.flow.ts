@@ -95,6 +95,28 @@ export type GlobalOptionReduceResult = {
   optionCountAfterReduce: number;
 };
 
+export type GuestNameRecallResult = {
+  nameOnRecallCard: string | null;
+  nameInOrderEdit: string | null;
+};
+
+export type SearchMenuToggleResult = {
+  searchClassWhenDisabled: string;
+  searchClassWhenEnabled: string;
+  searchResult: string;
+};
+
+export type ItemCountRecallResult = {
+  itemCountBeforeSave: string;
+  itemCountAfterRecall: string;
+};
+
+export type LargeTipResult = {
+  tipToast: string;
+  expectedTip: string;
+  recallTip: string;
+};
+
 export class OrderEntryFlow {
   constructor(
     private readonly homePage: PosHomePage,
@@ -440,6 +462,100 @@ export class OrderEntryFlow {
     const modifyAreaVisibleAfterReduce = await this.orderDishesPage.isGlobalOptionModifyAreaVisible();
     const optionCountAfterReduce = await this.orderDishesPage.readGlobalOptionListCount();
     return { modifyAreaVisibleAfterInitialCount, modifyAreaVisibleAfterReduce, optionCountAfterReduce };
+  }
+
+  async createDineInOrderWithGuestNameAndReadRecall(
+    homeUrl: string,
+    guestName: string,
+  ): Promise<GuestNameRecallResult> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.fillGuestName(guestName);
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.saveOrder();
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    const nameOnRecallCard = await this.recallPage.readCustomerName();
+    await this.recallPage.clickEdit();
+    const nameInOrderEdit = await this.recallPage.readCustomerName();
+    return { nameOnRecallCard, nameInOrderEdit };
+  }
+
+  async toggleSearchMenuAndSearchDefaultItem(homeUrl: string): Promise<SearchMenuToggleResult> {
+    if (!this.adminPage) {
+      throw new Error('AdminPage is required for Search Menu setup');
+    }
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.setSearchMenu(false);
+    await this.homePage.refresh();
+    await this.homePage.clickDineIn();
+    const searchClassWhenDisabled = await this.orderDishesPage.readSearchClass();
+    await this.orderDishesPage.exitOrderPage();
+
+    await this.homePage.clickAdmin();
+    await this.adminPage.setSearchMenu(true);
+    await this.homePage.refresh();
+    await this.homePage.clickDineIn();
+    const searchClassWhenEnabled = await this.orderDishesPage.readSearchClass();
+    await this.orderDishesPage.searchMenuItem(menuModeSearchItems.pos);
+    const searchResult = await this.orderDishesPage.readSearchResult();
+
+    return { searchClassWhenDisabled, searchClassWhenEnabled, searchResult };
+  }
+
+  async createOrderWithIntegerItemCountAndReadRecall(homeUrl: string): Promise<ItemCountRecallResult> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickTogo();
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.selectMenuGroup(categorySwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(categorySwitchDish.category);
+    await this.orderDishesPage.addMenuItem(categorySwitchDish.name);
+    await this.orderDishesPage.changeSelectedItemQuantity(3);
+    const itemCountBeforeSave = await this.orderDishesPage.readItemCount();
+    await this.orderDishesPage.saveOrder();
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    const itemCountAfterRecall = await this.recallPage.readItemCount();
+    return { itemCountBeforeSave, itemCountAfterRecall };
+  }
+
+  async addLargeTipBeforeSaveAndReadRecall(homeUrl: string): Promise<LargeTipResult> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickTogo();
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    const orderTotal = await this.orderDishesPage.readSubtotal();
+    const customTip = Math.floor((orderTotal * 100) / 2) + 100;
+    const tipToast = await this.orderDishesPage.addTipAndReadToast(customTip);
+    await this.orderDishesPage.saveOrder();
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    const expectedTip = (customTip / 100).toFixed(2);
+    const recallTip = await this.recallPage.readOrderTipText();
+    return { tipToast, expectedTip, recallTip };
+  }
+
+  async addLargeTipAfterCreditPaymentAndReadRecall(homeUrl: string): Promise<LargeTipResult> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickTogo();
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.settleByCredit();
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    const orderTotal = await this.recallPage.readOrderTotal();
+    const customTip = Math.floor((orderTotal * 100) / 2) + 100;
+    const tipToast = await this.recallPage.addTipAfterCreditPaymentAndReadToast(customTip);
+    const expectedTip = (customTip / 100).toFixed(2);
+    const recallTip = await this.recallPage.readOrderTipText();
+    return { tipToast, expectedTip, recallTip };
   }
 
   private async openOrderAndAddDish(homeUrl: string, dish: DishSample): Promise<void> {

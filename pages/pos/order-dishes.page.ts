@@ -47,6 +47,8 @@ export class OrderDishesPage extends PageObject {
   private readonly openFoodKeyboardTextInput: Locator;
   private readonly orderInventoryButton: Locator;
   private readonly orderItemName: Locator;
+  private readonly orderItemCount: Locator;
+  private readonly orderGuestNameInput: Locator;
   private readonly orderOptions: Locator;
   private readonly orderReward: Locator;
   private readonly orderExitButton: Locator;
@@ -58,6 +60,7 @@ export class OrderDishesPage extends PageObject {
   private readonly sendKitchenButton: Locator;
   private readonly settleButton: Locator;
   private readonly settleCashButton: Locator;
+  private readonly settleCreditButton: Locator;
   private readonly settleEvenPayButton: Locator;
   private readonly settleTotal: Locator;
   private readonly settleUnpaidAmount: Locator;
@@ -72,6 +75,7 @@ export class OrderDishesPage extends PageObject {
   private readonly searchInput: Locator;
   private readonly searchResult: Locator;
   private readonly tipInput: Locator;
+  private readonly tipToast: Locator;
   private readonly reduceItemButton: Locator;
   private readonly voidItemButton: Locator;
   private readonly comboItemButton: Locator;
@@ -119,6 +123,8 @@ export class OrderDishesPage extends PageObject {
     this.openFoodKeyboardTextInput = page.getByTestId('open-food-keyboard-text');
     this.orderInventoryButton = page.getByTestId('order-inventory');
     this.orderItemName = page.getByTestId('order-item-name');
+    this.orderItemCount = page.getByTestId('order-item-count');
+    this.orderGuestNameInput = page.getByTestId('order-guest-name');
     this.orderOptions = page.getByTestId('order-option');
     this.orderReward = page.getByTestId('order-reward');
     this.orderExitButton = page.getByTestId('order-exit');
@@ -132,6 +138,7 @@ export class OrderDishesPage extends PageObject {
     this.sendKitchenButton = page.getByTestId('order-send-kitchen');
     this.settleButton = page.getByTestId('order-settle');
     this.settleCashButton = page.getByTestId('settle-cash');
+    this.settleCreditButton = page.getByTestId('settle-credit');
     this.settleEvenPayButton = page.getByTestId('settle-even-pay');
     this.settleTotal = page.getByTestId('settle-total');
     this.settleUnpaidAmount = page.getByTestId('settle-unpaid-amount');
@@ -146,6 +153,7 @@ export class OrderDishesPage extends PageObject {
     this.searchInput = page.getByTestId('order-search');
     this.searchResult = page.getByTestId('order-search-result');
     this.tipInput = page.getByTestId('order-tip');
+    this.tipToast = page.getByTestId('order-tip-toast');
     this.reduceItemButton = page.getByTestId('order-reduce-item');
     this.voidItemButton = page.getByTestId('order-void-item');
     this.comboItemButton = page.getByTestId('order-combo-item');
@@ -377,6 +385,10 @@ export class OrderDishesPage extends PageObject {
     return step('读取点单页搜索结果', async () => ((await this.searchResult.textContent()) ?? '').trim());
   }
 
+  async readSearchClass(): Promise<string> {
+    return step('读取点单页搜索框状态', async () => (await this.searchInput.getAttribute('class')) ?? '');
+  }
+
   async clearSearch(): Promise<void> {
     await step('清空点单页搜索条件', async () => {
       await this.searchClearButton.click();
@@ -443,6 +455,24 @@ export class OrderDishesPage extends PageObject {
     });
   }
 
+  async addTipAndReadToast(amount: number): Promise<string> {
+    return step(`给订单添加小费 ${amount} 并读取提示`, async () => {
+      await this.tipInput.fill(String(amount));
+      await this.tipInput.press('Enter');
+      return ((await this.tipToast.textContent()) ?? '').trim();
+    });
+  }
+
+  async readItemCount(): Promise<string> {
+    return step('读取点单菜品总数量', async () => ((await this.orderItemCount.textContent()) ?? '').trim());
+  }
+
+  async fillGuestName(name: string): Promise<void> {
+    await step(`填写点单客名 ${name}`, async () => {
+      await this.orderGuestNameInput.fill(name);
+    });
+  }
+
   async splitEvenly(parts: number): Promise<void> {
     await step(`按 ${parts} 份平分订单`, async () => {
       await this.splitEvenButton.click();
@@ -500,6 +530,12 @@ export class OrderDishesPage extends PageObject {
   async settleByCash(): Promise<void> {
     await step('现金完成当前订单付款', async () => {
       await this.settleCashButton.click();
+    });
+  }
+
+  async settleByCredit(): Promise<void> {
+    await step('信用卡完成当前订单付款', async () => {
+      await this.settleCreditButton.click();
     });
   }
 
