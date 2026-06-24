@@ -52,4 +52,13 @@ test.describe('stage1 admin menu migration', () => {
     expect(result.afterCashPrinter).toEqual(['Cash']);
     expect(result.afterRunnerPrinter).toEqual(['Cash', 'Runner']);
   });
+
+  test('POS-36298 POS Menu 页面菜品总数应与 Menu API 一致', async ({ environment, menuClient, page }) => {
+    const flow = new AdminMenuFlow(new PosHomePage(page), new AdminPage(page), new OrderDishesPage(page), menuClient);
+
+    const count = await flow.readPosMenuItemCountFromPageAndApi(environment.posHomeUrl);
+
+    expect(count.pageCount).toBe(count.apiCount);
+    expect(count.pageCount).toBeGreaterThan(0);
+  });
 });

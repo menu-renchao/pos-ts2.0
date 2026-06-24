@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { inventoryTrackedDish } from '../../test-data/pos/dishes.js';
 import { StubAdminSettingsClient } from './admin-settings.client.js';
+import { StubMenuClient } from './menu.client.js';
 import { StubOrderClient } from './order.client.js';
 
 test('StubOrderClient creates orders and calculates totals', async () => {
@@ -37,4 +38,13 @@ test('StubAdminSettingsClient persists setting values', async () => {
   await client.setSetting('separateSameDishes', true);
 
   assert.equal(await client.readSetting('separateSameDishes'), true);
+});
+
+test('StubMenuClient returns POS menu item count in MenuAPI shape', async () => {
+  const client = new StubMenuClient();
+
+  const menuInfo = await client.getAllMenuGroupInfo();
+
+  assert.equal(menuInfo.menus[0]?.productLine, 'POS');
+  assert.equal(menuInfo.menus[0]?.menuItemCount, 24);
 });

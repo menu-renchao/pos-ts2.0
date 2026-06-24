@@ -1,6 +1,7 @@
 import type { AdminPage } from '../../pages/pos/admin.page.js';
 import type { PosHomePage } from '../../pages/pos/home.page.js';
 import type { OrderDishesPage } from '../../pages/pos/order-dishes.page.js';
+import type { MenuClient } from '../../clients/pos-api/menu.client.js';
 import { chineseInitialSearchDish, unitPriceDish } from '../../test-data/pos/dishes.js';
 
 const posMenuProductLine = 'POS Menu';
@@ -22,11 +23,17 @@ export type GlobalOptionPrinterResult = {
   afterRunnerPrinter: string[];
 };
 
+export type MenuItemCountComparison = {
+  pageCount: number;
+  apiCount: number;
+};
+
 export class AdminMenuFlow {
   constructor(
     private readonly homePage: PosHomePage,
     private readonly adminPage: AdminPage,
     private readonly orderDishesPage: OrderDishesPage,
+    private readonly menuClient?: MenuClient,
   ) {}
 
   async copyPosGlobalOptionGroupToEmenuAndReadCount(homeUrl: string): Promise<number> {
@@ -99,5 +106,27 @@ export class AdminMenuFlow {
       await this.adminPage.enterGlobalOptionCategory(group, category);
       await this.adminPage.deleteGlobalOption(optionName);
     }
+  }
+
+  async readPosMenuItemCountFromPageAndApi(homeUrl: string): Promise<MenuItemCountComparison> {
+    if (!this.menuClient) {
+      throw new Error('MenuClient is required to compare POS Menu item count with API data.');
+    }
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+
+    const pageCount = await this.adminPage.readMenuItemCount('POS');
+    const menuInfo = await this.menuClient.getAllMenuGroupInfo();
+    const posMenu = menuInfo.menus.find((menu) => menu.productLine === 'POS');
+
+    if (!posMenu) {
+      throw new Error('POS menu is missing from MenuClient.getAllMenuGroupInfo().');
+    }
+
+    return {
+      pageCount,
+      apiCount: posMenu.menuItemCount,
+    };
   }
 }

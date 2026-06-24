@@ -128,6 +128,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <button data-testid="admin-menu-copy-group">Copy Product Group</button>
       <button data-testid="admin-menu-enter-group">Enter Product Group</button>
       <div data-testid="admin-menu-group-category-count">0</div>
+      <button data-testid="admin-menu-read-item-count">Read Menu Item Count</button>
+      <div data-testid="admin-menu-item-count">0</div>
       <input data-testid="admin-global-option-group" />
       <input data-testid="admin-global-option-category" />
       <input data-testid="admin-global-option-name" />
@@ -527,6 +529,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           'Global Option Group': ['Legacy Emenu Option'],
         },
       };
+      const adminMenuItemCounts = {
+        POS: 24,
+      };
       let adminGlobalOptions = [];
       let selectedGlobalOptionName = '';
       let adminCreatedMenuItems = [];
@@ -598,6 +603,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const adminMenuCopyGroupButton = document.querySelector('[data-testid="admin-menu-copy-group"]');
       const adminMenuEnterGroupButton = document.querySelector('[data-testid="admin-menu-enter-group"]');
       const adminMenuGroupCategoryCount = document.querySelector('[data-testid="admin-menu-group-category-count"]');
+      const adminMenuReadItemCountButton = document.querySelector('[data-testid="admin-menu-read-item-count"]');
+      const adminMenuItemCount = document.querySelector('[data-testid="admin-menu-item-count"]');
       const adminGlobalOptionGroupInput = document.querySelector('[data-testid="admin-global-option-group"]');
       const adminGlobalOptionCategoryInput = document.querySelector('[data-testid="admin-global-option-category"]');
       const adminGlobalOptionNameInput = document.querySelector('[data-testid="admin-global-option-name"]');
@@ -908,6 +915,15 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
 
       function renderAdminMenuGroupCount(productLine, groupName) {
         adminMenuGroupCategoryCount.textContent = String(adminMenuCategories(productLine, groupName).length);
+      }
+
+      function menuItemCountProductLine(productLine) {
+        return productLine === 'POS Menu' ? 'POS' : productLine;
+      }
+
+      function renderAdminMenuItemCount(productLine) {
+        const countProductLine = menuItemCountProductLine(productLine);
+        adminMenuItemCount.textContent = String(adminMenuItemCounts[countProductLine] || 0);
       }
 
       function selectedGlobalOption() {
@@ -1986,6 +2002,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       });
       adminMenuEnterGroupButton.addEventListener('click', () => {
         renderAdminMenuGroupCount(adminMenuTargetProductLineInput.value, adminMenuGroupNameInput.value);
+      });
+      adminMenuReadItemCountButton.addEventListener('click', () => {
+        renderAdminMenuItemCount(adminMenuTargetProductLineInput.value);
       });
       adminGlobalOptionCreateButton.addEventListener('click', () => {
         const optionName = adminGlobalOptionNameInput.value;

@@ -35,6 +35,8 @@ export class AdminPage extends PageObject {
   private readonly menuCopyGroupButton: Locator;
   private readonly menuEnterGroupButton: Locator;
   private readonly menuGroupCategoryCount: Locator;
+  private readonly menuReadItemCountButton: Locator;
+  private readonly menuItemCountValue: Locator;
   private readonly globalOptionGroupInput: Locator;
   private readonly globalOptionCategoryInput: Locator;
   private readonly globalOptionNameInput: Locator;
@@ -91,6 +93,8 @@ export class AdminPage extends PageObject {
     this.menuCopyGroupButton = page.getByTestId('admin-menu-copy-group');
     this.menuEnterGroupButton = page.getByTestId('admin-menu-enter-group');
     this.menuGroupCategoryCount = page.getByTestId('admin-menu-group-category-count');
+    this.menuReadItemCountButton = page.getByTestId('admin-menu-read-item-count');
+    this.menuItemCountValue = page.getByTestId('admin-menu-item-count');
     this.globalOptionGroupInput = page.getByTestId('admin-global-option-group');
     this.globalOptionCategoryInput = page.getByTestId('admin-global-option-category');
     this.globalOptionNameInput = page.getByTestId('admin-global-option-name');
@@ -267,6 +271,15 @@ export class AdminPage extends PageObject {
       await this.menuGroupNameInput.fill(groupName);
       await this.menuEnterGroupButton.click();
       return Number((await this.menuGroupCategoryCount.textContent()) ?? '0');
+    });
+  }
+
+  async readMenuItemCount(productLine: string): Promise<number> {
+    return step(`读取 ${productLine} menu 菜品总数`, async () => {
+      await expect(this.adminRoot).toBeVisible();
+      await this.menuTargetProductLineInput.fill(productLine);
+      await this.menuReadItemCountButton.click();
+      return Number((await this.menuItemCountValue.textContent()) ?? '0');
     });
   }
 

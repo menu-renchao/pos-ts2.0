@@ -1028,6 +1028,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 | stage1/test_admin_menu.py | TestAdminMenu | `test_set_item_into_unit_price_item` unit-price item order preserves original price per weight | tests/stage1/admin-menu.spec.ts | `AdminMenuFlow.orderUnitPriceItemAndReadPrice` |
 | stage1/test_admin_menu.py | TestAdminMenu | `test_modify_item_chinese_name` item Chinese name syncs POS/Kitchen names in Admin Language | tests/stage1/admin-menu.spec.ts | `AdminMenuFlow.modifyItemChineseNameAndReadLanguageNames` |
 | stage1/test_admin_menu.py | TestAdminMenu | `test_global_option_add_printer` created Global Option receives Cash then Runner printers | tests/stage1/admin-menu.spec.ts | `AdminMenuFlow.addPrintersToGlobalOptionAndReadPrinters` |
+| stage1/test_admin_menu.py | TestAdminMenu | `test_menu_item_count` POS menu displayed item count equals MenuAPI count | tests/stage1/admin-menu.spec.ts | `AdminMenuFlow.readPosMenuItemCountFromPageAndApi` |
 
 ### Preconditions
 
@@ -1040,6 +1041,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - POS-33919 source `MenuAPI.create_dish(..., unit_price=True)` setup is represented by `AdminPage.configureUnitPriceItem` in round-one offline mode.
 - POS-34360 uses source-equivalent seeded dish `hn_normal_item1` / `hn_cate` from `chineseInitialSearchDish`.
 - POS-35406 uses source-equivalent `Global Option Group` / `Sauce`, option name `global option add printer test`, option price `10`, and printer names `Cash` then `Runner`.
+- POS-36298 compares Admin Menu's displayed POS product-line count with the source-equivalent Menu API response.
 
 ### Steps
 
@@ -1055,6 +1057,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 10. Open the Admin Language Sale Item search path, search `普通菜1的中文菜名`, and read the POS Name and Kitchen Name values.
 11. For POS-35406, enter `Global Option Group` / `Sauce`, create `global option add printer test` with price `10`, select it, add `Cash`, and read the printer list.
 12. Select the same option again, add `Runner`, read the printer list again, and delete the created option in cleanup.
+13. For POS-36298, enter Admin Menu, read the displayed POS product-line menu item count, call `MenuClient.getAllMenuGroupInfo`, and read the POS `menuItemCount` value.
 
 ### Expected Assertions
 
@@ -1063,6 +1066,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - POS-33919 verifies input `200` computes item price `20.00`, preserving original unit price `10.00` at weight `2.00`.
 - POS-34360 verifies both Admin Language POS Name and Kitchen Name equal `普通菜1的中文菜名` after the item Chinese name edit.
 - POS-35406 verifies the first Add Printer action returns exactly `Cash`, and the second Add Printer action returns exactly `Cash` plus `Runner` in order.
+- POS-36298 verifies the displayed POS menu item count equals the Menu API POS `menuItemCount` and is greater than 0.
 
 ### Page Responsibilities
 
@@ -1075,6 +1079,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `AdminPage.setItemChineseName` owns the POS-34360 category item edit action.
 - `AdminPage.searchSaleItemLanguageAndReadNames` owns the Admin Language Sale Item search and POS/Kitchen name reads.
 - `AdminPage.enterGlobalOptionCategory`, `AdminPage.createGlobalOption`, `AdminPage.selectGlobalOption`, `AdminPage.addPrinterToSelectedGlobalOption`, `AdminPage.readGlobalOptionPrinters`, and `AdminPage.deleteGlobalOption` own the POS-35406 Global Option edit and cleanup path.
+- `AdminPage.readMenuItemCount` owns the POS-36298 Admin Menu product-line count read from the page.
 
 ### Client/Data Responsibilities
 
@@ -1084,6 +1089,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `test-data/pos/dishes.ts` owns `chineseInitialSearchDish` with source-equivalent `hn_normal_item1` and default Chinese name.
 - Live POS-33919 should use the real `MenuAPI`/`TaxAPI` fixture path or confirmed Admin Menu UI selectors before being marked live verified.
 - POS-35406 has no live client dependency in round one; the offline POS stub owns created Global Option records and assigned printer names.
+- `StubMenuClient.getAllMenuGroupInfo` owns the round-one source-equivalent `MenuAPI().get_all_menu_group_info()` response for POS-36298.
 
 ### Stub Behavior
 
@@ -1094,6 +1100,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Unit-price item ordering shows a dedicated unit-price input; submitting `200` stores quantity `2.00` and recalculates price from base unit price.
 - Offline harness stores edited item Chinese names and returns the edited Chinese name as both POS Name and Kitchen Name in the Admin Language Sale Item search result.
 - Offline harness stores created Global Options in page memory, assigns selected printers without duplicates, returns printer names in append order, and deletes the created option during cleanup.
+- Offline harness renders the POS product-line menu item count from the same deterministic count used by `StubMenuClient`.
 
 ### Live Gaps
 
@@ -1107,3 +1114,5 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 | cleanup | Source restores `hn_normal_item1` Chinese name in `finally` | Add live cleanup fixture or afterEach restore before live verification |
 | selector | POS-35406 Global Option category navigation, item checkbox selection, batch edit Add Printer dialog, and printer selector need live confirmation | Confirm stable selectors and the save/refresh signal for assigned printers |
 | cleanup | POS-35406 creates a Global Option and must delete it even when printer assignment fails | Add live cleanup fixture using UI or API before live verification |
+| selector | POS-36298 Admin Menu product-line count display needs live DOM confirmation | Confirm stable selector for the POS product-line menu item count |
+| api | POS-36298 live verification depends on authenticated `MenuAPI().get_all_menu_group_info()` access and matching tenant data | Add live Menu API client wiring and ensure the UI and API read the same store/tenant |
