@@ -5,10 +5,12 @@ import { LanguagePreferenceFlow } from '../../flows/pos/language-preference.flow
 import { PosEntryFlow } from '../../flows/pos/pos-entry.flow.js';
 import { ReservationFlow } from '../../flows/pos/reservation.flow.js';
 import { ReportingFlow } from '../../flows/pos/reporting.flow.js';
+import { SdiMessageFlow } from '../../flows/pos/sdi-message.flow.js';
 import { StaffClockFlow } from '../../flows/pos/staff-clock.flow.js';
 import { SupportInfoFlow } from '../../flows/pos/support-info.flow.js';
 import { AdminPage } from '../../pages/pos/admin.page.js';
 import { DeliveryPage } from '../../pages/pos/delivery.page.js';
+import { MessageCenterPage } from '../../pages/pos/message-center.page.js';
 import { PosHomePage } from '../../pages/pos/home.page.js';
 import { OrderDishesPage } from '../../pages/pos/order-dishes.page.js';
 import { ReportPage } from '../../pages/pos/report.page.js';
@@ -17,6 +19,7 @@ import { SupportPage } from '../../pages/pos/support.page.js';
 import { homeFunctions, sessionMoveError } from '../../test-data/pos/home-functions.js';
 import { deliveryAddressSample } from '../../test-data/pos/delivery.js';
 import { languageOptions } from '../../test-data/pos/languages.js';
+import { sdiOrderMessageSample } from '../../test-data/pos/messages.js';
 import { expectedPatchInfo } from '../../test-data/pos/support-info.js';
 import { invalidEmployeePassword, validEmployeePassword } from '../../test-data/pos/permissions.js';
 import { jiraIssue } from '../../utils/jira.js';
@@ -223,5 +226,20 @@ test.describe('POS 首页', () => {
 
     expect(result.orderCount).toBeGreaterThan(0);
     expect(result.orderInfo).toContain(deliveryAddressSample);
+  });
+
+  test('POS 首页消息中心应展示 SDI 新订单消息并包含桌号和单号', {
+    annotation: [jiraIssue('POS-44416')],
+  }, async ({ environment, page }) => {
+    const sdiMessageFlow = new SdiMessageFlow(new PosHomePage(page), new MessageCenterPage(page));
+
+    const messageBody = await sdiMessageFlow.createSelfDineInOrderAndReadMessage(
+      environment.posHomeUrl,
+      sdiOrderMessageSample,
+    );
+
+    expect(messageBody).toContain("There's a new order for table");
+    expect(messageBody).toContain(sdiOrderMessageSample.tableName);
+    expect(messageBody).toContain(sdiOrderMessageSample.orderNumber);
   });
 });

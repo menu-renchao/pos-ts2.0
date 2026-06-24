@@ -419,6 +419,60 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 | selector | Real Delivery phone/name/address, history customer, order-list, and customer-list selectors must be confirmed against live DOM | Replace stub selectors with stable live selectors or request instrumentation |
 | data | Live historical Delivery order setup may require API/DB setup | Add setup/cleanup contract for historical Delivery orders before live smoke |
 
+## SdiMessageFlow
+
+### Source Coverage
+
+| source_file | source_class | source_test_pattern | target_spec | target_flow_method |
+|---|---|---|---|---|
+| stage0/test_main_page.py | TestMainPage | `test_sdi_order_message` SDI order triggers POS home message center notification | tests/stage0/main-page.spec.ts | `SdiMessageFlow.createSelfDineInOrderAndReadMessage` |
+
+### Preconditions
+
+- POS home is opened through `PosHomePage.open`.
+- Message center is entered through the home message center button.
+- Message sample data comes from `test-data/pos/messages.ts`.
+- First-round offline mode does not open a real SDI browser, submit a real order, or query the live DB.
+
+### Steps
+
+1. Open POS home.
+2. Open the message center.
+3. Switch message type to `Self-dine-in`.
+4. Clear existing messages.
+5. Generate an offline SDI order message using the source-equivalent table name and order number.
+6. Open the new-order message by title and read the current message body.
+
+### Expected Assertions
+
+- Message body contains `There's a new order for table`.
+- Message body contains the expected table name.
+- Message body contains the expected order number.
+
+### Page Responsibilities
+
+- `PosHomePage` owns message center entry.
+- `MessageCenterPage` owns message type selection, clear-all action, offline message event insertion, opening a message, and reading message body.
+
+### Client/Data Responsibilities
+
+- `test-data/pos/messages.ts` owns message type, title, table name, and order number samples.
+- No DB/API/client is required in first-round offline mode; the source SDI browser action and DB reads are represented by a deterministic message event.
+
+### Stub Behavior
+
+- Stub message center stores messages in browser page memory for the current test.
+- Stub SDI order event creates a message title and body matching the source assertions.
+- Stub clear-all removes all existing messages before the event is inserted.
+
+### Live Gaps
+
+| gap | reason | required before verified |
+|---|---|---|
+| external-system | Source behavior creates a real SDI order through a second browser context | Add live SDI page flow and environment data before live smoke |
+| db | Source behavior reads latest order number and table name from DB | Add API/DB adapter setup or deterministic live order lookup before live smoke |
+| selector | Real message center selectors must be confirmed against live DOM | Replace stub selectors with stable live selectors or request instrumentation |
+
 ## OrderEntryFlow
 
 ### Source Coverage

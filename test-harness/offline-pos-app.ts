@@ -28,6 +28,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <button data-testid="home-delivery">Delivery</button>
       <button data-testid="home-report">Report</button>
       <button data-testid="home-support">Support</button>
+      <button data-testid="home-message-center">Message Center</button>
       <input data-testid="employee-password" type="password" />
       <button data-testid="employee-password-save">Save</button>
       <div data-testid="clock-text" role="status"></div>
@@ -70,6 +71,18 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <div data-testid="support-version">Voffline-fast</div>
       <div data-testid="support-patch-version">7</div>
     </section>
+    <section data-testid="message-center" hidden>
+      <select data-testid="message-type">
+        <option value="Self-dine-in">Self-dine-in</option>
+      </select>
+      <button data-testid="message-clear-all">Clear All</button>
+      <input data-testid="message-seed-table-name" />
+      <input data-testid="message-seed-order-number" />
+      <button data-testid="message-seed-sdi-order">Seed SDI Order</button>
+      <input data-testid="message-search" />
+      <button data-testid="message-open">Open Message</button>
+      <div data-testid="message-current-body"></div>
+    </section>
     <section data-testid="reservation-page" hidden>
       <button data-testid="reservation-active-tab">Active</button>
       <button data-testid="reservation-inactive-tab">Inactive</button>
@@ -93,6 +106,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let userDefaultLanguage = localStorage.getItem('userDefaultLanguage') || 'Default';
       let clockState = 'off';
       let deliveryHistoricalAddress = '';
+      let messages = [];
       let reservations = [];
       let mainFunctions = ['Dine In', 'Drawer', 'To Go', 'Delivery'];
       let hiddenFunctions = ['Admin', 'Session'];
@@ -124,6 +138,14 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const reportPasswordSaveButton = document.querySelector('[data-testid="report-password-save"]');
       const reportPage = document.querySelector('[data-testid="report-page"]');
       const supportPage = document.querySelector('[data-testid="support-page"]');
+      const messageCenter = document.querySelector('[data-testid="message-center"]');
+      const messageClearAllButton = document.querySelector('[data-testid="message-clear-all"]');
+      const messageSeedTableNameInput = document.querySelector('[data-testid="message-seed-table-name"]');
+      const messageSeedOrderNumberInput = document.querySelector('[data-testid="message-seed-order-number"]');
+      const messageSeedSdiOrderButton = document.querySelector('[data-testid="message-seed-sdi-order"]');
+      const messageSearchInput = document.querySelector('[data-testid="message-search"]');
+      const messageOpenButton = document.querySelector('[data-testid="message-open"]');
+      const messageCurrentBody = document.querySelector('[data-testid="message-current-body"]');
       const deliveryPage = document.querySelector('[data-testid="delivery-page"]');
       const deliveryPhoneInput = document.querySelector('[data-testid="delivery-phone"]');
       const deliveryNameInput = document.querySelector('[data-testid="delivery-name"]');
@@ -182,6 +204,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         reportPasswordPanel.hidden = panel !== 'report-password';
         reportPage.hidden = panel !== 'report';
         supportPage.hidden = panel !== 'support';
+        messageCenter.hidden = panel !== 'message-center';
         reservationPage.hidden = panel !== 'reservation';
       }
 
@@ -382,6 +405,25 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       });
       document.querySelector('[data-testid="home-support"]').addEventListener('click', () => {
         showPanel('support');
+      });
+      document.querySelector('[data-testid="home-message-center"]').addEventListener('click', () => {
+        showPanel('message-center');
+      });
+      messageClearAllButton.addEventListener('click', () => {
+        messages = [];
+        messageCurrentBody.textContent = '';
+      });
+      messageSeedSdiOrderButton.addEventListener('click', () => {
+        const tableName = messageSeedTableNameInput.value;
+        const orderNumber = messageSeedOrderNumberInput.value;
+        messages.push({
+          title: "There's a new order!",
+          body: "There's a new order for table " + tableName + "\\n" + tableName + "\\n" + orderNumber,
+        });
+      });
+      messageOpenButton.addEventListener('click', () => {
+        const message = messages.find((item) => item.title.includes(messageSearchInput.value));
+        messageCurrentBody.textContent = message?.body || '';
       });
       deliveryHistoryCustomerButton.addEventListener('click', () => {
         showDeliveryOrders('Historical order for ' + deliveryPhoneInput.value);

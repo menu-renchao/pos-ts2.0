@@ -28,6 +28,8 @@ export class PosHomePage extends PageObject {
   private readonly homeFunctionList: Locator;
   private readonly loginToast: Locator;
   private readonly mainAddButton: Locator;
+  private readonly messageCenterButton: Locator;
+  private readonly messageCenterRoot: Locator;
   private readonly moreAddButton: Locator;
   private readonly orderPageRoot: Locator;
   private readonly reportButton: Locator;
@@ -62,6 +64,8 @@ export class PosHomePage extends PageObject {
     this.homeFunctionList = page.getByTestId('home-function-cards');
     this.homeFunctionCards = page.getByTestId('home-function-card');
     this.mainAddButton = page.getByTestId('edit-main-add');
+    this.messageCenterButton = page.getByTestId('home-message-center');
+    this.messageCenterRoot = page.getByTestId('message-center');
     this.moreAddButton = page.getByTestId('edit-more-add');
     this.orderPageRoot = page.getByTestId('order-page');
     this.reportButton = page.getByTestId('home-report');
@@ -158,6 +162,13 @@ export class PosHomePage extends PageObject {
     await step('从首页进入 Delivery 页面', async () => {
       await this.deliveryButton.click();
       await expect(this.page.getByTestId('delivery-page')).toBeVisible();
+    });
+  }
+
+  async openMessageCenter(): Promise<void> {
+    await step('打开首页消息中心', async () => {
+      await this.messageCenterButton.click();
+      await expect(this.messageCenterRoot).toBeVisible();
     });
   }
 
