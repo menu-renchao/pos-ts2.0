@@ -133,6 +133,16 @@ export const menuModeSearchItems = {
   emenu: 'All you can eat item',
 } as const;
 
+export const numberedNameConflictDish: DishSample = {
+  id: 'dish-numbered-name-conflict-aa',
+  name: 'AA',
+  number: 'AA',
+  price: 10,
+  category: 'Chicken Lunch E',
+  group: 'Dinner Menu',
+  taxRate: 0.0825,
+};
+
 export const defaultMenuGroup: MenuGroupSample = {
   id: 'group-migration-menu',
   name: 'Migration Menu',
@@ -146,5 +156,6 @@ export const defaultMenuGroup: MenuGroupSample = {
     chineseCategoryDish,
     itemNoSubOptionDish,
     itemOptionDish,
+    numberedNameConflictDish,
   ],
 };

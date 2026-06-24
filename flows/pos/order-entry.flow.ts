@@ -11,6 +11,7 @@ import {
   groupSwitchDish,
   categorySwitchDish,
   menuModeSearchItems,
+  numberedNameConflictDish,
 } from '../../test-data/pos/dishes.js';
 import { deliveryOrderInfoSample } from '../../test-data/pos/delivery.js';
 import { languageOptions } from '../../test-data/pos/languages.js';
@@ -106,6 +107,12 @@ export type SearchMenuToggleResult = {
   searchClassWhenDisabled: string;
   searchClassWhenEnabled: string;
   searchResult: string;
+};
+
+export type NumberedNameSearchResult = {
+  searchKeyword: string;
+  searchResultText: string;
+  searchResultCount: number;
 };
 
 export type ItemCountRecallResult = {
@@ -574,6 +581,19 @@ export class OrderEntryFlow {
     const searchResult = await this.orderDishesPage.readSearchResult();
 
     return { searchClassWhenDisabled, searchClassWhenEnabled, searchResult };
+  }
+
+  async searchDishWithSameNameAndNumberAndReadResult(homeUrl: string): Promise<NumberedNameSearchResult> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickTogo();
+    await this.orderDishesPage.searchMenuItem(numberedNameConflictDish.name);
+    const searchResultText = await this.orderDishesPage.readSearchResult();
+    const searchResultCount = await this.orderDishesPage.readSearchResultCount();
+    return {
+      searchKeyword: numberedNameConflictDish.name,
+      searchResultText,
+      searchResultCount,
+    };
   }
 
   async createOrderWithIntegerItemCountAndReadRecall(homeUrl: string): Promise<ItemCountRecallResult> {

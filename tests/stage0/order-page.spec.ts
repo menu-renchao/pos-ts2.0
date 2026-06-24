@@ -17,6 +17,7 @@ import {
   itemNoSubOptionDish,
   itemOptionDish,
   itemSubOptionDish,
+  numberedNameConflictDish,
 } from '../../test-data/pos/dishes.js';
 import { validEmployeePassword } from '../../test-data/pos/permissions.js';
 import { jiraIssue } from '../../utils/jira.js';
@@ -829,5 +830,21 @@ test.describe('POS 点单页面', () => {
     const welcomeText = await orderEntryFlow.exitDeliveryOrderAndReadHomeWelcome(environment.posHomeUrl);
 
     expect(welcomeText).toContain('Welcome');
+  });
+
+  test('POS-36255 菜名和 Number 相同时点单搜索应只返回一个结果', {
+    annotation: [jiraIssue('POS-36255')],
+  }, async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.searchDishWithSameNameAndNumberAndReadResult(environment.posHomeUrl);
+
+    expect(result.searchKeyword).toBe(numberedNameConflictDish.name);
+    expect(result.searchResultText).toBe(numberedNameConflictDish.name);
+    expect(result.searchResultCount).toBe(1);
   });
 });

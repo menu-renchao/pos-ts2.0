@@ -987,6 +987,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           { name: '蒙古鸡', price: 10.25, group: '', category: 'KDS鸡肉类午餐' },
           { name: 'Item Option Pork', price: 12, group: 'Dinner Menu', category: 'Item Options' },
           { name: 'Item Option Seafood', price: 12.75, group: 'Dinner Menu', category: 'Item Options' },
+          { name: 'AA', number: 'AA', price: 10, group: 'Dinner Menu', category: 'Chicken Lunch E' },
         ];
       }
 
@@ -1603,11 +1604,21 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       });
       orderSearchInput.addEventListener('input', () => {
         const expected = currentMenuMode === 'EMENU' ? 'All you can eat item' : 'Broccoli Garlic Sauce';
-        orderSearchResult.textContent = orderSearchInput.value === expected ? expected : '';
+        const keyword = orderSearchInput.value.trim();
+        const matches = menuData().filter((dish) => dish.name === keyword || dish.number === keyword);
+        const results = matches.length ? Array.from(new Map(matches.map((dish) => [dish.name, dish])).values()) : [];
+        orderSearchResult.innerHTML = '';
+        const visibleResults = results.length ? results : keyword === expected ? [{ name: expected }] : [];
+        visibleResults.forEach((dish) => {
+          const item = document.createElement('div');
+          item.dataset.testid = 'order-search-result-item';
+          item.textContent = dish.name;
+          orderSearchResult.appendChild(item);
+        });
       });
       orderSearchClearButton.addEventListener('click', () => {
         orderSearchInput.value = '';
-        orderSearchResult.textContent = '';
+        orderSearchResult.innerHTML = '';
       });
       orderInventoryButton.addEventListener('click', () => {
         inventorySettingPage.hidden = true;

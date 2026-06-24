@@ -534,6 +534,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 | stage0/test_order_page.py | TestOrderPage | `test_item_count_decimal_combine_item_add_option` decimal quantity same-item combine with Global Option splits quantities and preserves total after Recall | tests/stage0/order-page.spec.ts | `OrderEntryFlow.addGlobalOptionsToDecimalCombinedItemAndReadTotals` |
 | stage0/test_order_page.py | TestOrderPage | `test_custom_order` custom Delivery order saves and Recall Print exposes Reprint with three print outputs | tests/stage0/order-page.spec.ts | `OrderEntryFlow.printCustomDeliveryOrderAndReadPrintState` |
 | stage0/test_order_page.py | TestOrderPage | `test_delivery_order_exit` Delivery customer flow exits the order page directly back to POS home | tests/stage0/order-page.spec.ts | `OrderEntryFlow.exitDeliveryOrderAndReadHomeWelcome` |
+| stage0/test_order_page.py | TestOrderPage | `test_item_with_number` menu item whose name and number are the same appears only once in order search results | tests/stage0/order-page.spec.ts | `OrderEntryFlow.searchDishWithSameNameAndNumberAndReadResult` |
 | stage0/test_order_page.py | all `Test*` classes | add dishes, modify items, save orders, validate order totals | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createTogoOrder` |
 | stage0/test_order_settle.py | all `Test*` classes | create payable orders before settlement | tests/stage0/order-settle.spec.ts | `OrderEntryFlow.createTogoOrder` |
 
@@ -573,6 +574,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 24. For decimal combined-item Global Option behavior, enable Count Can Be Decimal and Auto Same Status combine, create a To Go order, set special price `7.95`, set quantity `2.3`, add a priced Global Option, read both split line quantities and the second-line price, save, open Recall, and compare saved total with Recall total.
 25. For custom Delivery print behavior, enter the custom Delivery order type, fill the source customer phone/name/address, add a source-equivalent kitchen item, save, open Recall, print, then read Reprint visibility and print output count.
 26. For Delivery exit behavior, enter Delivery, fill the source customer phone/name/address to reach the order page, click Exit, and read POS home welcome text.
+27. For name/number search behavior, seed the source-equivalent dish whose name and number are both `AA`, enter To Go, search `AA`, then read the result text and result item count.
 
 ### Expected Assertions
 
@@ -625,6 +627,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Decimal combined-item Global Option flow verifies quantities split into `0.3` and `2`, the second-line price equals `optionPrice * 2 + itemUnitPrice * 2`, and the Recall total equals the pre-save order total.
 - Custom Delivery print flow verifies Recall Print makes Reprint visible and produces three offline print outputs, matching the source file-count assertion without using the live temp print directory.
 - Delivery exit flow verifies clicking Exit from the Delivery-created order page returns to POS home by reading the visible welcome text.
+- Name/number search flow verifies searching `AA` returns text `AA` and exactly one visible search result even though both the dish name and dish number match the same keyword.
 
 ### Page Responsibilities
 
@@ -641,7 +644,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `DeliveryPage` owns Delivery order customer/address/note form entry and create-order submission.
 - `OrderDishesPage` owns Open Food keyboard input, item special-price input, 50% discount action, Delivery Info reads, combo add/reduce actions, and combo option-count reads.
 - `OrderDishesPage` owns order-line selection so special-price and quantity edits can target the source-equivalent first, second, or third dish.
-- `OrderDishesPage` owns menu search input, search result reads, search clear, order-page exit, Global Option Modify entry, Add/Count/Reduce actions, Modify-area visibility reads, and Global Option count reads.
+- `OrderDishesPage` owns menu search input, search result text/count reads, search clear, order-page exit, Global Option Modify entry, Add/Count/Reduce actions, Modify-area visibility reads, and Global Option count reads.
 - `OrderDishesPage` owns guest-name input, Search Menu class reads, item-count reads, source integer-cent tip entry, large-tip toast reads, and credit-payment action for order-page paths.
 - `OrderDishesPage` owns Hold/Delay print actions, printed-item void/reduce permission prompt reads, manager password submission, order line-count reads, first-line quantity/name/color reads, and same-dish add actions.
 - `OrderDishesPage` owns reduce action, option/list visibility reads, menu-item visibility reads, decimal quantity input, and item-count reads.
@@ -661,6 +664,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `test-data/pos/dishes.ts` owns dish, combo, option, and inventory sample data.
 - `test-data/pos/dishes.ts` owns category-level and item-level option order samples, including Chinese category and optional sub-option variants.
 - `test-data/pos/dishes.ts` owns POS/EMENU search-item names and the stable non-combo dish used to enter Global Option Modify flows.
+- `test-data/pos/dishes.ts` owns `numberedNameConflictDish`, whose source-equivalent name and number are both `AA` for POS-36255 search de-duplication.
 - `test-data/pos/dishes.ts` owns `groupSwitchDish`, `categorySwitchDish`, and `categoryOptionDish` as the POS-33600 source-equivalent special-price decimal quantity dishes.
 - `test-data/pos/dishes.ts` owns `pricedGlobalOption` as the source-equivalent Global Option price used by POS-35660.
 - `test-data/pos/dishes.ts` owns the default POS Search Menu item `Broccoli Garlic Sauce`.
@@ -710,6 +714,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Stub combo option state starts at four options for the migrated combo sample and decrements by one for each reduce action.
 - Stub menu mode is stored in browser-local state so refresh keeps the selected mode inside the current test.
 - Stub search returns only the source-expected item for the active menu mode: `Broccoli Garlic Sauce` for `POS`, `All you can eat item` for `EMENU`.
+- Stub menu search matches both dish name and dish number but de-duplicates by dish identity, so the `AA` name/number conflict renders one result item instead of two.
 - Stub order exit hides the order panel and leaves home controls available for the next Admin entry.
 - Stub Global Option Modify area stays visible after Add, Count, and Reduce actions.
 - Stub Global Option count can be set directly and reduce never goes below zero.

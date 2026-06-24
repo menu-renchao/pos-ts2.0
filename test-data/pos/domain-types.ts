@@ -4,6 +4,7 @@ export type PaymentType = 'cash' | 'credit' | 'gift-card' | 'rights-card';
 export type DishSample = {
   id: string;
   name: string;
+  number?: string;
   price: number;
   category: string;
   group?: string;

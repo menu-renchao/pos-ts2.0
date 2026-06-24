@@ -75,6 +75,7 @@ export class OrderDishesPage extends PageObject {
   private readonly searchClearButton: Locator;
   private readonly searchInput: Locator;
   private readonly searchResult: Locator;
+  private readonly searchResultItems: Locator;
   private readonly tipInput: Locator;
   private readonly tipToast: Locator;
   private readonly reduceItemButton: Locator;
@@ -154,6 +155,7 @@ export class OrderDishesPage extends PageObject {
     this.searchClearButton = page.getByTestId('order-search-clear');
     this.searchInput = page.getByTestId('order-search');
     this.searchResult = page.getByTestId('order-search-result');
+    this.searchResultItems = page.getByTestId('order-search-result-item');
     this.tipInput = page.getByTestId('order-tip');
     this.tipToast = page.getByTestId('order-tip-toast');
     this.reduceItemButton = page.getByTestId('order-reduce-item');
@@ -419,6 +421,10 @@ export class OrderDishesPage extends PageObject {
 
   async readSearchResult(): Promise<string> {
     return step('读取点单页搜索结果', async () => ((await this.searchResult.textContent()) ?? '').trim());
+  }
+
+  async readSearchResultCount(): Promise<number> {
+    return step('读取点单页搜索结果数量', async () => this.searchResultItems.count());
   }
 
   async readSearchClass(): Promise<string> {
