@@ -1570,10 +1570,21 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         return activeOrderItems().reduce((total, item) => total + Number(item.price || 0), 0);
       }
 
+      function currentAppliedItemDiscountAmount() {
+        return activeOrderItems().reduce((total, item) => {
+          const originalPrice = Number(item.originalPrice ?? item.price ?? 0);
+          const currentPrice = Number(item.price || 0);
+          return total + Math.max(0, originalPrice - currentPrice);
+        }, 0);
+      }
+
       function canAuthorizeItemDiscount(password, originalPrice, percent) {
-        const maxDiscountAmount = currentActiveOrderSubtotal() * (wholeOrderDiscountLimitForPassword(password) / 100);
+        const subtotal = currentActiveOrderSubtotal();
+        const maxDiscountAmount = subtotal * (wholeOrderDiscountLimitForPassword(password) / 100);
+        const currentWholeOrderDiscount = Math.abs(currentWholeOrderDiscountAmount(subtotal));
+        const currentItemDiscount = currentAppliedItemDiscountAmount();
         const requestedDiscountAmount = Number(originalPrice || 0) * (Number(percent || 0) / 100);
-        return requestedDiscountAmount <= maxDiscountAmount;
+        return currentWholeOrderDiscount + currentItemDiscount + requestedDiscountAmount <= maxDiscountAmount;
       }
 
       function canAuthorizeRecallWholeOrderAmountDiscount(password, subtotal, amount) {

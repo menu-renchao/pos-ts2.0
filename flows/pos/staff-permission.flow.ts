@@ -22,6 +22,11 @@ export type BossAuthorizedRecallWholeOrderDiscountResult = {
   totalAfterDiscount: number;
 };
 
+export type MultiDiscountPermissionResult = {
+  wholeOrderPermissionTip: string;
+  itemPermissionTip: string;
+};
+
 export type AuthorizedWholeOrderDiscountResult = {
   permissionTip: string;
   subtotal: number;
@@ -148,6 +153,34 @@ export class StaffPermissionFlow {
     const discountedPrice = await this.orderDishesPage.readSelectedItemPrice();
 
     return { permissionTip, managerDeniedTip, originalPrice, discountedPrice };
+  }
+
+  async requirePermissionForItemDiscountAfterBossAuthorizedWholeOrderDiscount(
+    homeUrl: string,
+  ): Promise<MultiDiscountPermissionResult> {
+    return step('整单折扣授权后再次提交单菜折扣仍校验累计权限', async () => {
+      await this.homePage.open(homeUrl);
+      await this.homePage.inputEmployeePassword(staffDiscountRoleSamples.server.password);
+      await this.homePage.clickTogo();
+      await this.orderDishesPage.openFoodWithoutTax(
+        staffDiscountSamples.itemDiscountFirstFoodName,
+        staffDiscountSamples.multiDiscountFirstFoodPrice,
+      );
+      await this.orderDishesPage.openFoodWithoutTax(
+        staffDiscountSamples.itemDiscountSecondFoodName,
+        staffDiscountSamples.multiDiscountSecondFoodPrice,
+      );
+      await this.orderDishesPage.openDiscountAndReadWholeOrderPrice();
+      await this.orderDishesPage.applyWholeOrderDiscountPercent(staffDiscountSamples.multiDiscountWholeOrderPercent);
+      const wholeOrderPermissionTip = await this.orderDishesPage.readDiscountTip();
+
+      await this.orderDishesPage.submitManagerPassword(staffDiscountRoleSamples.boss.password);
+      await this.orderDishesPage.selectOrderLineItem(1);
+      await this.orderDishesPage.applyItemDiscountPercent(staffDiscountSamples.multiDiscountItemPercent);
+      const itemPermissionTip = await this.orderDishesPage.readDiscountTip();
+
+      return { wholeOrderPermissionTip, itemPermissionTip };
+    });
   }
 
   async rejectRecallWholeOrderAmountDiscountAboveServerLimitWithoutPassword(
