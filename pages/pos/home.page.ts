@@ -23,6 +23,7 @@ export class PosHomePage extends PageObject {
   private readonly cancelEditButton: Locator;
   private readonly backToWorkButton: Locator;
   private readonly breakButton: Locator;
+  private readonly cashInOutButton: Locator;
   private readonly checkInButton: Locator;
   private readonly checkoutButton: Locator;
   private readonly clockText: Locator;
@@ -63,6 +64,7 @@ export class PosHomePage extends PageObject {
     this.savePasswordButton = page.getByTestId('employee-password-save');
     this.backToWorkButton = page.getByTestId('clock-back-to-work');
     this.breakButton = page.getByTestId('clock-break');
+    this.cashInOutButton = page.getByTestId('home-cash-in-out');
     this.cancelEditButton = page.getByTestId('edit-cancel');
     this.checkInButton = page.getByTestId('home-check-in');
     this.checkoutButton = page.getByTestId('clock-checkout');
@@ -215,6 +217,16 @@ export class PosHomePage extends PageObject {
     await step('从首页进入 Caller 页面', async () => {
       await this.callerButton.click();
       await expect(this.page.getByTestId('caller-page')).toBeVisible();
+    });
+  }
+
+  async openCashInOut(password = '11'): Promise<void> {
+    await step('从首页进入 Cash In/Out 页面', async () => {
+      await this.cashInOutButton.click();
+      await this.passwordInput.fill(password);
+      await this.waitForPasswordValue(password);
+      await this.savePasswordButton.click();
+      await expect(this.page.getByTestId('cash-in-out-page')).toBeVisible();
     });
   }
 

@@ -26,6 +26,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <button data-testid="home-pickup">Pickup</button>
       <button data-testid="home-recall">Recall</button>
       <button data-testid="home-caller">Caller</button>
+      <button data-testid="home-cash-in-out">Cash In/Out</button>
       <button data-testid="pos-switch-emenu-order">Emenu Order</button>
       <button data-testid="home-admin">Admin</button>
       <button data-testid="home-join-member">Join Member</button>
@@ -516,6 +517,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
     <section data-testid="report-password-panel" hidden>
       <input data-testid="report-password" type="password" />
       <button data-testid="report-password-save">Save</button>
+    </section>
+    <section data-testid="cash-in-out-page" hidden>
+      <h1 data-testid="cash-in-out-title">Cash In</h1>
     </section>
     <section data-testid="report-page" hidden>
       <h1>Report</h1>
@@ -1032,6 +1036,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const callerRefreshButton = document.querySelector('[data-testid="caller-refresh"]');
       const callerReadyList = document.querySelector('[data-testid="caller-ready-list"]');
       const callerPreparingList = document.querySelector('[data-testid="caller-preparing-list"]');
+      const cashInOutPage = document.querySelector('[data-testid="cash-in-out-page"]');
+      const cashInOutTitle = document.querySelector('[data-testid="cash-in-out-title"]');
       const emenuMainPage = document.querySelector('[data-testid="emenu-main-page"]');
       const emenuOrderPage = document.querySelector('[data-testid="emenu-order-page"]');
       const emenuContinueButton = document.querySelector('[data-testid="emenu-continue"]');
@@ -1204,6 +1210,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         orderPage.hidden = panel !== 'order';
         recallPage.hidden = panel !== 'recall';
         callerPage.hidden = panel !== 'caller';
+        cashInOutPage.hidden = panel !== 'cash-in-out';
         emenuMainPage.hidden = true;
         emenuOrderPage.hidden = true;
         reportPasswordPanel.hidden = panel !== 'report-password';
@@ -1227,6 +1234,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         orderPage.hidden = true;
         recallPage.hidden = true;
         callerPage.hidden = true;
+        cashInOutPage.hidden = true;
         reportPasswordPanel.hidden = true;
         reportPage.hidden = true;
         supportPage.hidden = true;
@@ -2966,6 +2974,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       document.querySelector('[data-testid="home-caller"]').addEventListener('click', () => {
         renderCallerDisplay();
         showPanel('caller');
+      });
+      document.querySelector('[data-testid="home-cash-in-out"]').addEventListener('click', () => {
+        cashInOutTitle.textContent = currentLanguage === 'Chinese' ? '现金备款' : 'Cash In';
+        showPanel('cash-in-out');
       });
       document.querySelector('[data-testid="pos-switch-emenu-order"]').addEventListener('click', () => {
         showEmenuPanel('order');

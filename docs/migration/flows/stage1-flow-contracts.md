@@ -327,13 +327,15 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 | source_file | source_class | source_test_patterns | target_specs | target_flow_methods |
 |---|---|---|---|---|
 | stage1/test_checkin_checkout.py | TestCheckInCheckOut | check-in/out attendance, edit attendance, earliest check-in time, auto checkout | tests/stage1/checkin-checkout.spec.ts | `AttendanceFlow.checkIn`, `AttendanceFlow.checkOut`, `AttendanceFlow.editAttendance`, `AttendanceFlow.verifyScheduledAttendanceRule` |
-| stage1/test_cashin_cashout.py | TestCashInCashOut | cash in and cash out Chinese-mode cases | tests/stage1/cashin-cashout.spec.ts | `CashDrawerFlow.cashIn`, `CashDrawerFlow.cashOut` |
+| stage1/test_cashin_cashout.py | TestCashInCashOut | test_cash_in_chinese: Chinese mode opens Cash In/Out and page text contains `现金备款` | tests/stage1/cashin-cashout.spec.ts | `CashDrawerFlow.openCashInChinesePage` |
+| stage1/test_cashin_cashout.py | TestCashInCashOut | remaining cash-out Chinese-mode case | tests/stage1/cashin-cashout.spec.ts | not-started |
 
 ### Preconditions
 
 - Staff shift plan and attendance samples are typed.
 - Store time and schedule assumptions are explicit, not hidden in sleeps.
 - Cash drawer reason, amount, and note samples are typed.
+- For `test_cash_in_chinese`, POS home can switch to Chinese mode and employee password `11` is accepted before opening Cash In/Out.
 
 ### Steps
 
@@ -342,16 +344,20 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 3. Perform check-in/check-out or cash-in/cash-out action.
 4. Edit attendance when required.
 5. Read attendance, shift, drawer, or report state.
+6. For `CashDrawerFlow.openCashInChinesePage`, open POS home, switch language to Chinese, open Cash In/Out with password `11`, and read the page title text.
 
 ### Expected Assertions
 
 - Attendance status and edited attendance values match source expectations.
 - Earliest check-in and auto-checkout scenarios use deterministic time setup or are marked `live-gap`.
 - Cash-in/cash-out amounts, reasons, and visible records match source expectations.
+- `CashDrawerFlow.openCashInChinesePage` returns page text containing `现金备款`, matching the source `expected_ret`.
 
 ### Page Responsibilities
 
 - `CashInOutPage` owns cash drawer controls and record reads.
+- `PosHomePage.open`, `PosHomePage.switchLanguage`, and `PosHomePage.openCashInOut` own homepage navigation, language switching, and password-gated Cash In/Out entry.
+- `CashInOutPage.readPageText` owns the Cash In/Out title read used by `test_cash_in_chinese`.
 - `AdminPage` or future attendance pages own shift/attendance setting controls.
 - `ReportPage` owns attendance/cash report reads when introduced.
 
@@ -360,11 +366,13 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 - `StubStaffShiftPlanClient` owns shift and attendance schedule state.
 - `test-data/pos/reports.ts` owns report date/time samples.
 - `test-data/pos/payments.ts` owns cash amount samples.
+- `test_cash_in_chinese` has no external client or typed test-data dependency in first-round offline mode.
 
 ### Stub Behavior
 
 - Stub attendance stores records by employee and test-local date.
 - Stub cash drawer stores deterministic cash-in/cash-out records.
+- Offline POS renders the Cash In/Out page title as `现金备款` after switching the home language to Chinese.
 
 ### Live Gaps
 
@@ -372,6 +380,7 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 |---|---|---|
 | time | Time-based auto-checkout requires controllable clock or environment setup | Add time control strategy or mark scoped live gap |
 | selector | Attendance and cash drawer controls need DOM confirmation | Confirm stable selectors |
+| cash-in Chinese page | Real home submenu, password popup, language persistence, loading behavior, and Cash In/Out title selector/text need live validation | Run live smoke for `test_cash_in_chinese` and record selector/data gaps |
 
 ## Caller And Cross-Surface Calling Flow
 
