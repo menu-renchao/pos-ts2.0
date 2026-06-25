@@ -77,4 +77,38 @@ export class AttendanceFlow {
       };
     });
   }
+
+  async checkoutBossThenEditAttendanceWageAndRead(homeUrl: string): Promise<AttendanceWageResult> {
+    return step('Boss Checkout 后编辑 Staff Attendance 工资并重新读取', async () => {
+      await this.homePage.open(homeUrl);
+
+      await this.homePage.clickAdmin();
+      await this.adminPage.enterStaff();
+      await this.adminPage.clickStaffName('Boss');
+      await this.adminPage.inputStaffWage('20');
+      await this.adminPage.selectWageType('Hourly');
+      await this.adminPage.clickStaffSave();
+
+      await this.homePage.openCheckIn();
+      await this.homePage.openCheckIn();
+      await this.homePage.clickCheckoutButton();
+      await this.homePage.inputEmployeePassword(staffDiscountRoleSamples.boss.password);
+
+      await this.homePage.clickAdmin();
+      await this.adminPage.enterStaff();
+      await this.adminPage.clickAttendanceSearch();
+      await this.adminPage.clickLastAttendance();
+      await this.adminPage.inputAttendanceWage('40');
+      await this.adminPage.selectAttendanceWageType('Monthly');
+      await this.adminPage.clickAttendanceSave();
+
+      await this.adminPage.clickAttendanceSearch();
+      await this.adminPage.clickLastAttendance();
+
+      return {
+        wage: await this.adminPage.readAttendanceWage(),
+        wageType: await this.adminPage.readAttendanceWageType(),
+      };
+    });
+  }
 }

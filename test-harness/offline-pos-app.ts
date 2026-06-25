@@ -113,8 +113,14 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         <button data-testid="admin-attendance-search">Attendance Search</button>
         <div data-testid="admin-attendance-list"></div>
         <button data-testid="admin-attendance-last-row" hidden>Last Attendance</button>
-        <div data-testid="admin-attendance-wage" hidden></div>
-        <div data-testid="admin-attendance-wage-type" hidden></div>
+        <input data-testid="admin-attendance-wage" hidden />
+        <select data-testid="admin-attendance-wage-type" hidden>
+          <option value="1">Hourly</option>
+          <option value="2">Weekly</option>
+          <option value="3">Biweekly</option>
+          <option value="4">Monthly</option>
+        </select>
+        <button data-testid="admin-attendance-save" hidden>Save Attendance</button>
       </section>
       <select data-testid="admin-auto-redirect-after-reduce">
         <option value="true">true</option>
@@ -843,6 +849,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const adminAttendanceLastRow = document.querySelector('[data-testid="admin-attendance-last-row"]');
       const adminAttendanceWage = document.querySelector('[data-testid="admin-attendance-wage"]');
       const adminAttendanceWageType = document.querySelector('[data-testid="admin-attendance-wage-type"]');
+      const adminAttendanceSaveButton = document.querySelector('[data-testid="admin-attendance-save"]');
       const adminAuthorityDineIn = document.querySelector('[data-testid="admin-authority-DINE_IN"]');
       const adminAuthorityAdmin = document.querySelector('[data-testid="admin-authority-ADMIN"]');
       const adminAuthorityAdminStaff = document.querySelector('[data-testid="admin-authority-ADMIN_STAFF"]');
@@ -1697,8 +1704,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           : '';
         adminAttendanceWage.hidden = !lastRecord;
         adminAttendanceWageType.hidden = !lastRecord;
-        adminAttendanceWage.textContent = lastRecord?.wage || '';
-        adminAttendanceWageType.textContent = lastRecord?.wageType || '';
+        adminAttendanceSaveButton.hidden = !lastRecord;
+        adminAttendanceWage.value = lastRecord?.wage || '';
+        adminAttendanceWageType.value = lastRecord?.wageType || '1';
       }
 
       function renderAdminStaffList() {
@@ -2826,6 +2834,15 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         renderLastAttendance();
       });
       adminAttendanceLastRow.addEventListener('click', () => {
+        renderLastAttendance();
+      });
+      adminAttendanceSaveButton.addEventListener('click', () => {
+        const lastRecord = attendanceRecords[attendanceRecords.length - 1];
+        if (!lastRecord) {
+          return;
+        }
+        lastRecord.wage = adminAttendanceWage.value;
+        lastRecord.wageType = adminAttendanceWageType.value;
         renderLastAttendance();
       });
       adminAnalysisButton.addEventListener('click', () => {

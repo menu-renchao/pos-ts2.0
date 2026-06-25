@@ -21,4 +21,13 @@ test.describe('stage1 check-in checkout migration', () => {
     expect(attendance.wage).toBe('20');
     expect(attendance.wageType).toBe('1');
   });
+
+  test('Staff Attendance 中修改 wage 和 wage type 后保存应保留修改值', async ({ environment, page }) => {
+    const flow = new AttendanceFlow(new PosHomePage(page), new AdminPage(page));
+
+    const attendance = await flow.checkoutBossThenEditAttendanceWageAndRead(environment.posHomeUrl);
+
+    expect(attendance.wage).toBe('40');
+    expect(attendance.wageType).toBe('4');
+  });
 });

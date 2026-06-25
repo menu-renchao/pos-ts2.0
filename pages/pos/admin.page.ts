@@ -102,6 +102,7 @@ export class AdminPage extends PageObject {
   private readonly staffWageTypeSelect: Locator;
   private readonly attendanceSearchButton: Locator;
   private readonly lastAttendanceRow: Locator;
+  private readonly attendanceSaveButton: Locator;
   private readonly attendanceWageValue: Locator;
   private readonly attendanceWageTypeValue: Locator;
   private readonly searchMenuSelect: Locator;
@@ -206,6 +207,7 @@ export class AdminPage extends PageObject {
     this.staffWageTypeSelect = page.getByTestId('admin-staff-wage-type');
     this.attendanceSearchButton = page.getByTestId('admin-attendance-search');
     this.lastAttendanceRow = page.getByTestId('admin-attendance-last-row');
+    this.attendanceSaveButton = page.getByTestId('admin-attendance-save');
     this.attendanceWageValue = page.getByTestId('admin-attendance-wage');
     this.attendanceWageTypeValue = page.getByTestId('admin-attendance-wage-type');
     this.searchMenuSelect = page.getByTestId('admin-search-menu');
@@ -308,13 +310,29 @@ export class AdminPage extends PageObject {
   }
 
   async readAttendanceWage(): Promise<string> {
-    return step('读取 Staff Attendance wage', async () => ((await this.attendanceWageValue.textContent()) ?? '').trim());
+    return step('读取 Staff Attendance wage', async () => this.readInputValueOrText(this.attendanceWageValue));
   }
 
   async readAttendanceWageType(): Promise<string> {
-    return step('读取 Staff Attendance wage type', async () =>
-      ((await this.attendanceWageTypeValue.textContent()) ?? '').trim(),
-    );
+    return step('读取 Staff Attendance wage type', async () => this.readInputValueOrText(this.attendanceWageTypeValue));
+  }
+
+  async inputAttendanceWage(wage: string): Promise<void> {
+    await step(`修改 Staff Attendance wage 为 ${wage}`, async () => {
+      await this.attendanceWageValue.fill(wage);
+    });
+  }
+
+  async selectAttendanceWageType(wageType: string): Promise<void> {
+    await step(`修改 Staff Attendance wage type 为 ${wageType}`, async () => {
+      await this.attendanceWageTypeValue.selectOption({ label: wageType });
+    });
+  }
+
+  async clickAttendanceSave(): Promise<void> {
+    await step('保存 Staff Attendance', async () => {
+      await this.attendanceSaveButton.click();
+    });
   }
 
   async isAuthorityEnabled(authority: StaffPermissionName): Promise<boolean> {
@@ -656,5 +674,13 @@ export class AdminPage extends PageObject {
           .map((value) => value.trim())
           .filter(Boolean)
       : [];
+  }
+
+  private async readInputValueOrText(locator: Locator): Promise<string> {
+    const tagName = await locator.evaluate((element) => element.tagName.toLowerCase()).catch(() => '');
+    if (tagName === 'input' || tagName === 'select' || tagName === 'textarea') {
+      return (await locator.inputValue()).trim();
+    }
+    return ((await locator.textContent()) ?? '').trim();
   }
 }
