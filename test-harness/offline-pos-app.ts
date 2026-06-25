@@ -26,6 +26,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <button data-testid="home-pickup">Pickup</button>
       <button data-testid="home-recall">Recall</button>
       <button data-testid="home-caller">Caller</button>
+      <button data-testid="pos-switch-emenu-order">Emenu Order</button>
       <button data-testid="home-admin">Admin</button>
       <button data-testid="home-join-member">Join Member</button>
       <button data-testid="home-reservation">Reservation</button>
@@ -482,6 +483,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
     </section>
     <section data-testid="caller-page" hidden>
       <h1>Caller</h1>
+      <button data-testid="caller-refresh">Refresh</button>
       <section data-testid="caller-ready-area">
         <div data-testid="caller-ready-list"></div>
       </section>
@@ -1027,6 +1029,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const subOrderCashPayButton = document.querySelector('[data-testid="sub-order-cash-pay"]');
       const recallSubOrders = document.querySelector('[data-testid="recall-sub-orders"]');
       const callerPage = document.querySelector('[data-testid="caller-page"]');
+      const callerRefreshButton = document.querySelector('[data-testid="caller-refresh"]');
       const callerReadyList = document.querySelector('[data-testid="caller-ready-list"]');
       const callerPreparingList = document.querySelector('[data-testid="caller-preparing-list"]');
       const emenuMainPage = document.querySelector('[data-testid="emenu-main-page"]');
@@ -2963,6 +2966,12 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       document.querySelector('[data-testid="home-caller"]').addEventListener('click', () => {
         renderCallerDisplay();
         showPanel('caller');
+      });
+      document.querySelector('[data-testid="pos-switch-emenu-order"]').addEventListener('click', () => {
+        showEmenuPanel('order');
+      });
+      callerRefreshButton.addEventListener('click', () => {
+        renderCallerDisplay();
       });
       emenuContinueButton.addEventListener('click', () => {
         showEmenuPanel('order');

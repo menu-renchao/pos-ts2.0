@@ -16,6 +16,7 @@ export class EmenuMainPage extends PageObject {
   private readonly tableButton: Locator;
   private readonly unusedLicenseButton: Locator;
   private readonly posHomeButton: Locator;
+  private readonly emenuOrderButton: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -30,6 +31,7 @@ export class EmenuMainPage extends PageObject {
     this.tableButton = page.getByTestId('emenu-table');
     this.unusedLicenseButton = page.getByTestId('emenu-unused-license');
     this.posHomeButton = page.getByTestId('emenu-switch-pos');
+    this.emenuOrderButton = page.getByTestId('pos-switch-emenu-order');
   }
 
   async openAndStartOrder(emenuUrl: string): Promise<void> {
@@ -53,6 +55,13 @@ export class EmenuMainPage extends PageObject {
     await step('从 Emenu 切回 POS 首页', async () => {
       await this.posHomeButton.click();
       await expect(this.page.getByTestId('pos-home')).toBeVisible();
+    });
+  }
+
+  async switchToEmenuOrder(): Promise<void> {
+    await step('从 POS 切回 Emenu 点单页', async () => {
+      await this.emenuOrderButton.click();
+      await expect(this.emenuOrderRoot).toBeVisible();
     });
   }
 }

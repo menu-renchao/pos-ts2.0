@@ -31,4 +31,11 @@ export class CallerPage extends PageObject {
       return (await items.allTextContents()).map((info) => info.trim()).filter(Boolean);
     });
   }
+
+  async refresh(): Promise<void> {
+    await step('刷新 Caller 页面信息', async () => {
+      await this.page.getByTestId('caller-refresh').click();
+      await this.waitLoaded();
+    });
+  }
 }

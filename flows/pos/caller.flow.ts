@@ -35,8 +35,19 @@ export type EmenuCallerNameResult = {
   preparingInfoAfterCallOff: string[];
 };
 
+export type EmenuCallerRefreshResult = {
+  orderNumber: string;
+  firstGuestName: string;
+  firstShortGuestName: string;
+  secondGuestName: string;
+  secondShortGuestName: string;
+  preparingInfoAfterFirstEdit: string[];
+  preparingInfoAfterSecondCall: string[];
+};
+
 const callerGuestName = 'CallerGuest42';
 const emenuEditedGuestName = 'EmenuGuest42';
+const emenuRefreshGuestName = 'RefreshGuest42';
 
 export class CallerFlow {
   constructor(
@@ -180,6 +191,58 @@ export class CallerFlow {
         shortGuestName: shortenCallerGuestName(emenuEditedGuestName),
         preparingInfoBeforeCallOff,
         preparingInfoAfterCallOff,
+      };
+    });
+  }
+
+  async callEmenuOrderCallerInfoRefreshAfterGuestNameChange(
+    emenuUrl: string,
+    _homeUrl: string,
+  ): Promise<EmenuCallerRefreshResult> {
+    return step('Emenu 叫号后 POS 改名并再次叫号刷新信息', async () => {
+      if (!this.emenuMainPage || !this.emenuOrderPage) {
+        throw new Error('Emenu pages are required for Emenu caller flow.');
+      }
+
+      await this.emenuMainPage.openAndStartOrder(emenuUrl);
+      await this.emenuOrderPage.placeFirstCategoryItemOrder();
+      await this.emenuOrderPage.closeOrderCard();
+      await this.emenuOrderPage.callServer();
+
+      await this.emenuMainPage.switchToPosHome();
+      await this.homePage.clickRecall();
+      await this.recallPage.openRecentOrder();
+      const orderNumber = await this.recallPage.readOrderNumber();
+      const firstGuestName = `Area 1-Table 1#${orderNumber}`;
+      await this.recallPage.clickEdit();
+      await this.orderDishesPage.inputGuestName(firstGuestName);
+      await this.orderDishesPage.sendAllToKitchen();
+
+      await this.homePage.openCaller();
+      await this.callerPage.refresh();
+      const preparingInfoAfterFirstEdit = await this.callerPage.readInfoList('preparing');
+
+      await this.homePage.clickRecall();
+      await this.recallPage.openRecentOrder();
+      await this.recallPage.clickEdit();
+      await this.orderDishesPage.inputGuestName(emenuRefreshGuestName);
+      await this.orderDishesPage.sendAllToKitchen();
+
+      await this.emenuMainPage.switchToEmenuOrder();
+      await this.emenuOrderPage.callServer();
+      await this.emenuMainPage.switchToPosHome();
+      await this.homePage.openCaller();
+      await this.callerPage.refresh();
+      const preparingInfoAfterSecondCall = await this.callerPage.readInfoList('preparing');
+
+      return {
+        orderNumber,
+        firstGuestName,
+        firstShortGuestName: shortenCallerGuestName(firstGuestName),
+        secondGuestName: emenuRefreshGuestName,
+        secondShortGuestName: shortenCallerGuestName(emenuRefreshGuestName),
+        preparingInfoAfterFirstEdit,
+        preparingInfoAfterSecondCall,
       };
     });
   }

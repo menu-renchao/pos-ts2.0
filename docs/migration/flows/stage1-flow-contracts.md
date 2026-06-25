@@ -383,7 +383,7 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 | stage1/test_caller.py | TestCaller | test_dine_in_caller_with_table: Dine In order without guest name, use Recall order-card ID, call order, verify Preparing display, call off, verify removal | tests/stage1/caller.spec.ts | `CallerFlow.callDineInOrderWithoutGuestNameAndClear` |
 | stage1/test_caller.py | TestCaller | test_emenu_caller_with_table: Emenu table order, call server from Emenu, verify Caller Preparing display by Recall order-card ID, call off from POS, verify removal | tests/stage1/caller.spec.ts | `CallerFlow.callEmenuOrderWithTableAndClear` |
 | stage1/test_caller.py | TestCaller | test_emenu_caller_with_name_and_table: Emenu table order, call server from Emenu, edit guest name in POS Recall, verify Caller Preparing display by order number and guest name, call off from POS, verify removal | tests/stage1/caller.spec.ts | `CallerFlow.callEmenuOrderWithEditedGuestNameAndClear` |
-| stage1/test_caller.py | TestCaller | remaining Emenu caller refresh path | tests/stage1/caller.spec.ts | not-started |
+| stage1/test_caller.py | TestCaller | test_emenu_caller_with_refresh_info: Emenu table order, first call server, edit guest name to table/order text, refresh Caller, edit guest name again, call server again from Emenu, verify Caller info refreshes to new name | tests/stage1/caller.spec.ts | `CallerFlow.callEmenuOrderCallerInfoRefreshAfterGuestNameChange` |
 
 ### Preconditions
 
@@ -393,6 +393,7 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 - For the no-guest Dine In path, the offline Recall order-card ID is deterministic as `Area 1 Table 1 {orderNumber}`.
 - For the migrated Emenu path, `posEmenuUrl` opens the offline Emenu surface and the Emenu table order-card ID is deterministic as `Area 1 Table 1 {orderNumber}`.
 - For the migrated Emenu guest-name path, POS edits the Emenu order guest name to `EmenuGuest42`, so the caller shortening rule is deterministic as `Eme...42`.
+- For the migrated Emenu refresh path, the first POS edit uses source-equivalent table/order text `Area 1-Table 1#{orderNumber}` and the second edit uses deterministic name `RefreshGuest42`.
 - First-round offline mode reads the saved order number or order-card ID from Recall; source `PosDBFunction.get_last_order_num` remains a live DB validation gap.
 
 ### Steps
@@ -405,6 +406,7 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 6. Return to Recall, call off the same order, reopen Caller, and read Preparing again.
 7. For the Emenu path, open Emenu, select license/table/guest count, place the first new-category item order, close the Emenu order card, click Call Server, switch back to POS, open Recall, read the order-card ID, verify Caller Preparing, call off from POS Recall, and verify Caller Preparing removal.
 8. For the Emenu guest-name path, after Emenu Call Server, switch back to POS, open Recall, read the order number, edit the order, input `EmenuGuest42`, send all to kitchen, reopen Recall/Caller, verify Caller Preparing by order number and shortened guest name, then call off from POS Recall and verify removal.
+9. For the Emenu refresh path, after the first Emenu Call Server, switch back to POS, open Recall, edit the order guest name to `Area 1-Table 1#{orderNumber}`, send all, open Caller and refresh; then switch back to POS Recall, edit the same order to `RefreshGuest42`, send all, switch back to Emenu, click Call Server again, open Caller and refresh again.
 
 ### Expected Assertions
 
@@ -419,6 +421,9 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 - For the Emenu guest-name path, before POS call off Caller Preparing contains the Recall order number.
 - For the Emenu guest-name path, before POS call off Caller Preparing contains the source-equivalent shortened guest name `Eme...42`.
 - For the Emenu guest-name path, after POS call off Caller Preparing no longer contains the Recall order number or shortened guest name.
+- For the Emenu refresh path, after the first Caller refresh Preparing contains the Recall order number and the shortened first guest name.
+- For the Emenu refresh path, after the second Emenu Call Server and Caller refresh Preparing contains the Recall order number and shortened second guest name `Ref...42`.
+- For the Emenu refresh path, after the second refresh Preparing no longer contains the shortened first guest name.
 
 ### Page Responsibilities
 
@@ -427,9 +432,10 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 - `RecallPage.openRecentOrder`, `RecallPage.readOrderNumber`, `RecallPage.readOrderCardId`, `RecallPage.callCurrentOrder`, and `RecallPage.callOffCurrentOrder` own Recall order selection and caller actions.
 - `RecallPage.clickEdit` owns entry into POS order editing from Recall.
 - `OrderDishesPage.inputGuestName` and `OrderDishesPage.sendAllToKitchen` own POS-side guest-name edit and send-all persistence for the Emenu order.
-- `CallerPage.waitLoaded` and `CallerPage.readInfoList` own caller display reads.
+- `CallerPage.waitLoaded`, `CallerPage.refresh`, and `CallerPage.readInfoList` own caller display refresh and reads.
 - `EmenuMainPage.openAndStartOrder` owns Emenu URL entry, license selection, table selection, guest count, and navigation to Emenu order.
 - `EmenuMainPage.switchToPosHome` owns the first-round offline switch from Emenu back to POS.
+- `EmenuMainPage.switchToEmenuOrder` owns the first-round offline switch from POS back to the existing Emenu order page.
 - `EmenuOrderPage.placeFirstCategoryItemOrder`, `EmenuOrderPage.closeOrderCard`, and `EmenuOrderPage.callServer` own Emenu order placement and call-server action.
 
 ### Client/Data Responsibilities
@@ -449,6 +455,7 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 - Emenu `Place Order` creates a saved table order and exposes the same latest order to POS Recall.
 - Emenu `Call Server` marks that table order as `preparing` for Caller before POS Recall opens it.
 - POS Recall edit updates the selected Emenu order guest name, keeps the existing order number, and refreshes Caller Preparing from table/order-card display to order number plus shortened guest name.
+- Repeating Emenu `Call Server` after the second POS guest-name edit re-renders Caller Preparing with the same order number and the latest shortened guest name.
 - Recall `Call Off` clears the selected order from Caller Preparing.
 
 ### Live Gaps
@@ -463,6 +470,7 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 | cross-surface | Emenu, POS, and Caller display surfaces require environment URLs/selectors | Define environment config and stable selectors |
 | emenu | Source Emenu flow selects license, table, customer count, closes order card, clicks Call Server, and switches browser tabs; first-round offline mode uses stable harness selectors and a same-page switch button | Validate real Emenu login/license/table/customer/order-card/call-server selectors plus POS/Emenu tab switching |
 | edit-order | Source edits the Emenu order through POS Recall and `OrderPage.edit_guest_name`/`send_all`; first-round offline mode updates the selected saved order directly through the POS order page controls | Validate real Recall edit navigation, guest-name input, send-all persistence, and post-refresh message handling |
+| refresh | Source refreshes Caller and repeats Emenu Call Server after POS edits the guest name again; first-round offline mode re-renders the deterministic Caller list on refresh | Validate real Caller refresh timing and repeated Emenu Call Server refresh semantics |
 | display-area | Python source defaults caller verification to Ready area while current TS offline convention verifies Preparing for called orders | Confirm real Caller Ready/Preparing mapping for Emenu Call Server |
 
 ## Expiration Manager Flow

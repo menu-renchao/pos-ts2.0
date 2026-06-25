@@ -71,4 +71,26 @@ test.describe('stage1 caller migration', () => {
     expect(result.preparingInfoAfterCallOff).not.toContain(result.orderNumber);
     expect(result.preparingInfoAfterCallOff).not.toContain(result.shortGuestName);
   });
+
+  test('POS-31496 emenu选桌下单叫号，POS修改名称后再次叫号，叫号信息更新', async ({ environment, page }) => {
+    const flow = new CallerFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new CallerPage(page),
+      new EmenuMainPage(page),
+      new EmenuOrderPage(page),
+    );
+
+    const result = await flow.callEmenuOrderCallerInfoRefreshAfterGuestNameChange(
+      environment.posEmenuUrl,
+      environment.posHomeUrl,
+    );
+
+    expect(result.preparingInfoAfterFirstEdit).toContain(result.orderNumber);
+    expect(result.preparingInfoAfterFirstEdit).toContain(result.firstShortGuestName);
+    expect(result.preparingInfoAfterSecondCall).toContain(result.orderNumber);
+    expect(result.preparingInfoAfterSecondCall).toContain(result.secondShortGuestName);
+    expect(result.preparingInfoAfterSecondCall).not.toContain(result.firstShortGuestName);
+  });
 });
