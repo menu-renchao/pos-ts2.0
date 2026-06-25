@@ -57,6 +57,7 @@ export class RecallPage extends PageObject {
   private readonly orderStatus: Locator;
   private readonly orderSubtotal: Locator;
   private readonly orderTax: Locator;
+  private readonly orderPriceDetail: Locator;
   private readonly orderCardId: Locator;
   private readonly orderNumber: Locator;
   private readonly orderReward: Locator;
@@ -139,6 +140,7 @@ export class RecallPage extends PageObject {
     this.orderStatus = page.getByTestId('recall-order-status');
     this.orderSubtotal = page.getByTestId('recall-order-subtotal');
     this.orderTax = page.getByTestId('recall-order-tax');
+    this.orderPriceDetail = page.getByTestId('recall-order-price-detail');
     this.orderCardId = page.getByTestId('recall-order-card-id');
     this.orderNumber = page.getByTestId('recall-order-number');
     this.orderReward = page.getByTestId('recall-order-reward');
@@ -362,6 +364,10 @@ export class RecallPage extends PageObject {
 
   async readOrderStatus(): Promise<string> {
     return step('读取 Recall 订单状态', async () => (await this.orderStatus.textContent()) ?? '');
+  }
+
+  async readOrderPriceDetail(): Promise<string> {
+    return step('读取 Recall 订单价格明细', async () => ((await this.orderPriceDetail.textContent()) ?? '').trim());
   }
 
   async readOrderTaxText(): Promise<string> {

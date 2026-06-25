@@ -207,4 +207,23 @@ test.describe('stage2 order operation migration', () => {
 
     expect(reasonCount).toBe(7);
   });
+
+  test('POS-22813 分单子单清空加收后支付明细不应包含 Charge', {
+    annotation: [jiraIssue('POS-22813')],
+  }, async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.clearChargesOnPaidDragSplitSubOrdersAndReadDetails(environment.posHomeUrl);
+
+    expect(result.firstSubOrderStatus).toBe('Paid');
+    expect(result.firstSubOrderPriceDetail).not.toContain('Charge');
+    expect(result.secondSubOrderStatus).toBe('Paid');
+    expect(result.secondSubOrderPriceDetail).not.toContain('Charge');
+    expect(result.thirdSubOrderStatus).toBe('Paid');
+    expect(result.thirdSubOrderPriceDetail).not.toContain('Charge');
+  });
 });

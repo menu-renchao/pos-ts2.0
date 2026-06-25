@@ -362,6 +362,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <input data-testid="order-tip" />
       <div data-testid="order-tip-toast"></div>
       <button data-testid="order-charge-20">Charge 20%</button>
+      <button data-testid="order-charge-5">Charge 5%</button>
       <button data-testid="order-charge-0">Charge 0%</button>
       <div data-testid="order-charge-label"></div>
       <div data-testid="order-charge-price"></div>
@@ -460,6 +461,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <div data-testid="recall-order-tax"></div>
       <div data-testid="recall-order-reward">0</div>
       <div data-testid="recall-order-total"></div>
+      <div data-testid="recall-order-price-detail"></div>
       <div data-testid="recall-crm-member-name"></div>
       <div data-testid="recall-crm-point-balance">0</div>
       <input data-testid="recall-crm-combine-order-no" />
@@ -1032,6 +1034,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const orderTipInput = document.querySelector('[data-testid="order-tip"]');
       const orderTipToast = document.querySelector('[data-testid="order-tip-toast"]');
       const orderCharge20Button = document.querySelector('[data-testid="order-charge-20"]');
+      const orderCharge5Button = document.querySelector('[data-testid="order-charge-5"]');
       const orderChargeZeroButton = document.querySelector('[data-testid="order-charge-0"]');
       const orderChargeLabel = document.querySelector('[data-testid="order-charge-label"]');
       const orderChargePrice = document.querySelector('[data-testid="order-charge-price"]');
@@ -1100,6 +1103,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const recallOrderTax = document.querySelector('[data-testid="recall-order-tax"]');
       const recallOrderReward = document.querySelector('[data-testid="recall-order-reward"]');
       const recallOrderTotal = document.querySelector('[data-testid="recall-order-total"]');
+      const recallOrderPriceDetail = document.querySelector('[data-testid="recall-order-price-detail"]');
       const recallTipMethod = document.querySelector('[data-testid="recall-tip-method"]');
       const recallTipInput = document.querySelector('[data-testid="recall-tip-input"]');
       const recallTipSubmitButton = document.querySelector('[data-testid="recall-tip-submit"]');
@@ -2739,6 +2743,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           if (selectedSubOrderIndex !== null && currentEditingOrder.subOrderItems?.[selectedSubOrderIndex]) {
             const previousSubOrderTotal = orderItemsSubtotal(currentEditingOrder.subOrderItems[selectedSubOrderIndex]);
             currentEditingOrder.subOrderItems[selectedSubOrderIndex] = [...currentOrderItems];
+            currentEditingOrder.subOrderStatuses[selectedSubOrderIndex] = currentOrderStatus || currentEditingOrder.subOrderStatuses[selectedSubOrderIndex];
+            currentEditingOrder.subOrderChargeCleared = currentEditingOrder.subOrderChargeCleared || [];
+            currentEditingOrder.subOrderChargeCleared[selectedSubOrderIndex] = currentOrderChargeRate === 0;
             currentEditingOrder.subOrderTips = currentEditingOrder.subOrderTips || [];
             const nextSubOrderTotal = orderItemsSubtotal(currentOrderItems);
             if (currentEditingOrder.priceEdited && previousSubOrderTotal !== nextSubOrderTotal) {
@@ -2758,6 +2765,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           currentEditingOrder.crmFixedRewardAmount = currentCrmFixedRewardAmount;
           currentEditingOrder.crmPointDeduction = currentCrmPointDeduction;
           currentEditingOrder.hasRedeemItem = currentHasRedeemItem;
+          if (selectedSubOrderIndex === null) {
+            currentEditingOrder.orderChargeRate = currentOrderChargeRate;
+            currentEditingOrder.orderChargeLabel = currentOrderChargeLabel;
+          }
           currentEditingOrder.priceEdited = currentEditingOrder.priceEdited || currentOrderPriceEdited;
           currentEditingOrder.partialPaid = currentSemiPayMode;
           currentEditingOrder.rewardDiscount = calculateRewardDiscount(currentEditingOrder);
@@ -2793,6 +2804,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           splitOrderPrices: [],
           subOrderItems: [],
           subOrderStatuses: [],
+          subOrderChargeCleared: [],
+          orderChargeRate: currentOrderChargeRate,
+          orderChargeLabel: currentOrderChargeLabel,
           inventoryDeductedQuantity: 0,
           paymentRecords: currentPaymentRecords.map((record) => ({ ...record })),
           paymentType: '',
@@ -2811,6 +2825,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
 
       function selectRecallOrder(order) {
         selectedRecallOrder = order || null;
+        selectedSubOrderIndex = null;
         latestSavedOrderItems = selectedRecallOrder ? [...selectedRecallOrder.items] : [];
         latestSavedItemOption = selectedRecallOrder?.itemOption || null;
         renderRecallOrderItems();
@@ -2821,9 +2836,28 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           return Number(Number(order.settlementTotal).toFixed(2));
         }
         return Number(((order?.items || []).reduce((total, item) => total + Number(item.price || 0), 0)
+          + orderChargeAmount(order, order?.items || [])
           + Number(order?.tip || 0)
           + Number(order?.rewardDiscount || 0)
           + Number(order?.wholeOrderDiscountAmount || 0)).toFixed(2));
+      }
+
+      function orderChargeAmount(order, items) {
+        const rate = Number(order?.orderChargeRate || 0);
+        if (!rate) {
+          return 0;
+        }
+        return roundMoney(orderItemsSubtotal(items || []) * rate);
+      }
+
+      function priceDetailText(order, items, subOrderIndex = null) {
+        const lines = ['Subtotal ' + orderItemsSubtotal(items || []).toFixed(2)];
+        const chargeCleared = subOrderIndex !== null && Boolean(order?.subOrderChargeCleared?.[subOrderIndex]);
+        const charge = chargeCleared ? 0 : orderChargeAmount(order, items || []);
+        if (charge) {
+          lines.push((order?.orderChargeLabel || 'Charge') + ' ' + charge.toFixed(2));
+        }
+        return lines.join(' ');
       }
 
       function ensurePaymentRecords(order) {
@@ -2980,6 +3014,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
             recallItemCount.textContent = formatItemCount(subOrderItems);
             recallOrderSubtotal.textContent = String(total);
             recallOrderTotal.textContent = String(total);
+            recallOrderPriceDetail.textContent = priceDetailText(order, subOrderItems, index);
             recallOrderTip.textContent = formatTip(order.subOrderTips?.[index] ?? order.tip ?? 0);
           });
           recallSubOrders.appendChild(card);
@@ -3029,6 +3064,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           order?.settlementTotal !== null && order?.settlementTotal !== undefined
             ? Number(orderTotal(order)).toFixed(2)
             : String(orderTotal(order));
+        recallOrderPriceDetail.textContent = priceDetailText(order, order.items || []);
         recallCrmMemberName.textContent = order.crmMember?.name || '';
         recallCrmPointBalance.textContent = String(order.crmMember?.points || 0);
         recallMoveOrderButton.hidden = Boolean(order.hasRedeemItem);
@@ -3638,6 +3674,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         currentOrderChargeLabel = 'Charge(20%)';
         renderOrderAmounts();
       });
+      orderCharge5Button.addEventListener('click', () => {
+        currentOrderChargeRate = 0.05;
+        currentOrderChargeLabel = 'Charge(5%)';
+        renderOrderAmounts();
+      });
       orderChargeZeroButton.addEventListener('click', () => {
         currentOrderChargeRate = 0;
         currentOrderChargeLabel = '';
@@ -3771,7 +3812,12 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           member.points += earnPointsForSubtotal(Number(orderSubtotal.textContent || '0'));
           currentCrmMember = member;
         }
+        const wasEditingOrderForSettlement = Boolean(currentEditingOrder);
         saveCurrentOrder();
+        if (wasEditingOrderForSettlement) {
+          showPanel('recall');
+          renderRecallOrderItems();
+        }
       }
       settleCashButton.addEventListener('click', () => {
         settleCurrentOrder('cash');
@@ -4443,6 +4489,13 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           currentOrderTip = selectedSubOrderIndex !== null
             ? selectedRecallOrder.subOrderTips?.[selectedSubOrderIndex] ?? selectedRecallOrder.tip ?? 0
             : selectedRecallOrder.tip || 0;
+          currentOrderChargeRate = selectedSubOrderIndex !== null && selectedRecallOrder.subOrderChargeCleared?.[selectedSubOrderIndex]
+            ? 0
+            : Number(selectedRecallOrder.orderChargeRate || 0);
+          currentOrderChargeLabel = currentOrderChargeRate ? selectedRecallOrder.orderChargeLabel || 'Charge' : '';
+          currentOrderStatus = selectedSubOrderIndex !== null
+            ? selectedRecallOrder.subOrderStatuses?.[selectedSubOrderIndex] || ''
+            : selectedRecallOrder.status || '';
           currentOrderPriceEdited = Boolean(selectedRecallOrder.priceEdited);
           currentCustomerName = selectedRecallOrder.customerName || null;
           orderGuestNameInput.value = selectedRecallOrder.customerName || '';

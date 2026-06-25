@@ -117,6 +117,15 @@ export type AmountSplitFixedTotalsResult = {
   secondSubOrderTotal: number;
 };
 
+export type ClearSplitSubOrderChargeResult = {
+  firstSubOrderStatus: string;
+  firstSubOrderPriceDetail: string;
+  secondSubOrderStatus: string;
+  secondSubOrderPriceDetail: string;
+  thirdSubOrderStatus: string;
+  thirdSubOrderPriceDetail: string;
+};
+
 export type EvenSplitTipUnsplitResult = {
   combinedTipText: string;
 };
@@ -772,6 +781,62 @@ export class OrderEntryFlow {
     await this.recallPage.openRecentOrder();
     await this.recallPage.openVoidReasonChooser();
     return this.recallPage.readVoidReasonCount();
+  }
+
+  async clearChargesOnPaidDragSplitSubOrdersAndReadDetails(
+    homeUrl: string,
+  ): Promise<ClearSplitSubOrderChargeResult> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+
+    const firstDish = splitDiscountDishes[0];
+    const secondDish = splitDiscountDishes[1];
+    const thirdDish = splitDiscountDishes[2];
+    if (!firstDish || !secondDish || !thirdDish) {
+      throw new Error('POS-22813 requires three split discount dishes');
+    }
+    await this.orderDishesPage.selectMenuGroup(firstDish.group);
+    await this.orderDishesPage.selectMenuCategory(firstDish.category);
+    await this.orderDishesPage.addMenuItem(firstDish.name);
+    await this.orderDishesPage.addMenuItem(secondDish.name);
+    await this.orderDishesPage.addMenuItem(thirdDish.name);
+    await this.orderDishesPage.applyOrderCharge('5%');
+    await this.orderDishesPage.sendAllToKitchen();
+
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.openSplitOrder();
+    await this.recallPage.splitByDrag();
+
+    await this.clearCurrentSplitSubOrderChargeAndPay(1);
+    await this.clearCurrentSplitSubOrderChargeAndPay(2);
+    await this.clearCurrentSplitSubOrderChargeAndPay(3);
+
+    await this.recallPage.openSubOrder(1);
+    const firstSubOrderStatus = await this.recallPage.readOrderStatus();
+    const firstSubOrderPriceDetail = await this.recallPage.readOrderPriceDetail();
+    await this.recallPage.openSubOrder(2);
+    const secondSubOrderStatus = await this.recallPage.readOrderStatus();
+    const secondSubOrderPriceDetail = await this.recallPage.readOrderPriceDetail();
+    await this.recallPage.openSubOrder(3);
+    const thirdSubOrderStatus = await this.recallPage.readOrderStatus();
+    const thirdSubOrderPriceDetail = await this.recallPage.readOrderPriceDetail();
+
+    return {
+      firstSubOrderPriceDetail,
+      firstSubOrderStatus,
+      secondSubOrderPriceDetail,
+      secondSubOrderStatus,
+      thirdSubOrderPriceDetail,
+      thirdSubOrderStatus,
+    };
+  }
+
+  private async clearCurrentSplitSubOrderChargeAndPay(index: number): Promise<void> {
+    await this.recallPage.openSubOrder(index);
+    await this.recallPage.clickEdit();
+    await this.orderDishesPage.applyOrderCharge('0%');
+    await this.orderDishesPage.settleByCash();
   }
 
   async unsplitEvenSplitOrderAfterEditingFirstSubOrderTip(homeUrl: string): Promise<EvenSplitTipUnsplitResult> {

@@ -70,6 +70,7 @@ export class OrderDishesPage extends PageObject {
   private readonly orderExitButton: Locator;
   private readonly orderModifyButton: Locator;
   private readonly orderCharge20Button: Locator;
+  private readonly orderCharge5Button: Locator;
   private readonly orderChargeZeroButton: Locator;
   private readonly orderChargeLabel: Locator;
   private readonly orderChargePrice: Locator;
@@ -186,6 +187,7 @@ export class OrderDishesPage extends PageObject {
     this.orderExitButton = page.getByTestId('order-exit').or(page.locator('#exitBt'));
     this.orderModifyButton = page.getByTestId('order-modify');
     this.orderCharge20Button = page.getByTestId('order-charge-20');
+    this.orderCharge5Button = page.getByTestId('order-charge-5');
     this.orderChargeZeroButton = page.getByTestId('order-charge-0');
     this.orderChargeLabel = page.getByTestId('order-charge-label');
     this.orderChargePrice = page.getByTestId('order-charge-price');
@@ -774,10 +776,14 @@ export class OrderDishesPage extends PageObject {
     });
   }
 
-  async applyOrderCharge(rate: '0%' | '20%'): Promise<void> {
+  async applyOrderCharge(rate: '0%' | '5%' | '20%'): Promise<void> {
     await step(`应用整单按比例加收 ${rate}`, async () => {
       if (rate === '0%') {
         await this.orderChargeZeroButton.click();
+        return;
+      }
+      if (rate === '5%') {
+        await this.orderCharge5Button.click();
         return;
       }
       if (rate !== '20%') {
