@@ -37,6 +37,9 @@ export const test = base.extend<PosTestFixtures>({
   posDbClient: async ({}, use) => {
     await use(createStubClients().posDbClient);
   },
+  staffShiftPlanClient: async ({}, use) => {
+    await use(createStubClients().staffShiftPlanClient);
+  },
 });
 
 export { expect } from '@playwright/test';

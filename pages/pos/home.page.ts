@@ -2,6 +2,7 @@ import type { Locator, Page } from '@playwright/test';
 import { expect } from '@playwright/test';
 
 import type { StaffPermissionOverride, StaffRoleDiscountLimit } from '../../clients/pos-api/admin-staff.client.js';
+import type { StaffShiftPlan } from '../../clients/pos-api/staff-shift-plan.client.js';
 import { step } from '../../utils/step.js';
 import { waitUntil } from '../../utils/wait.js';
 import { PageObject } from '../shared/page-object.js';
@@ -194,6 +195,13 @@ export class PosHomePage extends PageObject {
     });
   }
 
+  async logoutAndLogin(password: string): Promise<void> {
+    await step(`重新以员工密码 ${password} 登录`, async () => {
+      await this.logout();
+      await this.inputEmployeePassword(password);
+    });
+  }
+
   async inputEmployeePasswordWithoutSave(password: string): Promise<void> {
     await step('输入员工密码但不保存', async () => {
       await this.passwordInput.fill(password);
@@ -247,6 +255,23 @@ export class PosHomePage extends PageObject {
         localStorage.setItem('offlineStaffPermissionOverrides', JSON.stringify(overridesByStaffId));
         window.dispatchEvent(new CustomEvent('offline-staff-permissions-updated', { detail: overridesByStaffId }));
       }, overrides);
+    });
+  }
+
+  async applyOfflineShiftSchedule(enabled: boolean, plans: readonly StaffShiftPlan[]): Promise<void> {
+    await step('同步离线员工排班配置', async () => {
+      await this.page.evaluate(
+        ({ shiftScheduleEnabled, shiftPlans }) => {
+          localStorage.setItem('offlineShiftScheduleEnabled', String(shiftScheduleEnabled));
+          localStorage.setItem('offlineShiftPlans', JSON.stringify(shiftPlans));
+          window.dispatchEvent(
+            new CustomEvent('offline-shift-schedule-updated', {
+              detail: { shiftScheduleEnabled, shiftPlans },
+            }),
+          );
+        },
+        { shiftScheduleEnabled: enabled, shiftPlans: plans },
+      );
     });
   }
 

@@ -10,6 +10,7 @@ export const adminSettings = {
   clickSettleAutoSend: 'clickSettleAutoSend',
   countCanBeDecimal: 'countCanBeDecimal',
   roundingStrategy: 'roundingStrategy',
+  shiftSchedule: 'shiftSchedule',
 } as const;
 
 export type AdminSettingName = (typeof adminSettings)[keyof typeof adminSettings];

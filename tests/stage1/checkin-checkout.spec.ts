@@ -30,4 +30,18 @@ test.describe('stage1 check-in checkout migration', () => {
     expect(attendance.wage).toBe('40');
     expect(attendance.wageType).toBe('4');
   });
+
+  test('POS-43835 配置最早打卡时间后员工在允许时间内应打卡成功', {
+    annotation: { type: 'issue', description: 'POS-43835' },
+  }, async ({ adminSettingsClient, environment, page, staffShiftPlanClient }) => {
+    const flow = new AttendanceFlow(new PosHomePage(page), new AdminPage(page));
+
+    const clockText = await flow.checkInWithinEarliestAllowedTime(
+      environment.posHomeUrl,
+      adminSettingsClient,
+      staffShiftPlanClient,
+    );
+
+    expect(clockText).toContain('Clocked In');
+  });
 });

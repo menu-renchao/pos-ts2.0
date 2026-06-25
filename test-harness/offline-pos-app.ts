@@ -650,6 +650,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let currentKdsCategoryRequired = localStorage.getItem('currentKdsCategoryRequired') === 'true';
       let currentKdsCategoryDiscountAllowance = localStorage.getItem('currentKdsCategoryDiscountAllowance') !== 'false';
       let currentRoundingStrategy = localStorage.getItem('currentRoundingStrategy') || 'no_rounding';
+      let currentShiftScheduleEnabled = localStorage.getItem('offlineShiftScheduleEnabled') === 'true';
+      let currentShiftPlans = readStoredJson('offlineShiftPlans', []);
       let currentCategoryName = '';
       let currentOrderChargeRate = 0;
       let currentOrderChargeLabel = '';
@@ -1603,6 +1605,16 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         return '';
       }
 
+      function shiftStaffIdForPassword(password) {
+        if (password === '123') {
+          return 55;
+        }
+        if (password === '11') {
+          return 11;
+        }
+        return NaN;
+      }
+
       function staffHasPermission(password, permission) {
         if (password === '11') {
           return true;
@@ -1645,6 +1657,30 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       window.addEventListener('offline-staff-permissions-updated', (event) => {
         updateStaffPermissionOverrides(event.detail);
       });
+
+      window.addEventListener('offline-shift-schedule-updated', (event) => {
+        currentShiftScheduleEnabled = Boolean(event.detail?.shiftScheduleEnabled);
+        currentShiftPlans = Array.isArray(event.detail?.shiftPlans) ? event.detail.shiftPlans : [];
+      });
+
+      function currentEmployeeShiftPlan() {
+        const staffId = shiftStaffIdForPassword(currentEmployeePassword);
+        return currentShiftPlans.find((plan) => Number(plan.staffId) === staffId) || null;
+      }
+
+      function canCurrentEmployeeClockIn() {
+        if (!currentShiftScheduleEnabled) {
+          return true;
+        }
+        const plan = currentEmployeeShiftPlan();
+        if (!plan) {
+          return false;
+        }
+        return (
+          Number(plan.earliestClockInOffset || 0) >= 0 &&
+          Number(plan.startOffsetMinutes || 0) >= Number(plan.earliestClockInOffset || 0)
+        );
+      }
 
       function canOpenReportWithPassword(password) {
         return (
@@ -2766,6 +2802,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       });
       checkInButton.addEventListener('click', () => {
         if (clockState === 'off') {
+          if (!canCurrentEmployeeClockIn()) {
+            clockText.textContent = 'Cannot Clock In';
+            renderClockControls();
+            return;
+          }
           const staff = currentEmployeeStaff();
           currentClockStaffSnapshot = {
             staffName: staff.name,

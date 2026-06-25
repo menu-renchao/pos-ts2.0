@@ -1,5 +1,8 @@
+import type { AdminSettingsClient } from '../../clients/pos-api/admin-settings.client.js';
+import type { StaffShiftPlanClient } from '../../clients/pos-api/staff-shift-plan.client.js';
 import type { AdminPage } from '../../pages/pos/admin.page.js';
 import type { PosHomePage } from '../../pages/pos/home.page.js';
+import { adminSettings } from '../../test-data/pos/admin-settings.js';
 import { staffDiscountRoleSamples } from '../../test-data/pos/permissions.js';
 import { step } from '../../utils/step.js';
 
@@ -109,6 +112,39 @@ export class AttendanceFlow {
         wage: await this.adminPage.readAttendanceWage(),
         wageType: await this.adminPage.readAttendanceWageType(),
       };
+    });
+  }
+
+  async checkInWithinEarliestAllowedTime(
+    homeUrl: string,
+    adminSettingsClient: AdminSettingsClient,
+    staffShiftPlanClient: StaffShiftPlanClient,
+  ): Promise<string> {
+    return step('配置最早打卡时间后员工在允许时间内打卡', async () => {
+      await adminSettingsClient.setSetting(adminSettings.shiftSchedule, true);
+      await staffShiftPlanClient.saveShiftPlan({
+        staffId: 55,
+        workDayOffset: 0,
+        startOffsetMinutes: 5,
+        endOffsetMinutes: 5,
+        earliestClockInOffset: 5,
+      });
+
+      await this.homePage.open(homeUrl);
+      await this.homePage.applyOfflineShiftSchedule(
+        (await adminSettingsClient.readSetting(adminSettings.shiftSchedule)) === true,
+        await staffShiftPlanClient.readShiftPlans(),
+      );
+      await this.homePage.logoutAndLogin('123');
+      await this.homePage.openCheckIn();
+      const clockText = await this.homePage.readClockText();
+
+      await this.homePage.openCheckIn();
+      await this.homePage.clickCheckoutButton();
+      await staffShiftPlanClient.deleteShiftPlan(55);
+      await adminSettingsClient.setSetting(adminSettings.shiftSchedule, false);
+
+      return clockText;
     });
   }
 }
