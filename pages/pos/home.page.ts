@@ -19,6 +19,10 @@ export class PosHomePage extends PageObject {
   readonly passwordInput: Locator;
   readonly savePasswordButton: Locator;
 
+  private readonly licenseContainer: Locator;
+  private readonly licenseOkButton: Locator;
+  private readonly licenseInput: Locator;
+  private readonly licenseRow: Locator;
   private readonly adminPageRoot: Locator;
   private readonly cancelEditButton: Locator;
   private readonly backToWorkButton: Locator;
@@ -49,10 +53,11 @@ export class PosHomePage extends PageObject {
 
   constructor(page: Page) {
     super(page);
-    this.homeRoot = page.getByTestId('pos-home');
+    // 兼容离线模式（data-testid）和 live 模式（原生 ID / 文本）
+    this.homeRoot = page.locator('[data-testid="pos-home"]').or(page.locator('#welcome'));
     this.adminPageRoot = page.getByTestId('admin-page');
-    this.togoButton = page.getByTestId('home-togo');
-    this.recallButton = page.getByTestId('home-recall');
+    this.togoButton = page.getByTestId('home-togo').or(page.locator('#m4btbx').getByText('To Go', { exact: true }));
+    this.recallButton = page.getByTestId('home-recall').or(page.locator('#recallbt'));
     this.callerButton = page.getByTestId('home-caller');
     this.adminButton = page.getByTestId('home-admin');
     this.reservationButton = page.getByTestId('home-reservation');
@@ -60,8 +65,12 @@ export class PosHomePage extends PageObject {
     this.deliveryButton = page.getByTestId('home-delivery');
     this.dineInButton = page.getByTestId('home-dine-in');
     this.pickupButton = page.getByTestId('home-pickup');
-    this.passwordInput = page.getByTestId('employee-password');
-    this.savePasswordButton = page.getByTestId('employee-password-save');
+    this.passwordInput = page.getByTestId('employee-password').or(page.locator('#pwipt'));
+    this.savePasswordButton = page.getByTestId('employee-password-save').or(page.locator('#ds'));
+    this.licenseContainer = page.locator('#skIptBx');
+    this.licenseOkButton = page.locator('#skok');
+    this.licenseInput = page.locator('#sknm');
+    this.licenseRow = page.locator('.skOneRow');
     this.backToWorkButton = page.getByTestId('clock-back-to-work');
     this.breakButton = page.getByTestId('clock-break');
     this.cashInOutButton = page.getByTestId('home-cash-in-out');
@@ -78,7 +87,7 @@ export class PosHomePage extends PageObject {
     this.messageCenterButton = page.getByTestId('home-message-center');
     this.messageCenterRoot = page.getByTestId('message-center');
     this.moreAddButton = page.getByTestId('edit-more-add');
-    this.orderPageRoot = page.getByTestId('order-page');
+    this.orderPageRoot = page.getByTestId('order-page').or(page.locator('#orderDishes'));
     this.reportButton = page.getByTestId('home-report');
     this.reportPasswordPanel = page.getByTestId('report-password-panel');
     this.saveEditButton = page.getByTestId('edit-save');
@@ -92,7 +101,85 @@ export class PosHomePage extends PageObject {
   async open(homeUrl: string): Promise<void> {
     await step('打开 POS 首页', async () => {
       await this.page.goto(homeUrl);
-      await expect(this.homeRoot).toBeVisible();
+      await this.chooseAvailableLicenseIfVisible(8_000);
+      // 移除遮罩层，确保 PIN 输入框可交互
+      await this.page.evaluate(() => {
+        const cover = document.getElementById('floatcoverblock');
+        if (cover) cover.style.display = 'none';
+        const kb = document.getElementById('mykbflbx');
+        if (kb) kb.style.display = 'none';
+      });
+      // 如果 PIN 密码输入框可见，则执行密码登录
+      const pinInput = this.page.locator('#pwipt');
+      if (await pinInput.isVisible()) {
+        await this.inputLoginPassword('11');
+      }
+      await this.chooseAvailableLicenseIfVisible(5_000);
+      if (await pinInput.isVisible()) {
+        await this.inputLoginPassword('11');
+      }
+      // 移除可能残留的遮罩层
+      await this.page.evaluate(() => {
+        const cover = document.getElementById('floatcoverblock');
+        if (cover) cover.style.display = 'none';
+      });
+      // 等待首页就绪：离线模式等 pos-home，live 模式等可点击的 To Go 功能入口
+      if (await this.togoButton.isVisible()) {
+        await expect(this.togoButton).toBeVisible();
+      } else {
+        await expect(this.homeRoot).toBeVisible({ timeout: 15_000 });
+      }
+    });
+  }
+
+  private async chooseAvailableLicenseIfVisible(timeout: number): Promise<void> {
+    const appeared = await this.licenseContainer
+      .waitFor({ state: 'visible', timeout })
+      .then(() => true)
+      .catch(() => this.licenseContainer.isVisible());
+    if (appeared) {
+      await this.chooseAvailableLicense();
+      await expect(this.page.locator('#pwipt')).toBeVisible({ timeout: 20_000 });
+    }
+  }
+
+  async chooseAvailableLicense(): Promise<void> {
+    await step('选择可用 License', async () => {
+      await expect(this.licenseContainer).toBeVisible({ timeout: 20_000 });
+      await expect(this.licenseInput).toBeVisible();
+      // 等待 License 列表加载完成
+      await expect(this.licenseRow.first()).toBeVisible({ timeout: 15_000 });
+      // 点击第一个 Not in use 的 PC License
+      const pcLicense = this.licenseRow.filter({ hasText: 'Not in use' }).filter({ hasText: 'PC' }).first();
+      await expect(pcLicense).toBeVisible({ timeout: 10_000 });
+      await pcLicense.click();
+      // 点击确认按钮
+      for (let retryCount = 0; retryCount < 3 && (await this.licenseOkButton.isVisible()); retryCount += 1) {
+        await this.licenseOkButton.click();
+        await waitUntil(async () => !(await this.licenseContainer.isVisible()), {
+          description: 'License 选择弹层关闭',
+          intervalMs: 200,
+          timeoutMs: 5_000,
+        }).catch(() => undefined);
+      }
+      await expect(this.licenseContainer).toBeHidden({ timeout: 10_000 });
+    });
+  }
+
+  async inputLoginPassword(password: string): Promise<void> {
+    await step('输入 PIN 密码并提交', async () => {
+      const pinInput = this.page.locator('#pwipt');
+      const hasNumPanel = (await this.page.locator('#numpanel').count()) > 0;
+      if (hasNumPanel) {
+        // live 模式：#pwipt 是 readonly，需要通过数字键盘输入
+        for (const digit of password) {
+          await this.page.locator(`#numpanel td:has-text("${digit}")`).first().click();
+        }
+      } else {
+        // 离线模式：直接 fill 输入框
+        await pinInput.fill(password);
+      }
+      await this.page.locator('#ds').click();
     });
   }
 
@@ -209,7 +296,7 @@ export class PosHomePage extends PageObject {
   async clickRecall(): Promise<void> {
     await step('从首页进入 Recall 页面', async () => {
       await this.recallButton.click();
-      await expect(this.page.getByTestId('recall-page')).toBeVisible();
+      await expect(this.page.getByTestId('recall-page').or(this.page.locator('.recall'))).toBeVisible();
     });
   }
 

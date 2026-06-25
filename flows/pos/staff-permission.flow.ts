@@ -100,6 +100,7 @@ export class StaffPermissionFlow {
 
   async rejectWholeOrderDiscountAboveServerLimitWithoutPassword(homeUrl: string): Promise<WholeOrderDiscountPermissionResult> {
     await this.homePage.open(homeUrl);
+    await this.homePage.logout();
     await this.homePage.inputEmployeePassword(staffDiscountRoleSamples.server.password);
     await this.homePage.clickDineIn();
     await this.orderDishesPage.openFoodWithoutTax(staffDiscountSamples.openFoodName, staffDiscountSamples.openFoodPrice);
@@ -115,6 +116,7 @@ export class StaffPermissionFlow {
 
   async applyWholeOrderDiscountAboveServerLimitWithManagerPassword(homeUrl: string): Promise<AuthorizedWholeOrderDiscountResult> {
     await this.homePage.open(homeUrl);
+    await this.homePage.logout();
     await this.homePage.inputEmployeePassword(staffDiscountRoleSamples.server.password);
     await this.homePage.clickDineIn();
     await this.orderDishesPage.openFoodWithoutTax(staffDiscountSamples.openFoodName, staffDiscountSamples.openFoodPrice);
@@ -132,6 +134,7 @@ export class StaffPermissionFlow {
     homeUrl: string,
   ): Promise<BossAuthorizedWholeOrderDiscountResult> {
     await this.homePage.open(homeUrl);
+    await this.homePage.logout();
     await this.homePage.inputEmployeePassword(staffDiscountRoleSamples.server.password);
     await this.homePage.clickDineIn();
     await this.orderDishesPage.openFoodWithoutTax(staffDiscountSamples.openFoodName, staffDiscountSamples.openFoodPrice);
@@ -150,6 +153,7 @@ export class StaffPermissionFlow {
 
   async applyItemDiscountAboveServerLimitWithManagerPassword(homeUrl: string): Promise<AuthorizedItemDiscountResult> {
     await this.homePage.open(homeUrl);
+    await this.homePage.logout();
     await this.homePage.inputEmployeePassword(staffDiscountRoleSamples.server.password);
     await this.homePage.clickTogo();
     await this.orderDishesPage.openFoodWithoutTax(
@@ -175,6 +179,7 @@ export class StaffPermissionFlow {
     homeUrl: string,
   ): Promise<BossAuthorizedItemDiscountResult> {
     await this.homePage.open(homeUrl);
+    await this.homePage.logout();
     await this.homePage.inputEmployeePassword(staffDiscountRoleSamples.server.password);
     await this.homePage.clickTogo();
     await this.orderDishesPage.openFoodWithoutTax(
@@ -264,6 +269,7 @@ export class StaffPermissionFlow {
 
       await this.homePage.open(homeUrl);
       await this.homePage.applyOfflineStaffDiscountLimits(await adminStaffClient.readRoleMaxDiscounts());
+      await this.homePage.logout();
       await this.homePage.inputEmployeePassword(staffDiscountRoleSamples.server.password);
       await this.homePage.clickDineIn();
       await this.orderDishesPage.openFoodWithoutTax(
@@ -299,6 +305,7 @@ export class StaffPermissionFlow {
 
       await this.homePage.open(homeUrl);
       await this.homePage.applyOfflineStaffDiscountLimits(await adminStaffClient.readRoleMaxDiscounts());
+      await this.homePage.logout();
       await this.homePage.inputEmployeePassword(staffDiscountRoleSamples.server.password);
       await this.homePage.clickDineIn();
       await this.orderDishesPage.openFoodWithoutTax(
@@ -349,6 +356,7 @@ export class StaffPermissionFlow {
 
       await this.homePage.open(homeUrl);
       await this.homePage.applyOfflineStaffPermissionOverrides(await adminStaffClient.readStaffPermissionOverrides());
+      await this.homePage.logout();
       await this.homePage.inputEmployeePassword(staffSamples.noAnalysis.password);
       await this.homePage.clickAdmin();
       const permissionAlert = await adminPage.clickAnalysisAndReadPermissionAlert();
@@ -375,6 +383,7 @@ export class StaffPermissionFlow {
 
       await this.homePage.open(homeUrl);
       await this.homePage.applyOfflineStaffPermissionOverrides(await adminStaffClient.readStaffPermissionOverrides());
+      await this.homePage.logout();
       await this.homePage.inputEmployeePassword(staffSamples.personalReportOnly.password);
       await this.homePage.clickReport();
       await reportPage.inputPasswordInPopup(staffSamples.personalReportOnly.password);
@@ -400,6 +409,7 @@ export class StaffPermissionFlow {
         await this.homePage.open(homeUrl);
         await this.homePage.applyOfflineStaffPermissionOverrides(await adminStaffClient.readStaffPermissionOverrides());
         await this.homePage.refresh();
+        await this.homePage.logout();
         await this.homePage.inputEmployeePassword(staffSample.password);
         await this.homePage.clickAdmin();
         await adminPage.enterStaff();
@@ -425,6 +435,7 @@ export class StaffPermissionFlow {
   ): Promise<WholeOrderDiscountPermissionResult> {
     const recallPage = this.requireRecallPage();
     await this.homePage.open(homeUrl);
+    await this.homePage.logout();
     await this.homePage.inputEmployeePassword(staffDiscountRoleSamples.server.password);
     await this.homePage.clickPickup();
     await this.orderDishesPage.openFoodWithoutTax(
@@ -449,6 +460,7 @@ export class StaffPermissionFlow {
   ): Promise<CanceledRecallWholeOrderDiscountResult> {
     const recallPage = this.requireRecallPage();
     await this.homePage.open(homeUrl);
+    await this.homePage.logout();
     await this.homePage.inputEmployeePassword(staffDiscountRoleSamples.server.password);
     await this.homePage.clickPickup();
     await this.orderDishesPage.openFoodWithoutTax(

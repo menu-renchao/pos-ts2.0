@@ -36,8 +36,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <button data-testid="home-report">Report</button>
       <button data-testid="home-support">Support</button>
       <button data-testid="home-message-center">Message Center</button>
-      <input data-testid="employee-password" type="password" />
-      <button data-testid="employee-password-save">Save</button>
+      <input data-testid="employee-password" id="pwipt" type="password" />
+      <button data-testid="employee-password-save" id="ds">Save</button>
       <div data-testid="clock-text" role="status"></div>
       <button data-testid="clock-break" hidden>Break</button>
       <button data-testid="clock-back-to-work" hidden>Back To Work</button>

@@ -62,7 +62,6 @@ export class CallerFlow {
   async callDineInOrderWithGuestNameAndClear(homeUrl: string): Promise<DineInCallerNameResult> {
     return step('Dine In 下单带客名后叫号并销号', async () => {
       await this.homePage.open(homeUrl);
-      await this.homePage.inputEmployeePassword('11');
       await this.homePage.clickDineIn();
       await this.orderDishesPage.openFoodWithoutTax(openFoodDish.name, openFoodDish.price);
       await this.orderDishesPage.inputGuestName(callerGuestName);
@@ -94,7 +93,6 @@ export class CallerFlow {
   async callDineInOrderWithoutGuestNameAndClear(homeUrl: string): Promise<DineInCallerTableResult> {
     return step('Dine In 下单无客名后按桌号叫号并销号', async () => {
       await this.homePage.open(homeUrl);
-      await this.homePage.inputEmployeePassword('11');
       await this.homePage.clickDineIn();
       await this.orderDishesPage.openFoodWithoutTax(openFoodDish.name, openFoodDish.price);
       await this.orderDishesPage.saveOrder();

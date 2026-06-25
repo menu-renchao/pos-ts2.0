@@ -24,6 +24,7 @@ export class OrderDishesPage extends PageObject {
   private readonly itemPrice: Locator;
   private readonly itemPriceInput: Locator;
   private readonly itemPriceSubmitButton: Locator;
+  private readonly itemQuantityButton: Locator;
   private readonly itemQuantityInput: Locator;
   private readonly itemQuantitySubmitButton: Locator;
   private readonly unitPriceInput: Locator;
@@ -120,9 +121,9 @@ export class OrderDishesPage extends PageObject {
 
   constructor(page: Page) {
     super(page);
-    this.menuCategories = page.getByTestId('order-menu-category');
-    this.menuGroups = page.getByTestId('order-menu-group');
-    this.menuItems = page.getByTestId('order-menu-item');
+    this.menuCategories = page.getByTestId('order-menu-category').or(page.locator('#odctgbx .dishCatBx'));
+    this.menuGroups = page.getByTestId('order-menu-group').or(page.locator('#grplist .grplistbt'));
+    this.menuItems = page.getByTestId('order-menu-item').or(page.locator('#oddishes .dishBx'));
     this.customerInfoPopup = page.getByTestId('customer-info-popup');
     this.customerNameInput = page.getByTestId('customer-name');
     this.customerPhoneInput = page.getByTestId('customer-phone');
@@ -135,8 +136,9 @@ export class OrderDishesPage extends PageObject {
     this.itemPrice = page.getByTestId('order-item-price');
     this.itemPriceInput = page.getByTestId('item-price-input');
     this.itemPriceSubmitButton = page.getByTestId('item-price-submit');
-    this.itemQuantityInput = page.getByTestId('order-item-quantity');
-    this.itemQuantitySubmitButton = page.getByTestId('order-item-quantity-submit');
+    this.itemQuantityButton = page.getByTestId('order-item-quantity-button').or(page.locator('#chgNumicon'));
+    this.itemQuantityInput = page.getByTestId('order-item-quantity').or(page.locator('#number-input'));
+    this.itemQuantitySubmitButton = page.getByTestId('order-item-quantity-submit').or(page.locator('#number-input-submit'));
     this.unitPriceInput = page.getByTestId('order-unit-price-input');
     this.unitPriceSubmitButton = page.getByTestId('order-unit-price-submit');
     this.itemTax = page.getByTestId('order-tax');
@@ -163,11 +165,11 @@ export class OrderDishesPage extends PageObject {
     this.openFoodKeyboardLanguage = page.getByTestId('open-food-keyboard-language');
     this.openFoodKeyboardSubmitButton = page.getByTestId('open-food-keyboard-submit');
     this.openFoodKeyboardTextInput = page.getByTestId('open-food-keyboard-text');
-    this.orderInventoryButton = page.getByTestId('order-inventory');
+    this.orderInventoryButton = page.getByTestId('order-inventory').or(page.locator('#inventorymanage'));
     this.orderItemName = page.getByTestId('order-item-name');
     this.orderCurrentQuickCombo = page.getByTestId('order-current-quick-combo');
     this.orderItemCount = page.getByTestId('order-item-count');
-    this.orderLineItems = page.getByTestId('order-line-item');
+    this.orderLineItems = page.getByTestId('order-line-item').or(page.locator('#orderDishes [id*="itemdsh"]'));
     this.orderGuestNameInput = page.getByTestId('order-guest-name');
     this.orderOptions = page.getByTestId('order-option');
     this.orderReward = page.getByTestId('order-reward');
@@ -176,7 +178,7 @@ export class OrderDishesPage extends PageObject {
     this.orderDiscountPercentInput = page.getByTestId('order-discount-percent');
     this.orderDiscountSubmitButton = page.getByTestId('order-discount-submit');
     this.orderDiscountWholeOrderPrice = page.getByTestId('order-discount-whole-order-price');
-    this.orderExitButton = page.getByTestId('order-exit');
+    this.orderExitButton = page.getByTestId('order-exit').or(page.locator('#exitBt'));
     this.orderModifyButton = page.getByTestId('order-modify');
     this.orderCharge20Button = page.getByTestId('order-charge-20');
     this.orderChargeZeroButton = page.getByTestId('order-charge-0');
@@ -185,9 +187,9 @@ export class OrderDishesPage extends PageObject {
     this.pickupButton = page.getByTestId('order-pickup');
     this.pickupInfoSubmitButton = page.getByTestId('pickup-info-submit');
     this.openFoodCategory = page.getByTestId('open-food-category');
-    this.orderRoot = page.getByTestId('order-page');
+    this.orderRoot = page.getByTestId('order-page').or(page.locator('#orderDishes'));
     this.currentCategoryName = page.getByTestId('current-category-name');
-    this.saveOrderButton = page.getByTestId('order-save');
+    this.saveOrderButton = page.getByTestId('order-save').or(page.locator('#odSave'));
     this.saveOrderAlert = page.getByTestId('order-save-alert');
     this.sendKitchenButton = page.getByTestId('order-send-kitchen');
     this.settleButton = page.getByTestId('order-settle');
@@ -218,7 +220,7 @@ export class OrderDishesPage extends PageObject {
     this.searchResultItems = page.getByTestId('order-search-result-item');
     this.tipInput = page.getByTestId('order-tip');
     this.tipToast = page.getByTestId('order-tip-toast');
-    this.reduceItemButton = page.getByTestId('order-reduce-item');
+    this.reduceItemButton = page.getByTestId('order-reduce-item').or(page.locator('#reduce1icon'));
     this.voidItemButton = page.getByTestId('order-void-item');
     this.comboItemButton = page.getByTestId('order-combo-item');
     this.comboSubItemEditNoteButton = page.getByTestId('combo-edit-note');
@@ -261,7 +263,24 @@ export class OrderDishesPage extends PageObject {
   async selectMenuGroup(groupName = ''): Promise<void> {
     await step(`选择点单菜单组 ${groupName}`, async () => {
       if (groupName) {
-        await this.menuGroups.filter({ hasText: exactText(groupName) }).click();
+        const group = this.menuGroups.filter({ hasText: exactText(groupName) });
+        let isCurrentGroup = await group.evaluate((el) => el.classList.contains('grplistbtAct')).catch(() => false);
+        if (isCurrentGroup) {
+          return;
+        }
+        if (await group.isVisible()) {
+          await group.click().catch(async (error: unknown) => {
+            isCurrentGroup = await group.evaluate((el) => el.classList.contains('grplistbtAct')).catch(() => false);
+            if (!isCurrentGroup) {
+              throw error;
+            }
+          });
+          return;
+        }
+        isCurrentGroup = await group.evaluate((el) => el.classList.contains('grplistbtAct')).catch(() => false);
+        if (!isCurrentGroup) {
+          await group.click();
+        }
       }
     });
   }
@@ -317,8 +336,20 @@ export class OrderDishesPage extends PageObject {
 
   async openInventoryPage(): Promise<void> {
     await step('从点单页打开库存页', async () => {
-      await this.orderInventoryButton.click();
-      await expect(this.page.getByTestId('inventory-page')).toBeVisible();
+      // live 模式下需要先点击 More 按钮展开浮动按钮区
+      const isInventoryVisible = await this.orderInventoryButton.isVisible();
+      if (!isInventoryVisible) {
+        await this.page.evaluate(() => {
+          const chg = document.getElementById('chgMenuBx');
+          if (chg) (chg as HTMLElement).click();
+        });
+      }
+      // 用 JS 触发 inventory 页面打开
+      await this.page.evaluate(() => {
+        const inv = document.getElementById('inventorymanage');
+        if (inv) (inv as HTMLElement).click();
+      });
+      await expect(this.page.getByTestId('inventory-page').or(this.page.locator('#inventory'))).toBeVisible({ timeout: 15_000 });
     });
   }
 
@@ -463,9 +494,7 @@ export class OrderDishesPage extends PageObject {
 
   async changeSelectedItemQuantityAndReadToast(quantity: number): Promise<string> {
     return step(`修改当前菜品数量为 ${quantity} 并读取权限提示`, async () => {
-      await this.itemQuantityInput.fill(String(quantity));
-      await new Promise((resolve) => setTimeout(resolve, 200));
-      await this.itemQuantitySubmitButton.click();
+      await this.setSelectedItemQuantity(quantity);
       return ((await this.tipToast.textContent()) ?? '').trim();
     });
   }
@@ -561,10 +590,20 @@ export class OrderDishesPage extends PageObject {
 
   async changeSelectedItemQuantity(quantity: number): Promise<void> {
     await step(`修改当前菜品数量为 ${quantity}`, async () => {
-      await this.itemQuantityInput.fill(String(quantity));
-      await new Promise((resolve) => setTimeout(resolve, 200));
-      await this.itemQuantitySubmitButton.click();
+      await this.setSelectedItemQuantity(quantity);
     });
+  }
+
+  private async setSelectedItemQuantity(quantity: number): Promise<void> {
+    if (!(await this.itemQuantityInput.isVisible())) {
+      await this.selectOrderLineBeforeAction(this.itemQuantityButton);
+      await expect(this.itemQuantityButton).toBeVisible({ timeout: 5_000 });
+      await this.itemQuantityButton.click();
+      await expect(this.itemQuantityInput).toBeVisible();
+    }
+    await this.itemQuantityInput.fill(String(quantity));
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    await this.itemQuantitySubmitButton.click();
   }
 
   async readSubtotal(): Promise<number> {
@@ -581,14 +620,31 @@ export class OrderDishesPage extends PageObject {
 
   async reduceFirstItemToZero(): Promise<void> {
     await step('将当前订单首个菜品数量减少为 0', async () => {
+      await this.selectOrderLineBeforeAction(this.reduceItemButton);
       await this.reduceItemButton.click();
     });
   }
 
   async reduceSelectedItemQuantity(): Promise<void> {
     await step('减少当前菜品数量', async () => {
+      await this.selectOrderLineBeforeAction(this.reduceItemButton);
       await this.reduceItemButton.click();
     });
+  }
+
+  private async selectOrderLineBeforeAction(actionButton: Locator): Promise<void> {
+    if (!(await actionButton.isVisible())) {
+      const liveOrderItemName = this.page.locator('#oodbtbx .itemNameORDEREDtxt').last();
+      if (await liveOrderItemName.isVisible()) {
+        await liveOrderItemName.click();
+        return;
+      }
+      const lineCount = await this.orderLineItems.count();
+      if (lineCount > 0) {
+        const line = this.orderLineItems.nth(lineCount - 1);
+        await line.click();
+      }
+    }
   }
 
   async searchMenuItem(keyword: string): Promise<void> {

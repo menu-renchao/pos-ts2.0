@@ -105,11 +105,14 @@ export class RecallPage extends PageObject {
 
   constructor(page: Page) {
     super(page);
-    this.recentOrderButton = page.getByTestId('recall-recent-order');
+    this.recentOrderButton = page
+      .getByTestId('recall-recent-order')
+      .or(page.locator('#reordersmylst .ReactVirtualized__Grid__innerScrollContainer > div > div > div').first())
+      .or(page.locator('[role="gridcell"]').first());
     this.recalledOptions = page.getByTestId('recall-item-option');
     this.recalledComboSubItems = page.getByTestId('recall-combo-sub-item');
     this.recallItems = page.getByTestId('recall-order-item');
-    this.recallRoot = page.getByTestId('recall-page');
+    this.recallRoot = page.getByTestId('recall-page').or(page.locator('.recall'));
     this.discountAmountInput = page.getByTestId('recall-order-discount-amount');
     this.discountAmountSubmitButton = page.getByTestId('recall-order-discount-submit');
     this.discountButton = page.getByTestId('recall-order-discount');
@@ -119,7 +122,7 @@ export class RecallPage extends PageObject {
     this.amountInputs = page.getByTestId('split-amount-input');
     this.combinedTipButton = page.getByTestId('recall-combine-split');
     this.customerName = page.getByTestId('recall-customer-name');
-    this.editButton = page.getByTestId('recall-edit');
+    this.editButton = page.getByTestId('recall-edit').or(page.locator('#editodicon'));
     this.evenSplitButton = page.getByTestId('split-even-order');
     this.guestNameInput = page.getByTestId('recall-guest-name');
     this.itemSplitButton = page.getByTestId('split-by-item');

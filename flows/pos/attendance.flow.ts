@@ -17,7 +17,6 @@ export class AttendanceFlow {
   async checkoutBossAndReadAttendanceWage(homeUrl: string): Promise<AttendanceWageResult> {
     return step('Boss Checkout 后读取 Staff Attendance 工资记录', async () => {
       await this.homePage.open(homeUrl);
-      await this.homePage.inputEmployeePassword(staffDiscountRoleSamples.boss.password);
 
       await this.homePage.clickAdmin();
       await this.adminPage.enterStaff();
