@@ -511,6 +511,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         <div data-testid="split-item-prices"></div>
         <div data-testid="split-order-prices"></div>
         <button data-testid="split-sub-order-settle">Settle Suborder</button>
+        <input data-testid="sub-order-pay-amount" />
         <button data-testid="sub-order-cash-pay">Cash Pay Suborder</button>
       </section>
       <div data-testid="recall-sub-orders"></div>
@@ -1145,6 +1146,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const splitItemPrices = document.querySelector('[data-testid="split-item-prices"]');
       const splitOrderPrices = document.querySelector('[data-testid="split-order-prices"]');
       const splitSubOrderSettleButton = document.querySelector('[data-testid="split-sub-order-settle"]');
+      const subOrderPayAmountInput = document.querySelector('[data-testid="sub-order-pay-amount"]');
       const subOrderCashPayButton = document.querySelector('[data-testid="sub-order-cash-pay"]');
       const recallSubOrders = document.querySelector('[data-testid="recall-sub-orders"]');
       const callerPage = document.querySelector('[data-testid="caller-page"]');
@@ -4385,10 +4387,15 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         renderRecallOrderItems();
       });
       splitSaveAmountButton.addEventListener('click', () => {
+        if (selectedRecallOrder?.splitOrderPrices?.length) {
+          selectedRecallOrder.subOrderStatuses = selectedRecallOrder.splitOrderPrices.map(() => 'New Order');
+          selectedRecallOrder.subOrderItems = selectedRecallOrder.splitOrderPrices.map(() => []);
+          renderSubOrders(selectedRecallOrder);
+        }
         renderRecallOrderItems();
       });
       splitUnsplitButton.addEventListener('click', () => {
-        if (selectedRecallOrder?.subOrderStatuses?.some((status) => status === 'Paid')) {
+        if (selectedRecallOrder?.subOrderStatuses?.some((status) => status === 'Paid' || status === 'Partially Paid')) {
           recallVoidAlert.textContent =
             'The operation cannot be done due to partial payment! Please revoke the payment before preceeding.';
           return;
@@ -4416,7 +4423,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       });
       subOrderCashPayButton.addEventListener('click', () => {
         if (selectedRecallOrder && selectedSubOrderIndex !== null) {
-          selectedRecallOrder.subOrderStatuses[selectedSubOrderIndex] = 'Paid';
+          const requestedPaymentAmount = Number(subOrderPayAmountInput.value || '0') / 100;
+          const subOrderTotal = Number(selectedRecallOrder.splitOrderPrices?.[selectedSubOrderIndex] || 0);
+          selectedRecallOrder.subOrderStatuses[selectedSubOrderIndex] =
+            requestedPaymentAmount > 0 && requestedPaymentAmount < subOrderTotal ? 'Partially Paid' : 'Paid';
+          subOrderPayAmountInput.value = '';
         }
         renderSubOrders(selectedRecallOrder);
       });

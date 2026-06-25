@@ -88,6 +88,7 @@ export class RecallPage extends PageObject {
   private readonly splitByDragButton: Locator;
   private readonly splitItemPrices: Locator;
   private readonly splitOrderPrices: Locator;
+  private readonly subOrderPayAmountInput: Locator;
   private readonly subOrderCards: Locator;
   private readonly subOrderSettleButton: Locator;
   private readonly unsplitButton: Locator;
@@ -166,6 +167,7 @@ export class RecallPage extends PageObject {
     this.splitByDragButton = page.getByTestId('split-by-drag');
     this.splitItemPrices = page.getByTestId('split-item-price');
     this.splitOrderPrices = page.getByTestId('split-order-price');
+    this.subOrderPayAmountInput = page.getByTestId('sub-order-pay-amount');
     this.subOrderCards = page.getByTestId('recall-sub-order-card');
     this.subOrderSettleButton = page.getByTestId('split-sub-order-settle');
     this.unsplitButton = page.getByTestId('split-unsplit');
@@ -579,6 +581,13 @@ export class RecallPage extends PageObject {
 
   async payCurrentSubOrderByCash(): Promise<void> {
     await step('现金支付当前子单', async () => {
+      await this.page.getByTestId('sub-order-cash-pay').click();
+    });
+  }
+
+  async payCurrentSubOrderByCashAmount(amountInCents: number): Promise<void> {
+    await step(`现金支付当前子单指定金额 ${amountInCents}`, async () => {
+      await this.subOrderPayAmountInput.fill(String(amountInCents));
       await this.page.getByTestId('sub-order-cash-pay').click();
     });
   }

@@ -8,7 +8,7 @@ These contracts gate migration for all active source rows under `stage2/*.py`.
 
 | source_file | source_class | source_test_patterns | target_specs | target_flow_methods |
 |---|---|---|---|---|
-| stage2/test_order_operation.py | TestOrderOperation | seat split including `test_seat_split_void_no_shared_item`, `test_seat_split_void_have_shared_item`, `test_seat_split_modify_tip`, and `test_seat_split_close_unsplit`, amount/even split, semi-pay, multi-pay, refund, void reason, charge clear, discount clear, tips, charge tax, charge edits, order copy/move/combine, split with zero suborder, send combo, option blank-click, language switch | tests/stage2/order-operation.spec.ts | `OrderEntryFlow.voidSecondSeatSplitSubOrderAndReadTip`, `OrderEntryFlow.preventVoidSeatSplitSubOrderWithSharedPaidItem`, `OrderEntryFlow.modifyFirstSeatSplitSubOrderTipAndReadTips`, `OrderEntryFlow.preventUnsplitSeatSplitOrderAfterPartialPayment`, `AdvancedOrderFlow.splitBySeat`, `AdvancedOrderFlow.splitByAmount`, `AdvancedOrderFlow.combineOrders`, `AdvancedOrderFlow.copyOrder`, `AdvancedOrderFlow.moveItemsOrOrder`, `AdvancedOrderFlow.refundByItemOrAmount`, `AdvancedOrderFlow.applyAndEditCharges`, `AdvancedOrderFlow.applyDiscountReason` |
+| stage2/test_order_operation.py | TestOrderOperation | seat split including `test_seat_split_void_no_shared_item`, `test_seat_split_void_have_shared_item`, `test_seat_split_modify_tip`, and `test_seat_split_close_unsplit`, amount/even split including `test_amount_split_semi_paid_add`, multi-pay, refund, void reason, charge clear, discount clear, tips, charge tax, charge edits, order copy/move/combine, split with zero suborder, send combo, option blank-click, language switch | tests/stage2/order-operation.spec.ts | `OrderEntryFlow.voidSecondSeatSplitSubOrderAndReadTip`, `OrderEntryFlow.preventVoidSeatSplitSubOrderWithSharedPaidItem`, `OrderEntryFlow.modifyFirstSeatSplitSubOrderTipAndReadTips`, `OrderEntryFlow.preventUnsplitSeatSplitOrderAfterPartialPayment`, `OrderEntryFlow.preventUnsplitAmountSplitOrderAfterPartialPayment`, `AdvancedOrderFlow.splitBySeat`, `AdvancedOrderFlow.splitByAmount`, `AdvancedOrderFlow.combineOrders`, `AdvancedOrderFlow.copyOrder`, `AdvancedOrderFlow.moveItemsOrOrder`, `AdvancedOrderFlow.refundByItemOrAmount`, `AdvancedOrderFlow.applyAndEditCharges`, `AdvancedOrderFlow.applyDiscountReason` |
 
 ### Preconditions
 
@@ -20,6 +20,7 @@ These contracts gate migration for all active source rows under `stage2/*.py`.
 - POS-19365 creates a Dine In order with guest count 2, one shared non-combo dish, one seat 1 non-combo dish, one seat 2 non-combo dish, and a 5.00 order tip before split.
 - POS-19368 creates a Dine In order with guest count 2, one seat 1 dish, one seat 2 dish, and a 5.00 order tip before saving the seat split.
 - POS-19371 creates a Dine In order with guest count 2, one seat 1 dish, one seat 2 dish, and a 5.00 order tip before attempting to cancel a partially paid seat split.
+- POS-19374 creates a Dine In order with two non-combo dishes and a 5.00 order tip before amount splitting and partially paying suborder 1.
 
 ### Steps
 
@@ -31,6 +32,7 @@ These contracts gate migration for all active source rows under `stage2/*.py`.
 6. POS-19365 path: enter Dine In, set guest count 2, add one shared dish, add seat 1 and seat 2 dishes, add tip 500 cents, save, open Recall, split by seat, cash-pay suborder 1, open suborder 2, attempt suborder void, and read the blocking alert.
 7. POS-19368 path: enter Dine In, set guest count 2, add seat 1 and seat 2 dishes, add tip 500 cents, save, open Recall, split by seat, save split, read suborder 2 tip, edit suborder 1, change tip to 600 cents, save, reopen both suborders, and read their tips.
 8. POS-19371 path: enter Dine In, set guest count 2, add seat 1 and seat 2 dishes, add tip 500 cents, save, open Recall, split by seat, cash-pay suborder 1, reopen the split panel from the suborder list, click Unsplit, and read the blocking alert.
+9. POS-19374 path: enter Dine In, add two non-combo dishes, add tip 500 cents, save, open Recall, split by custom amounts, confirm amount split, cash-pay 1.00 on suborder 1, reopen the split panel, click Unsplit, and read the blocking alert.
 
 ### Expected Assertions
 
@@ -43,6 +45,7 @@ These contracts gate migration for all active source rows under `stage2/*.py`.
 - POS-19365 verifies voiding suborder 2 is blocked after suborder 1 with a shared paid dish is paid, with alert `The order has paid dishes and cannot be voided!`.
 - POS-19368 verifies suborder 1 tip changes to 6.00 and suborder 2 tip remains equal to its value before editing suborder 1.
 - POS-19371 verifies canceling a split after one suborder has been paid is blocked with alert `The operation cannot be done due to partial payment! Please revoke the payment before preceeding.`
+- POS-19374 verifies canceling an amount split after a 1.00 partial cash payment is blocked with alert `The operation cannot be done due to partial payment! Please revoke the payment before preceeding.`
 
 ### Page Responsibilities
 
@@ -53,6 +56,7 @@ These contracts gate migration for all active source rows under `stage2/*.py`.
 - POS-19365 also uses `OrderDishesPage.selectSharedSeat` and `RecallPage.voidOrderAndReadAlert` for shared-item suborder void validation.
 - POS-19368 also uses `RecallPage.saveSplit`, `RecallPage.clickEdit`, and `RecallPage.readOrderTip` to validate per-suborder tip persistence.
 - POS-19371 also uses `RecallPage.unsplitAndReadAlert` to validate the blocked cancel-split action after partial payment.
+- POS-19374 also uses `RecallPage.splitByAmounts`, `RecallPage.saveSplitAmountCreate`, and `RecallPage.payCurrentSubOrderByCashAmount` to validate custom amount split partial payment.
 
 ### Client/Data Responsibilities
 
@@ -63,6 +67,7 @@ These contracts gate migration for all active source rows under `stage2/*.py`.
 - POS-19365 uses `groupSwitchDish` as the shared dish plus `categorySwitchDish` and `posNameDisplayDish` as seat-specific dishes, with no live client dependency in offline mode.
 - POS-19368 uses `groupSwitchDish` and `categorySwitchDish` as the two seat-specific non-combo dishes, with no live client dependency in offline mode.
 - POS-19371 uses `groupSwitchDish` and `categorySwitchDish` as the two seat-specific non-combo dishes, with no live client dependency in offline mode.
+- POS-19374 uses `groupSwitchDish` twice as the two non-combo dishes, with no live client dependency in offline mode.
 
 ### Stub Behavior
 
@@ -72,6 +77,7 @@ These contracts gate migration for all active source rows under `stage2/*.py`.
 - POS-19365 stub behavior marks explicitly shared items, includes shared items in each seat split suborder, and blocks voiding another suborder when a shared item already belongs to a paid suborder.
 - POS-19368 stub behavior initializes per-suborder tip values from the original order tip, then updates only the selected suborder tip when editing a suborder.
 - POS-19371 stub behavior marks the first suborder as paid and blocks Unsplit while any suborder status is `Paid`.
+- POS-19374 stub behavior converts saved amount split prices into suborder statuses, records 1.00 cash as `Partially Paid`, and blocks Unsplit while any suborder status is `Paid` or `Partially Paid`.
 
 ### Live Gaps
 
@@ -84,6 +90,7 @@ These contracts gate migration for all active source rows under `stage2/*.py`.
 | POS-19365-live | Shared item seat assignment, split-by-seat shared item allocation, paid suborder state, and sub_order_void alert selector are only stub-verified | Run live smoke for POS-19365 and record selector/data gaps before removing live gap |
 | POS-19368-live | Split save, suborder card reopen, suborder edit, and per-suborder tip persistence selectors are only stub-verified | Run live smoke for POS-19368 and record selector/data gaps before removing live gap |
 | POS-19371-live | Suborder list split button, suborder partial-payment state, and Unsplit blocking alert selector are only stub-verified | Run live smoke for POS-19371 and record selector/data gaps before removing live gap |
+| POS-19374-live | Amount split keypad, suborder partial cash payment, settlement cancel confirmation, and Unsplit blocking alert selector are only stub-verified | Run live smoke for POS-19374 and record selector/data gaps before removing live gap |
 
 ## Recall Search, Sort, Edit, And Card Detail Flow
 
