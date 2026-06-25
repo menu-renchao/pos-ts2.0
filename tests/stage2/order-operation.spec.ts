@@ -177,4 +177,20 @@ test.describe('stage2 order operation migration', () => {
     expect(result.firstRefundAmount).toBe(-result.firstPaymentAmount);
     expect(result.secondRefundAmount).toBe(-result.secondPaymentAmount);
   });
+
+  test('POS-21845 按多个固定金额分单后母单总额不变且子单金额正确', {
+    annotation: [jiraIssue('POS-21845')],
+  }, async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.splitLargeOrderByMultipleAmountsAndReadTotals(environment.posHomeUrl);
+
+    expect(result.parentTotalAfterSplit).toBe(result.parentTotalBeforeSplit);
+    expect(result.firstSubOrderTotal).toBe(20);
+    expect(result.secondSubOrderTotal).toBe(20);
+  });
 });

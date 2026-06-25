@@ -110,6 +110,13 @@ export type AmountSplitUnsplitSuccessResult = {
   splitOrderCountAfterUnsplit: number;
 };
 
+export type AmountSplitFixedTotalsResult = {
+  parentTotalBeforeSplit: number;
+  parentTotalAfterSplit: number;
+  firstSubOrderTotal: number;
+  secondSubOrderTotal: number;
+};
+
 export type EvenSplitTipUnsplitResult = {
   combinedTipText: string;
 };
@@ -721,6 +728,37 @@ export class OrderEntryFlow {
     const splitOrderCountAfterUnsplit = (await this.recallPage.readSplitOrderPrices()).length;
 
     return { splitOrderCountAfterUnsplit, unsplitAlertText };
+  }
+
+  async splitLargeOrderByMultipleAmountsAndReadTotals(homeUrl: string): Promise<AmountSplitFixedTotalsResult> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.changeSelectedItemPrice(200);
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.openSplitOrder();
+    const parentTotalBeforeSplit = await this.recallPage.readOrderTotal();
+    await this.recallPage.splitByAmounts([20, 20, 20, 20, 20]);
+    const parentTotalAfterSplit = await this.recallPage.readOrderTotal();
+    await this.recallPage.saveSplit();
+    await this.recallPage.saveSplitAmountCreate();
+    await this.recallPage.openSubOrder(1);
+    const firstSubOrderTotal = await this.recallPage.readOrderTotal();
+    await this.recallPage.openSubOrder(2);
+    const secondSubOrderTotal = await this.recallPage.readOrderTotal();
+
+    return {
+      firstSubOrderTotal,
+      parentTotalAfterSplit,
+      parentTotalBeforeSplit,
+      secondSubOrderTotal,
+    };
   }
 
   async unsplitEvenSplitOrderAfterEditingFirstSubOrderTip(homeUrl: string): Promise<EvenSplitTipUnsplitResult> {

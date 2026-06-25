@@ -2946,9 +2946,13 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           card.addEventListener('click', () => {
             selectedSubOrderIndex = index;
             recallOrderStatus.textContent = order.subOrderStatuses[index];
-            renderRecallItemRows(order.subOrderItems?.[index] || []);
-            const total = Number(((order.subOrderItems?.[index] || []).reduce((sum, item) => sum + Number(item.price || 0), 0)).toFixed(2));
-            recallItemCount.textContent = formatItemCount(order.subOrderItems?.[index] || []);
+            const subOrderItems = order.subOrderItems?.[index] || [];
+            renderRecallItemRows(subOrderItems);
+            const itemTotal = Number((subOrderItems.reduce((sum, item) => sum + Number(item.price || 0), 0)).toFixed(2));
+            const total = subOrderItems.length > 0
+              ? itemTotal
+              : Number(order.splitOrderPrices?.[index] || 0);
+            recallItemCount.textContent = formatItemCount(subOrderItems);
             recallOrderSubtotal.textContent = String(total);
             recallOrderTotal.textContent = String(total);
             recallOrderTip.textContent = formatTip(order.subOrderTips?.[index] ?? order.tip ?? 0);
@@ -4517,7 +4521,26 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         renderSplitPrices(selectedRecallOrder?.splitOrderPrices || []);
         renderSubOrders(selectedRecallOrder);
       });
-      splitAddSuborderButton.addEventListener('click', () => {});
+      function refreshAmountSplitDraft() {
+        draftSplitMode = 'amount';
+        draftSplitPrices = Array.from(document.querySelectorAll('[data-testid="split-amount-input"]'))
+          .map((amountInput) => Number(amountInput.value || '0'))
+          .filter((price) => price > 0);
+        draftSplitItemPrices = [...draftSplitPrices];
+        renderSplitPrices(draftSplitPrices);
+        renderSplitItemPrices(draftSplitItemPrices);
+      }
+
+      function bindSplitAmountInput(input) {
+        input.addEventListener('input', refreshAmountSplitDraft);
+      }
+
+      splitAddSuborderButton.addEventListener('click', () => {
+        const input = document.createElement('input');
+        input.dataset.testid = 'split-amount-input';
+        bindSplitAmountInput(input);
+        splitPanel.insertBefore(input, splitSaveButton);
+      });
       splitSaveButton.addEventListener('click', () => {
         if (selectedRecallOrder) {
           selectedRecallOrder.splitOrderPrices = [...draftSplitPrices];
@@ -4564,17 +4587,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         renderSplitPrices(draftSplitPrices);
         renderSplitItemPrices(draftSplitItemPrices);
       });
-      splitAmountInputs.forEach((input) => {
-        input.addEventListener('input', () => {
-          draftSplitMode = 'amount';
-          draftSplitPrices = Array.from(splitAmountInputs)
-            .map((amountInput) => Number(amountInput.value || '0'))
-            .filter((price) => price > 0);
-          draftSplitItemPrices = [...draftSplitPrices];
-          renderSplitPrices(draftSplitPrices);
-          renderSplitItemPrices(draftSplitItemPrices);
-        });
-      });
+      splitAmountInputs.forEach(bindSplitAmountInput);
       splitSubOrderSettleButton.addEventListener('click', () => {
         selectedSubOrderIndex = 0;
       });
