@@ -8,7 +8,7 @@ These contracts gate migration for all active source rows under `stage2/*.py`.
 
 | source_file | source_class | source_test_patterns | target_specs | target_flow_methods |
 |---|---|---|---|---|
-| stage2/test_order_operation.py | TestOrderOperation | seat split, amount/even split, semi-pay, multi-pay, refund, void reason, charge clear, discount clear, tips, charge tax, charge edits, order copy/move/combine, split with zero suborder, send combo, option blank-click, language switch | tests/stage2/order-operation.spec.ts | `AdvancedOrderFlow.splitBySeat`, `AdvancedOrderFlow.splitByAmount`, `AdvancedOrderFlow.combineOrders`, `AdvancedOrderFlow.copyOrder`, `AdvancedOrderFlow.moveItemsOrOrder`, `AdvancedOrderFlow.refundByItemOrAmount`, `AdvancedOrderFlow.applyAndEditCharges`, `AdvancedOrderFlow.applyDiscountReason` |
+| stage2/test_order_operation.py | TestOrderOperation | seat split including `test_seat_split_void_no_shared_item`, amount/even split, semi-pay, multi-pay, refund, void reason, charge clear, discount clear, tips, charge tax, charge edits, order copy/move/combine, split with zero suborder, send combo, option blank-click, language switch | tests/stage2/order-operation.spec.ts | `OrderEntryFlow.voidSecondSeatSplitSubOrderAndReadTip`, `AdvancedOrderFlow.splitBySeat`, `AdvancedOrderFlow.splitByAmount`, `AdvancedOrderFlow.combineOrders`, `AdvancedOrderFlow.copyOrder`, `AdvancedOrderFlow.moveItemsOrOrder`, `AdvancedOrderFlow.refundByItemOrAmount`, `AdvancedOrderFlow.applyAndEditCharges`, `AdvancedOrderFlow.applyDiscountReason` |
 
 ### Preconditions
 
@@ -16,6 +16,7 @@ These contracts gate migration for all active source rows under `stage2/*.py`.
 - Split, charge, discount, refund, and tip data are typed.
 - Manual and auto charge configuration is represented by typed clients.
 - Table/seat context is explicit when a source case uses `open_seat`.
+- POS-19362 creates a Dine In order with guest count 2, `groupSwitchDish` assigned to seat 1, `categorySwitchDish` assigned to seat 2, and a 5.00 order tip before split.
 
 ### Steps
 
@@ -23,6 +24,7 @@ These contracts gate migration for all active source rows under `stage2/*.py`.
 2. Execute the operation family: split, combine, copy, move, refund, charge edit, discount clear, send, or language switch.
 3. Open affected order/suborder when needed.
 4. Read numeric totals, item ownership, payment/refund state, charge/tip state, and visible prompts.
+5. POS-19362 path: enter Dine In, set guest count 2, add one non-combo dish to seat 1, add one non-combo dish to seat 2, add tip 500 cents, save, open Recall, split by seat, cash-pay suborder 1, read suborder 1 tip, void suborder 2, reopen both suborders, and read suborder 1 tip plus suborder 2 status.
 
 ### Expected Assertions
 
@@ -31,23 +33,27 @@ These contracts gate migration for all active source rows under `stage2/*.py`.
 - Refund by item/amount honors tax, discount, charge, and payment constraints.
 - Required/optional discount reasons display and persist correctly.
 - Tip suggestions and credit-part-pay behavior match source calculations.
+- POS-19362 verifies suborder 1 tip remains 5.00 after voiding suborder 2, and suborder 2 status becomes `Void`.
 
 ### Page Responsibilities
 
 - `OrderDishesPage`, `SplitOrderPage`, `SettlementPage`, and `RecallPage` own UI actions and reads.
 - Page objects expose numeric reads for all money fields.
 - Page objects do not contain split/combine strategy; strategy stays in flows.
+- POS-19362 uses `PosHomePage.open`, `PosHomePage.clickDineIn`, `PosHomePage.clickRecall`, `OrderDishesPage.setGuestCount`, `OrderDishesPage.selectSeat`, `OrderDishesPage.addMenuItem`, `OrderDishesPage.addTip`, `OrderDishesPage.saveOrder`, `RecallPage.openSplitOrder`, `RecallPage.splitBySeat`, `RecallPage.openSubOrder`, `RecallPage.settleSubOrder`, `RecallPage.payCurrentSubOrderByCash`, `RecallPage.readOrderTip`, `RecallPage.voidOrder`, and `RecallPage.readOrderStatus`.
 
 ### Client/Data Responsibilities
 
 - `StubPosOrderClient` owns order graph, payment, refund, and charge state.
 - `StubChargeClient` owns manual/auto charge setup.
 - `test-data/pos/dishes.ts`, `test-data/pos/payments.ts`, and `test-data/pos/admin-settings.ts` own operation samples.
+- POS-19362 uses `groupSwitchDish` and `categorySwitchDish` as the two seat-specific non-combo dishes and has no live client dependency in offline mode.
 
 ### Stub Behavior
 
 - Stub mode models order graph operations deterministically.
 - Stub refund/payment operations update explicit order state only through flow/client calls.
+- POS-19362 stub behavior assigns added order items to the currently selected seat, creates split suborders from item seat ownership, marks cash-paid suborder state separately, and voids only the selected suborder so another suborder's tip remains unchanged.
 
 ### Live Gaps
 
@@ -56,6 +62,7 @@ These contracts gate migration for all active source rows under `stage2/*.py`.
 | state | Live order graph operations can be eventually consistent | Add settled-state polling with `waitUntil` |
 | external-device | Credit/tip/refund payment device behavior cannot be proven offline | Add device simulator or live fixture |
 | selector | Split/refund/charge dialogs need stable DOM confirmation | Confirm selectors or request `data-testid` |
+| POS-19362-live | Show Seat setting, Dine In seat selector, split-by-seat suborder order-number lookup, suborder cash payment, and void confirmation selectors are only stub-verified | Run live smoke for POS-19362 and record selector/data gaps before removing live gap |
 
 ## Recall Search, Sort, Edit, And Card Detail Flow
 

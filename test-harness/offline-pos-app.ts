@@ -273,6 +273,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <div data-testid="order-item-count">0</div>
       <div data-testid="order-item-price">0</div>
       <input data-testid="order-guest-name" />
+      <input data-testid="order-guest-count" />
+      <button data-testid="order-seat-1">Seat 1</button>
+      <button data-testid="order-seat-2">Seat 2</button>
       <input data-testid="order-item-quantity" />
       <button data-testid="order-item-quantity-submit">Submit Quantity</button>
       <input data-testid="order-unit-price-input" hidden />
@@ -658,6 +661,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let currentOrderType = 'togo';
       let currentCardTender = '';
       let currentCustomerName = null;
+      let currentGuestCount = 1;
+      let currentSeatNumber = 1;
       let currentDeliveryInfoRows = [];
       let currentComboOptionCount = 0;
       let currentGlobalOptionCount = 0;
@@ -934,6 +939,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const orderItemCount = document.querySelector('[data-testid="order-item-count"]');
       const orderItemPrice = document.querySelector('[data-testid="order-item-price"]');
       const orderGuestNameInput = document.querySelector('[data-testid="order-guest-name"]');
+      const orderGuestCountInput = document.querySelector('[data-testid="order-guest-count"]');
+      const orderSeatOneButton = document.querySelector('[data-testid="order-seat-1"]');
+      const orderSeatTwoButton = document.querySelector('[data-testid="order-seat-2"]');
       const orderSearchInput = document.querySelector('[data-testid="order-search"]');
       const orderSearchClearButton = document.querySelector('[data-testid="order-search-clear"]');
       const orderSearchResult = document.querySelector('[data-testid="order-search-result"]');
@@ -2120,6 +2128,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           inventorySku: dish.inventorySku || '',
           taxRate: dish.taxRate,
           benefitPrice: dish.benefitPrice,
+          seat: currentSeatNumber,
           unitPriceItem: Boolean(dish.unitPriceItem),
           quickCombo: Boolean(dish.quickCombo),
           state: '',
@@ -3775,6 +3784,15 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           currentOrderTip = tipInCents / 100;
         }
       });
+      orderGuestCountInput.addEventListener('input', () => {
+        currentGuestCount = Number(orderGuestCountInput.value || '1');
+      });
+      orderSeatOneButton.addEventListener('click', () => {
+        currentSeatNumber = 1;
+      });
+      orderSeatTwoButton.addEventListener('click', () => {
+        currentSeatNumber = currentGuestCount >= 2 ? 2 : 1;
+      });
       splitEvenButton.addEventListener('click', () => {
         currentSplitPartTip = Number((currentOrderTip / 2).toFixed(2));
       });
@@ -4206,6 +4224,12 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       });
       recallVoidOrderButton.addEventListener('click', () => {
         if (selectedRecallOrder) {
+          if (selectedSubOrderIndex !== null && selectedRecallOrder.subOrderStatuses?.[selectedSubOrderIndex]) {
+            selectedRecallOrder.subOrderStatuses[selectedSubOrderIndex] = 'Void';
+            recallOrderStatus.textContent = 'Void';
+            renderSubOrders(selectedRecallOrder);
+            return;
+          }
           selectedRecallOrder.status = 'Voided';
           if (recallRestoreInventoryCheckbox.checked) {
             restoreOrderInventory(selectedRecallOrder);
@@ -4275,8 +4299,25 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         renderSplitPrices(draftSplitPrices);
       });
       splitBySeatButton.addEventListener('click', () => {
-        draftSplitItemPrices = (selectedRecallOrder?.items || []).slice(0, 2).map((item) => Number(item.price));
-        draftSplitPrices = [...draftSplitItemPrices];
+        if (selectedRecallOrder) {
+          const items = selectedRecallOrder.items || [];
+          const seatOneItems = items.filter((item) => Number(item.seat || 1) === 1);
+          const seatTwoItems = items.filter((item) => Number(item.seat || 1) === 2);
+          selectedRecallOrder.subOrderItems = [
+            seatOneItems.length ? seatOneItems : items.slice(0, 1),
+            seatTwoItems.length ? seatTwoItems : items.slice(1, 2),
+          ];
+          selectedRecallOrder.subOrderStatuses = ['New Order', 'New Order'];
+          selectedRecallOrder.splitOrderPrices = selectedRecallOrder.subOrderItems.map((subOrderItems) =>
+            Number(subOrderItems.reduce((sum, item) => sum + Number(item.price || 0), 0).toFixed(2)),
+          );
+          draftSplitItemPrices = [...selectedRecallOrder.splitOrderPrices];
+          draftSplitPrices = [...selectedRecallOrder.splitOrderPrices];
+          renderSubOrders(selectedRecallOrder);
+        } else {
+          draftSplitItemPrices = [];
+          draftSplitPrices = [];
+        }
         renderSplitItemPrices(draftSplitItemPrices);
         renderSplitPrices(draftSplitPrices);
       });

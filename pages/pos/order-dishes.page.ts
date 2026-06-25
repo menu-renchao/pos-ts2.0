@@ -57,6 +57,7 @@ export class OrderDishesPage extends PageObject {
   private readonly orderItemName: Locator;
   private readonly orderCurrentQuickCombo: Locator;
   private readonly orderItemCount: Locator;
+  private readonly guestCountInput: Locator;
   private readonly orderLineItems: Locator;
   private readonly orderGuestNameInput: Locator;
   private readonly orderOptions: Locator;
@@ -103,6 +104,8 @@ export class OrderDishesPage extends PageObject {
   private readonly searchInput: Locator;
   private readonly searchResult: Locator;
   private readonly searchResultItems: Locator;
+  private readonly seatOneButton: Locator;
+  private readonly seatTwoButton: Locator;
   private readonly tipInput: Locator;
   private readonly tipToast: Locator;
   private readonly reduceItemButton: Locator;
@@ -169,6 +172,7 @@ export class OrderDishesPage extends PageObject {
     this.orderItemName = page.getByTestId('order-item-name');
     this.orderCurrentQuickCombo = page.getByTestId('order-current-quick-combo');
     this.orderItemCount = page.getByTestId('order-item-count');
+    this.guestCountInput = page.getByTestId('order-guest-count');
     this.orderLineItems = page.getByTestId('order-line-item').or(page.locator('#orderDishes [id*="itemdsh"]'));
     this.orderGuestNameInput = page.getByTestId('order-guest-name');
     this.orderOptions = page.getByTestId('order-option');
@@ -218,6 +222,8 @@ export class OrderDishesPage extends PageObject {
     this.searchInput = page.getByTestId('order-search');
     this.searchResult = page.getByTestId('order-search-result');
     this.searchResultItems = page.getByTestId('order-search-result-item');
+    this.seatOneButton = page.getByTestId('order-seat-1');
+    this.seatTwoButton = page.getByTestId('order-seat-2');
     this.tipInput = page.getByTestId('order-tip');
     this.tipToast = page.getByTestId('order-tip-toast');
     this.reduceItemButton = page.getByTestId('order-reduce-item').or(page.locator('#reduce1icon'));
@@ -331,6 +337,23 @@ export class OrderDishesPage extends PageObject {
   async inputGuestName(name: string): Promise<void> {
     await step(`输入点单客名 ${name}`, async () => {
       await this.orderGuestNameInput.fill(name);
+    });
+  }
+
+  async setGuestCount(guestCount: number): Promise<void> {
+    await step(`设置点单人数 ${guestCount}`, async () => {
+      await this.guestCountInput.fill(String(guestCount));
+      await this.guestCountInput.dispatchEvent('input');
+    });
+  }
+
+  async selectSeat(seatNumber: 1 | 2): Promise<void> {
+    await step(`选择座位 ${seatNumber}`, async () => {
+      if (seatNumber === 1) {
+        await this.seatOneButton.click();
+        return;
+      }
+      await this.seatTwoButton.click();
     });
   }
 
