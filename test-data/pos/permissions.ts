@@ -18,6 +18,7 @@ export const staffDiscountSamples = {
   openFoodName: 'item1',
   openFoodPrice: 10,
   excessiveWholeOrderDiscountPercent: 20.01,
+  managerAuthorizedWholeOrderDiscountPercent: 30,
   permissionExceededTip: 'The discount exceeds permission limit，please input password',
   failedLoginTip: 'Failed to login',
 } as const;

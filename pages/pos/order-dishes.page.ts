@@ -1,6 +1,7 @@
 import type { Locator, Page } from '@playwright/test';
 import { expect } from '@playwright/test';
 
+import { parseCurrency } from '../../utils/money.js';
 import { step } from '../../utils/step.js';
 import { PageObject } from '../shared/page-object.js';
 
@@ -57,6 +58,7 @@ export class OrderDishesPage extends PageObject {
   private readonly orderOptions: Locator;
   private readonly orderReward: Locator;
   private readonly orderDiscountButton: Locator;
+  private readonly orderDiscountAmount: Locator;
   private readonly orderDiscountPercentInput: Locator;
   private readonly orderDiscountSubmitButton: Locator;
   private readonly orderDiscountWholeOrderPrice: Locator;
@@ -164,6 +166,7 @@ export class OrderDishesPage extends PageObject {
     this.orderOptions = page.getByTestId('order-option');
     this.orderReward = page.getByTestId('order-reward');
     this.orderDiscountButton = page.getByTestId('order-discount');
+    this.orderDiscountAmount = page.getByTestId('order-discount-amount');
     this.orderDiscountPercentInput = page.getByTestId('order-discount-percent');
     this.orderDiscountSubmitButton = page.getByTestId('order-discount-submit');
     this.orderDiscountWholeOrderPrice = page.getByTestId('order-discount-whole-order-price');
@@ -671,6 +674,13 @@ export class OrderDishesPage extends PageObject {
 
   async readDiscountTip(): Promise<string> {
     return step('读取整单折扣权限提示', async () => ((await this.tipToast.textContent()) ?? '').trim());
+  }
+
+  async readWholeOrderDiscountSummary(): Promise<{ subtotal: number; discount: number }> {
+    return step('读取整单折扣后的订单金额摘要', async () => ({
+      subtotal: await this.readSubtotal(),
+      discount: parseCurrency((await this.orderDiscountAmount.textContent()) ?? '0'),
+    }));
   }
 
   async readChargeLabel(): Promise<string> {
