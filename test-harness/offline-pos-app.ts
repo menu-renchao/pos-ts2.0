@@ -534,12 +534,14 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
     <section data-testid="emenu-order-page" hidden>
       <button data-testid="emenu-new-category">New Category</button>
       <button data-testid="emenu-new-category-first-item">Emenu First Item</button>
+      <button data-testid="emenu-add-item">Add Item</button>
       <button data-testid="emenu-add-cart">Add Cart</button>
       <button data-testid="emenu-cart">Cart</button>
       <button data-testid="emenu-place-order">Place Order</button>
       <section data-testid="emenu-order-card" hidden>
         <button data-testid="emenu-order-card-close">Close Order Card</button>
       </section>
+      <div data-testid="emenu-sold-out-popup" hidden>Insufficient stock</div>
       <button data-testid="emenu-call-server">Call Server</button>
       <button data-testid="emenu-switch-pos">POS</button>
     </section>
@@ -685,6 +687,14 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         price: 10,
         taxRate: 0.0825,
       });
+      let currentEmenuItem = readStoredJson('offlineEmenuItem', {
+        category: 'New Category',
+        group: 'Emenu Menu',
+        name: 'Emenu First Item',
+        price: 8,
+        taxRate: 0,
+      });
+      let currentEmenuItemQuantity = 0;
       let currentKioskCartItems = [];
       let currentKioskLicenseNames = readStoredJson('offlineKioskLicenseNames', [
         'Kiosk License A',
@@ -1140,10 +1150,13 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const emenuOrderPage = document.querySelector('[data-testid="emenu-order-page"]');
       const emenuContinueButton = document.querySelector('[data-testid="emenu-continue"]');
       const emenuSwitchPosButton = document.querySelector('[data-testid="emenu-switch-pos"]');
+      const emenuFirstCategoryItemButton = document.querySelector('[data-testid="emenu-new-category-first-item"]');
+      const emenuAddItemButton = document.querySelector('[data-testid="emenu-add-item"]');
       const emenuPlaceOrderButton = document.querySelector('[data-testid="emenu-place-order"]');
       const emenuOrderCard = document.querySelector('[data-testid="emenu-order-card"]');
       const emenuOrderCardCloseButton = document.querySelector('[data-testid="emenu-order-card-close"]');
       const emenuCallServerButton = document.querySelector('[data-testid="emenu-call-server"]');
+      const emenuSoldOutPopup = document.querySelector('[data-testid="emenu-sold-out-popup"]');
       const kioskPage = document.querySelector('[data-testid="kiosk-page"]');
       const kioskSelectLicenseButton = document.querySelector('[data-testid="kiosk-select-license"]');
       const kioskOrderTypeToGoButton = document.querySelector('[data-testid="kiosk-order-type-to-go"]');
@@ -1410,16 +1423,28 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       }
 
       function createEmenuOrder() {
+        const quantity = Math.max(currentEmenuItemQuantity, 1);
+        const unitPrice = Number(currentEmenuItem.price || 0);
         const order = {
           orderNumber: String(nextOrderNumber++),
           orderCardId: '',
-          items: [{ name: 'Emenu First Item', price: 8, unitPrice: 8, quantity: 1, state: '', taxRate: 0 }],
+          items: [
+            {
+              name: currentEmenuItem.name,
+              price: unitPrice * quantity,
+              unitPrice,
+              quantity,
+              state: '',
+              taxRate: Number(currentEmenuItem.taxRate || 0),
+              inventorySku: currentEmenuItem.inventorySku || '',
+            },
+          ],
           itemOption: null,
           tip: 0,
           splitTip: null,
           status: '',
           customerName: null,
-          subtotal: 8,
+          subtotal: unitPrice * quantity,
           settlementTotal: null,
           crmMember: null,
           crmDiscountRate: 0,
@@ -1445,6 +1470,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         latestSavedOrderItems = [...order.items];
         selectedRecallOrder = order;
         emenuLatestOrder = order;
+        currentEmenuItemQuantity = 0;
         return order;
       }
 
@@ -1455,6 +1481,19 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       function renderKioskItem() {
         kioskItemButton.textContent = currentKioskItem.name;
         kioskCartCount.textContent = String(currentKioskCartItems.length);
+      }
+
+      function renderEmenuItem() {
+        emenuFirstCategoryItemButton.textContent = currentEmenuItem.name;
+      }
+
+      function tryAddCurrentEmenuItem() {
+        const limit = Number(inventoryRecord(currentEmenuItem.name).quantity || 0);
+        if (limit > 0 && currentEmenuItemQuantity >= limit) {
+          emenuSoldOutPopup.hidden = false;
+          return;
+        }
+        currentEmenuItemQuantity += 1;
       }
 
       function kioskCartQuantityForCurrentItem() {
@@ -1815,6 +1854,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       window.addEventListener('offline-kiosk-item-updated', (event) => {
         currentKioskItem = event.detail || currentKioskItem;
         renderKioskItem();
+      });
+
+      window.addEventListener('offline-emenu-item-updated', (event) => {
+        currentEmenuItem = event.detail || currentEmenuItem;
+        renderEmenuItem();
       });
 
       window.addEventListener('offline-kiosk-license-names-updated', (event) => {
@@ -3372,6 +3416,12 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         document.querySelector('[data-testid="pos-home"]').hidden = false;
         showPanel('home');
       });
+      emenuFirstCategoryItemButton.addEventListener('click', () => {
+        tryAddCurrentEmenuItem();
+      });
+      emenuAddItemButton.addEventListener('click', () => {
+        tryAddCurrentEmenuItem();
+      });
       emenuPlaceOrderButton.addEventListener('click', () => {
         createEmenuOrder();
         emenuOrderCard.hidden = false;
@@ -4425,6 +4475,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       applyAutoClockOutIfDue();
       renderClockControls();
       renderKioskItem();
+      renderEmenuItem();
       renderKioskLicenses();
       if (window.location.pathname.includes('/kpos/kiosklite')) {
         showPanel('kiosk');

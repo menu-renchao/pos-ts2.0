@@ -30,6 +30,16 @@ export const kioskLimitedStockDish = {
   taxRate: 0.0825,
 } as const satisfies DishSample;
 
+export const emenuLimitedStockDish = {
+  id: 'dish-emenu-item5',
+  name: 'Item5',
+  price: 8,
+  category: 'New Category',
+  group: 'Emenu Menu',
+  inventorySku: 'EMENU-ITEM5',
+  taxRate: 0,
+} as const satisfies DishSample;
+
 export const splitDiscountDishes: readonly DishSample[] = [
   {
     id: 'dish-superman-item1',

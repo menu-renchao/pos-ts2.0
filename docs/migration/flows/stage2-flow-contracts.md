@@ -120,7 +120,7 @@ These contracts gate migration for all active source rows under `stage2/*.py`.
 
 | source_file | source_class | source_test_patterns | target_specs | target_flow_methods |
 |---|---|---|---|---|
-| stage2/test_operate_item_inventory.py | TestOperateItemInventory | `test_check_invetory_of_kiosk_product_line`, emenu product-line inventory, auto-recovery inventory, OO preorder inventory | tests/stage2/operate-item-inventory.spec.ts | `ProductLineInventoryFlow.verifyProductLineInventory`, `ProductLineInventoryFlow.configureAutoRecovery`, `ProductLineInventoryFlow.verifyPreorderInventoryDeduction` |
+| stage2/test_operate_item_inventory.py | TestOperateItemInventory | `test_check_invetory_of_kiosk_product_line`, `test_check_inventory_of_emenu_product_line`, auto-recovery inventory, OO preorder inventory | tests/stage2/operate-item-inventory.spec.ts | `ProductLineInventoryFlow.verifyProductLineInventory`, `ProductLineInventoryFlow.verifyEmenuProductLineInventory`, `ProductLineInventoryFlow.configureAutoRecovery`, `ProductLineInventoryFlow.verifyPreorderInventoryDeduction` |
 | stage2/test_kiosk_interaction.py | TestKioskInteraction | Admin Kiosk Inventory sold-out sync to Admin Menu | tests/stage2/kiosk-interaction.spec.ts | `ProductLineInventoryFlow.syncKioskInventoryToAdminMenu` |
 
 ### Preconditions
@@ -128,6 +128,7 @@ These contracts gate migration for all active source rows under `stage2/*.py`.
 - Product line samples exist for POS, Kiosk, Emenu, and OO.
 - Inventory state is represented separately per product line.
 - POS-43892 uses Kiosk product line item `Crabmeat Salad` with Limited Stock quantity `2`.
+- POS-43893 uses Emenu product line item `Item5` with Limited Stock quantity `2`.
 - Auto-recovery or preorder cases requiring clock/date control remain `live-gap` until controllable time is available.
 
 ### Steps
@@ -138,6 +139,7 @@ These contracts gate migration for all active source rows under `stage2/*.py`.
 4. Execute source-specific order/preorder or recovery action.
 5. Verify inventory sync or deduction.
 6. POS-43892 path: enter POS Dine In, open Inventory, search KIOSK Item `Crabmeat Salad`, set Limited Stock `2`, open Kiosk To Go, add `Crabmeat Salad` 3 times, view order, checkout, skip optional info twice, pay cash, and assert the Kiosk sold-out popup is visible.
+7. POS-43893 path: enter POS Dine In, open Inventory, search EMENU Item `Item5`, set Limited Stock `2`, open Emenu order page, select new category first item, increment quantity to `4`, add to cart, place order, and assert the Emenu sold-out popup is visible.
 
 ### Expected Assertions
 
@@ -145,11 +147,13 @@ These contracts gate migration for all active source rows under `stage2/*.py`.
 - Admin Kiosk Inventory changes sync to Admin Menu where required.
 - Preorder or recovery changes update inventory only when the source scenario requires it.
 - POS-43892 must prove the business behavior, not only selectors: configured stock is `2`, requested Kiosk quantity is `3`, and the third add is blocked by a visible insufficient-stock/sold-out popup.
+- POS-43893 must prove the business behavior, not only selectors: configured stock is `2`, requested Emenu quantity is `4`, and the fourth add is blocked by a visible insufficient-stock/sold-out popup.
 
 ### Page Responsibilities
 
 - `InventoryPage`, `MenuAdminPage`, `KioskHomePage`, `EmenuMainPage`, and OO pages own surface-specific reads.
 - POS-43892 uses `PosHomePage.open`, `PosHomePage.clickDineIn`, `OrderDishesPage.openInventoryPage`, `InventoryPage.searchInventory`, `InventoryPage.openInventorySetting`, `InventoryPage.setLimitedStockQuantity`, `InventoryPage.saveInventoryConfig`, `KioskHomePage.createCommonItem`, `KioskHomePage.openFromPosHomeUrl`, `KioskHomePage.selectLicense`, `KioskHomePage.chooseToGoOrderType`, `KioskHomePage.addItem`, `KioskHomePage.viewOrder`, `KioskHomePage.checkout`, `KioskHomePage.skipOptionalInfo`, `KioskHomePage.cashPayment`, and `KioskHomePage.isSoldOutPopupVisible`.
+- POS-43893 uses `PosHomePage.open`, `PosHomePage.clickDineIn`, `OrderDishesPage.openInventoryPage`, `InventoryPage.searchInventory`, `InventoryPage.openInventorySetting`, `InventoryPage.setLimitedStockQuantity`, `InventoryPage.saveInventoryConfig`, `EmenuOrderPage.createFirstCategoryItem`, `EmenuMainPage.openAndStartOrder`, `EmenuOrderPage.orderNewCategoryFirstItem`, and `EmenuOrderPage.isSoldOutPopupVisible`.
 - Cross-product-line sync rules stay in flows and clients.
 
 ### Client/Data Responsibilities
@@ -157,6 +161,7 @@ These contracts gate migration for all active source rows under `stage2/*.py`.
 - `StubMenuClient` owns item availability and product-line inventory limits by product line.
 - `test-data/pos/dishes.ts` owns inventory-sensitive item samples.
 - POS-43892 uses `kioskLimitedStockDish`.
+- POS-43893 uses `emenuLimitedStockDish`.
 - `test-data/pos/pos-enums.ts` owns product-line enum values.
 
 ### Stub Behavior
@@ -164,6 +169,7 @@ These contracts gate migration for all active source rows under `stage2/*.py`.
 - Stub product-line inventory is isolated per product line.
 - Stub sync must be explicit and traceable from the flow method.
 - Offline Kiosk cart rejects the third matching item when `offlineInventoryRecords[Crabmeat Salad].quantity` is `2`.
+- Offline Emenu item quantity rejects the fourth matching item when `offlineInventoryRecords[Item5].quantity` is `2`.
 
 ### Live Gaps
 
@@ -172,6 +178,7 @@ These contracts gate migration for all active source rows under `stage2/*.py`.
 | time | Auto-recovery depends on local/system time | Add controllable clock or mark scoped live gap |
 | cross-system | OO/Kiosk/Emenu surfaces need environment config | Define URLs and selectors per surface |
 | POS-43892-live | Real KIOSK inventory page selectors, `Crabmeat Salad` fixture data, Kiosk sold-out popup selector, and Admin-to-Kiosk inventory sync are not exercised in first-round offline mode | Run live Kiosk product-line inventory smoke for Limited Stock 2 and third-add sold-out popup |
+| POS-43893-live | Real EMENU inventory page selectors, `Item5` fixture data, Emenu add-item and sold-out popup selectors, and POS-to-Emenu inventory sync are not exercised in first-round offline mode | Run live Emenu product-line inventory smoke for Limited Stock 2 and fourth-add sold-out popup |
 
 ## Kiosk, Emenu, And SDI Interaction Flow
 
