@@ -23,6 +23,10 @@ export type AuthorizedItemDiscountResult = {
   discountedPrice: number;
 };
 
+export type BossAuthorizedItemDiscountResult = AuthorizedItemDiscountResult & {
+  managerDeniedTip: string;
+};
+
 export class StaffPermissionFlow {
   constructor(
     private readonly homePage: PosHomePage,
@@ -100,5 +104,33 @@ export class StaffPermissionFlow {
     const discountedPrice = await this.orderDishesPage.readSelectedItemPrice();
 
     return { permissionTip, originalPrice, discountedPrice };
+  }
+
+  async applyItemDiscountAboveManagerLimitWithBossPassword(
+    homeUrl: string,
+  ): Promise<BossAuthorizedItemDiscountResult> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.inputEmployeePassword(staffDiscountRoleSamples.server.password);
+    await this.homePage.clickTogo();
+    await this.orderDishesPage.openFoodWithoutTax(
+      staffDiscountSamples.itemDiscountFirstFoodName,
+      staffDiscountSamples.bossAuthorizedItemDiscountFirstFoodPrice,
+    );
+    await this.orderDishesPage.openFoodWithoutTax(
+      staffDiscountSamples.itemDiscountSecondFoodName,
+      staffDiscountSamples.bossAuthorizedItemDiscountSecondFoodPrice,
+    );
+    await this.orderDishesPage.selectOrderLineItem(1);
+    const originalPrice = await this.orderDishesPage.readSelectedItemPrice();
+
+    await this.orderDishesPage.applyItemDiscountPercent(staffDiscountSamples.bossAuthorizedItemDiscountPercent);
+    const permissionTip = await this.orderDishesPage.readDiscountTip();
+    await this.orderDishesPage.submitManagerPassword(staffDiscountRoleSamples.manager.password);
+    const managerDeniedTip = await this.orderDishesPage.readDiscountTip();
+    await this.orderDishesPage.applyItemDiscountPercent(staffDiscountSamples.bossAuthorizedItemDiscountPercent);
+    await this.orderDishesPage.submitManagerPassword(staffDiscountRoleSamples.boss.password);
+    const discountedPrice = await this.orderDishesPage.readSelectedItemPrice();
+
+    return { permissionTip, managerDeniedTip, originalPrice, discountedPrice };
   }
 }

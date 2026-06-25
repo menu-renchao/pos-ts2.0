@@ -65,4 +65,20 @@ test.describe('stage1 admin staff migration', () => {
       expect(result.originalPrice - result.discountedPrice).toBeCloseTo(result.originalPrice * 0.6, 2);
     },
   );
+
+  test(
+    'POS-31544 Server 提交 85% 单菜折扣时 Manager 权限不足且 Boss 密码应授权成功',
+    {
+      annotation: jiraIssue('POS-31544'),
+    },
+    async ({ environment, page }) => {
+      const flow = new StaffPermissionFlow(new PosHomePage(page), new OrderDishesPage(page));
+
+      const result = await flow.applyItemDiscountAboveManagerLimitWithBossPassword(environment.posHomeUrl);
+
+      expect(result.permissionTip).toContain('The discount exceeds permission limit，please input password');
+      expect(result.managerDeniedTip).toContain('No Permission!');
+      expect(result.originalPrice - result.discountedPrice).toBeCloseTo(result.originalPrice * 0.85, 2);
+    },
+  );
 });

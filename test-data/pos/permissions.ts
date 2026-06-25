@@ -28,4 +28,7 @@ export const staffDiscountSamples = {
   itemDiscountSecondFoodName: 'item2',
   itemDiscountSecondFoodPrice: 6,
   managerAuthorizedItemDiscountPercent: 60,
+  bossAuthorizedItemDiscountFirstFoodPrice: 6,
+  bossAuthorizedItemDiscountSecondFoodPrice: 4,
+  bossAuthorizedItemDiscountPercent: 85,
 } as const;

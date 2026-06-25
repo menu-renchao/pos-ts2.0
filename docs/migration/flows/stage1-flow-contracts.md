@@ -63,7 +63,7 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 
 | source_file | source_class | source_test_patterns | target_specs | target_flow_methods |
 |---|---|---|---|---|
-| stage1/test_admin_staff.py | TestAdminStaff | whole-order max discount, item max discount, recall discount permission, multi-discount, report permission, create staff with selected authority | tests/stage1/admin-staff.spec.ts | `StaffPermissionFlow.rejectWholeOrderDiscountAboveServerLimitWithoutPassword`, `StaffPermissionFlow.applyWholeOrderDiscountAboveServerLimitWithManagerPassword`, `StaffPermissionFlow.applyWholeOrderDiscountAboveManagerLimitWithBossPassword`, `StaffPermissionFlow.applyItemDiscountAboveServerLimitWithManagerPassword`, `StaffPermissionFlow.configureStaffPermissions`, `StaffPermissionFlow.applyOrderDiscountWithAuthorization`, `StaffPermissionFlow.applyItemDiscountWithAuthorization`, `StaffPermissionFlow.verifyReportPermission` |
+| stage1/test_admin_staff.py | TestAdminStaff | whole-order max discount, item max discount, recall discount permission, multi-discount, report permission, create staff with selected authority | tests/stage1/admin-staff.spec.ts | `StaffPermissionFlow.rejectWholeOrderDiscountAboveServerLimitWithoutPassword`, `StaffPermissionFlow.applyWholeOrderDiscountAboveServerLimitWithManagerPassword`, `StaffPermissionFlow.applyWholeOrderDiscountAboveManagerLimitWithBossPassword`, `StaffPermissionFlow.applyItemDiscountAboveServerLimitWithManagerPassword`, `StaffPermissionFlow.applyItemDiscountAboveManagerLimitWithBossPassword`, `StaffPermissionFlow.configureStaffPermissions`, `StaffPermissionFlow.applyOrderDiscountWithAuthorization`, `StaffPermissionFlow.applyItemDiscountWithAuthorization`, `StaffPermissionFlow.verifyReportPermission` |
 
 ### Preconditions
 
@@ -133,6 +133,19 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 | assertions | First prompt contains `The discount exceeds permission limit，please input password`; after Manager authorization, first item original price minus discounted price equals `originalPrice * 0.6`. |
 | stub behavior | Offline harness renders Open Food rows with quantity `1`; item discount authorization compares requested item discount amount against the employee role's whole-order discount amount limit; Server `007` blocks first item `60%`, Manager `006` authorizes it and updates only the selected order line price. |
 | live gaps | Live AdminStaffAPI role setup, selected-line item discount selector, manager password dialog behavior, pre/last discount item price selectors, and Open Food cents/display conversion must be validated in live smoke. |
+
+#### StaffPermissionFlow.applyItemDiscountAboveManagerLimitWithBossPassword
+
+| field | contract |
+|---|---|
+| source | `stage1/test_admin_staff.py::TestAdminStaff::test_item_maximum_discount_with_boss_pwd` |
+| jira | POS-31544 |
+| preconditions | Server/Manager/Boss discount limits are represented by `staffDiscountRoleSamples`; current employee logs in with Server password `007`; Manager password `006` can authorize item discount amounts only within the Manager whole-order limit; Boss password `11` can authorize up to `100%`; source Open Food `item1`/`item2` are represented by no-tax prices `6` and `4` in offline mode. |
+| actions | Open POS home, login as Server, enter To Go, add two Open Food no-tax items, select the first order line, read its original price, submit `85%` item discount, read permission prompt, enter Manager password `006`, read denied prompt, submit `85%` again, enter Boss password `11`, read the first item discounted price. |
+| page methods | `PosHomePage.open`, `PosHomePage.inputEmployeePassword`, `PosHomePage.clickTogo`, `OrderDishesPage.openFoodWithoutTax`, `OrderDishesPage.selectOrderLineItem`, `OrderDishesPage.readSelectedItemPrice`, `OrderDishesPage.applyItemDiscountPercent`, `OrderDishesPage.readDiscountTip`, `OrderDishesPage.submitManagerPassword` |
+| assertions | First prompt contains `The discount exceeds permission limit，please input password`; Manager password `006` leaves the operation blocked with `No Permission!`; Boss password `11` authorizes the discount and first item original price minus discounted price equals `originalPrice * 0.85`. |
+| stub behavior | Offline harness renders Open Food rows with quantity `1`; item discount authorization compares requested item discount amount against the employee role's whole-order discount amount limit; Server `007` blocks first item `85%`, Manager `006` remains blocked because `6 * 0.85` exceeds the `10 * 0.5` manager limit, and Boss `11` updates only the selected order line price. |
+| live gaps | Live AdminStaffAPI role setup, selected-line item discount selector, manager/boss password dialog behavior, pre/last discount item price selectors, and Open Food cents/display conversion must be validated in live smoke. |
 
 ### Expected Assertions
 
