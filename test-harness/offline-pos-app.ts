@@ -4639,6 +4639,16 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           const tipInCents = Number(recallTipInput.value || '0');
           const tipAmount = tipInCents / 100;
           recallTipToast.textContent = largeTipToast(tipInCents, orderTotal({ ...selectedRecallOrder, tip: 0 }));
+          if (selectedSubOrderIndex !== null && selectedRecallOrder.subOrderStatuses?.[selectedSubOrderIndex]) {
+            selectedRecallOrder.subOrderTips = selectedRecallOrder.subOrderTips || [];
+            const previousSubOrderTip = Number(selectedRecallOrder.subOrderTips[selectedSubOrderIndex] || 0);
+            selectedRecallOrder.subOrderTips[selectedSubOrderIndex] = recallTipMethod.value === 'cash'
+              ? roundMoney(previousSubOrderTip + tipAmount)
+              : tipAmount;
+            recallOrderTip.textContent = formatTip(selectedRecallOrder.subOrderTips[selectedSubOrderIndex]);
+            renderSubOrders(selectedRecallOrder);
+            return;
+          }
           selectedRecallOrder.tip = recallTipMethod.value === 'cash'
             ? roundMoney(Number(selectedRecallOrder.tip || 0) + tipAmount)
             : tipAmount;
@@ -4893,7 +4903,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       });
       splitAmountInputs.forEach(bindSplitAmountInput);
       splitSubOrderSettleButton.addEventListener('click', () => {
-        selectedSubOrderIndex = 0;
+        selectedSubOrderIndex = selectedSubOrderIndex ?? 0;
       });
       subOrderCashPayButton.addEventListener('click', () => {
         if (selectedRecallOrder && selectedSubOrderIndex !== null) {

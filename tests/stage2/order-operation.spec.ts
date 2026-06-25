@@ -306,6 +306,21 @@ test.describe('stage2 order operation migration', () => {
     expect(result.combinedTotal).toBeCloseTo(result.firstOrderTotal + result.secondOrderTotal, 2);
   });
 
+  test('POS-25235 平分分单两个子单现金支付后子单 1 可追加现金小费', {
+    annotation: [jiraIssue('POS-25235')],
+  }, async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.addCashTipToFirstPaidEvenSplitSubOrder(environment.posHomeUrl);
+
+    expect(result.firstSubOrderTipAfterCashTip).toBe('1.00');
+    expect(result.secondSubOrderStatusAfterCashPay).toBe('Paid');
+  });
+
   test('POS-27156 编辑订单时修改手动加收名称后重新选择应更新订单加收名称', async ({ environment, page }) => {
     const orderEntryFlow = new OrderEntryFlow(
       new PosHomePage(page),

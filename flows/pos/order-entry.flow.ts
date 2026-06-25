@@ -132,6 +132,11 @@ export type PartialSettleAddTipResult = {
   unpaidAmountAfterTip: number;
 };
 
+export type PaidEvenSplitCashTipResult = {
+  firstSubOrderTipAfterCashTip: string;
+  secondSubOrderStatusAfterCashPay: string;
+};
+
 export type NoOptionCopyTotalsResult = {
   recalledCopiedTotal: number;
   totalAfterCopy: number;
@@ -942,6 +947,39 @@ export class OrderEntryFlow {
     const orderStatus = await this.recallPage.readOrderStatus();
 
     return { originalTotal, orderStatus, unpaidAmountAfterTip };
+  }
+
+  async addCashTipToFirstPaidEvenSplitSubOrder(homeUrl: string): Promise<PaidEvenSplitCashTipResult> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickTogo();
+
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.openSplitOrder();
+    await this.recallPage.splitEvenly(2);
+    await this.recallPage.saveSplit();
+
+    await this.recallPage.openSubOrder(1);
+    await this.recallPage.settleSubOrder(1);
+    await this.recallPage.payCurrentSubOrderByCash();
+
+    await this.recallPage.openSubOrder(2);
+    await this.recallPage.settleSubOrder(2);
+    await this.recallPage.payCurrentSubOrderByCash();
+    await this.recallPage.openSubOrder(2);
+    const secondSubOrderStatusAfterCashPay = await this.recallPage.readOrderStatus();
+
+    await this.recallPage.openSubOrder(1);
+    await this.recallPage.addTipAfterCreditPayment(100, 'cash');
+    const firstSubOrderTipAfterCashTip = await this.recallPage.readOrderTipText();
+
+    return { firstSubOrderTipAfterCashTip, secondSubOrderStatusAfterCashPay };
   }
 
   async addNoPriceGlobalOptionCopyOrderAndReadTotals(homeUrl: string): Promise<NoOptionCopyTotalsResult> {
