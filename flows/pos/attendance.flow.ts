@@ -41,4 +41,40 @@ export class AttendanceFlow {
       };
     });
   }
+
+  async checkoutBossAfterEditingWageAndReadAttendance(homeUrl: string): Promise<AttendanceWageResult> {
+    return step('Boss Check In 后修改工资再 Checkout 并读取 Staff Attendance', async () => {
+      await this.homePage.open(homeUrl);
+
+      await this.homePage.clickAdmin();
+      await this.adminPage.enterStaff();
+      await this.adminPage.clickStaffName('Boss');
+      await this.adminPage.inputStaffWage('20');
+      await this.adminPage.selectWageType('Hourly');
+      await this.adminPage.clickStaffSave();
+
+      await this.homePage.openCheckIn();
+
+      await this.homePage.clickAdmin();
+      await this.adminPage.enterStaff();
+      await this.adminPage.clickStaffName('Boss');
+      await this.adminPage.inputStaffWage('30');
+      await this.adminPage.selectWageType('Weekly');
+      await this.adminPage.clickStaffSave();
+
+      await this.homePage.openCheckIn();
+      await this.homePage.clickCheckoutButton();
+      await this.homePage.inputEmployeePassword(staffDiscountRoleSamples.boss.password);
+
+      await this.homePage.clickAdmin();
+      await this.adminPage.enterStaff();
+      await this.adminPage.clickAttendanceSearch();
+      await this.adminPage.clickLastAttendance();
+
+      return {
+        wage: await this.adminPage.readAttendanceWage(),
+        wageType: await this.adminPage.readAttendanceWageType(),
+      };
+    });
+  }
 }

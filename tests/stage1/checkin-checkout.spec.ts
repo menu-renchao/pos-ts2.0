@@ -12,4 +12,13 @@ test.describe('stage1 check-in checkout migration', () => {
     expect(attendance.wage).toBe('20');
     expect(attendance.wageType).toBe('1');
   });
+
+  test('Boss Check In 后修改工资再 Checkout 时 Attendance 应保留 check-in 工资', async ({ environment, page }) => {
+    const flow = new AttendanceFlow(new PosHomePage(page), new AdminPage(page));
+
+    const attendance = await flow.checkoutBossAfterEditingWageAndReadAttendance(environment.posHomeUrl);
+
+    expect(attendance.wage).toBe('20');
+    expect(attendance.wageType).toBe('1');
+  });
 });

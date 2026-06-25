@@ -344,11 +344,15 @@ export class OrderDishesPage extends PageObject {
           if (chg) (chg as HTMLElement).click();
         });
       }
-      // 用 JS 触发 inventory 页面打开
-      await this.page.evaluate(() => {
-        const inv = document.getElementById('inventorymanage');
-        if (inv) (inv as HTMLElement).click();
-      });
+      if (await this.orderInventoryButton.isVisible()) {
+        await this.orderInventoryButton.click();
+      } else {
+        // live 模式兼容旧 DOM id
+        await this.page.evaluate(() => {
+          const inv = document.getElementById('inventorymanage');
+          if (inv) (inv as HTMLElement).click();
+        });
+      }
       await expect(this.page.getByTestId('inventory-page').or(this.page.locator('#inventory'))).toBeVisible({ timeout: 15_000 });
     });
   }

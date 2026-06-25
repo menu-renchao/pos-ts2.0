@@ -133,6 +133,9 @@ export class PosHomePage extends PageObject {
   }
 
   private async chooseAvailableLicenseIfVisible(timeout: number): Promise<void> {
+    if ((await this.licenseContainer.count()) === 0) {
+      return;
+    }
     const appeared = await this.licenseContainer
       .waitFor({ state: 'visible', timeout })
       .then(() => true)
