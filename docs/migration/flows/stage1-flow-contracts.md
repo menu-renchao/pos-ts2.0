@@ -63,13 +63,14 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 
 | source_file | source_class | source_test_patterns | target_specs | target_flow_methods |
 |---|---|---|---|---|
-| stage1/test_admin_staff.py | TestAdminStaff | whole-order max discount, item max discount, recall discount permission, multi-discount, report permission, create staff with selected authority | tests/stage1/admin-staff.spec.ts | `StaffPermissionFlow.configureStaffPermissions`, `StaffPermissionFlow.applyOrderDiscountWithAuthorization`, `StaffPermissionFlow.applyItemDiscountWithAuthorization`, `StaffPermissionFlow.verifyReportPermission` |
+| stage1/test_admin_staff.py | TestAdminStaff | whole-order max discount, item max discount, recall discount permission, multi-discount, report permission, create staff with selected authority | tests/stage1/admin-staff.spec.ts | `StaffPermissionFlow.rejectWholeOrderDiscountAboveServerLimitWithoutPassword`, `StaffPermissionFlow.configureStaffPermissions`, `StaffPermissionFlow.applyOrderDiscountWithAuthorization`, `StaffPermissionFlow.applyItemDiscountWithAuthorization`, `StaffPermissionFlow.verifyReportPermission` |
 
 ### Preconditions
 
 - Staff accounts and roles are represented by typed permission samples.
 - Manager/boss/server password or employee context is explicit in fixture/test data.
 - Discount limits and permission sets are configured through Admin or stub staff client.
+- `test_whole_order_maximum_discount_without_pwd` uses source-equivalent role limits: Server password `007` has max whole-order discount `20%`, Manager password `006` has `50%`, Boss password `11` has `100%`.
 
 ### Steps
 
@@ -78,6 +79,21 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 3. Attempt whole-order or item discount with the specified staff context.
 4. Enter manager/boss password where the source requires authorization.
 5. Read discount application, blocked prompt, or report access state.
+
+### Migrated Behavior Contracts
+
+#### StaffPermissionFlow.rejectWholeOrderDiscountAboveServerLimitWithoutPassword
+
+| field | contract |
+|---|---|
+| source | `stage1/test_admin_staff.py::TestAdminStaff::test_whole_order_maximum_discount_without_pwd` |
+| jira | POS-31535 |
+| preconditions | Server/Manager/Boss discount limits are represented by `staffDiscountRoleSamples`; current employee logs in with Server password `007`; source Open Food `item1` is represented by no-tax price `10` in offline mode. |
+| actions | Open POS home, login as Server, enter Dine In without table, add Open Food no tax, open whole-order discount, submit `20.01%`, confirm manager password dialog with empty password. |
+| page methods | `PosHomePage.open`, `PosHomePage.inputEmployeePassword`, `PosHomePage.clickDineIn`, `OrderDishesPage.openFoodWithoutTax`, `OrderDishesPage.openDiscountAndReadWholeOrderPrice`, `OrderDishesPage.applyWholeOrderDiscountPercent`, `OrderDishesPage.readDiscountTip`, `OrderDishesPage.submitManagerPassword` |
+| assertions | First prompt contains `The discount exceeds permission limit，please input password`; empty password confirmation then contains `Failed to login`. |
+| stub behavior | Offline harness maps password `007` to a `20%` whole-order discount limit, password `006` to `50%`, and password `11` to `100%`; exceeding the limit opens the manager password popup and invalid or empty password returns `Failed to login`. |
+| live gaps | Live AdminStaffAPI role setup, real whole-order discount input selectors, manager password dialog selectors, and Open Food cents/display conversion must be validated in live smoke. |
 
 ### Expected Assertions
 

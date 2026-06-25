@@ -288,6 +288,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <button data-testid="item-discount-50">50% Discount</button>
       <button data-testid="order-discount">Order Discount</button>
       <div data-testid="order-discount-whole-order-price"></div>
+      <input data-testid="order-discount-percent" />
+      <button data-testid="order-discount-submit">Apply Order Discount</button>
       <input data-testid="order-tip" />
       <div data-testid="order-tip-toast"></div>
       <button data-testid="order-charge-20">Charge 20%</button>
@@ -777,6 +779,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const itemHalfDiscountButton = document.querySelector('[data-testid="item-discount-50"]');
       const orderDiscountButton = document.querySelector('[data-testid="order-discount"]');
       const orderDiscountWholeOrderPrice = document.querySelector('[data-testid="order-discount-whole-order-price"]');
+      const orderDiscountPercentInput = document.querySelector('[data-testid="order-discount-percent"]');
+      const orderDiscountSubmitButton = document.querySelector('[data-testid="order-discount-submit"]');
       const orderTipInput = document.querySelector('[data-testid="order-tip"]');
       const orderTipToast = document.querySelector('[data-testid="order-tip-toast"]');
       const orderCharge20Button = document.querySelector('[data-testid="order-charge-20"]');
@@ -1219,6 +1223,16 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
 
       function activeOrderItems() {
         return currentOrderItems.filter((item) => item.state !== 'Voided' && Number(item.quantity || 0) > 0);
+      }
+
+      function currentWholeOrderDiscountLimit() {
+        if (currentEmployeePassword === '007') {
+          return 20;
+        }
+        if (currentEmployeePassword === '006') {
+          return 50;
+        }
+        return 100;
       }
 
       function currentEditableCombo() {
@@ -2775,6 +2789,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         if (managerPasswordInput.value === '11' && currentOrderItems[0]) {
           currentOrderItems[0].state = 'Voided';
           managerPasswordPopup.hidden = true;
+          return;
+        }
+        if (!managerPasswordPopup.hidden) {
+          orderTipToast.textContent = 'Failed to login';
         }
       });
       itemDiscountButton.addEventListener('click', () => {
@@ -2792,6 +2810,20 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       orderDiscountButton.addEventListener('click', () => {
         const subtotal = activeOrderItems().reduce((total, item) => total + Number(item.price || 0), 0);
         orderDiscountWholeOrderPrice.textContent = roundMoney(subtotal).toFixed(2);
+      });
+      orderDiscountSubmitButton.addEventListener('click', () => {
+        const percent = Number(orderDiscountPercentInput.value || '0');
+        if (percent > currentWholeOrderDiscountLimit()) {
+          orderTipToast.textContent = 'The discount exceeds permission limit，please input password';
+          managerPasswordPopup.hidden = false;
+          return;
+        }
+        currentOrderItems = currentOrderItems.map((item) => ({
+          ...item,
+          price: roundMoney(Number(item.price || 0) * (1 - percent / 100)),
+        }));
+        orderTipToast.textContent = '';
+        renderOrderAmounts();
       });
       itemPriceSubmitButton.addEventListener('click', () => {
         const selectedItem = currentOrderItems[selectedOrderItemIndex] || currentOrderItems[0];

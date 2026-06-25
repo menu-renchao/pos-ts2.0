@@ -7,3 +7,17 @@ export const staffSamples = {
 
 export const validEmployeePassword = staffSamples.manager.password;
 export const invalidEmployeePassword = '9890';
+
+export const staffDiscountRoleSamples = {
+  server: { role: 'Server', password: '007', maxWholeOrderDiscountPercent: 20 },
+  manager: { role: 'Manager', password: '006', maxWholeOrderDiscountPercent: 50 },
+  boss: { role: 'Boss', password: '11', maxWholeOrderDiscountPercent: 100 },
+} as const;
+
+export const staffDiscountSamples = {
+  openFoodName: 'item1',
+  openFoodPrice: 10,
+  excessiveWholeOrderDiscountPercent: 20.01,
+  permissionExceededTip: 'The discount exceeds permission limit，please input password',
+  failedLoginTip: 'Failed to login',
+} as const;

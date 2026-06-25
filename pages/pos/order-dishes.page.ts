@@ -57,6 +57,8 @@ export class OrderDishesPage extends PageObject {
   private readonly orderOptions: Locator;
   private readonly orderReward: Locator;
   private readonly orderDiscountButton: Locator;
+  private readonly orderDiscountPercentInput: Locator;
+  private readonly orderDiscountSubmitButton: Locator;
   private readonly orderDiscountWholeOrderPrice: Locator;
   private readonly orderExitButton: Locator;
   private readonly orderModifyButton: Locator;
@@ -162,6 +164,8 @@ export class OrderDishesPage extends PageObject {
     this.orderOptions = page.getByTestId('order-option');
     this.orderReward = page.getByTestId('order-reward');
     this.orderDiscountButton = page.getByTestId('order-discount');
+    this.orderDiscountPercentInput = page.getByTestId('order-discount-percent');
+    this.orderDiscountSubmitButton = page.getByTestId('order-discount-submit');
     this.orderDiscountWholeOrderPrice = page.getByTestId('order-discount-whole-order-price');
     this.orderExitButton = page.getByTestId('order-exit');
     this.orderModifyButton = page.getByTestId('order-modify');
@@ -656,6 +660,17 @@ export class OrderDishesPage extends PageObject {
       await this.orderDiscountButton.click();
       return ((await this.orderDiscountWholeOrderPrice.textContent()) ?? '').trim();
     });
+  }
+
+  async applyWholeOrderDiscountPercent(percent: number): Promise<void> {
+    await step(`应用整单折扣 ${percent}%`, async () => {
+      await this.orderDiscountPercentInput.fill(String(percent));
+      await this.orderDiscountSubmitButton.click();
+    });
+  }
+
+  async readDiscountTip(): Promise<string> {
+    return step('读取整单折扣权限提示', async () => ((await this.tipToast.textContent()) ?? '').trim());
   }
 
   async readChargeLabel(): Promise<string> {
