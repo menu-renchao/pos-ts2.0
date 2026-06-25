@@ -37,6 +37,9 @@ export const test = base.extend<PosTestFixtures>({
   posDbClient: async ({}, use) => {
     await use(createStubClients().posDbClient);
   },
+  restaurantClient: async ({}, use) => {
+    await use(createStubClients().restaurantClient);
+  },
   staffShiftPlanClient: async ({}, use) => {
     await use(createStubClients().staffShiftPlanClient);
   },

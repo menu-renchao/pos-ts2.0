@@ -537,6 +537,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
     <section data-testid="kiosk-page" hidden>
       <button data-testid="kiosk-select-license">Kiosk License</button>
       <button data-testid="kiosk-order-type-to-go">To Go</button>
+      <div data-testid="kiosk-license-list"></div>
       <button data-testid="kiosk-menu-group">Chinese Food</button>
       <button data-testid="kiosk-menu-category">Appetizers</button>
       <button data-testid="kiosk-item">kiosk_item</button>
@@ -675,6 +676,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         taxRate: 0.0825,
       });
       let currentKioskCartItems = [];
+      let currentKioskLicenseNames = readStoredJson('offlineKioskLicenseNames', [
+        'Kiosk License A',
+        'Kiosk License B',
+      ]);
       let currentKioskOrderType = '';
       let currentCategoryName = '';
       let currentOrderChargeRate = 0;
@@ -1131,6 +1136,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const kioskSkipButton = document.querySelector('[data-testid="kiosk-skip"]');
       const kioskCashPaymentButton = document.querySelector('[data-testid="kiosk-cash-payment"]');
       const kioskCartCount = document.querySelector('[data-testid="kiosk-cart-count"]');
+      const kioskLicenseList = document.querySelector('[data-testid="kiosk-license-list"]');
       const reportPasswordPanel = document.querySelector('[data-testid="report-password-panel"]');
       const reportPasswordInput = document.querySelector('[data-testid="report-password"]');
       const reportPasswordSaveButton = document.querySelector('[data-testid="report-password-save"]');
@@ -1430,6 +1436,16 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       function renderKioskItem() {
         kioskItemButton.textContent = currentKioskItem.name;
         kioskCartCount.textContent = String(currentKioskCartItems.length);
+      }
+
+      function renderKioskLicenses() {
+        kioskLicenseList.innerHTML = '';
+        currentKioskLicenseNames.forEach((licenseName) => {
+          const licenseButton = document.createElement('button');
+          licenseButton.dataset.testid = 'kiosk-license-name';
+          licenseButton.textContent = licenseName;
+          kioskLicenseList.appendChild(licenseButton);
+        });
       }
 
       function createKioskPaidOrder() {
@@ -1770,6 +1786,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       window.addEventListener('offline-kiosk-item-updated', (event) => {
         currentKioskItem = event.detail || currentKioskItem;
         renderKioskItem();
+      });
+
+      window.addEventListener('offline-kiosk-license-names-updated', (event) => {
+        currentKioskLicenseNames = Array.isArray(event.detail) ? event.detail : [];
+        renderKioskLicenses();
       });
 
       window.addEventListener('offline-takeout-tax-exempt-updated', (event) => {
@@ -4351,6 +4372,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       applyAutoClockOutIfDue();
       renderClockControls();
       renderKioskItem();
+      renderKioskLicenses();
       if (window.location.pathname.includes('/kpos/kiosklite')) {
         showPanel('kiosk');
       } else if (window.location.pathname.includes('/emenu/')) {

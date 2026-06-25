@@ -1,4 +1,5 @@
 import type { AdminSettingsClient } from '../../clients/pos-api/admin-settings.client.js';
+import { posLicenseTypes, type RestaurantClient } from '../../clients/pos-api/restaurant.client.js';
 import type { KioskHomePage } from '../../pages/kiosk/home.page.js';
 import type { PosHomePage } from '../../pages/pos/home.page.js';
 import type { RecallPage } from '../../pages/pos/recall.page.js';
@@ -44,6 +45,22 @@ export class KioskInteractionFlow {
       await this.kioskHomePage.applyOfflineTakeoutTaxExempt(false);
 
       return taxText;
+    });
+  }
+
+  async verifyKioskLicenseList(
+    posHomeUrl: string,
+    restaurantClient: RestaurantClient,
+  ): Promise<{ posApiKioskLicenseNames: string[]; kioskLicenseNames: string[] }> {
+    return step('验证 Kiosk 登录列表只展示 Kiosk License', async () => {
+      const posApiKioskLicenseNames = (await restaurantClient.getAllLicenseNames(posLicenseTypes.kiosk, false)).sort();
+
+      await this.homePage.open(posHomeUrl);
+      await this.kioskHomePage.applyOfflineKioskLicenseNames(posApiKioskLicenseNames);
+      await this.kioskHomePage.openFromPosHomeUrl(posHomeUrl);
+      const kioskLicenseNames = (await this.kioskHomePage.readAllKioskLicenseNames()).sort();
+
+      return { posApiKioskLicenseNames, kioskLicenseNames };
     });
   }
 }

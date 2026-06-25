@@ -4,6 +4,7 @@ import { inventoryTrackedDish } from '../../test-data/pos/dishes.js';
 import { StubAdminSettingsClient } from './admin-settings.client.js';
 import { StubMenuClient } from './menu.client.js';
 import { StubOrderClient } from './order.client.js';
+import { posLicenseTypes, StubRestaurantClient } from './restaurant.client.js';
 
 test('StubOrderClient creates orders and calculates totals', async () => {
   const client = new StubOrderClient();
@@ -47,4 +48,14 @@ test('StubMenuClient returns POS menu item count in MenuAPI shape', async () => 
 
   assert.equal(menuInfo.menus[0]?.productLine, 'POS');
   assert.equal(menuInfo.menus[0]?.menuItemCount, 24);
+});
+
+test('StubRestaurantClient filters Kiosk license names like PosAPI', async () => {
+  const client = new StubRestaurantClient();
+
+  assert.deepEqual(await client.getAllLicenseNames(posLicenseTypes.kiosk, false), [
+    'Kiosk License A',
+    'Kiosk License B',
+  ]);
+  assert.deepEqual(await client.getAllLicenseNames(posLicenseTypes.kiosk, true), ['Kiosk License A']);
 });

@@ -14,4 +14,14 @@ test.describe('stage2 kiosk interaction migration', () => {
 
     expect(taxText).toBe('--');
   });
+
+  test('POS-24842 Kiosk 登录列表应只展示 POS API 返回的 Kiosk License', {
+    annotation: { type: 'issue', description: 'POS-24842' },
+  }, async ({ environment, page, restaurantClient }) => {
+    const flow = new KioskInteractionFlow(new PosHomePage(page), new KioskHomePage(page), new RecallPage(page));
+
+    const licenseComparison = await flow.verifyKioskLicenseList(environment.posHomeUrl, restaurantClient);
+
+    expect(licenseComparison.kioskLicenseNames).toEqual(licenseComparison.posApiKioskLicenseNames);
+  });
 });

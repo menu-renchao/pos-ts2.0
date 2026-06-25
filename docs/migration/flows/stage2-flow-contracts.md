@@ -172,7 +172,7 @@ These contracts gate migration for all active source rows under `stage2/*.py`.
 
 | source_file | source_class | source_test_patterns | target_specs | target_flow_methods |
 |---|---|---|---|---|
-| stage2/test_kiosk_interaction.py | TestKioskInteraction | `test_global_takeout_tax_exemption`, kiosk login/license display, service charge/tax, kiosk order bind member and redeem gift dish | tests/stage2/kiosk-interaction.spec.ts | `KioskInteractionFlow.placeKioskTogoCashOrderAndReadRecallTax`, `KioskInteractionFlow.verifyKioskLicenseList`, `KioskInteractionFlow.bindKioskOrderToCrmMember` |
+| stage2/test_kiosk_interaction.py | TestKioskInteraction | `test_global_takeout_tax_exemption`, `test_kiosk_login_and_license_display`, service charge/tax, kiosk order bind member and redeem gift dish | tests/stage2/kiosk-interaction.spec.ts | `KioskInteractionFlow.placeKioskTogoCashOrderAndReadRecallTax`, `KioskInteractionFlow.verifyKioskLicenseList`, `KioskInteractionFlow.bindKioskOrderToCrmMember` |
 | stage2/test_recall_page.py | TestRecallSearchByTime | `test_clear_sdi_convinience_fee_by_pos`, `test_sdi_order_item_togo_flag_display_in_pos`, `test_emenu_edit_search` | tests/stage2/recall-page.spec.ts | `ExternalOrderFlow.createSdiOrder`, `ExternalOrderFlow.createEmenuOrder`, `ExternalOrderFlow.verifyExternalOrderInRecall` |
 
 ### Preconditions
@@ -181,6 +181,7 @@ These contracts gate migration for all active source rows under `stage2/*.py`.
 - License list, tax exemption, service charge, convenience fee, and CRM member samples are typed.
 - External order IDs are stored through stub order/client state.
 - POS-20995 starts with `adminSettings.takeoutTaxExempt=true`, a Kiosk item `kiosk_item` priced at 10, and an empty Recall order list.
+- POS-24842 starts with `StubRestaurantClient.getAllLicenseNames(posLicenseTypes.kiosk, false)` returning every Kiosk-type license, including in-use licenses, and excluding PC licenses.
 
 ### Steps
 
@@ -198,9 +199,17 @@ For `KioskInteractionFlow.placeKioskTogoCashOrderAndReadRecallTax`:
 4. Return to POS home, enter Recall, open the most recent synced Kiosk order, and read Recall Tax text.
 5. Disable the setting after the assertion path has captured the result.
 
+For `KioskInteractionFlow.verifyKioskLicenseList`:
+
+1. Read all Kiosk-type license names from `StubRestaurantClient.getAllLicenseNames(posLicenseTypes.kiosk, false)`.
+2. Open POS home and sync that deterministic license list into the offline Kiosk login surface.
+3. Open Kiosk and read every displayed license name from the login list.
+4. Sort both lists and return them to the spec for equality assertion.
+
 ### Expected Assertions
 
 - Kiosk license list contains only Kiosk-type licenses.
+- POS-24842 requires the Kiosk login list to match the POS API Kiosk license names exactly after sorting and to exclude non-Kiosk license types.
 - Kiosk togo tax exemption and service charge calculations match source behavior.
 - POS-20995 requires Recall Tax text to be exactly `--` for the Kiosk To Go cash order when global Takeout tax exemption is enabled.
 - Kiosk order can bind CRM member and redeem gift dish in POS.
@@ -212,6 +221,7 @@ For `KioskInteractionFlow.placeKioskTogoCashOrderAndReadRecallTax`:
 - `KioskHomePage`, `EmenuMainPage`, `EmenuOrderPage`, `SdiOrderDetailPage`, and `SdiCheckoutPage` own external surface actions.
 - `RecallPage`, `OrderDishesPage`, and `PosCrmPage` own POS-side verification.
 - POS-20995 uses `KioskHomePage.applyOfflineTakeoutTaxExempt`, `KioskHomePage.createCommonItem`, `KioskHomePage.openFromPosHomeUrl`, `KioskHomePage.selectLicense`, `KioskHomePage.chooseToGoOrderType`, `KioskHomePage.addItem`, `KioskHomePage.viewOrder`, `KioskHomePage.checkout`, `KioskHomePage.skipOptionalInfo`, `KioskHomePage.cashPayment`, `PosHomePage.open`, `PosHomePage.clickRecall`, `RecallPage.openRecentOrder`, and `RecallPage.readOrderTaxText`.
+- POS-24842 uses `PosHomePage.open`, `KioskHomePage.applyOfflineKioskLicenseNames`, `KioskHomePage.openFromPosHomeUrl`, and `KioskHomePage.readAllKioskLicenseNames`.
 
 ### Client/Data Responsibilities
 
@@ -219,12 +229,14 @@ For `KioskInteractionFlow.placeKioskTogoCashOrderAndReadRecallTax`:
 - `StubPosOrderClient` owns external order import state.
 - `StubCrmRewardClient` owns member/redeem behavior.
 - POS-20995 uses `StubAdminSettingsClient.setSetting`, `StubAdminSettingsClient.readSetting`, and `test-data/pos/admin-settings.ts` field `takeoutTaxExempt`.
+- POS-24842 uses `StubRestaurantClient.getAllLicenseNames`, `test-data/pos/licenses.ts`, and `posLicenseTypes.kiosk`.
 
 ### Stub Behavior
 
 - Stub external orders are created as POS-visible order records.
 - Stub license list is deterministic and product-line filtered.
 - POS-20995 persists the Kiosk paid order into offline saved-order state so that a POS page reload can open the synced order from Recall and expose `recall-order-tax`.
+- POS-24842 renders the filtered Kiosk license names into `kiosk-license-name` elements and intentionally keeps the PC license out of the Kiosk login list.
 
 ### Live Gaps
 
@@ -234,3 +246,4 @@ For `KioskInteractionFlow.placeKioskTogoCashOrderAndReadRecallTax`:
 | selector | External surfaces need DOM selector confirmation | Confirm selectors or request `data-testid` |
 | payment-device | Kiosk card/payment paths may require devices | Add simulator/live fixture |
 | POS-20995-live | Real AdminSettingAPI, Kiosk license/order-type/menu/cart/checkout/cash selectors, cross-tab sync timing, and Recall tax selector are not exercised in first-round offline mode | Run live Kiosk To Go smoke and record selector/data/environment gaps before closing live validation |
+| POS-24842-live | Real PosAPI license response, Kiosk login URL/auth, license-list selector, and product-line filtering are not exercised in first-round offline mode | Run live Kiosk login smoke and compare UI list with `get_all_license_names(license_type=KIOSK, unused_only=False)` |

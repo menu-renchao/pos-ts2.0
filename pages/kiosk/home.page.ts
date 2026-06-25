@@ -8,6 +8,7 @@ export class KioskHomePage extends PageObject {
   private readonly cashPaymentButton: Locator;
   private readonly checkoutButton: Locator;
   private readonly itemButton: Locator;
+  private readonly licenseNames: Locator;
   private readonly kioskRoot: Locator;
   private readonly orderTypeToGoButton: Locator;
   private readonly selectLicenseButton: Locator;
@@ -20,6 +21,7 @@ export class KioskHomePage extends PageObject {
     this.cashPaymentButton = page.getByTestId('kiosk-cash-payment');
     this.checkoutButton = page.getByTestId('kiosk-checkout');
     this.itemButton = page.getByTestId('kiosk-item');
+    this.licenseNames = page.getByTestId('kiosk-license-name');
     this.orderTypeToGoButton = page.getByTestId('kiosk-order-type-to-go');
     this.selectLicenseButton = page.getByTestId('kiosk-select-license');
     this.skipButton = page.getByTestId('kiosk-skip');
@@ -54,6 +56,15 @@ export class KioskHomePage extends PageObject {
     });
   }
 
+  async applyOfflineKioskLicenseNames(licenseNames: string[]): Promise<void> {
+    await step('同步离线 Kiosk License 列表', async () => {
+      await this.page.evaluate((names) => {
+        localStorage.setItem('offlineKioskLicenseNames', JSON.stringify(names));
+        window.dispatchEvent(new CustomEvent('offline-kiosk-license-names-updated', { detail: names }));
+      }, licenseNames);
+    });
+  }
+
   async openFromPosHomeUrl(posHomeUrl: string): Promise<void> {
     await step('打开 Kiosk 页面', async () => {
       const posUrl = new URL(posHomeUrl);
@@ -65,6 +76,14 @@ export class KioskHomePage extends PageObject {
   async selectLicense(): Promise<void> {
     await step('Kiosk 选择 License', async () => {
       await this.selectLicenseButton.click();
+    });
+  }
+
+  async readAllKioskLicenseNames(): Promise<string[]> {
+    return step('读取 Kiosk 登录 License 列表', async () => {
+      await expect(this.kioskRoot).toBeVisible();
+      const licenseNames = await this.licenseNames.allTextContents();
+      return licenseNames.map((licenseName) => licenseName.trim()).filter(Boolean);
     });
   }
 

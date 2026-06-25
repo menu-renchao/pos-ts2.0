@@ -3,6 +3,7 @@ import { StubAdminStaffClient } from '../clients/pos-api/admin-staff.client.js';
 import { StubAdminSettingsClient } from '../clients/pos-api/admin-settings.client.js';
 import { StubMenuClient } from '../clients/pos-api/menu.client.js';
 import { StubOrderClient } from '../clients/pos-api/order.client.js';
+import { StubRestaurantClient } from '../clients/pos-api/restaurant.client.js';
 import { StubStaffShiftPlanClient } from '../clients/pos-api/staff-shift-plan.client.js';
 
 export type StubClientSet = {
@@ -11,6 +12,7 @@ export type StubClientSet = {
   menuClient: StubMenuClient;
   orderClient: StubOrderClient;
   posDbClient: StubPosDbClient;
+  restaurantClient: StubRestaurantClient;
   staffShiftPlanClient: StubStaffShiftPlanClient;
 };
 
@@ -21,6 +23,7 @@ export function createStubClients(): StubClientSet {
     menuClient: new StubMenuClient(),
     orderClient: new StubOrderClient(),
     posDbClient: new StubPosDbClient(),
+    restaurantClient: new StubRestaurantClient(),
     staffShiftPlanClient: new StubStaffShiftPlanClient(),
   };
 }
