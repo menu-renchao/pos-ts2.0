@@ -12,6 +12,12 @@ export type MenuDishAvailability = {
   outOfStock: boolean;
 };
 
+export type ProductLineInventoryLimit = {
+  itemName: string;
+  productLine: string;
+  quantity: number;
+};
+
 export interface MenuClient {
   getAllMenuGroupInfo(): Promise<MenuGroupInfo>;
   getAllAvailableDishInfosOfCategoryAndGroup(
@@ -19,7 +25,9 @@ export interface MenuClient {
     categoryName: string,
     productLine: string,
   ): Promise<Record<string, MenuDishAvailability>>;
+  readProductLineInventoryLimit(productLine: string, itemName: string): Promise<ProductLineInventoryLimit | undefined>;
   setDishOutOfStock(productLine: string, groupName: string, categoryName: string, itemName: string): Promise<void>;
+  setProductLineInventoryLimit(productLine: string, itemName: string, quantity: number): Promise<void>;
 }
 
 export class StubMenuClient implements MenuClient {
@@ -32,6 +40,7 @@ export class StubMenuClient implements MenuClient {
   private readonly kioskDishAvailability = new Map<string, MenuDishAvailability>([
     [this.dishKey('KIOSK', 'Chinese Food', 'Appetizers', 'kiosk_item'), { name: 'kiosk_item', outOfStock: false }],
   ]);
+  private readonly productLineInventoryLimits = new Map<string, ProductLineInventoryLimit>();
 
   async getAllMenuGroupInfo(): Promise<MenuGroupInfo> {
     return {
@@ -58,7 +67,27 @@ export class StubMenuClient implements MenuClient {
     });
   }
 
+  async readProductLineInventoryLimit(
+    productLine: string,
+    itemName: string,
+  ): Promise<ProductLineInventoryLimit | undefined> {
+    const limit = this.productLineInventoryLimits.get(this.productLineInventoryKey(productLine, itemName));
+    return limit ? { ...limit } : undefined;
+  }
+
+  async setProductLineInventoryLimit(productLine: string, itemName: string, quantity: number): Promise<void> {
+    this.productLineInventoryLimits.set(this.productLineInventoryKey(productLine, itemName), {
+      itemName,
+      productLine,
+      quantity,
+    });
+  }
+
   private dishKey(productLine: string, groupName: string, categoryName: string, itemName: string): string {
     return [productLine, groupName, categoryName, itemName].join('|');
+  }
+
+  private productLineInventoryKey(productLine: string, itemName: string): string {
+    return [productLine, itemName].join('|');
   }
 }

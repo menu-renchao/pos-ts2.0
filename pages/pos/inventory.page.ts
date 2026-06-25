@@ -5,8 +5,8 @@ import { step } from '../../utils/step.js';
 import { PageObject } from '../shared/page-object.js';
 
 export type InventorySearchFilter = {
-  readonly channel: 'POS';
-  readonly type: 'All';
+  readonly channel: 'POS' | 'KIOSK' | 'EMENU';
+  readonly type: 'All' | 'Item';
   readonly itemName: string;
 };
 

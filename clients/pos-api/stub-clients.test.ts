@@ -59,6 +59,19 @@ test('StubMenuClient stores Kiosk dish sold-out status by product line and categ
   assert.equal(dishes.kiosk_item?.outOfStock, true);
 });
 
+test('StubMenuClient stores product-line inventory limits independently', async () => {
+  const client = new StubMenuClient();
+
+  await client.setProductLineInventoryLimit('KIOSK', 'Crabmeat Salad', 2);
+
+  assert.deepEqual(await client.readProductLineInventoryLimit('KIOSK', 'Crabmeat Salad'), {
+    itemName: 'Crabmeat Salad',
+    productLine: 'KIOSK',
+    quantity: 2,
+  });
+  assert.equal(await client.readProductLineInventoryLimit('EMENU', 'Crabmeat Salad'), undefined);
+});
+
 test('StubRestaurantClient filters Kiosk license names like PosAPI', async () => {
   const client = new StubRestaurantClient();
 

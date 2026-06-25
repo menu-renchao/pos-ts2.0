@@ -13,6 +13,7 @@ export class KioskHomePage extends PageObject {
   private readonly orderTypeToGoButton: Locator;
   private readonly selectLicenseButton: Locator;
   private readonly skipButton: Locator;
+  private readonly soldOutPopup: Locator;
   private readonly viewOrderButton: Locator;
 
   constructor(page: Page) {
@@ -25,16 +26,22 @@ export class KioskHomePage extends PageObject {
     this.orderTypeToGoButton = page.getByTestId('kiosk-order-type-to-go');
     this.selectLicenseButton = page.getByTestId('kiosk-select-license');
     this.skipButton = page.getByTestId('kiosk-skip');
+    this.soldOutPopup = page.getByTestId('kiosk-sold-out-popup');
     this.viewOrderButton = page.getByTestId('kiosk-view-order');
   }
 
-  async createCommonItem(itemName: string, price: number): Promise<void> {
+  async createCommonItem(
+    itemName: string,
+    price: number,
+    options: { group?: string; category?: string; inventorySku?: string } = {},
+  ): Promise<void> {
     await step(`Kiosk 创建普通菜 ${itemName}`, async () => {
       await this.page.evaluate(
-        ({ name, itemPrice }) => {
+        ({ category, group, inventorySku, name, itemPrice }) => {
           const item = {
-            category: 'Appetizers',
-            group: 'Chinese Food',
+            category,
+            group,
+            inventorySku,
             name,
             price: itemPrice,
             taxRate: 0.0825,
@@ -42,7 +49,13 @@ export class KioskHomePage extends PageObject {
           localStorage.setItem('offlineKioskItem', JSON.stringify(item));
           window.dispatchEvent(new CustomEvent('offline-kiosk-item-updated', { detail: item }));
         },
-        { name: itemName, itemPrice: price },
+        {
+          category: options.category ?? 'Appetizers',
+          group: options.group ?? 'Chinese Food',
+          inventorySku: options.inventorySku ?? '',
+          name: itemName,
+          itemPrice: price,
+        },
       );
     });
   }
@@ -93,11 +106,17 @@ export class KioskHomePage extends PageObject {
     });
   }
 
-  async addItem(group: string, category: string, itemName: string): Promise<void> {
+  async addItem(group: string, category: string, itemName: string, quantity = 1): Promise<void> {
     await step(`Kiosk 从 ${group}/${category} 添加菜品 ${itemName}`, async () => {
       await expect(this.itemButton).toHaveText(itemName);
-      await this.itemButton.click();
+      for (let index = 0; index < quantity; index += 1) {
+        await this.itemButton.click();
+      }
     });
+  }
+
+  async isSoldOutPopupVisible(): Promise<boolean> {
+    return step('判断 Kiosk 库存不足弹窗是否展示', async () => this.soldOutPopup.isVisible());
   }
 
   async viewOrder(): Promise<void> {

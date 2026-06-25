@@ -20,6 +20,16 @@ export const kioskInventoryDish = {
   taxRate: 0.0825,
 } as const satisfies DishSample;
 
+export const kioskLimitedStockDish = {
+  id: 'dish-kiosk-crabmeat-salad',
+  name: 'Crabmeat Salad',
+  price: 10,
+  category: 'Salads',
+  group: 'Chinese Food',
+  inventorySku: 'KIOSK-CRABMEAT-SALAD',
+  taxRate: 0.0825,
+} as const satisfies DishSample;
+
 export const splitDiscountDishes: readonly DishSample[] = [
   {
     id: 'dish-superman-item1',

@@ -408,9 +408,12 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
     <section data-testid="inventory-page" hidden>
       <select data-testid="inventory-channel">
         <option value="POS">POS</option>
+        <option value="KIOSK">KIOSK</option>
+        <option value="EMENU">EMENU</option>
       </select>
       <select data-testid="inventory-type">
         <option value="All">All</option>
+        <option value="Item">Item</option>
       </select>
       <input data-testid="inventory-item-search" />
       <button data-testid="inventory-search">Search Inventory</button>
@@ -551,6 +554,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <button data-testid="kiosk-checkout">Checkout</button>
       <button data-testid="kiosk-skip">Skip</button>
       <button data-testid="kiosk-cash-payment">Cash</button>
+      <div data-testid="kiosk-sold-out-popup" hidden>Insufficient stock</div>
       <div data-testid="kiosk-cart-count">0</div>
     </section>
     <section data-testid="report-password-panel" hidden>
@@ -718,6 +722,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let currentInventorySearchItem = 'superman item4';
       const inventoryRecords = {
         'superman item4': { status: 'LIMITED_STOCK', quantity: 0 },
+        ...readStoredJson('offlineInventoryRecords', {}),
       };
       const crmMembers = [
         { phone: '(64)673-37557', name: 'CRM Member A', points: 100 },
@@ -1147,6 +1152,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const kioskCheckoutButton = document.querySelector('[data-testid="kiosk-checkout"]');
       const kioskSkipButton = document.querySelector('[data-testid="kiosk-skip"]');
       const kioskCashPaymentButton = document.querySelector('[data-testid="kiosk-cash-payment"]');
+      const kioskSoldOutPopup = document.querySelector('[data-testid="kiosk-sold-out-popup"]');
       const kioskCartCount = document.querySelector('[data-testid="kiosk-cart-count"]');
       const kioskLicenseList = document.querySelector('[data-testid="kiosk-license-list"]');
       const reportPasswordPanel = document.querySelector('[data-testid="report-password-panel"]');
@@ -1451,6 +1457,12 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         kioskCartCount.textContent = String(currentKioskCartItems.length);
       }
 
+      function kioskCartQuantityForCurrentItem() {
+        return currentKioskCartItems
+          .filter((item) => item.name === currentKioskItem.name)
+          .reduce((quantity, item) => quantity + Number(item.quantity || 1), 0);
+      }
+
       function renderKioskLicenses() {
         kioskLicenseList.innerHTML = '';
         currentKioskLicenseNames.forEach((licenseName) => {
@@ -1623,6 +1635,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       function inventoryRecord(itemName) {
         inventoryRecords[itemName] = inventoryRecords[itemName] || { status: 'LIMITED_STOCK', quantity: 0 };
         return inventoryRecords[itemName];
+      }
+
+      function persistInventoryRecords() {
+        localStorage.setItem('offlineInventoryRecords', JSON.stringify(inventoryRecords));
       }
 
       function formatInventoryState(itemName) {
@@ -3367,6 +3383,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         currentKioskOrderType = 'togo';
       });
       kioskItemButton.addEventListener('click', () => {
+        const limit = Number(inventoryRecord(currentKioskItem.name).quantity || 0);
+        if (limit > 0 && kioskCartQuantityForCurrentItem() >= limit) {
+          kioskSoldOutPopup.hidden = false;
+          return;
+        }
         currentKioskCartItems.push({ ...currentKioskItem, quantity: 1 });
         renderKioskItem();
       });
@@ -3468,6 +3489,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         const record = inventoryRecord(currentInventorySearchItem);
         record.status = inventoryStockStatusSelect.value;
         record.quantity = Number(inventoryLimitedStockQuantityInput.value || '0');
+        persistInventoryRecords();
         inventorySettingPage.hidden = true;
         renderInventorySearchResult();
       });
