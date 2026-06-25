@@ -320,4 +320,24 @@ test.describe('stage2 order operation migration', () => {
     expect(result.modifiedChargeSelectedInDialog).toBe(true);
     expect(result.recalledChargeAfterReapply).toEqual({ mod_test1: '10.00' });
   });
+
+  test('POS-27157 编辑订单时修改手动固定加收为百分比后重新选择应按小计计算加收', async ({
+    environment,
+    page,
+  }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.convertManualFixedChargeToPercentThenReapplyInRecalledOrder(
+      environment.posHomeUrl,
+    );
+
+    expect(result.initialChargeBeforeSave).toEqual({ manu_test_fixed: '10.00' });
+    expect(result.selectedChargesAfterRateTypeChange).toEqual({ manu_test_fixed: 'Add10%' });
+    expect(result.recalledChargeAfterReapply.manu_test_fixed).toBe((result.recalledSubtotal * 0.1).toFixed(2));
+  });
 });

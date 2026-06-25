@@ -151,6 +151,13 @@ export type RenameManualChargeResult = {
   recalledChargeBeforeReapply: Record<string, string>;
 };
 
+export type ManualChargeRateTypeToPercentResult = {
+  initialChargeBeforeSave: Record<string, string>;
+  recalledChargeAfterReapply: Record<string, string>;
+  recalledSubtotal: number;
+  selectedChargesAfterRateTypeChange: Record<string, string>;
+};
+
 export type EvenSplitTipUnsplitResult = {
   combinedTipText: string;
 };
@@ -1021,6 +1028,43 @@ export class OrderEntryFlow {
       modifiedChargeSelectedInDialog,
       recalledChargeAfterReapply,
       recalledChargeBeforeReapply,
+    };
+  }
+
+  async convertManualFixedChargeToPercentThenReapplyInRecalledOrder(
+    homeUrl: string,
+  ): Promise<ManualChargeRateTypeToPercentResult> {
+    if (!this.adminPage) {
+      throw new Error('POS-27157 requires AdminPage');
+    }
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.applyPresetCharge('manu_test_fixed');
+    const initialChargeBeforeSave = await this.orderDishesPage.readOrderChargeItems();
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.clickAdmin();
+    await this.adminPage.setManualChargeRateType('manu_test_fixed', 'percent');
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.clickEdit();
+
+    await this.orderDishesPage.openChargeDialog();
+    const selectedChargesAfterRateTypeChange = await this.orderDishesPage.readSelectedPresetCharges();
+    await this.orderDishesPage.reapplyPresetCharge('manu_test_fixed');
+    const recalledChargeAfterReapply = await this.orderDishesPage.readOrderChargeItems();
+    const recalledSubtotal = await this.orderDishesPage.readSubtotal();
+
+    return {
+      initialChargeBeforeSave,
+      recalledChargeAfterReapply,
+      recalledSubtotal,
+      selectedChargesAfterRateTypeChange,
     };
   }
 

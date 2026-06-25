@@ -157,6 +157,12 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <input data-testid="admin-charge-old-name" />
       <input data-testid="admin-charge-new-name" />
       <button data-testid="admin-charge-rename">Rename Charge</button>
+      <input data-testid="admin-charge-rate-type-name" />
+      <select data-testid="admin-charge-rate-type">
+        <option value="amount">amount</option>
+        <option value="percent">percent</option>
+      </select>
+      <button data-testid="admin-charge-rate-type-save">Save Charge Rate Type</button>
       <input data-testid="admin-kds-item-name" />
       <input data-testid="admin-kds-pos-name" />
       <button data-testid="admin-kds-pos-name-save">Save Item POS Name</button>
@@ -862,6 +868,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const adminChargeOldNameInput = document.querySelector('[data-testid="admin-charge-old-name"]');
       const adminChargeNewNameInput = document.querySelector('[data-testid="admin-charge-new-name"]');
       const adminChargeRenameButton = document.querySelector('[data-testid="admin-charge-rename"]');
+      const adminChargeRateTypeNameInput = document.querySelector('[data-testid="admin-charge-rate-type-name"]');
+      const adminChargeRateTypeSelect = document.querySelector('[data-testid="admin-charge-rate-type"]');
+      const adminChargeRateTypeSaveButton = document.querySelector('[data-testid="admin-charge-rate-type-save"]');
       const kdsItemNameInput = document.querySelector('[data-testid="admin-kds-item-name"]');
       const kdsItemPosNameInput = document.querySelector('[data-testid="admin-kds-pos-name"]');
       const kdsItemPosNameSaveButton = document.querySelector('[data-testid="admin-kds-pos-name-save"]');
@@ -2359,6 +2368,13 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         return roundMoney(chargeableSubtotal * currentOrderChargeRate);
       }
 
+      function chargeDisplayValue(charge, subtotal = currentActiveOrderSubtotal()) {
+        if (charge?.rateType === 'percent') {
+          return 'Add' + Number((charge.rate || 0) * 100).toFixed(0) + '%';
+        }
+        return 'Add $' + Number(charge?.amount ?? currentChargeAmount(subtotal)).toFixed(2);
+      }
+
       function renderPresetChargeDialog() {
         presetChargeList.innerHTML = '';
         selectedChargeList.innerHTML = '';
@@ -2366,7 +2382,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           const button = document.createElement('button');
           button.dataset.testid = 'preset-charge';
           button.dataset.chargeName = charge.name;
-          button.textContent = charge.name + ' Add $' + Number(charge.amount).toFixed(2);
+          button.textContent = charge.name + ' ' + chargeDisplayValue(charge);
           button.addEventListener('click', () => {
             currentOrderChargeRate = Number(charge.rate || 0);
             currentOrderChargeFixedAmount = charge.rateType === 'amount' ? Number(charge.amount || 0) : null;
@@ -2385,7 +2401,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           const selected = document.createElement('div');
           selected.dataset.testid = 'selected-charge-item';
           selected.dataset.chargeName = selectedCharge?.name || currentOrderChargeLabel;
-          selected.dataset.chargeRate = 'Add $' + Number(selectedCharge?.amount || currentChargeAmount(currentActiveOrderSubtotal())).toFixed(2);
+          selected.dataset.chargeRate = chargeDisplayValue(selectedCharge, currentActiveOrderSubtotal());
           selected.textContent = selected.dataset.chargeName + ' ' + selected.dataset.chargeRate;
           selectedChargeList.appendChild(selected);
         }
@@ -3795,6 +3811,20 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         manualCharges = manualCharges.map((charge) => (
           charge.name === oldName ? { ...charge, name: newName } : charge
         ));
+        localStorage.setItem('offlineManualCharges', JSON.stringify(manualCharges));
+      });
+      adminChargeRateTypeSaveButton.addEventListener('click', () => {
+        const chargeName = adminChargeRateTypeNameInput.value;
+        const rateType = adminChargeRateTypeSelect.value;
+        manualCharges = manualCharges.map((charge) => {
+          if (charge.name !== chargeName) {
+            return charge;
+          }
+          if (rateType === 'percent') {
+            return { ...charge, amount: 10, rate: 0.1, rateType: 'percent' };
+          }
+          return { ...charge, amount: 10, rate: 0, rateType: 'amount' };
+        });
         localStorage.setItem('offlineManualCharges', JSON.stringify(manualCharges));
       });
       orderTaxExemptButton.addEventListener('click', () => {
