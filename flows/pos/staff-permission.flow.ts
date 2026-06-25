@@ -36,6 +36,14 @@ export type ZeroServerDiscountPermissionResult = {
   permissionTip: string;
 };
 
+export type CumulativeOrderItemDiscountPermissionResult = {
+  subtotal: number;
+  wholeOrderDiscount: number;
+  firstItemOriginalPrice: number;
+  firstItemDiscountedPrice: number;
+  permissionTip: string;
+};
+
 export type AuthorizedWholeOrderDiscountResult = {
   permissionTip: string;
   subtotal: number;
@@ -245,6 +253,61 @@ export class StaffPermissionFlow {
       const permissionTip = await this.orderDishesPage.readDiscountTip();
 
       return { permissionTip };
+    });
+  }
+
+  async requirePermissionForSecondItemDiscountAfterWholeOrderAndItemDiscounts(
+    homeUrl: string,
+  ): Promise<CumulativeOrderItemDiscountPermissionResult> {
+    return step('整单折扣和单菜折扣后第二个单菜固定折扣按累计额度校验', async () => {
+      const adminStaffClient = this.requireAdminStaffClient();
+      await adminStaffClient.editRoleMaxDiscount(
+        'Server',
+        staffDiscountRoleSamples.server.maxWholeOrderDiscountPercent,
+      );
+      await adminStaffClient.editRoleMaxDiscount(
+        'Manager',
+        staffDiscountRoleSamples.manager.maxWholeOrderDiscountPercent,
+      );
+      await adminStaffClient.editRoleMaxDiscount('Boss', staffDiscountRoleSamples.boss.maxWholeOrderDiscountPercent);
+
+      await this.homePage.open(homeUrl);
+      await this.homePage.applyOfflineStaffDiscountLimits(await adminStaffClient.readRoleMaxDiscounts());
+      await this.homePage.inputEmployeePassword(staffDiscountRoleSamples.server.password);
+      await this.homePage.clickDineIn();
+      await this.orderDishesPage.openFoodWithoutTax(
+        staffDiscountSamples.itemDiscountFirstFoodName,
+        staffDiscountSamples.multiDiscountFirstFoodPrice,
+      );
+      await this.orderDishesPage.openFoodWithoutTax(
+        staffDiscountSamples.itemDiscountSecondFoodName,
+        staffDiscountSamples.multiDiscountSecondFoodPrice,
+      );
+
+      await this.orderDishesPage.openDiscountAndReadWholeOrderPrice();
+      await this.orderDishesPage.applyWholeOrderDiscountPercent(
+        staffDiscountSamples.cumulativeWholeOrderDiscountPercent,
+      );
+      const { subtotal, discount: wholeOrderDiscount } = await this.orderDishesPage.readWholeOrderDiscountSummary();
+
+      await this.orderDishesPage.selectOrderLineItem(1);
+      const firstItemOriginalPrice = await this.orderDishesPage.readSelectedItemPrice();
+      await this.orderDishesPage.applyItemDiscountPercent(staffDiscountSamples.cumulativeItemDiscountPercent);
+      const firstItemDiscountedPrice = await this.orderDishesPage.readSelectedItemPrice();
+
+      await this.orderDishesPage.selectOrderLineItem(2);
+      await this.orderDishesPage.applySelectedItemsDiscountAmount(
+        staffDiscountSamples.cumulativeSecondItemDiscountAmount,
+      );
+      const permissionTip = await this.orderDishesPage.readDiscountTip();
+
+      return {
+        subtotal,
+        wholeOrderDiscount,
+        firstItemOriginalPrice,
+        firstItemDiscountedPrice,
+        permissionTip,
+      };
     });
   }
 

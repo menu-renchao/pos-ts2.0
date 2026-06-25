@@ -177,4 +177,25 @@ test.describe('stage1 admin staff migration', () => {
       expect(result.permissionTip).toContain('The discount exceeds permission limit，please input password');
     },
   );
+
+  test(
+    'POS-31687 Server 已有整单和单菜折扣后再给第二个单菜固定折扣应按累计额度提示超权限',
+    {
+      annotation: jiraIssue('POS-31687'),
+    },
+    async ({ adminStaffClient, environment, page }) => {
+      const flow = new StaffPermissionFlow(new PosHomePage(page), new OrderDishesPage(page), undefined, adminStaffClient);
+
+      const result = await flow.requirePermissionForSecondItemDiscountAfterWholeOrderAndItemDiscounts(
+        environment.posHomeUrl,
+      );
+
+      expect(result.wholeOrderDiscount).toBeCloseTo(-result.subtotal * 0.1, 2);
+      expect(result.firstItemOriginalPrice - result.firstItemDiscountedPrice).toBeCloseTo(
+        result.firstItemOriginalPrice * 0.1,
+        2,
+      );
+      expect(result.permissionTip).toContain('The discount exceeds permission limit，please input password');
+    },
+  );
 });
