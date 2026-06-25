@@ -132,6 +132,13 @@ export type PartialSettleAddTipResult = {
   unpaidAmountAfterTip: number;
 };
 
+export type NoOptionCopyTotalsResult = {
+  recalledCopiedTotal: number;
+  totalAfterCopy: number;
+  totalAfterNoOption: number;
+  totalBeforeNoOption: number;
+};
+
 export type EvenSplitTipUnsplitResult = {
   combinedTipText: string;
 };
@@ -903,6 +910,34 @@ export class OrderEntryFlow {
     const orderStatus = await this.recallPage.readOrderStatus();
 
     return { originalTotal, orderStatus, unpaidAmountAfterTip };
+  }
+
+  async addNoPriceGlobalOptionCopyOrderAndReadTotals(homeUrl: string): Promise<NoOptionCopyTotalsResult> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    const totalBeforeNoOption = await this.orderDishesPage.readSubtotal();
+
+    await this.orderDishesPage.openGlobalOptionModify();
+    const totalAfterNoOption = await this.orderDishesPage.readSubtotal();
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.copyCurrentOrder();
+    const totalAfterCopy = await this.recallPage.readOrderTotal();
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    const recalledCopiedTotal = await this.recallPage.readOrderTotal();
+
+    return {
+      recalledCopiedTotal,
+      totalAfterCopy,
+      totalAfterNoOption,
+      totalBeforeNoOption,
+    };
   }
 
   async unsplitEvenSplitOrderAfterEditingFirstSubOrderTip(homeUrl: string): Promise<EvenSplitTipUnsplitResult> {

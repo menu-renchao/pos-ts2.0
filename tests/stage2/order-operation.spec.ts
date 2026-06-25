@@ -263,4 +263,18 @@ test.describe('stage2 order operation migration', () => {
     expect(result.unpaidAmountAfterTip).toBeCloseTo(result.originalTotal - 4, 2);
     expect(result.orderStatus).toBe('Paid');
   });
+
+  test('POS-24394 添加 No 全局 Option 并复制订单后总额应保持不变', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.addNoPriceGlobalOptionCopyOrderAndReadTotals(environment.posHomeUrl);
+
+    expect(result.totalAfterNoOption).toBe(result.totalBeforeNoOption);
+    expect(result.totalAfterCopy).toBe(result.totalAfterNoOption);
+    expect(result.recalledCopiedTotal).toBe(result.totalAfterNoOption);
+  });
 });

@@ -75,6 +75,7 @@ export class RecallPage extends PageObject {
   private readonly recallCancelConditionButton: Locator;
   private readonly recallCrmCombineButton: Locator;
   private readonly recallCrmCombineInput: Locator;
+  private readonly recallCopyOrderButton: Locator;
   private readonly recallCrmDiscountButton: Locator;
   private readonly recallCrmMemberName: Locator;
   private readonly recallCrmPointBalance: Locator;
@@ -158,6 +159,7 @@ export class RecallPage extends PageObject {
     this.recallCancelConditionButton = page.getByTestId('recall-cancel-condition');
     this.recallCrmCombineButton = page.getByTestId('recall-crm-combine-order');
     this.recallCrmCombineInput = page.getByTestId('recall-crm-combine-order-no');
+    this.recallCopyOrderButton = page.getByTestId('recall-copy-order');
     this.recallCrmDiscountButton = page.getByTestId('recall-crm-redeem-discount');
     this.recallCrmMemberName = page.getByTestId('recall-crm-member-name');
     this.recallCrmPointBalance = page.getByTestId('recall-crm-point-balance');
@@ -449,6 +451,12 @@ export class RecallPage extends PageObject {
   async clickSettle(): Promise<void> {
     await step('Recall 点击支付', async () => {
       await this.page.getByTestId('recall-settle').click();
+    });
+  }
+
+  async copyCurrentOrder(): Promise<void> {
+    await step('复制 Recall 当前订单', async () => {
+      await this.recallCopyOrderButton.click();
     });
   }
 

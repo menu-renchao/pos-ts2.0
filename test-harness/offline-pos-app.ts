@@ -469,6 +469,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <div data-testid="recall-crm-point-balance">0</div>
       <input data-testid="recall-crm-combine-order-no" />
       <button data-testid="recall-crm-combine-order">Combine CRM Order</button>
+      <button data-testid="recall-copy-order">Copy Order</button>
       <button data-testid="recall-settle">Settle</button>
       <button data-testid="recall-crm-redeem-discount">10% Off</button>
       <button data-testid="recall-order-discount">Recall Order Discount</button>
@@ -1122,6 +1123,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const recallCrmPointBalance = document.querySelector('[data-testid="recall-crm-point-balance"]');
       const recallCrmCombineInput = document.querySelector('[data-testid="recall-crm-combine-order-no"]');
       const recallCrmCombineButton = document.querySelector('[data-testid="recall-crm-combine-order"]');
+      const recallCopyOrderButton = document.querySelector('[data-testid="recall-copy-order"]');
       const recallSettleButton = document.querySelector('[data-testid="recall-settle"]');
       const recallCrmRedeemDiscountButton = document.querySelector('[data-testid="recall-crm-redeem-discount"]');
       const recallOrderDiscountButton = document.querySelector('[data-testid="recall-order-discount"]');
@@ -4361,6 +4363,20 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         const orderIndex = Number(recallCrmCombineInput.value || '1');
         const sourceOrder = savedOrders[savedOrders.length - orderIndex];
         mergeCrmOrders(selectedRecallOrder, sourceOrder);
+      });
+      recallCopyOrderButton.addEventListener('click', () => {
+        if (!selectedRecallOrder) {
+          return;
+        }
+        const copiedOrder = JSON.parse(JSON.stringify(selectedRecallOrder));
+        copiedOrder.orderNumber = String(nextOrderNumber++);
+        copiedOrder.orderCardId = copiedOrder.orderType === 'dine-in'
+          ? 'Area 1 Table 1 ' + copiedOrder.orderNumber
+          : copiedOrder.orderNumber;
+        copiedOrder.status = copiedOrder.status || 'New Order';
+        savedOrders.push(copiedOrder);
+        selectRecallOrder(copiedOrder);
+        persistSavedOrders();
       });
       recallSettleButton.addEventListener('click', () => {});
       recallCrmRedeemDiscountButton.addEventListener('click', () => {
