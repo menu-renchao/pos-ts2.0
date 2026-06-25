@@ -659,6 +659,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let currentItemOption = null;
       let latestSavedItemOption = null;
       let currentOrderTip = 0;
+      let currentOrderPriceEdited = false;
       let currentSplitPartTip = null;
       let currentOrderStatus = '';
       let currentOrderType = 'togo';
@@ -2646,6 +2647,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         selectedOrderItemIndexes = new Set();
         currentItemOption = null;
         currentOrderTip = 0;
+        currentOrderPriceEdited = false;
         currentOrderChargeRate = 0;
         currentOrderChargeLabel = '';
         currentWholeOrderDiscountRate = 0;
@@ -2721,9 +2723,15 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         orderSaveAlert.textContent = '';
         if (currentEditingOrder) {
           if (selectedSubOrderIndex !== null && currentEditingOrder.subOrderItems?.[selectedSubOrderIndex]) {
+            const previousSubOrderTotal = orderItemsSubtotal(currentEditingOrder.subOrderItems[selectedSubOrderIndex]);
             currentEditingOrder.subOrderItems[selectedSubOrderIndex] = [...currentOrderItems];
             currentEditingOrder.subOrderTips = currentEditingOrder.subOrderTips || [];
-            currentEditingOrder.subOrderTips[selectedSubOrderIndex] = currentOrderTip;
+            const nextSubOrderTotal = orderItemsSubtotal(currentOrderItems);
+            if (currentEditingOrder.priceEdited && previousSubOrderTotal !== nextSubOrderTotal) {
+              redistributeSubOrderTipsBySubtotal(currentEditingOrder);
+            } else {
+              currentEditingOrder.subOrderTips[selectedSubOrderIndex] = currentOrderTip;
+            }
           } else {
             currentEditingOrder.items = [...currentOrderItems];
             currentEditingOrder.tip = currentOrderTip;
@@ -2736,6 +2744,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           currentEditingOrder.crmFixedRewardAmount = currentCrmFixedRewardAmount;
           currentEditingOrder.crmPointDeduction = currentCrmPointDeduction;
           currentEditingOrder.hasRedeemItem = currentHasRedeemItem;
+          currentEditingOrder.priceEdited = currentEditingOrder.priceEdited || currentOrderPriceEdited;
           currentEditingOrder.partialPaid = currentSemiPayMode;
           currentEditingOrder.rewardDiscount = calculateRewardDiscount(currentEditingOrder);
           applyInventoryDelta(currentEditingOrder, currentOrderItems);
@@ -2750,6 +2759,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           itemOption: currentItemOption,
           tip: currentOrderTip,
           splitTip: currentSplitPartTip,
+          priceEdited: currentOrderPriceEdited,
           status: currentOrderStatus,
           customerName: currentCustomerName,
           subtotal: Number(orderSubtotal.textContent || '0'),
@@ -2799,6 +2809,30 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           + Number(order?.tip || 0)
           + Number(order?.rewardDiscount || 0)
           + Number(order?.wholeOrderDiscountAmount || 0)).toFixed(2));
+      }
+
+      function orderItemsSubtotal(items) {
+        return roundMoney((items || []).reduce((total, item) => total + Number(item.price || 0), 0));
+      }
+
+      function redistributeSubOrderTipsBySubtotal(order) {
+        const subOrderItems = order?.subOrderItems || [];
+        if (!order || subOrderItems.length === 0) {
+          return;
+        }
+        const tip = Number(order.tip || 0);
+        const subtotal = subOrderItems.reduce((total, items) => total + orderItemsSubtotal(items), 0);
+        let allocatedTip = 0;
+        order.subOrderTips = subOrderItems.map((items, index) => {
+          if (index === subOrderItems.length - 1) {
+            return roundMoney(tip - allocatedTip);
+          }
+          const share = subtotal > 0
+            ? roundMoney((tip * orderItemsSubtotal(items)) / subtotal)
+            : roundMoney(tip / subOrderItems.length);
+          allocatedTip = roundMoney(allocatedTip + share);
+          return share;
+        });
       }
 
       function mergeCrmOrders(targetOrder, sourceOrder) {
@@ -4021,6 +4055,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         if (selectedItem) {
           selectedItem.price = Number(itemPriceInput.value || '0');
           selectedItem.unitPrice = Number(itemPriceInput.value || '0') / Number(selectedItem.quantity || 1);
+          currentOrderPriceEdited = true;
           renderOrderAmounts();
         }
       });
@@ -4277,12 +4312,13 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         recallGuestNameInput.value = '';
         if (selectedRecallOrder) {
           currentOrderItems = selectedSubOrderIndex !== null && selectedRecallOrder.subOrderItems?.[selectedSubOrderIndex]
-            ? [...selectedRecallOrder.subOrderItems[selectedSubOrderIndex]]
-            : [...selectedRecallOrder.items];
+            ? selectedRecallOrder.subOrderItems[selectedSubOrderIndex].map((item) => ({ ...item }))
+            : selectedRecallOrder.items.map((item) => ({ ...item }));
           currentItemOption = selectedRecallOrder.itemOption || null;
           currentOrderTip = selectedSubOrderIndex !== null
             ? selectedRecallOrder.subOrderTips?.[selectedSubOrderIndex] ?? selectedRecallOrder.tip ?? 0
             : selectedRecallOrder.tip || 0;
+          currentOrderPriceEdited = Boolean(selectedRecallOrder.priceEdited);
           currentCustomerName = selectedRecallOrder.customerName || null;
           orderGuestNameInput.value = selectedRecallOrder.customerName || '';
           currentCrmMember = selectedRecallOrder.crmMember ? { ...selectedRecallOrder.crmMember } : null;
@@ -4344,10 +4380,14 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
             sharedItems.length || seatTwoItems.length ? [...sharedItems, ...seatTwoItems] : items.slice(1, 2),
           ];
           selectedRecallOrder.subOrderStatuses = ['New Order', 'New Order'];
-          selectedRecallOrder.subOrderTips = [selectedRecallOrder.tip || 0, selectedRecallOrder.tip || 0];
           selectedRecallOrder.splitOrderPrices = selectedRecallOrder.subOrderItems.map((subOrderItems) =>
             Number(subOrderItems.reduce((sum, item) => sum + Number(item.price || 0), 0).toFixed(2)),
           );
+          if (selectedRecallOrder.priceEdited) {
+            redistributeSubOrderTipsBySubtotal(selectedRecallOrder);
+          } else {
+            selectedRecallOrder.subOrderTips = [selectedRecallOrder.tip || 0, selectedRecallOrder.tip || 0];
+          }
           draftSplitItemPrices = [...selectedRecallOrder.splitOrderPrices];
           draftSplitPrices = [...selectedRecallOrder.splitOrderPrices];
           renderSubOrders(selectedRecallOrder);
@@ -4519,6 +4559,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         currentOrderItems = [];
         currentItemOption = null;
         currentOrderTip = 0;
+        currentOrderPriceEdited = false;
         currentSplitPartTip = null;
         currentOrderStatus = '';
         currentCustomerName = deliveryNameInput.value || null;
