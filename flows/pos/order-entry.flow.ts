@@ -97,6 +97,10 @@ export type SeatSplitModifyTipResult = {
   secondSubOrderTipAfterEdit: number;
 };
 
+export type SeatSplitUnsplitAlertResult = {
+  unsplitAlertText: string;
+};
+
 export type ComboOptionCountResult = {
   beforeCount: number;
   afterCount: number;
@@ -609,6 +613,37 @@ export class OrderEntryFlow {
       secondSubOrderTipAfterEdit,
       secondSubOrderTipBeforeEdit,
     };
+  }
+
+  async preventUnsplitSeatSplitOrderAfterPartialPayment(homeUrl: string): Promise<SeatSplitUnsplitAlertResult> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.setGuestCount(2);
+
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.selectSeat(1);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+
+    await this.orderDishesPage.selectMenuGroup(categorySwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(categorySwitchDish.category);
+    await this.orderDishesPage.selectSeat(2);
+    await this.orderDishesPage.addMenuItem(categorySwitchDish.name);
+
+    await this.orderDishesPage.addTip(500);
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.openSplitOrder();
+    await this.recallPage.splitBySeat();
+    await this.recallPage.openSubOrder(1);
+    await this.recallPage.settleSubOrder(1);
+    await this.recallPage.payCurrentSubOrderByCash();
+    await this.recallPage.openSplitOrder();
+    const unsplitAlertText = await this.recallPage.unsplitAndReadAlert();
+
+    return { unsplitAlertText };
   }
 
   async readFirstDragSplitSubOrderDiscountWholePrice(homeUrl: string): Promise<string> {

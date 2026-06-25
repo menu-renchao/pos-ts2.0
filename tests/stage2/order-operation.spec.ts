@@ -50,4 +50,20 @@ test.describe('stage2 order operation migration', () => {
     expect(result.firstSubOrderTipAfterEdit).toBe(6);
     expect(result.secondSubOrderTipAfterEdit).toBe(result.secondSubOrderTipBeforeEdit);
   });
+
+  test('POS-19371 子单部分付款后取消分单应提示需先撤销付款', {
+    annotation: [jiraIssue('POS-19371')],
+  }, async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.preventUnsplitSeatSplitOrderAfterPartialPayment(environment.posHomeUrl);
+
+    expect(result.unsplitAlertText).toBe(
+      'The operation cannot be done due to partial payment! Please revoke the payment before preceeding.',
+    );
+  });
 });

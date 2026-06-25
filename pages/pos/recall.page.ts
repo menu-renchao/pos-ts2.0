@@ -614,6 +614,13 @@ export class RecallPage extends PageObject {
     });
   }
 
+  async unsplitAndReadAlert(): Promise<string> {
+    return step('撤销 Recall 分单并读取提示', async () => {
+      await this.unsplitButton.click();
+      return ((await this.voidAlert.textContent()) ?? '').trim();
+    });
+  }
+
   async readSplitOrderPrices(): Promise<number[]> {
     return step('读取 Recall 子单金额列表', async () =>
       (await this.splitOrderPrices.allTextContents()).map((price) => Number(price)),

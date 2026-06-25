@@ -4388,6 +4388,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         renderRecallOrderItems();
       });
       splitUnsplitButton.addEventListener('click', () => {
+        if (selectedRecallOrder?.subOrderStatuses?.some((status) => status === 'Paid')) {
+          recallVoidAlert.textContent =
+            'The operation cannot be done due to partial payment! Please revoke the payment before preceeding.';
+          return;
+        }
         draftSplitPrices = [];
         draftSplitItemPrices = [];
         if (selectedRecallOrder) {
