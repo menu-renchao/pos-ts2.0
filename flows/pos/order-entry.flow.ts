@@ -680,6 +680,10 @@ export class OrderEntryFlow {
     return { unsplitAlertText };
   }
 
+  async preventUnsplitAmountSplitOrderAfterSemiPayment(homeUrl: string): Promise<AmountSplitUnsplitAlertResult> {
+    return this.preventUnsplitAmountSplitOrderAfterPartialPayment(homeUrl);
+  }
+
   async unsplitUnpaidAmountSplitOrder(homeUrl: string): Promise<AmountSplitUnsplitSuccessResult> {
     await this.homePage.open(homeUrl);
     await this.homePage.clickDineIn();
