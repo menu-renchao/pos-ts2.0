@@ -8,7 +8,7 @@ These contracts gate migration for all active source rows under `stage2/*.py`.
 
 | source_file | source_class | source_test_patterns | target_specs | target_flow_methods |
 |---|---|---|---|---|
-| stage2/test_order_operation.py | TestOrderOperation | seat split including `test_seat_split_void_no_shared_item`, `test_seat_split_void_have_shared_item`, `test_seat_split_modify_tip`, `test_seat_split_close_unsplit`, `test_split_tip_reduce_item`, and `test_split_tip_discount_item`, amount/even split including `test_amount_split_semi_paid_add`, `test_amount_split_split`, `test_amount_split_semi_paid_unsplit`, `test_even_split_tip_unsplit`, `test_multi_pay_refund`, and `test_multi_amount_split`, multi-pay, refund, void reason, charge clear, discount clear, tips, charge tax, charge edits, order copy/move/combine, split with zero suborder, send combo, option blank-click, language switch | tests/stage2/order-operation.spec.ts | `OrderEntryFlow.voidSecondSeatSplitSubOrderAndReadTip`, `OrderEntryFlow.preventVoidSeatSplitSubOrderWithSharedPaidItem`, `OrderEntryFlow.modifyFirstSeatSplitSubOrderTipAndReadTips`, `OrderEntryFlow.preventUnsplitSeatSplitOrderAfterPartialPayment`, `OrderEntryFlow.preventUnsplitAmountSplitOrderAfterPartialPayment`, `OrderEntryFlow.unsplitUnpaidAmountSplitOrder`, `OrderEntryFlow.preventUnsplitAmountSplitOrderAfterSemiPayment`, `OrderEntryFlow.unsplitEvenSplitOrderAfterEditingFirstSubOrderTip`, `OrderEntryFlow.reduceFirstSeatSplitSubOrderItemAndReadTips`, `OrderEntryFlow.discountFirstSeatSplitSubOrderItemAndReadTips`, `OrderEntryFlow.splitLargeOrderByMultipleAmountsAndReadTotals`, `SettlementFlow.refundEvenPayCreditAndCashPaymentsAndReadRecords`, `AdvancedOrderFlow.splitBySeat`, `AdvancedOrderFlow.splitByAmount`, `AdvancedOrderFlow.combineOrders`, `AdvancedOrderFlow.copyOrder`, `AdvancedOrderFlow.moveItemsOrOrder`, `AdvancedOrderFlow.refundByItemOrAmount`, `AdvancedOrderFlow.applyAndEditCharges`, `AdvancedOrderFlow.applyDiscountReason` |
+| stage2/test_order_operation.py | TestOrderOperation | seat split including `test_seat_split_void_no_shared_item`, `test_seat_split_void_have_shared_item`, `test_seat_split_modify_tip`, `test_seat_split_close_unsplit`, `test_split_tip_reduce_item`, and `test_split_tip_discount_item`, amount/even split including `test_amount_split_semi_paid_add`, `test_amount_split_split`, `test_amount_split_semi_paid_unsplit`, `test_even_split_tip_unsplit`, `test_multi_pay_refund`, and `test_multi_amount_split`, void reason including `test_order_void_reason`, charge clear, discount clear, tips, charge tax, charge edits, order copy/move/combine, split with zero suborder, send combo, option blank-click, language switch | tests/stage2/order-operation.spec.ts | `OrderEntryFlow.voidSecondSeatSplitSubOrderAndReadTip`, `OrderEntryFlow.preventVoidSeatSplitSubOrderWithSharedPaidItem`, `OrderEntryFlow.modifyFirstSeatSplitSubOrderTipAndReadTips`, `OrderEntryFlow.preventUnsplitSeatSplitOrderAfterPartialPayment`, `OrderEntryFlow.preventUnsplitAmountSplitOrderAfterPartialPayment`, `OrderEntryFlow.unsplitUnpaidAmountSplitOrder`, `OrderEntryFlow.preventUnsplitAmountSplitOrderAfterSemiPayment`, `OrderEntryFlow.unsplitEvenSplitOrderAfterEditingFirstSubOrderTip`, `OrderEntryFlow.reduceFirstSeatSplitSubOrderItemAndReadTips`, `OrderEntryFlow.discountFirstSeatSplitSubOrderItemAndReadTips`, `OrderEntryFlow.splitLargeOrderByMultipleAmountsAndReadTotals`, `OrderEntryFlow.openVoidReasonsForSavedOrderAndReadCount`, `SettlementFlow.refundEvenPayCreditAndCashPaymentsAndReadRecords`, `AdvancedOrderFlow.splitBySeat`, `AdvancedOrderFlow.splitByAmount`, `AdvancedOrderFlow.combineOrders`, `AdvancedOrderFlow.copyOrder`, `AdvancedOrderFlow.moveItemsOrOrder`, `AdvancedOrderFlow.refundByItemOrAmount`, `AdvancedOrderFlow.applyAndEditCharges`, `AdvancedOrderFlow.applyDiscountReason` |
 
 ### Preconditions
 
@@ -28,6 +28,7 @@ These contracts gate migration for all active source rows under `stage2/*.py`.
 - POS-19389 creates a Dine In order with guest count 2, two 5.00 dishes on seat 1, one 5.00 dish on seat 2, and a 6.00 order tip before seat splitting and applying a 5.00 fixed item discount to suborder 1.
 - POS-19517 creates a Dine In 11.00 tax-exempt one-item order before splitting settlement into two payments.
 - POS-21845 creates a Dine In 200.00 one-item order before amount splitting into five fixed 20.00 suborders.
+- POS-21855 creates a Dine In saved order with one non-combo dish before opening the Recall void reason chooser.
 
 ### Steps
 
@@ -47,6 +48,7 @@ These contracts gate migration for all active source rows under `stage2/*.py`.
 14. POS-19389 path: enter Dine In, set guest count 2, add two seat 1 dishes and one seat 2 dish, change all three dish prices to 5.00, add tip 600 cents, save, open Recall, split by seat, save, read suborder 1 tip, edit suborder 1, apply a 5.00 fixed amount discount to the first item, save, and read both suborder tips.
 15. POS-19517 path: enter Dine In, add one non-combo dish, change its price to 11.00, void item tax, open settlement, split payment evenly into 2 payments, pay the first half by credit, reopen the saved order from Recall, complete the remaining half by cash, read payment records 1 and 2, refund payment records 1 and 2, and read payment records 3 and 4.
 16. POS-21845 path: enter Dine In, add one non-combo dish, change its price to 200.00, save, open Recall, read parent total before amount split, input five 20.00 amount split rows, read parent total after split input, save the amount split, and read suborder 1 and 2 totals.
+17. POS-21855 path: enter Dine In, add one non-combo dish, save the order, open Recall recent order, click Void, open the void reason chooser, and count displayed reason options.
 
 ### Expected Assertions
 
@@ -67,6 +69,7 @@ These contracts gate migration for all active source rows under `stage2/*.py`.
 - POS-19389 verifies changed-price seat split tip allocation starts at suborder 1 tip `4.00` and, after applying a 5.00 fixed item discount on suborder 1, both suborder tips are `3.00`.
 - POS-19517 verifies payment record 3 equals the negative amount of payment record 1, and payment record 4 equals the negative amount of payment record 2.
 - POS-21845 verifies parent order total remains unchanged after entering amount split rows, and the first two saved suborder totals are both `20.00`.
+- POS-21855 verifies the Void reason chooser displays exactly 7 reason options.
 
 ### Page Responsibilities
 
@@ -85,6 +88,7 @@ These contracts gate migration for all active source rows under `stage2/*.py`.
 - POS-19389 also uses `OrderDishesPage.changeSelectedItemPrice`, `OrderDishesPage.selectOrderLineItem`, `OrderDishesPage.applySelectedItemsDiscountAmount`, `RecallPage.splitBySeat`, `RecallPage.saveSplit`, `RecallPage.openSubOrder`, `RecallPage.clickEdit`, and `RecallPage.readOrderTipText` to validate seat-split tip redistribution after item discount.
 - POS-19517 also uses `OrderDishesPage.voidSelectedItemTax`, `OrderDishesPage.clickSettle`, `OrderDishesPage.splitPaymentEvenly`, `OrderDishesPage.settleByCredit`, `RecallPage.clickSettle`, `RecallPage.payCurrentOrderByCash`, `RecallPage.readPaymentRecordAmount`, and `RecallPage.refundPaymentRecord` to validate multi-payment refund record values.
 - POS-21845 also uses `OrderDishesPage.changeSelectedItemPrice`, `RecallPage.openSplitOrder`, `RecallPage.readOrderTotal`, `RecallPage.splitByAmounts`, `RecallPage.saveSplit`, `RecallPage.saveSplitAmountCreate`, and `RecallPage.openSubOrder` to validate fixed amount split totals.
+- POS-21855 also uses `RecallPage.openVoidReasonChooser` and `RecallPage.readVoidReasonCount` to validate the configured Void reason list.
 
 ### Client/Data Responsibilities
 
@@ -103,6 +107,7 @@ These contracts gate migration for all active source rows under `stage2/*.py`.
 - POS-19389 uses `groupSwitchDish` three times as the non-combo dishes for two seats, with no live client dependency in offline mode.
 - POS-19517 uses the stable `superman item1` non-combo dish from `test-data/pos/dishes.ts`, with no live client dependency in offline mode.
 - POS-21845 uses `groupSwitchDish` as the source non-combo dish, with no live client dependency in offline mode.
+- POS-21855 uses `groupSwitchDish` as the source non-combo dish, with no live client dependency in offline mode.
 
 ### Stub Behavior
 
@@ -120,6 +125,7 @@ These contracts gate migration for all active source rows under `stage2/*.py`.
 - POS-19389 stub behavior reuses changed-price seat split tip allocation, applies a 5.00 fixed amount discount to suborder 1's first item, and reallocates tips as 3.00/3.00 when suborder subtotals become equal.
 - POS-19517 stub behavior records the first even-pay credit payment as a positive payment record, records the remaining cash payment as a second positive payment record, and appends refund records with the negative amount of the selected original payment record while preserving record ordering.
 - POS-21845 stub behavior lets amount split dynamically add amount inputs, keeps the parent total unchanged while entering split rows, persists each fixed split amount as a suborder price, and displays fixed-price suborder totals even when amount split suborders do not own item rows.
+- POS-21855 stub behavior keeps existing Void order status behavior and additionally renders a seven-option Void reason chooser after a successful Void action.
 
 ### Live Gaps
 
@@ -140,6 +146,7 @@ These contracts gate migration for all active source rows under `stage2/*.py`.
 | POS-19389-live | Changed-price seat split tip allocation, fixed item discount save, and suborder tip display are only stub-verified | Run live smoke for POS-19389 and record selector/data gaps before removing live gap |
 | POS-19517-live | Even-pay settlement, credit test-only payment, cash tender, payment record refund action, and payment record ordering are only stub-verified | Run live smoke for POS-19517 and record selector/device/data gaps before removing live gap |
 | POS-21845-live | Dynamic amount split rows, parent total display, amount split save confirmation, and fixed suborder total display are only stub-verified | Run live smoke for POS-21845 and record selector/data gaps before removing live gap |
+| POS-21855-live | Void reason chooser and reason option count are only stub-verified | Run live smoke for POS-21855 and record selector/configuration gaps before removing live gap |
 
 ## Recall Search, Sort, Edit, And Card Detail Flow
 

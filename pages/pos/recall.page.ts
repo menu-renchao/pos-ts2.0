@@ -95,6 +95,8 @@ export class RecallPage extends PageObject {
   private readonly voidAlert: Locator;
   private readonly voidPaidOrderButton: Locator;
   private readonly voidOrderButton: Locator;
+  private readonly voidReasonChooseButton: Locator;
+  private readonly voidReasonOptions: Locator;
   private readonly restoreInventoryCheckbox: Locator;
   private readonly reprintButton: Locator;
   private readonly subOrderButton: Locator;
@@ -175,6 +177,8 @@ export class RecallPage extends PageObject {
     this.voidAlert = page.getByTestId('recall-void-alert');
     this.voidPaidOrderButton = page.getByTestId('recall-void-paid-order');
     this.voidOrderButton = page.getByTestId('recall-void-order');
+    this.voidReasonChooseButton = page.getByTestId('recall-void-reason-choose');
+    this.voidReasonOptions = page.getByTestId('recall-void-reason-option');
     this.restoreInventoryCheckbox = page.getByTestId('recall-restore-inventory');
     this.reprintButton = page.getByTestId('recall-reprint');
     this.subOrderButton = page.getByTestId('recall-sub-order');
@@ -488,6 +492,20 @@ export class RecallPage extends PageObject {
     return step(`Recall Void 订单${restoreInventory ? '并恢复库存' : '且不恢复库存'}并读取提示`, async () => {
       await this.voidOrder(restoreInventory);
       return ((await this.voidAlert.textContent()) ?? '').trim();
+    });
+  }
+
+  async openVoidReasonChooser(): Promise<void> {
+    await step('打开 Recall Void 原因选择', async () => {
+      await this.voidOrderButton.click();
+      await this.voidReasonChooseButton.click();
+    });
+  }
+
+  async readVoidReasonCount(): Promise<number> {
+    return step('读取 Recall Void 原因数量', async () => {
+      await expect(this.voidReasonOptions.first()).toBeVisible();
+      return this.voidReasonOptions.count();
     });
   }
 

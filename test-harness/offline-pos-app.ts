@@ -489,6 +489,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       </label>
       <button data-testid="recall-void-order">Void Order</button>
       <div data-testid="recall-void-alert" role="alert"></div>
+      <section data-testid="recall-void-reason-panel" hidden>
+        <button data-testid="recall-void-reason-choose">Choose Void Reason</button>
+        <div data-testid="recall-void-reasons"></div>
+      </section>
       <button data-testid="recall-refund-paid-order">Refund Paid Order</button>
       <div data-testid="recall-payment-records"></div>
       <button data-testid="recall-cancel-condition">Cancel Condition</button>
@@ -1128,6 +1132,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const recallVoidPaidOrderButton = document.querySelector('[data-testid="recall-void-paid-order"]');
       const recallRestoreInventoryCheckbox = document.querySelector('[data-testid="recall-restore-inventory"]');
       const recallVoidOrderButton = document.querySelector('[data-testid="recall-void-order"]');
+      const recallVoidReasonPanel = document.querySelector('[data-testid="recall-void-reason-panel"]');
+      const recallVoidReasons = document.querySelector('[data-testid="recall-void-reasons"]');
       const recallRefundPaidOrderButton = document.querySelector('[data-testid="recall-refund-paid-order"]');
       const recallPaymentRecords = document.querySelector('[data-testid="recall-payment-records"]');
       const recallCancelConditionButton = document.querySelector('[data-testid="recall-cancel-condition"]');
@@ -2879,6 +2885,25 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         });
       }
 
+      function renderVoidReasons() {
+        recallVoidReasons.innerHTML = '';
+        [
+          'Customer changed mind',
+          'Wrong item',
+          'Duplicate order',
+          'Kitchen unavailable',
+          'Manager approval',
+          'Payment issue',
+          'Other',
+        ].forEach((reason) => {
+          const option = document.createElement('button');
+          option.dataset.testid = 'recall-void-reason-option';
+          option.textContent = reason;
+          recallVoidReasons.appendChild(option);
+        });
+        recallVoidReasonPanel.hidden = false;
+      }
+
       function orderItemsSubtotal(items) {
         return roundMoney((items || []).reduce((total, item) => total + Number(item.price || 0), 0));
       }
@@ -4376,6 +4401,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       recallVoidOrderButton.addEventListener('click', () => {
         if (selectedRecallOrder) {
           recallVoidAlert.textContent = '';
+          recallVoidReasonPanel.hidden = true;
           if (selectedSubOrderIndex !== null && selectedRecallOrder.subOrderStatuses?.[selectedSubOrderIndex]) {
             const hasPaidSharedItem = selectedRecallOrder.subOrderItems?.some((subOrderItems, subOrderIndex) =>
               subOrderIndex !== selectedSubOrderIndex &&
@@ -4388,6 +4414,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
             }
             selectedRecallOrder.subOrderStatuses[selectedSubOrderIndex] = 'Void';
             recallOrderStatus.textContent = 'Void';
+            renderVoidReasons();
             renderSubOrders(selectedRecallOrder);
             return;
           }
@@ -4395,6 +4422,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           if (recallRestoreInventoryCheckbox.checked) {
             restoreOrderInventory(selectedRecallOrder);
           }
+          renderVoidReasons();
           renderRecallOrderItems();
         }
       });

@@ -193,4 +193,18 @@ test.describe('stage2 order operation migration', () => {
     expect(result.firstSubOrderTotal).toBe(20);
     expect(result.secondSubOrderTotal).toBe(20);
   });
+
+  test('POS-21855 Void 订单时应展示 7 个原因选项', {
+    annotation: [jiraIssue('POS-21855')],
+  }, async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const reasonCount = await orderEntryFlow.openVoidReasonsForSavedOrderAndReadCount(environment.posHomeUrl);
+
+    expect(reasonCount).toBe(7);
+  });
 });

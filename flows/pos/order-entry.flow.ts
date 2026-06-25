@@ -761,6 +761,19 @@ export class OrderEntryFlow {
     };
   }
 
+  async openVoidReasonsForSavedOrderAndReadCount(homeUrl: string): Promise<number> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.saveOrder();
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.openVoidReasonChooser();
+    return this.recallPage.readVoidReasonCount();
+  }
+
   async unsplitEvenSplitOrderAfterEditingFirstSubOrderTip(homeUrl: string): Promise<EvenSplitTipUnsplitResult> {
     await this.homePage.open(homeUrl);
     await this.homePage.clickDineIn();
