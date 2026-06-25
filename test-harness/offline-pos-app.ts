@@ -77,6 +77,29 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         <option value="true">true</option>
         <option value="false">false</option>
       </select>
+      <button data-testid="admin-staff">Staff</button>
+      <section data-testid="admin-staff-page" hidden>
+        <button data-testid="admin-staff-create">Create Staff</button>
+        <div data-testid="admin-staff-list"></div>
+        <input data-testid="admin-staff-name" />
+        <input data-testid="admin-staff-code" />
+        <select data-testid="admin-staff-role">
+          <option value="Manager">Manager</option>
+        </select>
+        <label>
+          <input data-testid="admin-authority-DINE_IN" type="checkbox" />
+          DINE_IN
+        </label>
+        <label>
+          <input data-testid="admin-authority-ADMIN" type="checkbox" />
+          ADMIN
+        </label>
+        <label>
+          <input data-testid="admin-authority-ADMIN_STAFF" type="checkbox" />
+          ADMIN_STAFF
+        </label>
+        <button data-testid="admin-staff-save">Save Staff</button>
+      </section>
       <select data-testid="admin-auto-redirect-after-reduce">
         <option value="true">true</option>
         <option value="false">false</option>
@@ -622,6 +645,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let adminGlobalOptions = [];
       let selectedGlobalOptionName = '';
       let adminCreatedMenuItems = [];
+      let adminStaffRecords = [];
+      let selectedAdminStaffName = '';
       let savedOrders = [];
       let nextOrderNumber = 100000;
       let selectedRecallOrder = null;
@@ -731,6 +756,17 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const adminTaxFreeEnabledSelect = document.querySelector('[data-testid="admin-tax-free-enabled"]');
       const adminTaxFreeSaveButton = document.querySelector('[data-testid="admin-tax-free-save"]');
       const adminTaxFreeConfirmation = document.querySelector('[data-testid="admin-tax-free-confirmation"]');
+      const adminStaffButton = document.querySelector('[data-testid="admin-staff"]');
+      const adminStaffPage = document.querySelector('[data-testid="admin-staff-page"]');
+      const adminStaffCreateButton = document.querySelector('[data-testid="admin-staff-create"]');
+      const adminStaffList = document.querySelector('[data-testid="admin-staff-list"]');
+      const adminStaffNameInput = document.querySelector('[data-testid="admin-staff-name"]');
+      const adminStaffCodeInput = document.querySelector('[data-testid="admin-staff-code"]');
+      const adminStaffRoleSelect = document.querySelector('[data-testid="admin-staff-role"]');
+      const adminStaffSaveButton = document.querySelector('[data-testid="admin-staff-save"]');
+      const adminAuthorityDineIn = document.querySelector('[data-testid="admin-authority-DINE_IN"]');
+      const adminAuthorityAdmin = document.querySelector('[data-testid="admin-authority-ADMIN"]');
+      const adminAuthorityAdminStaff = document.querySelector('[data-testid="admin-authority-ADMIN_STAFF"]');
       const joinMemberButton = document.querySelector('[data-testid="home-join-member"]');
       const joinMemberRegistration = document.querySelector('[data-testid="join-member-registration"]');
       const joinMemberFirstNameInput = document.querySelector('[data-testid="join-member-first-name"]');
@@ -1402,6 +1438,48 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           staffHasPermission(password, 'REPORT') ||
           staffHasPermission(password, 'TOTAL_REPORT') ||
           staffHasPermission(password, 'PERSONAL_REPORT')
+        );
+      }
+
+      function staffAuthorityCheckbox(permission) {
+        return {
+          DINE_IN: adminAuthorityDineIn,
+          ADMIN: adminAuthorityAdmin,
+          ADMIN_STAFF: adminAuthorityAdminStaff,
+        }[permission];
+      }
+
+      function setStaffAuthority(permission, enabled) {
+        const checkbox = staffAuthorityCheckbox(permission);
+        if (checkbox) {
+          checkbox.checked = Boolean(enabled);
+        }
+      }
+
+      function showSelectedAdminStaff(staff) {
+        selectedAdminStaffName = staff?.name || '';
+        adminStaffNameInput.value = staff?.name || '';
+        adminStaffCodeInput.value = staff?.code || '';
+        adminStaffRoleSelect.value = staff?.role || 'Manager';
+        ['DINE_IN', 'ADMIN', 'ADMIN_STAFF'].forEach((permission) => {
+          setStaffAuthority(permission, staff?.permissions?.includes(permission));
+        });
+      }
+
+      function renderAdminStaffList() {
+        adminStaffList.innerHTML = '';
+        adminStaffRecords.forEach((staff) => {
+          const row = document.createElement('button');
+          row.dataset.testid = 'admin-staff-row';
+          row.textContent = staff.name;
+          row.addEventListener('click', () => showSelectedAdminStaff(staff));
+          adminStaffList.appendChild(row);
+        });
+      }
+
+      function creatableStaffPermissionsForCurrentEmployee() {
+        return ['DINE_IN', 'ADMIN', 'ADMIN_STAFF'].filter((permission) =>
+          staffHasPermission(currentEmployeePassword, permission),
         );
       }
 
@@ -2465,7 +2543,34 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       document.querySelector('[data-testid="home-admin"]').addEventListener('click', () => {
         adminAnalysisPage.hidden = true;
         adminPermissionPopup.hidden = true;
+        adminStaffPage.hidden = true;
         showPanel('admin');
+      });
+      adminStaffButton.addEventListener('click', () => {
+        adminAnalysisPage.hidden = true;
+        adminPermissionPopup.hidden = true;
+        adminStaffPage.hidden = false;
+        renderAdminStaffList();
+      });
+      adminStaffCreateButton.addEventListener('click', () => {
+        showSelectedAdminStaff({
+          name: '',
+          code: '',
+          role: 'Manager',
+          permissions: creatableStaffPermissionsForCurrentEmployee(),
+        });
+      });
+      adminStaffSaveButton.addEventListener('click', () => {
+        const staff = {
+          name: adminStaffNameInput.value,
+          code: adminStaffCodeInput.value,
+          role: adminStaffRoleSelect.value,
+          permissions: creatableStaffPermissionsForCurrentEmployee(),
+        };
+        adminStaffRecords = adminStaffRecords.filter((record) => record.name !== staff.name);
+        adminStaffRecords.push(staff);
+        renderAdminStaffList();
+        showSelectedAdminStaff(staff);
       });
       adminAnalysisButton.addEventListener('click', () => {
         if (staffHasPermission(currentEmployeePassword, 'ANALYSIS')) {

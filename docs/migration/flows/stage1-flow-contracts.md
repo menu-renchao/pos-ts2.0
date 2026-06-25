@@ -63,7 +63,7 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 
 | source_file | source_class | source_test_patterns | target_specs | target_flow_methods |
 |---|---|---|---|---|
-| stage1/test_admin_staff.py | TestAdminStaff | whole-order max discount, item max discount, recall discount permission, multi-discount, report permission, create staff with selected authority | tests/stage1/admin-staff.spec.ts | `StaffPermissionFlow.rejectWholeOrderDiscountAboveServerLimitWithoutPassword`, `StaffPermissionFlow.applyWholeOrderDiscountAboveServerLimitWithManagerPassword`, `StaffPermissionFlow.applyWholeOrderDiscountAboveManagerLimitWithBossPassword`, `StaffPermissionFlow.applyItemDiscountAboveServerLimitWithManagerPassword`, `StaffPermissionFlow.applyItemDiscountAboveManagerLimitWithBossPassword`, `StaffPermissionFlow.rejectRecallWholeOrderAmountDiscountAboveServerLimitWithoutPassword`, `StaffPermissionFlow.cancelRecallWholeOrderAmountDiscountAboveServerLimit`, `StaffPermissionFlow.applyRecallWholeOrderAmountDiscountAboveManagerLimitWithBossPassword`, `StaffPermissionFlow.requirePermissionForItemDiscountAfterBossAuthorizedWholeOrderDiscount`, `StaffPermissionFlow.requirePermissionForMultiItemAmountDiscount`, `StaffPermissionFlow.rejectAnyWholeOrderDiscountWhenServerLimitIsZero`, `StaffPermissionFlow.requirePermissionForSecondItemDiscountAfterWholeOrderAndItemDiscounts`, `StaffPermissionFlow.openAnalysisReportWithBossOverrideWhenStaffLacksPermission`, `StaffPermissionFlow.openTodayStaffReportWhenStaffOnlyHasPersonalReport`, `StaffPermissionFlow.configureStaffPermissions`, `StaffPermissionFlow.applyOrderDiscountWithAuthorization`, `StaffPermissionFlow.applyItemDiscountWithAuthorization`, `StaffPermissionFlow.verifyReportPermission` |
+| stage1/test_admin_staff.py | TestAdminStaff | whole-order max discount, item max discount, recall discount permission, multi-discount, report permission, create staff with selected authority | tests/stage1/admin-staff.spec.ts | `StaffPermissionFlow.rejectWholeOrderDiscountAboveServerLimitWithoutPassword`, `StaffPermissionFlow.applyWholeOrderDiscountAboveServerLimitWithManagerPassword`, `StaffPermissionFlow.applyWholeOrderDiscountAboveManagerLimitWithBossPassword`, `StaffPermissionFlow.applyItemDiscountAboveServerLimitWithManagerPassword`, `StaffPermissionFlow.applyItemDiscountAboveManagerLimitWithBossPassword`, `StaffPermissionFlow.rejectRecallWholeOrderAmountDiscountAboveServerLimitWithoutPassword`, `StaffPermissionFlow.cancelRecallWholeOrderAmountDiscountAboveServerLimit`, `StaffPermissionFlow.applyRecallWholeOrderAmountDiscountAboveManagerLimitWithBossPassword`, `StaffPermissionFlow.requirePermissionForItemDiscountAfterBossAuthorizedWholeOrderDiscount`, `StaffPermissionFlow.requirePermissionForMultiItemAmountDiscount`, `StaffPermissionFlow.rejectAnyWholeOrderDiscountWhenServerLimitIsZero`, `StaffPermissionFlow.requirePermissionForSecondItemDiscountAfterWholeOrderAndItemDiscounts`, `StaffPermissionFlow.openAnalysisReportWithBossOverrideWhenStaffLacksPermission`, `StaffPermissionFlow.openTodayStaffReportWhenStaffOnlyHasPersonalReport`, `StaffPermissionFlow.createNewStaffWithOnlyExistingAuthority`, `StaffPermissionFlow.configureStaffPermissions`, `StaffPermissionFlow.applyOrderDiscountWithAuthorization`, `StaffPermissionFlow.applyItemDiscountWithAuthorization`, `StaffPermissionFlow.verifyReportPermission` |
 
 ### Preconditions
 
@@ -75,6 +75,7 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 - `test_multi_whole_order_item_maximum_discount` configures Server/Manager/Boss to `20%`/`50%`/`100%` through `StubAdminStaffClient`, then validates cumulative whole-order plus item discount permission.
 - `test_staff_visit_without_analysis_authority` removes `ANALYSIS` from staff `1` through `StubAdminStaffClient`, matching source `AdminStaffAPI.edit_staff_remove_functions('1', [PosPermissionNames.ANALYSIS])`.
 - `test_staff_visit_without_view_history_authority` removes `VIEW_HISTORY_ORDERS`, `REPORT`, and `TOTAL_REPORT` from staff `1`, adds `PERSONAL_REPORT`, and validates today's Staff Report date range.
+- `test_create_new_staff_with_only_existed_authority` removes `DINE_IN` from staff `1`, adds `ADMIN` and `ADMIN_STAFF`, then validates a newly saved staff cannot receive `DINE_IN`.
 
 ### Steps
 
@@ -268,6 +269,19 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 | stub behavior | `StubAdminStaffClient.editStaffRemoveFunctions` and `editStaffAddFunctions` store staff permission overrides for staff `1`; offline harness maps password `123` to staff `1`, allows Report access through `PERSONAL_REPORT` even after `REPORT` and `TOTAL_REPORT` are removed, and renders deterministic Staff Report date range values for the local current day. |
 | live gaps | Live AdminStaffAPI setup/teardown, Report password dialog selector, Total Report navigation, Staff Report selector, iframe switching, and real date range selectors must be validated in live smoke. |
 
+#### StaffPermissionFlow.createNewStaffWithOnlyExistingAuthority
+
+| field | contract |
+|---|---|
+| source | `stage1/test_admin_staff.py::TestAdminStaff::test_create_new_staff_with_only_existed_authority` |
+| jira | POS-39749 |
+| preconditions | `StubAdminStaffClient` removes `DINE_IN` from staff id `1`, then adds `ADMIN` and `ADMIN_STAFF`; the offline harness receives staff permission overrides through `PosHomePage.applyOfflineStaffPermissionOverrides`; current employee logs in with password `123`; new staff sample uses name `pos39749`, code `397`, and role `Manager`. |
+| actions | Configure staff permissions, open POS home, synchronize offline permission overrides, refresh, login as staff `123`, open Admin, enter Staff, click Create Staff, input new staff name/code/role, save, reopen that staff by name, and read the `DINE_IN` authority checkbox. |
+| page methods | `PosHomePage.open`, `PosHomePage.applyOfflineStaffPermissionOverrides`, `PosHomePage.refresh`, `PosHomePage.inputEmployeePassword`, `PosHomePage.clickAdmin`, `AdminPage.enterStaff`, `AdminPage.clickCreateStaff`, `AdminPage.inputNewStaffInfo`, `AdminPage.clickStaffSave`, `AdminPage.clickStaffName`, `AdminPage.isAuthorityEnabled` |
+| assertions | The created staff name is present after save; `AdminPage.isAuthorityEnabled('DINE_IN')` returns false, matching the source `is_selected() is False` assertion for `PosPermissionNames.DINE_IN.value`. |
+| stub behavior | Offline harness creates staff records from the current employee's available permissions; because staff `123` lacks `DINE_IN`, saving a Manager staff does not check the `DINE_IN` authority checkbox; `StubAdminStaffClient.deleteStaffByName` records the source cleanup boundary without connecting to live APIs. |
+| live gaps | Live AdminStaffAPI setup/teardown, Admin Staff iframe navigation, Create Staff form selectors, role permission intersection behavior, save loading behavior, staff list row selector, and `privileges_DINE_IN` selector must be validated in live smoke. |
+
 ### Expected Assertions
 
 - Discount without permission is blocked or limited as in the source case.
@@ -281,7 +295,7 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 - `PosHomePage` owns offline staff discount limit synchronization for stub-mode role setup.
 - `PosHomePage` owns offline staff permission synchronization for stub-mode staff permission setup.
 - `StaffAdminPage` owns staff and permission controls when live Admin UI selectors are introduced.
-- `AdminPage` owns Admin Analysis navigation, permission alert, override password submission, and Analysis page visibility.
+- `AdminPage` owns Admin Analysis navigation, permission alert, override password submission, Analysis page visibility, Staff navigation, Staff creation form, Staff save, Staff row selection, and Staff authority checkbox reads.
 - `OrderDishesPage` owns discount action entry points and amount reads.
 - `RecallPage` owns recalled-order discount checks.
 - `ReportPage` owns report password submission, Total Report/Staff Report navigation, and Staff Report date range reads.
@@ -289,7 +303,7 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 ### Client/Data Responsibilities
 
 - `StubAdminStaffClient` owns role maximum discount setup for migrated AdminStaffAPI-style role changes.
-- `StubAdminStaffClient` owns staff permission add/remove setup for migrated AdminStaffAPI-style staff permission changes.
+- `StubAdminStaffClient` owns staff permission add/remove setup and source-equivalent staff cleanup boundaries for migrated AdminStaffAPI-style staff permission changes.
 - `StubPosStaffClient` owns staff/permission state when staff creation/report permissions are migrated.
 - `test-data/pos/permissions.ts` owns roles and authority samples.
 - `test-data/pos/payments.ts` owns discount and expected total samples.

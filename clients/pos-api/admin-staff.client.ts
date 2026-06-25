@@ -2,7 +2,15 @@ import { staffDiscountRoleSamples } from '../../test-data/pos/permissions.js';
 import { step } from '../../utils/step.js';
 
 export type StaffRoleName = (typeof staffDiscountRoleSamples)[keyof typeof staffDiscountRoleSamples]['role'];
-export type StaffPermissionName = 'ANALYSIS' | 'VIEW_HISTORY_ORDERS' | 'REPORT' | 'TOTAL_REPORT' | 'PERSONAL_REPORT';
+export type StaffPermissionName =
+  | 'ANALYSIS'
+  | 'VIEW_HISTORY_ORDERS'
+  | 'REPORT'
+  | 'TOTAL_REPORT'
+  | 'PERSONAL_REPORT'
+  | 'DINE_IN'
+  | 'ADMIN'
+  | 'ADMIN_STAFF';
 
 export type StaffRoleDiscountLimit = {
   role: StaffRoleName;
@@ -20,6 +28,7 @@ export interface AdminStaffClient {
   readRoleMaxDiscounts(): Promise<StaffRoleDiscountLimit[]>;
   editStaffRemoveFunctions(staffId: string, permissions: readonly StaffPermissionName[]): Promise<void>;
   editStaffAddFunctions(staffId: string, permissions: readonly StaffPermissionName[]): Promise<void>;
+  deleteStaffByName(staffName: string): Promise<void>;
   readStaffPermissionOverrides(): Promise<StaffPermissionOverride[]>;
 }
 
@@ -48,8 +57,11 @@ export class StubAdminStaffClient implements AdminStaffClient {
     await step(`移除员工 ${staffId} 权限 ${permissions.join(', ')}`, async () => {
       const current = this.permissionOverrideFor(staffId);
       const removedPermissions = [...new Set([...current.removedPermissions, ...permissions])];
+      const removedPermissionSet = new Set<StaffPermissionName>(permissions);
+      const addedPermissions = current.addedPermissions.filter((permission) => !removedPermissionSet.has(permission));
       this.permissionOverrides.set(staffId, {
         ...current,
+        addedPermissions,
         removedPermissions,
       });
     });
@@ -71,6 +83,10 @@ export class StubAdminStaffClient implements AdminStaffClient {
 
   async readStaffPermissionOverrides(): Promise<StaffPermissionOverride[]> {
     return step('读取员工权限覆盖配置', async () => [...this.permissionOverrides.values()]);
+  }
+
+  async deleteStaffByName(staffName: string): Promise<void> {
+    await step(`删除员工 ${staffName}`, async () => {});
   }
 
   private permissionOverrideFor(staffId: string): StaffPermissionOverride {

@@ -10,6 +10,16 @@ export const staffSamples = {
     removedPermissions: ['VIEW_HISTORY_ORDERS', 'REPORT', 'TOTAL_REPORT'],
     addedPermissions: ['PERSONAL_REPORT'],
   },
+  createWithOnlyExistingAuthority: {
+    id: '1',
+    password: '123',
+    name: 'pos39749',
+    code: '397',
+    role: 'Manager',
+    removedPermissions: ['DINE_IN'],
+    addedPermissions: ['ADMIN', 'ADMIN_STAFF'],
+    restrictedAuthority: 'DINE_IN',
+  },
 } as const;
 
 export const validEmployeePassword = staffSamples.manager.password;
@@ -61,4 +71,7 @@ export const staffPermissionSamples = {
   reportPermissionName: 'REPORT',
   totalReportPermissionName: 'TOTAL_REPORT',
   personalReportPermissionName: 'PERSONAL_REPORT',
+  dineInPermissionName: 'DINE_IN',
+  adminPermissionName: 'ADMIN',
+  adminStaffPermissionName: 'ADMIN_STAFF',
 } as const;

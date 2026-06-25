@@ -63,6 +63,11 @@ export type StaffReportDateRangeResult = {
   tomorrow: string;
 };
 
+export type CreatedStaffAuthorityResult = {
+  staffName: string;
+  dineInAuthorityEnabled: boolean;
+};
+
 export type AuthorizedWholeOrderDiscountResult = {
   permissionTip: string;
   subtotal: number;
@@ -378,6 +383,40 @@ export class StaffPermissionFlow {
       const { startTime, endTime } = await reportPage.readStaffReportDateRange();
 
       return { startTime, endTime, today: localIsoDate(0), tomorrow: localIsoDate(1) };
+    });
+  }
+
+  async createNewStaffWithOnlyExistingAuthority(homeUrl: string): Promise<CreatedStaffAuthorityResult> {
+    return step('创建新员工时只能赋予当前员工已有权限', async () => {
+      const adminStaffClient = this.requireAdminStaffClient();
+      const adminPage = this.requireAdminPage();
+      const staffSample = staffSamples.createWithOnlyExistingAuthority;
+      let staffName = '';
+
+      try {
+        await adminStaffClient.editStaffRemoveFunctions(staffSample.id, staffSample.removedPermissions);
+        await adminStaffClient.editStaffAddFunctions(staffSample.id, staffSample.addedPermissions);
+
+        await this.homePage.open(homeUrl);
+        await this.homePage.applyOfflineStaffPermissionOverrides(await adminStaffClient.readStaffPermissionOverrides());
+        await this.homePage.refresh();
+        await this.homePage.inputEmployeePassword(staffSample.password);
+        await this.homePage.clickAdmin();
+        await adminPage.enterStaff();
+        await adminPage.clickCreateStaff();
+
+        staffName = staffSample.name;
+        await adminPage.inputNewStaffInfo(staffName, staffSample.code, staffSample.role);
+        await adminPage.clickStaffSave();
+        await adminPage.clickStaffName(staffName);
+        const dineInAuthorityEnabled = await adminPage.isAuthorityEnabled(staffSample.restrictedAuthority);
+
+        return { staffName, dineInAuthorityEnabled };
+      } finally {
+        if (staffName) {
+          await adminStaffClient.deleteStaffByName(staffName);
+        }
+      }
     });
   }
 

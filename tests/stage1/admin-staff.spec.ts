@@ -243,4 +243,25 @@ test.describe('stage1 admin staff migration', () => {
       expect(result.endTime).toContain(result.tomorrow);
     },
   );
+
+  test(
+    'POS-39749 创建新员工时只能赋予当前员工已有权限并保存成功',
+    {
+      annotation: jiraIssue('POS-39749'),
+    },
+    async ({ adminStaffClient, environment, page }) => {
+      const flow = new StaffPermissionFlow(
+        new PosHomePage(page),
+        new OrderDishesPage(page),
+        undefined,
+        adminStaffClient,
+        new AdminPage(page),
+      );
+
+      const result = await flow.createNewStaffWithOnlyExistingAuthority(environment.posHomeUrl);
+
+      expect(result.staffName).toBeTruthy();
+      expect(result.dineInAuthorityEnabled).toBe(false);
+    },
+  );
 });

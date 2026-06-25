@@ -3,6 +3,7 @@ import { expect } from '@playwright/test';
 
 import { step } from '../../utils/step.js';
 import type { CombineSameItemMode, MenuMode, RoundingStrategyOption } from '../../test-data/pos/admin-settings.js';
+import type { StaffPermissionName } from '../../clients/pos-api/admin-staff.client.js';
 import { PageObject } from '../shared/page-object.js';
 
 export class AdminPage extends PageObject {
@@ -90,6 +91,13 @@ export class AdminPage extends PageObject {
   private readonly roundingStrategySelect: Locator;
   private readonly saveSettingsButton: Locator;
   private readonly saveLanguageButton: Locator;
+  private readonly staffCreateButton: Locator;
+  private readonly staffCodeInput: Locator;
+  private readonly staffNameInput: Locator;
+  private readonly staffPage: Locator;
+  private readonly staffRoleSelect: Locator;
+  private readonly staffSaveButton: Locator;
+  private readonly staffSectionButton: Locator;
   private readonly searchMenuSelect: Locator;
   private readonly separateSameItemSelect: Locator;
   private readonly staffNoteSelect: Locator;
@@ -181,6 +189,13 @@ export class AdminPage extends PageObject {
     this.roundingStrategySelect = page.getByTestId('admin-rounding-strategy');
     this.saveSettingsButton = page.getByTestId('admin-save-settings');
     this.saveLanguageButton = page.getByTestId('save-user-default-language');
+    this.staffCreateButton = page.getByTestId('admin-staff-create');
+    this.staffCodeInput = page.getByTestId('admin-staff-code');
+    this.staffNameInput = page.getByTestId('admin-staff-name');
+    this.staffPage = page.getByTestId('admin-staff-page');
+    this.staffRoleSelect = page.getByTestId('admin-staff-role');
+    this.staffSaveButton = page.getByTestId('admin-staff-save');
+    this.staffSectionButton = page.getByTestId('admin-staff');
     this.searchMenuSelect = page.getByTestId('admin-search-menu');
     this.separateSameItemSelect = page.getByTestId('admin-separate-same-item');
     this.staffNoteSelect = page.getByTestId('admin-staff-note');
@@ -215,6 +230,50 @@ export class AdminPage extends PageObject {
     return step('判断是否进入后台 Analysis 页面', async () => {
       await expect(this.analysisPage).toBeVisible();
       return this.analysisPage.isVisible();
+    });
+  }
+
+  async enterStaff(): Promise<void> {
+    await step('进入后台 Staff 页面', async () => {
+      await expect(this.adminRoot).toBeVisible();
+      await this.staffSectionButton.click();
+      await expect(this.staffPage).toBeVisible();
+    });
+  }
+
+  async clickCreateStaff(): Promise<void> {
+    await step('点击创建 Staff', async () => {
+      await this.staffCreateButton.click();
+      await expect(this.staffNameInput).toBeVisible();
+    });
+  }
+
+  async inputNewStaffInfo(name: string, code: string, role: string): Promise<void> {
+    await step(`输入新员工 ${name} 信息`, async () => {
+      await this.staffNameInput.fill(name);
+      await this.staffCodeInput.fill(code);
+      await this.staffRoleSelect.selectOption(role);
+    });
+  }
+
+  async clickStaffSave(): Promise<void> {
+    await step('保存 Staff', async () => {
+      await this.staffSaveButton.click();
+    });
+  }
+
+  async clickStaffName(staffName: string): Promise<void> {
+    await step(`打开员工 ${staffName}`, async () => {
+      await this.page.getByTestId('admin-staff-row').filter({ hasText: staffName }).click();
+      await expect(this.staffNameInput).toHaveValue(staffName);
+    });
+  }
+
+  async isAuthorityEnabled(authority: StaffPermissionName): Promise<boolean> {
+    return step(`读取员工权限 ${authority} 是否已勾选`, async () => {
+      const authorityCheckbox = this.page.getByTestId(`admin-authority-${authority}`);
+      await expect(authorityCheckbox).toBeVisible();
+      return authorityCheckbox.isChecked();
     });
   }
 
