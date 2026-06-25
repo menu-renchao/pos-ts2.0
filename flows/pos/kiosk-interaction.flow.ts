@@ -1,9 +1,12 @@
 import type { AdminSettingsClient } from '../../clients/pos-api/admin-settings.client.js';
+import type { MenuClient, MenuDishAvailability } from '../../clients/pos-api/menu.client.js';
 import { posLicenseTypes, type RestaurantClient } from '../../clients/pos-api/restaurant.client.js';
 import type { KioskHomePage } from '../../pages/kiosk/home.page.js';
+import type { AdminPage } from '../../pages/pos/admin.page.js';
 import type { PosHomePage } from '../../pages/pos/home.page.js';
 import type { RecallPage } from '../../pages/pos/recall.page.js';
 import { adminSettings } from '../../test-data/pos/admin-settings.js';
+import { kioskInventoryDish } from '../../test-data/pos/dishes.js';
 import { step } from '../../utils/step.js';
 
 export class KioskInteractionFlow {
@@ -11,6 +14,7 @@ export class KioskInteractionFlow {
     private readonly homePage: PosHomePage,
     private readonly kioskHomePage: KioskHomePage,
     private readonly recallPage: RecallPage,
+    private readonly adminPage?: AdminPage,
   ) {}
 
   async placeKioskTogoCashOrderAndReadRecallTax(
@@ -61,6 +65,34 @@ export class KioskInteractionFlow {
       const kioskLicenseNames = (await this.kioskHomePage.readAllKioskLicenseNames()).sort();
 
       return { posApiKioskLicenseNames, kioskLicenseNames };
+    });
+  }
+
+  async markKioskItemSoldOutAndReadMenuApiState(
+    posHomeUrl: string,
+    menuClient: MenuClient,
+  ): Promise<MenuDishAvailability> {
+    return step('后台 Kiosk 设置菜品售罄并读取 Menu API Kiosk 菜品状态', async () => {
+      if (!this.adminPage) {
+        throw new Error('AdminPage is required to set Kiosk item sold out.');
+      }
+
+      await this.homePage.open(posHomeUrl);
+      await this.homePage.clickAdmin();
+      await this.adminPage.enterKiosk();
+      await this.adminPage.setKioskItemSoldOut(kioskInventoryDish.name);
+      await menuClient.setDishOutOfStock('KIOSK', kioskInventoryDish.group, kioskInventoryDish.category, kioskInventoryDish.name);
+
+      const dishes = await menuClient.getAllAvailableDishInfosOfCategoryAndGroup(
+        kioskInventoryDish.group,
+        kioskInventoryDish.category,
+        'KIOSK',
+      );
+      const itemState = dishes[kioskInventoryDish.name];
+      if (!itemState) {
+        throw new Error(`Missing Kiosk menu item state for ${kioskInventoryDish.name}`);
+      }
+      return itemState;
     });
   }
 }

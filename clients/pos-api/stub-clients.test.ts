@@ -50,6 +50,15 @@ test('StubMenuClient returns POS menu item count in MenuAPI shape', async () => 
   assert.equal(menuInfo.menus[0]?.menuItemCount, 24);
 });
 
+test('StubMenuClient stores Kiosk dish sold-out status by product line and category', async () => {
+  const client = new StubMenuClient();
+
+  await client.setDishOutOfStock('KIOSK', 'Chinese Food', 'Appetizers', 'kiosk_item');
+  const dishes = await client.getAllAvailableDishInfosOfCategoryAndGroup('Chinese Food', 'Appetizers', 'KIOSK');
+
+  assert.equal(dishes.kiosk_item?.outOfStock, true);
+});
+
 test('StubRestaurantClient filters Kiosk license names like PosAPI', async () => {
   const client = new StubRestaurantClient();
 

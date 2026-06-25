@@ -122,6 +122,12 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         </select>
         <button data-testid="admin-attendance-save" hidden>Save Attendance</button>
       </section>
+      <button data-testid="admin-kiosk">Kiosk</button>
+      <section data-testid="admin-kiosk-page" hidden>
+        <input data-testid="admin-kiosk-item-name" />
+        <button data-testid="admin-kiosk-item-sold-out">Set Sold Out</button>
+        <div data-testid="admin-kiosk-item-status"></div>
+      </section>
       <select data-testid="admin-auto-redirect-after-reduce">
         <option value="true">true</option>
         <option value="false">false</option>
@@ -755,6 +761,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         },
       ];
       let attendanceRecords = [];
+      let adminKioskSoldOutItems = new Set(readStoredJson('offline-admin-kiosk-sold-out-items', []));
       let selectedAdminStaffName = '';
       let savedOrders = readStoredJson('offlineSavedOrders', []);
       let emenuLatestOrder = null;
@@ -868,6 +875,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const adminTaxFreeConfirmation = document.querySelector('[data-testid="admin-tax-free-confirmation"]');
       const adminStaffButton = document.querySelector('[data-testid="admin-staff"]');
       const adminStaffPage = document.querySelector('[data-testid="admin-staff-page"]');
+      const adminKioskButton = document.querySelector('[data-testid="admin-kiosk"]');
+      const adminKioskPage = document.querySelector('[data-testid="admin-kiosk-page"]');
+      const adminKioskItemNameInput = document.querySelector('[data-testid="admin-kiosk-item-name"]');
+      const adminKioskItemSoldOutButton = document.querySelector('[data-testid="admin-kiosk-item-sold-out"]');
+      const adminKioskItemStatus = document.querySelector('[data-testid="admin-kiosk-item-status"]');
       const adminStaffCreateButton = document.querySelector('[data-testid="admin-staff-create"]');
       const adminStaffList = document.querySelector('[data-testid="admin-staff-list"]');
       const adminStaffNameInput = document.querySelector('[data-testid="admin-staff-name"]');
@@ -1313,6 +1325,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
 
       function showPanel(panel) {
         adminPage.hidden = panel !== 'admin';
+        adminKioskPage.hidden = true;
         deliveryPage.hidden = panel !== 'delivery';
         joinMemberRegistration.hidden = panel !== 'join-member';
         inventoryPage.hidden = panel !== 'inventory';
@@ -1909,6 +1922,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           row.addEventListener('click', () => showSelectedAdminStaff(staff));
           adminStaffList.appendChild(row);
         });
+      }
+
+      function renderAdminKioskItemStatus(itemName) {
+        adminKioskItemStatus.textContent = adminKioskSoldOutItems.has(itemName) ? 'out-of-stock' : 'in-stock';
       }
 
       function creatableStaffPermissionsForCurrentEmployee() {
@@ -3003,13 +3020,27 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         adminAnalysisPage.hidden = true;
         adminPermissionPopup.hidden = true;
         adminStaffPage.hidden = true;
+        adminKioskPage.hidden = true;
         showPanel('admin');
       });
       adminStaffButton.addEventListener('click', () => {
         adminAnalysisPage.hidden = true;
         adminPermissionPopup.hidden = true;
         adminStaffPage.hidden = false;
+        adminKioskPage.hidden = true;
         renderAdminStaffList();
+      });
+      adminKioskButton.addEventListener('click', () => {
+        adminAnalysisPage.hidden = true;
+        adminPermissionPopup.hidden = true;
+        adminStaffPage.hidden = true;
+        adminKioskPage.hidden = false;
+      });
+      adminKioskItemSoldOutButton.addEventListener('click', () => {
+        const itemName = adminKioskItemNameInput.value;
+        adminKioskSoldOutItems.add(itemName);
+        localStorage.setItem('offline-admin-kiosk-sold-out-items', JSON.stringify([...adminKioskSoldOutItems]));
+        renderAdminKioskItemStatus(itemName);
       });
       adminStaffCreateButton.addEventListener('click', () => {
         showSelectedAdminStaff({

@@ -10,6 +10,16 @@ export const inventoryTrackedDish: DishSample = {
   taxRate: 0.0825,
 };
 
+export const kioskInventoryDish = {
+  id: 'dish-kiosk-item',
+  name: 'kiosk_item',
+  price: 10,
+  category: 'Appetizers',
+  group: 'Chinese Food',
+  inventorySku: 'KIOSK-ITEM',
+  taxRate: 0.0825,
+} as const satisfies DishSample;
+
 export const splitDiscountDishes: readonly DishSample[] = [
   {
     id: 'dish-superman-item1',

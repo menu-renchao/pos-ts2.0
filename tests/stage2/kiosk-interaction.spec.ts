@@ -1,6 +1,7 @@
 import { expect, test } from '../../fixtures/base-test.js';
 import { KioskInteractionFlow } from '../../flows/pos/kiosk-interaction.flow.js';
 import { KioskHomePage } from '../../pages/kiosk/home.page.js';
+import { AdminPage } from '../../pages/pos/admin.page.js';
 import { PosHomePage } from '../../pages/pos/home.page.js';
 import { RecallPage } from '../../pages/pos/recall.page.js';
 
@@ -23,5 +24,20 @@ test.describe('stage2 kiosk interaction migration', () => {
     const licenseComparison = await flow.verifyKioskLicenseList(environment.posHomeUrl, restaurantClient);
 
     expect(licenseComparison.kioskLicenseNames).toEqual(licenseComparison.posApiKioskLicenseNames);
+  });
+
+  test('POS-36267 Kiosk 后台设置菜品售罄后 Menu API 应同步 out_of_stock', {
+    annotation: { type: 'issue', description: 'POS-36267' },
+  }, async ({ environment, menuClient, page }) => {
+    const flow = new KioskInteractionFlow(
+      new PosHomePage(page),
+      new KioskHomePage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const itemState = await flow.markKioskItemSoldOutAndReadMenuApiState(environment.posHomeUrl, menuClient);
+
+    expect(itemState.outOfStock).toBe(true);
   });
 });

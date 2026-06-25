@@ -25,6 +25,11 @@ export class AdminPage extends PageObject {
   private readonly itemGroupInput: Locator;
   private readonly itemCategoryInput: Locator;
   private readonly itemNameInput: Locator;
+  private readonly kioskButton: Locator;
+  private readonly kioskItemNameInput: Locator;
+  private readonly kioskItemSoldOutButton: Locator;
+  private readonly kioskItemStatus: Locator;
+  private readonly kioskPage: Locator;
   private readonly kdsItemNameInput: Locator;
   private readonly kdsItemPosNameInput: Locator;
   private readonly kdsItemPosNameSaveButton: Locator;
@@ -128,6 +133,11 @@ export class AdminPage extends PageObject {
     this.itemGroupInput = page.getByTestId('admin-item-group');
     this.itemCategoryInput = page.getByTestId('admin-item-category');
     this.itemNameInput = page.getByTestId('admin-item-name');
+    this.kioskButton = page.getByTestId('admin-kiosk');
+    this.kioskPage = page.getByTestId('admin-kiosk-page');
+    this.kioskItemNameInput = page.getByTestId('admin-kiosk-item-name');
+    this.kioskItemSoldOutButton = page.getByTestId('admin-kiosk-item-sold-out');
+    this.kioskItemStatus = page.getByTestId('admin-kiosk-item-status');
     this.itemChineseNameInput = page.getByTestId('admin-item-chinese-name');
     this.itemChineseNameSaveButton = page.getByTestId('admin-item-chinese-name-save');
     this.kdsItemNameInput = page.getByTestId('admin-kds-item-name');
@@ -252,6 +262,23 @@ export class AdminPage extends PageObject {
       await expect(this.adminRoot).toBeVisible();
       await this.staffSectionButton.click();
       await expect(this.staffPage).toBeVisible();
+    });
+  }
+
+  async enterKiosk(): Promise<void> {
+    await step('进入后台 Kiosk 页面', async () => {
+      await expect(this.adminRoot).toBeVisible();
+      await this.kioskButton.click();
+      await expect(this.kioskPage).toBeVisible();
+    });
+  }
+
+  async setKioskItemSoldOut(itemName: string): Promise<void> {
+    await step(`后台 Kiosk 设置菜品 ${itemName} 售罄`, async () => {
+      await expect(this.kioskPage).toBeVisible();
+      await this.kioskItemNameInput.fill(itemName);
+      await this.kioskItemSoldOutButton.click();
+      await expect(this.kioskItemStatus).toHaveText('out-of-stock');
     });
   }
 
