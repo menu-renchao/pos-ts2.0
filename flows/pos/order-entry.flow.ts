@@ -950,8 +950,8 @@ export class OrderEntryFlow {
     homeUrl: string,
   ): Promise<CombinedNonTaxableChargeTotalsResult> {
     await this.homePage.open(homeUrl);
-    const firstOrderTotal = await this.createTaxExemptOrderWithNonTaxableChargeAndReadTotal();
-    const secondOrderTotal = await this.createTaxExemptOrderWithNonTaxableChargeAndReadTotal();
+    const firstOrderTotal = await this.createTaxExemptOrderWithChargeAndReadTotal({ taxableCharge: false });
+    const secondOrderTotal = await this.createTaxExemptOrderWithChargeAndReadTotal({ taxableCharge: false });
 
     await this.homePage.clickRecall();
     await this.recallPage.openRecentOrder();
@@ -965,13 +965,36 @@ export class OrderEntryFlow {
     };
   }
 
-  private async createTaxExemptOrderWithNonTaxableChargeAndReadTotal(): Promise<number> {
+  async combineTwoTaxExemptOrdersWithTaxableChargeAndReadTotals(
+    homeUrl: string,
+  ): Promise<CombinedNonTaxableChargeTotalsResult> {
+    await this.homePage.open(homeUrl);
+    const firstOrderTotal = await this.createTaxExemptOrderWithChargeAndReadTotal({ taxableCharge: true });
+    const secondOrderTotal = await this.createTaxExemptOrderWithChargeAndReadTotal({ taxableCharge: true });
+
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.combineOrder(2);
+    const combinedTotal = await this.recallPage.readOrderTotal();
+
+    return {
+      combinedTotal,
+      firstOrderTotal,
+      secondOrderTotal,
+    };
+  }
+
+  private async createTaxExemptOrderWithChargeAndReadTotal(options: { taxableCharge: boolean }): Promise<number> {
     await this.homePage.clickDineIn();
     await this.orderDishesPage.selectMenuGroup(chineseInitialSearchDish.group);
     await this.orderDishesPage.selectMenuCategory(chineseInitialSearchDish.category);
     await this.orderDishesPage.addMenuItem(chineseInitialSearchDish.name);
-    await this.orderDishesPage.applyOrderCharge('10%');
     await this.orderDishesPage.voidSelectedItemTax();
+    if (options.taxableCharge) {
+      await this.orderDishesPage.applyTaxableOrderCharge('10%');
+    } else {
+      await this.orderDishesPage.applyOrderCharge('10%');
+    }
     const total = await this.orderDishesPage.readSettlementTotal();
     await this.orderDishesPage.saveOrder();
     return total;

@@ -805,6 +805,12 @@ export class OrderDishesPage extends PageObject {
     });
   }
 
+  async applyTaxableOrderCharge(rate: '10%'): Promise<void> {
+    await step(`应用计税整单按比例加收 ${rate}`, async () => {
+      await this.orderCharge10Button.click();
+    });
+  }
+
   async openDiscountAndReadWholeOrderPrice(): Promise<string> {
     return step('打开折扣界面并读取整单金额', async () => {
       await this.orderDiscountButton.click();

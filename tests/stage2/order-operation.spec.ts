@@ -291,4 +291,18 @@ test.describe('stage2 order operation migration', () => {
 
     expect(result.combinedTotal).toBeCloseTo(result.firstOrderTotal + result.secondOrderTotal, 2);
   });
+
+  test('POS-23672 两个免税菜品订单应用计税加收后合单总额应相加', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.combineTwoTaxExemptOrdersWithTaxableChargeAndReadTotals(
+      environment.posHomeUrl,
+    );
+
+    expect(result.combinedTotal).toBeCloseTo(result.firstOrderTotal + result.secondOrderTotal, 2);
+  });
 });
