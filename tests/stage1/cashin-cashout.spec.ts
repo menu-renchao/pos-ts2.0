@@ -11,4 +11,12 @@ test.describe('stage1 cash in/out migration', () => {
 
     expect(pageText).toContain('现金备款');
   });
+
+  test('中文模式完成 Cash In 后再次进入应展示现金结算', async ({ environment, page }) => {
+    const flow = new CashDrawerFlow(new PosHomePage(page), new CashInOutPage(page));
+
+    const pageText = await flow.completeCashInAndOpenCashOutChinesePage(environment.posHomeUrl, 'test');
+
+    expect(pageText).toContain('现金结算');
+  });
 });

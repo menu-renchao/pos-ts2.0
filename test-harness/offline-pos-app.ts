@@ -520,6 +520,12 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
     </section>
     <section data-testid="cash-in-out-page" hidden>
       <h1 data-testid="cash-in-out-title">Cash In</h1>
+      <button data-testid="cash-in-out-complete">Complete</button>
+      <section data-testid="cash-in-out-note-panel" hidden>
+        <input data-testid="cash-in-out-note" />
+        <button data-testid="cash-in-out-note-ok">OK</button>
+      </section>
+      <button data-testid="cash-in-out-cover" hidden>Cover</button>
     </section>
     <section data-testid="report-page" hidden>
       <h1>Report</h1>
@@ -589,6 +595,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
     <script>
       const sessionMoveError = "Can't move this button to/from hide area";
       let currentLanguage = localStorage.getItem('currentLanguage') || 'Default';
+      let cashDrawerMode = 'cash-in';
       let userDefaultLanguage = localStorage.getItem('userDefaultLanguage') || 'Default';
       let clockState = 'off';
       let deliveryHistoricalAddress = '';
@@ -1038,6 +1045,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const callerPreparingList = document.querySelector('[data-testid="caller-preparing-list"]');
       const cashInOutPage = document.querySelector('[data-testid="cash-in-out-page"]');
       const cashInOutTitle = document.querySelector('[data-testid="cash-in-out-title"]');
+      const cashInOutCompleteButton = document.querySelector('[data-testid="cash-in-out-complete"]');
+      const cashInOutNotePanel = document.querySelector('[data-testid="cash-in-out-note-panel"]');
+      const cashInOutNoteInput = document.querySelector('[data-testid="cash-in-out-note"]');
+      const cashInOutNoteOkButton = document.querySelector('[data-testid="cash-in-out-note-ok"]');
+      const cashInOutCover = document.querySelector('[data-testid="cash-in-out-cover"]');
       const emenuMainPage = document.querySelector('[data-testid="emenu-main-page"]');
       const emenuOrderPage = document.querySelector('[data-testid="emenu-order-page"]');
       const emenuContinueButton = document.querySelector('[data-testid="emenu-continue"]');
@@ -1144,6 +1156,14 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         breakButton.hidden = clockState !== 'clocked-in';
         backToWorkButton.hidden = clockState !== 'on-break';
         checkoutButton.hidden = clockState === 'off';
+      }
+
+      function renderCashInOutTitle() {
+        if (currentLanguage === 'Chinese') {
+          cashInOutTitle.textContent = cashDrawerMode === 'cash-in' ? '现金备款' : '现金结算';
+        } else {
+          cashInOutTitle.textContent = cashDrawerMode === 'cash-in' ? 'Cash In' : 'Cash Out';
+        }
       }
 
       function adminMenuCategories(productLine, groupName) {
@@ -2976,8 +2996,24 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         showPanel('caller');
       });
       document.querySelector('[data-testid="home-cash-in-out"]').addEventListener('click', () => {
-        cashInOutTitle.textContent = currentLanguage === 'Chinese' ? '现金备款' : 'Cash In';
+        renderCashInOutTitle();
+        cashInOutNotePanel.hidden = true;
+        cashInOutCover.hidden = true;
         showPanel('cash-in-out');
+      });
+      cashInOutCompleteButton.addEventListener('click', () => {
+        cashInOutNotePanel.hidden = false;
+        cashInOutNoteInput.focus();
+      });
+      cashInOutNoteOkButton.addEventListener('click', () => {
+        cashDrawerMode = cashDrawerMode === 'cash-in' ? 'cash-out' : 'cash-in';
+        renderCashInOutTitle();
+        cashInOutNotePanel.hidden = true;
+        cashInOutCover.hidden = false;
+      });
+      cashInOutCover.addEventListener('click', () => {
+        cashInOutCover.hidden = true;
+        showPanel('home');
       });
       document.querySelector('[data-testid="pos-switch-emenu-order"]').addEventListener('click', () => {
         showEmenuPanel('order');

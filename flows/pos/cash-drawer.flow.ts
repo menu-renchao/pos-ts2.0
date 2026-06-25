@@ -16,4 +16,18 @@ export class CashDrawerFlow {
       return this.cashInOutPage.readPageText();
     });
   }
+
+  async completeCashInAndOpenCashOutChinesePage(homeUrl: string, note: string): Promise<string> {
+    return step('中文模式完成 Cash In 后再次进入 Cash Out 并读取文案', async () => {
+      await this.homePage.open(homeUrl);
+      await this.homePage.switchLanguage('Chinese');
+      await this.homePage.openCashInOut('11');
+      await this.cashInOutPage.completeCashInOut(note);
+      await this.cashInOutPage.closeCover();
+      await this.homePage.openCashInOut('11');
+      const cashOutText = await this.cashInOutPage.readPageText();
+      await this.cashInOutPage.completeCashInOut(note);
+      return cashOutText;
+    });
+  }
 }
