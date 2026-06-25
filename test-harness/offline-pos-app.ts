@@ -353,6 +353,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <button data-testid="item-discount-50">50% Discount</button>
       <input data-testid="item-discount-amount" />
       <input data-testid="item-discount-percent" />
+      <button data-testid="item-discount-clear-selected">Clear Item Discount</button>
       <button data-testid="item-discount-submit">Apply Item Discount</button>
       <button data-testid="order-discount">Order Discount</button>
       <div data-testid="order-discount-whole-order-price"></div>
@@ -1027,6 +1028,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const itemHalfDiscountButton = document.querySelector('[data-testid="item-discount-50"]');
       const itemDiscountAmountInput = document.querySelector('[data-testid="item-discount-amount"]');
       const itemDiscountPercentInput = document.querySelector('[data-testid="item-discount-percent"]');
+      const itemDiscountClearSelectedButton = document.querySelector('[data-testid="item-discount-clear-selected"]');
       const itemDiscountSubmitButton = document.querySelector('[data-testid="item-discount-submit"]');
       const orderDiscountButton = document.querySelector('[data-testid="order-discount"]');
       const orderDiscountWholeOrderPrice = document.querySelector('[data-testid="order-discount-whole-order-price"]');
@@ -1758,6 +1760,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         return itemName;
       }
 
+      function displayOrderLineText(item) {
+        const discountText = item.itemDiscountPercent || item.itemDiscountAmount ? ' Discount' : '';
+        return displayItemName(item) + discountText;
+      }
+
       function itemLineColor(item) {
         return item.inKitchenQuantity ? 'rgba(113, 9, 9, 1)' : '';
       }
@@ -2373,6 +2380,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         const originalPrice = Number(item.originalPrice ?? item.price ?? 0);
         item.originalPrice = originalPrice;
         item.price = roundMoney(originalPrice * (1 - Number(percent || 0) / 100));
+        item.itemDiscountPercent = Number(percent || 0);
+        item.itemDiscountAmount = 0;
         pendingItemDiscount = null;
         managerPasswordPopup.hidden = true;
         orderTipToast.textContent = '';
@@ -2389,7 +2398,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           const originalPrice = Number(item.originalPrice ?? item.price ?? 0);
           item.originalPrice = originalPrice;
           const itemShare = Number(item.price || 0) / selectedSubtotal;
-          item.price = roundMoney(Math.max(0, Number(item.price || 0) - Number(amount || 0) * itemShare));
+          const itemDiscountAmount = Number(amount || 0) * itemShare;
+          item.price = roundMoney(Math.max(0, Number(item.price || 0) - itemDiscountAmount));
+          item.itemDiscountAmount = roundMoney(itemDiscountAmount);
+          item.itemDiscountPercent = 0;
         });
         pendingItemDiscount = null;
         managerPasswordPopup.hidden = true;
@@ -2496,7 +2508,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           row.dataset.color = itemLineColor(item);
           row.dataset.selected = selectedOrderItemIndexes.has(orderIndex) ? 'true' : 'false';
           row.style.color = itemLineColor(item);
-          row.textContent = displayItemName(item);
+          row.textContent = displayOrderLineText(item);
           row.addEventListener('click', (event) => {
             selectedOrderItemIndex = orderIndex >= 0 ? orderIndex : activeIndex;
             if (event.ctrlKey || event.metaKey) {
@@ -4215,6 +4227,18 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           return;
         }
         applyItemDiscountPercent(selectedIndex, percent);
+      });
+      itemDiscountClearSelectedButton.addEventListener('click', () => {
+        selectedItemDiscountIndexes().forEach((index) => {
+          const item = currentOrderItems[index];
+          if (!item) {
+            return;
+          }
+          item.price = Number(item.originalPrice ?? item.price ?? 0);
+          item.itemDiscountPercent = 0;
+          item.itemDiscountAmount = 0;
+        });
+        renderOrderAmounts();
       });
       orderDiscountButton.addEventListener('click', () => {
         const subtotal = activeOrderItems().reduce((total, item) => total + Number(item.price || 0), 0);

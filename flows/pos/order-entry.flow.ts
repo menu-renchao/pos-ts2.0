@@ -857,6 +857,25 @@ export class OrderEntryFlow {
     return this.orderDishesPage.readOrderPriceDetail();
   }
 
+  async clearThirdItemDiscountAndReadItemText(homeUrl: string): Promise<string> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+
+    for (let index = 0; index < 3; index += 1) {
+      await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    }
+
+    await this.orderDishesPage.openDiscountAndReadWholeOrderPrice();
+    await this.orderDishesPage.applyWholeOrderDiscountPercent(20);
+    await this.orderDishesPage.selectOrderLineItems([1, 2, 3]);
+    await this.orderDishesPage.applySelectedItemsDiscountPercent(20);
+    await this.orderDishesPage.selectOrderLineItem(3);
+    await this.orderDishesPage.clearSelectedItemDiscounts();
+    return this.orderDishesPage.readOrderLineText(3);
+  }
+
   async unsplitEvenSplitOrderAfterEditingFirstSubOrderTip(homeUrl: string): Promise<EvenSplitTipUnsplitResult> {
     await this.homePage.open(homeUrl);
     await this.homePage.clickDineIn();

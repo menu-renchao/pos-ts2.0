@@ -238,4 +238,16 @@ test.describe('stage2 order operation migration', () => {
 
     expect(priceDetail).not.toContain('Discount');
   });
+
+  test('POS-23204 清空第 3 个单菜折扣后该菜品不应包含 Discount', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const thirdItemText = await orderEntryFlow.clearThirdItemDiscountAndReadItemText(environment.posHomeUrl);
+
+    expect(thirdItemText).not.toContain('Discount');
+  });
 });

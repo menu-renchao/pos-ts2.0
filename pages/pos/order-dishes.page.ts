@@ -20,6 +20,7 @@ export class OrderDishesPage extends PageObject {
   private readonly itemHalfDiscountButton: Locator;
   private readonly itemDiscountAmountInput: Locator;
   private readonly itemDiscountPercentInput: Locator;
+  private readonly itemDiscountClearSelectedButton: Locator;
   private readonly itemDiscountSubmitButton: Locator;
   private readonly itemPrice: Locator;
   private readonly itemPriceInput: Locator;
@@ -139,6 +140,7 @@ export class OrderDishesPage extends PageObject {
     this.itemHalfDiscountButton = page.getByTestId('item-discount-50');
     this.itemDiscountAmountInput = page.getByTestId('item-discount-amount');
     this.itemDiscountPercentInput = page.getByTestId('item-discount-percent');
+    this.itemDiscountClearSelectedButton = page.getByTestId('item-discount-clear-selected');
     this.itemDiscountSubmitButton = page.getByTestId('item-discount-submit');
     this.itemPrice = page.getByTestId('order-item-price');
     this.itemPriceInput = page.getByTestId('item-price-input');
@@ -822,6 +824,16 @@ export class OrderDishesPage extends PageObject {
     await step('清空整单折扣', async () => {
       await this.orderDiscountClearWholeButton.click();
     });
+  }
+
+  async clearSelectedItemDiscounts(): Promise<void> {
+    await step('清空选中菜品折扣', async () => {
+      await this.itemDiscountClearSelectedButton.click();
+    });
+  }
+
+  async readOrderLineText(index: number): Promise<string> {
+    return step(`读取第 ${index} 个订单菜品文本`, async () => ((await this.orderLineItems.nth(index - 1).textContent()) ?? '').trim());
   }
 
   async readOrderPriceDetail(): Promise<string> {
