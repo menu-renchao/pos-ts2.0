@@ -35,6 +35,7 @@ export const staffDiscountSamples = {
   multiDiscountSecondFoodPrice: 4,
   multiDiscountWholeOrderPercent: 30,
   multiDiscountItemPercent: 10,
+  multiItemDiscountAmount: 3,
   recallDiscountOpenFoodName: 'item1',
   recallDiscountOpenFoodPrice: 10,
   recallExcessiveWholeOrderDiscountAmount: 3,

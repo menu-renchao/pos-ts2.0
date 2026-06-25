@@ -18,6 +18,7 @@ export class OrderDishesPage extends PageObject {
   private readonly currentCategoryName: Locator;
   private readonly itemDiscountButton: Locator;
   private readonly itemHalfDiscountButton: Locator;
+  private readonly itemDiscountAmountInput: Locator;
   private readonly itemDiscountPercentInput: Locator;
   private readonly itemDiscountSubmitButton: Locator;
   private readonly itemPrice: Locator;
@@ -128,6 +129,7 @@ export class OrderDishesPage extends PageObject {
     this.customerSubmitButton = page.getByTestId('customer-submit');
     this.itemDiscountButton = page.getByTestId('item-discount-10');
     this.itemHalfDiscountButton = page.getByTestId('item-discount-50');
+    this.itemDiscountAmountInput = page.getByTestId('item-discount-amount');
     this.itemDiscountPercentInput = page.getByTestId('item-discount-percent');
     this.itemDiscountSubmitButton = page.getByTestId('item-discount-submit');
     this.itemPrice = page.getByTestId('order-item-price');
@@ -519,6 +521,14 @@ export class OrderDishesPage extends PageObject {
     });
   }
 
+  async applySelectedItemsDiscountAmount(amount: number): Promise<void> {
+    await step(`给已选菜品应用固定金额折扣 ${amount}`, async () => {
+      await this.itemDiscountAmountInput.fill(String(amount));
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      await this.itemDiscountSubmitButton.click();
+    });
+  }
+
   async changeSelectedItemPrice(price: number): Promise<void> {
     await step(`修改当前菜品价格为 ${price}`, async () => {
       await this.itemPriceInput.fill(String(price));
@@ -530,6 +540,16 @@ export class OrderDishesPage extends PageObject {
   async selectOrderLineItem(index: number): Promise<void> {
     await step(`选择第 ${index} 个订单菜品`, async () => {
       await this.orderLineItems.nth(index - 1).click();
+    });
+  }
+
+  async selectOrderLineItems(indexes: readonly number[]): Promise<void> {
+    await step(`选择多个订单菜品 ${indexes.join(', ')}`, async () => {
+      for (const [position, index] of indexes.entries()) {
+        await this.orderLineItems.nth(index - 1).click({
+          modifiers: position === 0 ? [] : ['Control'],
+        });
+      }
     });
   }
 

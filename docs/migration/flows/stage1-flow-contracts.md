@@ -63,7 +63,7 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 
 | source_file | source_class | source_test_patterns | target_specs | target_flow_methods |
 |---|---|---|---|---|
-| stage1/test_admin_staff.py | TestAdminStaff | whole-order max discount, item max discount, recall discount permission, multi-discount, report permission, create staff with selected authority | tests/stage1/admin-staff.spec.ts | `StaffPermissionFlow.rejectWholeOrderDiscountAboveServerLimitWithoutPassword`, `StaffPermissionFlow.applyWholeOrderDiscountAboveServerLimitWithManagerPassword`, `StaffPermissionFlow.applyWholeOrderDiscountAboveManagerLimitWithBossPassword`, `StaffPermissionFlow.applyItemDiscountAboveServerLimitWithManagerPassword`, `StaffPermissionFlow.applyItemDiscountAboveManagerLimitWithBossPassword`, `StaffPermissionFlow.rejectRecallWholeOrderAmountDiscountAboveServerLimitWithoutPassword`, `StaffPermissionFlow.cancelRecallWholeOrderAmountDiscountAboveServerLimit`, `StaffPermissionFlow.applyRecallWholeOrderAmountDiscountAboveManagerLimitWithBossPassword`, `StaffPermissionFlow.requirePermissionForItemDiscountAfterBossAuthorizedWholeOrderDiscount`, `StaffPermissionFlow.configureStaffPermissions`, `StaffPermissionFlow.applyOrderDiscountWithAuthorization`, `StaffPermissionFlow.applyItemDiscountWithAuthorization`, `StaffPermissionFlow.verifyReportPermission` |
+| stage1/test_admin_staff.py | TestAdminStaff | whole-order max discount, item max discount, recall discount permission, multi-discount, report permission, create staff with selected authority | tests/stage1/admin-staff.spec.ts | `StaffPermissionFlow.rejectWholeOrderDiscountAboveServerLimitWithoutPassword`, `StaffPermissionFlow.applyWholeOrderDiscountAboveServerLimitWithManagerPassword`, `StaffPermissionFlow.applyWholeOrderDiscountAboveManagerLimitWithBossPassword`, `StaffPermissionFlow.applyItemDiscountAboveServerLimitWithManagerPassword`, `StaffPermissionFlow.applyItemDiscountAboveManagerLimitWithBossPassword`, `StaffPermissionFlow.rejectRecallWholeOrderAmountDiscountAboveServerLimitWithoutPassword`, `StaffPermissionFlow.cancelRecallWholeOrderAmountDiscountAboveServerLimit`, `StaffPermissionFlow.applyRecallWholeOrderAmountDiscountAboveManagerLimitWithBossPassword`, `StaffPermissionFlow.requirePermissionForItemDiscountAfterBossAuthorizedWholeOrderDiscount`, `StaffPermissionFlow.requirePermissionForMultiItemAmountDiscount`, `StaffPermissionFlow.configureStaffPermissions`, `StaffPermissionFlow.applyOrderDiscountWithAuthorization`, `StaffPermissionFlow.applyItemDiscountWithAuthorization`, `StaffPermissionFlow.verifyReportPermission` |
 
 ### Preconditions
 
@@ -198,6 +198,19 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 | assertions | First whole-order discount attempt contains `The discount exceeds permission limit，please input password`; after Boss authorizes the `30%` whole-order discount, the first item `10%` discount attempt also contains `The discount exceeds permission limit，please input password` because cumulative discount amount `3 + 0.6` exceeds the Server limit `10 * 0.2`. |
 | stub behavior | Offline harness keeps role limits deterministic, records the authorized whole-order discount rate, and item discount authorization compares existing whole-order discount amount plus existing item discounts plus the requested item discount against the current employee role's maximum discount amount. |
 | live gaps | Live AdminStaffAPI role setup, whole-order discount percent selector, selected-line item discount selector, manager/boss permission dialog behavior, cumulative discount permission calculation, and Open Food cents/display conversion must be validated in live smoke. |
+
+#### StaffPermissionFlow.requirePermissionForMultiItemAmountDiscount
+
+| field | contract |
+|---|---|
+| source | `stage1/test_admin_staff.py::TestAdminStaff::test_multi_item_maximum_discount` |
+| jira | POS-31569 |
+| preconditions | Server/Manager/Boss discount limits are represented by `staffDiscountRoleSamples`; current employee logs in with Server password `007`; source Dine In no-table order is represented by two no-tax Open Food items `item1`/`item2` priced at `6` and `4` in offline mode. |
+| actions | Open POS home, login as Server, enter Dine In without table, add two Open Food no-tax items, open discount panel, select order lines 1 and 2, submit fixed amount item discount `3`, read permission prompt. |
+| page methods | `PosHomePage.open`, `PosHomePage.inputEmployeePassword`, `PosHomePage.clickDineIn`, `OrderDishesPage.openFoodWithoutTax`, `OrderDishesPage.openDiscountAndReadWholeOrderPrice`, `OrderDishesPage.selectOrderLineItems`, `OrderDishesPage.applySelectedItemsDiscountAmount`, `OrderDishesPage.readDiscountTip` |
+| assertions | Permission prompt contains `The discount exceeds permission limit，please input password` because fixed item discount amount `3` across selected items exceeds Server's maximum discount amount `10 * 0.2 = 2`. |
+| stub behavior | Offline harness supports multi-select order rows through modified-click selection, accepts fixed amount item discount input, compares fixed amount plus existing order/item discounts against the current employee role limit, and opens the manager password popup without applying the discount when the Server limit is exceeded. |
+| live gaps | Live AdminStaffAPI role setup, Dine In no-table entry selector, multi-select item discount selector, fixed-amount item discount selector, permission dialog behavior, and Open Food cents/display conversion must be validated in live smoke. |
 
 ### Expected Assertions
 

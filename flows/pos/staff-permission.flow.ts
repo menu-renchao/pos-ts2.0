@@ -27,6 +27,10 @@ export type MultiDiscountPermissionResult = {
   itemPermissionTip: string;
 };
 
+export type MultiItemAmountDiscountPermissionResult = {
+  permissionTip: string;
+};
+
 export type AuthorizedWholeOrderDiscountResult = {
   permissionTip: string;
   subtotal: number;
@@ -180,6 +184,30 @@ export class StaffPermissionFlow {
       const itemPermissionTip = await this.orderDishesPage.readDiscountTip();
 
       return { wholeOrderPermissionTip, itemPermissionTip };
+    });
+  }
+
+  async requirePermissionForMultiItemAmountDiscount(
+    homeUrl: string,
+  ): Promise<MultiItemAmountDiscountPermissionResult> {
+    return step('多个单菜固定金额折扣超过 Server 权限时提示授权', async () => {
+      await this.homePage.open(homeUrl);
+      await this.homePage.inputEmployeePassword(staffDiscountRoleSamples.server.password);
+      await this.homePage.clickDineIn();
+      await this.orderDishesPage.openFoodWithoutTax(
+        staffDiscountSamples.itemDiscountFirstFoodName,
+        staffDiscountSamples.multiDiscountFirstFoodPrice,
+      );
+      await this.orderDishesPage.openFoodWithoutTax(
+        staffDiscountSamples.itemDiscountSecondFoodName,
+        staffDiscountSamples.multiDiscountSecondFoodPrice,
+      );
+      await this.orderDishesPage.openDiscountAndReadWholeOrderPrice();
+      await this.orderDishesPage.selectOrderLineItems([1, 2]);
+      await this.orderDishesPage.applySelectedItemsDiscountAmount(staffDiscountSamples.multiItemDiscountAmount);
+      const permissionTip = await this.orderDishesPage.readDiscountTip();
+
+      return { permissionTip };
     });
   }
 

@@ -286,6 +286,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <section data-testid="global-option-area" hidden>Global Option Area</section>
       <button data-testid="item-discount-10">10% Discount</button>
       <button data-testid="item-discount-50">50% Discount</button>
+      <input data-testid="item-discount-amount" />
       <input data-testid="item-discount-percent" />
       <button data-testid="item-discount-submit">Apply Item Discount</button>
       <button data-testid="order-discount">Order Discount</button>
@@ -514,6 +515,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let messages = [];
       let currentOrderItems = [];
       let selectedOrderItemIndex = -1;
+      let selectedOrderItemIndexes = new Set();
       let latestSavedOrderItems = [];
       let currentItemOption = null;
       let latestSavedItemOption = null;
@@ -794,6 +796,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const globalOptionArea = document.querySelector('[data-testid="global-option-area"]');
       const itemDiscountButton = document.querySelector('[data-testid="item-discount-10"]');
       const itemHalfDiscountButton = document.querySelector('[data-testid="item-discount-50"]');
+      const itemDiscountAmountInput = document.querySelector('[data-testid="item-discount-amount"]');
       const itemDiscountPercentInput = document.querySelector('[data-testid="item-discount-percent"]');
       const itemDiscountSubmitButton = document.querySelector('[data-testid="item-discount-submit"]');
       const orderDiscountButton = document.querySelector('[data-testid="order-discount"]');
@@ -1342,6 +1345,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           ],
         });
         selectedOrderItemIndex = currentOrderItems.length - 1;
+        selectedOrderItemIndexes = new Set([selectedOrderItemIndex]);
         selectedComboSubItemName = 'ITEM1';
         renderComboSubItems();
         renderOrderAmounts();
@@ -1362,6 +1366,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
             subItems: dish.comboSubItems.map((name) => comboSubItem(name, true)),
           });
           selectedOrderItemIndex = currentOrderItems.length - 1;
+          selectedOrderItemIndexes = new Set([selectedOrderItemIndex]);
           selectedComboSubItemName = dish.comboSubItems[0] || '';
           pendingComboReplacementStarted = false;
           renderComboSubItems();
@@ -1381,6 +1386,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           target.quantity = Number(target.quantity || 1) + 1;
           target.price = roundMoney(Number(target.unitPrice || dish.price || 0) * target.quantity);
           selectedOrderItemIndex = currentOrderItems.indexOf(target);
+          selectedOrderItemIndexes = new Set([selectedOrderItemIndex]);
           renderOrderAmounts();
           return;
         }
@@ -1401,6 +1407,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           inKitchenQuantity: 0,
         });
         selectedOrderItemIndex = currentOrderItems.length - 1;
+        selectedOrderItemIndexes = new Set([selectedOrderItemIndex]);
         renderOrderAmounts();
       }
 
@@ -1587,6 +1594,14 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         return currentWholeOrderDiscount + currentItemDiscount + requestedDiscountAmount <= maxDiscountAmount;
       }
 
+      function canAuthorizeItemAmountDiscount(password, amount) {
+        const subtotal = currentActiveOrderSubtotal();
+        const maxDiscountAmount = subtotal * (wholeOrderDiscountLimitForPassword(password) / 100);
+        const currentWholeOrderDiscount = Math.abs(currentWholeOrderDiscountAmount(subtotal));
+        const currentItemDiscount = currentAppliedItemDiscountAmount();
+        return currentWholeOrderDiscount + currentItemDiscount + Number(amount || 0) <= maxDiscountAmount;
+      }
+
       function canAuthorizeRecallWholeOrderAmountDiscount(password, subtotal, amount) {
         const maxDiscountAmount = Number(subtotal || 0) * (wholeOrderDiscountLimitForPassword(password) / 100);
         return Number(amount || 0) <= maxDiscountAmount;
@@ -1604,6 +1619,33 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         managerPasswordPopup.hidden = true;
         orderTipToast.textContent = '';
         renderOrderAmounts();
+      }
+
+      function applyItemAmountDiscount(indexes, amount) {
+        const selectedItems = indexes.map((index) => currentOrderItems[index]).filter(Boolean);
+        const selectedSubtotal = selectedItems.reduce((total, item) => total + Number(item.price || 0), 0);
+        if (!selectedItems.length || !selectedSubtotal) {
+          return;
+        }
+        selectedItems.forEach((item) => {
+          const originalPrice = Number(item.originalPrice ?? item.price ?? 0);
+          item.originalPrice = originalPrice;
+          const itemShare = Number(item.price || 0) / selectedSubtotal;
+          item.price = roundMoney(Math.max(0, Number(item.price || 0) - Number(amount || 0) * itemShare));
+        });
+        pendingItemDiscount = null;
+        managerPasswordPopup.hidden = true;
+        orderTipToast.textContent = '';
+        renderOrderAmounts();
+      }
+
+      function selectedItemDiscountIndexes() {
+        const indexes = [...selectedOrderItemIndexes].filter((index) => currentOrderItems[index]);
+        if (indexes.length) {
+          return indexes;
+        }
+        const fallbackIndex = selectedOrderItemIndex >= 0 ? selectedOrderItemIndex : 0;
+        return currentOrderItems[fallbackIndex] ? [fallbackIndex] : [];
       }
 
       function applyRecallWholeOrderAmountDiscount(amount) {
@@ -1693,11 +1735,20 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           row.dataset.quantity = String(item.quantity || 1);
           row.dataset.price = String(item.price || 0);
           row.dataset.color = itemLineColor(item);
-          row.dataset.selected = orderIndex === selectedOrderItemIndex ? 'true' : 'false';
+          row.dataset.selected = selectedOrderItemIndexes.has(orderIndex) ? 'true' : 'false';
           row.style.color = itemLineColor(item);
           row.textContent = displayItemName(item);
-          row.addEventListener('click', () => {
+          row.addEventListener('click', (event) => {
             selectedOrderItemIndex = orderIndex >= 0 ? orderIndex : activeIndex;
+            if (event.ctrlKey || event.metaKey) {
+              if (selectedOrderItemIndexes.has(selectedOrderItemIndex)) {
+                selectedOrderItemIndexes.delete(selectedOrderItemIndex);
+              } else {
+                selectedOrderItemIndexes.add(selectedOrderItemIndex);
+              }
+            } else {
+              selectedOrderItemIndexes = new Set([selectedOrderItemIndex]);
+            }
             renderOrderAmounts();
           });
           orderItemsList.appendChild(row);
@@ -1840,6 +1891,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       function resetCurrentOrder() {
         currentOrderItems = [];
         selectedOrderItemIndex = -1;
+        selectedOrderItemIndexes = new Set();
         currentItemOption = null;
         currentOrderTip = 0;
         currentOrderChargeRate = 0;
@@ -1882,6 +1934,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         orderGuestNameInput.value = '';
         orderTipInput.value = '';
         orderTipToast.textContent = '';
+        itemDiscountAmountInput.value = '';
+        itemDiscountPercentInput.value = '';
         orderDiscountWholeOrderPrice.textContent = '';
         orderDiscountAmount.textContent = '';
         globalOptionArea.hidden = true;
@@ -2892,6 +2946,14 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       });
       managerPasswordSubmitButton.addEventListener('click', () => {
         if (pendingItemDiscount) {
+          if (pendingItemDiscount.amount != null) {
+            if (canAuthorizeItemAmountDiscount(managerPasswordInput.value, pendingItemDiscount.amount)) {
+              applyItemAmountDiscount(pendingItemDiscount.indexes, pendingItemDiscount.amount);
+              return;
+            }
+            orderTipToast.textContent = managerPasswordInput.value ? 'No Permission!' : 'Failed to login';
+            return;
+          }
           if (canAuthorizeItemDiscount(managerPasswordInput.value, pendingItemDiscount.originalPrice, pendingItemDiscount.percent)) {
             applyItemDiscountPercent(pendingItemDiscount.index, pendingItemDiscount.percent);
             return;
@@ -2953,6 +3015,18 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         const selectedIndex = selectedOrderItemIndex >= 0 ? selectedOrderItemIndex : 0;
         const selectedItem = currentOrderItems[selectedIndex];
         if (!selectedItem) {
+          return;
+        }
+        const amount = Number(itemDiscountAmountInput.value || '0');
+        if (amount > 0) {
+          const indexes = selectedItemDiscountIndexes();
+          if (!canAuthorizeItemAmountDiscount(currentEmployeePassword, amount)) {
+            pendingItemDiscount = { indexes, amount };
+            orderTipToast.textContent = 'The discount exceeds permission limit，please input password';
+            managerPasswordPopup.hidden = false;
+            return;
+          }
+          applyItemAmountDiscount(indexes, amount);
           return;
         }
         const percent = Number(itemDiscountPercentInput.value || '0');

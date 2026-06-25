@@ -149,4 +149,18 @@ test.describe('stage1 admin staff migration', () => {
       expect(result.itemPermissionTip).toContain('The discount exceeds permission limit，please input password');
     },
   );
+
+  test(
+    'POS-31569 Server 同时给两个单菜提交固定金额折扣超过整单额度应提示超权限',
+    {
+      annotation: jiraIssue('POS-31569'),
+    },
+    async ({ environment, page }) => {
+      const flow = new StaffPermissionFlow(new PosHomePage(page), new OrderDishesPage(page));
+
+      const result = await flow.requirePermissionForMultiItemAmountDiscount(environment.posHomeUrl);
+
+      expect(result.permissionTip).toContain('The discount exceeds permission limit，please input password');
+    },
+  );
 });
