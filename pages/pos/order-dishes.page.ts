@@ -104,6 +104,7 @@ export class OrderDishesPage extends PageObject {
   private readonly searchInput: Locator;
   private readonly searchResult: Locator;
   private readonly searchResultItems: Locator;
+  private readonly seatSharedButton: Locator;
   private readonly seatOneButton: Locator;
   private readonly seatTwoButton: Locator;
   private readonly tipInput: Locator;
@@ -222,6 +223,7 @@ export class OrderDishesPage extends PageObject {
     this.searchInput = page.getByTestId('order-search');
     this.searchResult = page.getByTestId('order-search-result');
     this.searchResultItems = page.getByTestId('order-search-result-item');
+    this.seatSharedButton = page.getByTestId('order-seat-shared');
     this.seatOneButton = page.getByTestId('order-seat-1');
     this.seatTwoButton = page.getByTestId('order-seat-2');
     this.tipInput = page.getByTestId('order-tip');
@@ -354,6 +356,12 @@ export class OrderDishesPage extends PageObject {
         return;
       }
       await this.seatTwoButton.click();
+    });
+  }
+
+  async selectSharedSeat(): Promise<void> {
+    await step('选择共享菜座位', async () => {
+      await this.seatSharedButton.click();
     });
   }
 

@@ -87,6 +87,10 @@ export type SeatSplitVoidResult = {
   secondSubOrderStatusAfterVoid: string;
 };
 
+export type SeatSplitSharedVoidAlertResult = {
+  voidAlertText: string;
+};
+
 export type ComboOptionCountResult = {
   beforeCount: number;
   afterCount: number;
@@ -517,6 +521,42 @@ export class OrderEntryFlow {
       firstSubOrderTipBeforeVoid,
       secondSubOrderStatusAfterVoid,
     };
+  }
+
+  async preventVoidSeatSplitSubOrderWithSharedPaidItem(homeUrl: string): Promise<SeatSplitSharedVoidAlertResult> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.setGuestCount(2);
+
+    await this.orderDishesPage.selectSharedSeat();
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+
+    await this.orderDishesPage.selectSeat(1);
+    await this.orderDishesPage.selectMenuGroup(categorySwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(categorySwitchDish.category);
+    await this.orderDishesPage.addMenuItem(categorySwitchDish.name);
+
+    await this.orderDishesPage.selectSeat(2);
+    await this.orderDishesPage.selectMenuGroup(posNameDisplayDish.group);
+    await this.orderDishesPage.selectMenuCategory(posNameDisplayDish.category);
+    await this.orderDishesPage.addMenuItem(posNameDisplayDish.name);
+
+    await this.orderDishesPage.addTip(500);
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.openSplitOrder();
+    await this.recallPage.splitBySeat();
+    await this.recallPage.openSubOrder(1);
+    await this.recallPage.settleSubOrder(1);
+    await this.recallPage.payCurrentSubOrderByCash();
+    await this.recallPage.openSubOrder(2);
+    const voidAlertText = await this.recallPage.voidOrderAndReadAlert();
+
+    return { voidAlertText };
   }
 
   async readFirstDragSplitSubOrderDiscountWholePrice(homeUrl: string): Promise<string> {

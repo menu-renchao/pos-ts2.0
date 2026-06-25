@@ -91,6 +91,7 @@ export class RecallPage extends PageObject {
   private readonly subOrderCards: Locator;
   private readonly subOrderSettleButton: Locator;
   private readonly unsplitButton: Locator;
+  private readonly voidAlert: Locator;
   private readonly voidPaidOrderButton: Locator;
   private readonly voidOrderButton: Locator;
   private readonly restoreInventoryCheckbox: Locator;
@@ -168,6 +169,7 @@ export class RecallPage extends PageObject {
     this.subOrderCards = page.getByTestId('recall-sub-order-card');
     this.subOrderSettleButton = page.getByTestId('split-sub-order-settle');
     this.unsplitButton = page.getByTestId('split-unsplit');
+    this.voidAlert = page.getByTestId('recall-void-alert');
     this.voidPaidOrderButton = page.getByTestId('recall-void-paid-order');
     this.voidOrderButton = page.getByTestId('recall-void-order');
     this.restoreInventoryCheckbox = page.getByTestId('recall-restore-inventory');
@@ -467,6 +469,13 @@ export class RecallPage extends PageObject {
         await this.restoreInventoryCheckbox.uncheck();
       }
       await this.voidOrderButton.click();
+    });
+  }
+
+  async voidOrderAndReadAlert(restoreInventory = true): Promise<string> {
+    return step(`Recall Void 订单${restoreInventory ? '并恢复库存' : '且不恢复库存'}并读取提示`, async () => {
+      await this.voidOrder(restoreInventory);
+      return ((await this.voidAlert.textContent()) ?? '').trim();
     });
   }
 

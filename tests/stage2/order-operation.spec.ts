@@ -21,4 +21,18 @@ test.describe('stage2 order operation migration', () => {
     expect(result.firstSubOrderTipAfterVoid).toBe(result.firstSubOrderTipBeforeVoid);
     expect(result.secondSubOrderStatusAfterVoid).toBe('Void');
   });
+
+  test('POS-19365 按座位分单存在共享菜且子单 1 已支付时 Void 子单 2 应提示禁止', {
+    annotation: [jiraIssue('POS-19365')],
+  }, async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.preventVoidSeatSplitSubOrderWithSharedPaidItem(environment.posHomeUrl);
+
+    expect(result.voidAlertText).toBe('The order has paid dishes and cannot be voided!');
+  });
 });

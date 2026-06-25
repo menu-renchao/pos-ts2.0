@@ -274,6 +274,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <div data-testid="order-item-price">0</div>
       <input data-testid="order-guest-name" />
       <input data-testid="order-guest-count" />
+      <button data-testid="order-seat-shared">Shared</button>
       <button data-testid="order-seat-1">Seat 1</button>
       <button data-testid="order-seat-2">Seat 2</button>
       <input data-testid="order-item-quantity" />
@@ -487,6 +488,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         Restore Inventory
       </label>
       <button data-testid="recall-void-order">Void Order</button>
+      <div data-testid="recall-void-alert" role="alert"></div>
       <button data-testid="recall-refund-paid-order">Refund Paid Order</button>
       <button data-testid="recall-cancel-condition">Cancel Condition</button>
       <button data-testid="recall-move-order">Move Order</button>
@@ -940,6 +942,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const orderItemPrice = document.querySelector('[data-testid="order-item-price"]');
       const orderGuestNameInput = document.querySelector('[data-testid="order-guest-name"]');
       const orderGuestCountInput = document.querySelector('[data-testid="order-guest-count"]');
+      const orderSeatSharedButton = document.querySelector('[data-testid="order-seat-shared"]');
       const orderSeatOneButton = document.querySelector('[data-testid="order-seat-1"]');
       const orderSeatTwoButton = document.querySelector('[data-testid="order-seat-2"]');
       const orderSearchInput = document.querySelector('[data-testid="order-search"]');
@@ -1091,6 +1094,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const recallTipInput = document.querySelector('[data-testid="recall-tip-input"]');
       const recallTipSubmitButton = document.querySelector('[data-testid="recall-tip-submit"]');
       const recallTipToast = document.querySelector('[data-testid="recall-tip-toast"]');
+      const recallVoidAlert = document.querySelector('[data-testid="recall-void-alert"]');
       const recallItemCount = document.querySelector('[data-testid="recall-item-count"]');
       const recallOrderCardId = document.querySelector('[data-testid="recall-order-card-id"]');
       const recallOrderNumber = document.querySelector('[data-testid="recall-order-number"]');
@@ -2128,7 +2132,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           inventorySku: dish.inventorySku || '',
           taxRate: dish.taxRate,
           benefitPrice: dish.benefitPrice,
-          seat: currentSeatNumber,
+          seat: currentSeatNumber ?? 1,
+          shared: currentSeatNumber === null,
           unitPriceItem: Boolean(dish.unitPriceItem),
           quickCombo: Boolean(dish.quickCombo),
           state: '',
@@ -3787,6 +3792,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       orderGuestCountInput.addEventListener('input', () => {
         currentGuestCount = Number(orderGuestCountInput.value || '1');
       });
+      orderSeatSharedButton.addEventListener('click', () => {
+        currentSeatNumber = null;
+      });
       orderSeatOneButton.addEventListener('click', () => {
         currentSeatNumber = 1;
       });
@@ -4224,7 +4232,17 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       });
       recallVoidOrderButton.addEventListener('click', () => {
         if (selectedRecallOrder) {
+          recallVoidAlert.textContent = '';
           if (selectedSubOrderIndex !== null && selectedRecallOrder.subOrderStatuses?.[selectedSubOrderIndex]) {
+            const hasPaidSharedItem = selectedRecallOrder.subOrderItems?.some((subOrderItems, subOrderIndex) =>
+              subOrderIndex !== selectedSubOrderIndex &&
+              selectedRecallOrder.subOrderStatuses[subOrderIndex] === 'Paid' &&
+              subOrderItems.some((item) => item.shared),
+            );
+            if (hasPaidSharedItem) {
+              recallVoidAlert.textContent = 'The order has paid dishes and cannot be voided!';
+              return;
+            }
             selectedRecallOrder.subOrderStatuses[selectedSubOrderIndex] = 'Void';
             recallOrderStatus.textContent = 'Void';
             renderSubOrders(selectedRecallOrder);
@@ -4301,11 +4319,12 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       splitBySeatButton.addEventListener('click', () => {
         if (selectedRecallOrder) {
           const items = selectedRecallOrder.items || [];
-          const seatOneItems = items.filter((item) => Number(item.seat || 1) === 1);
-          const seatTwoItems = items.filter((item) => Number(item.seat || 1) === 2);
+          const sharedItems = items.filter((item) => item.shared);
+          const seatOneItems = items.filter((item) => !item.shared && Number(item.seat || 1) === 1);
+          const seatTwoItems = items.filter((item) => !item.shared && Number(item.seat || 1) === 2);
           selectedRecallOrder.subOrderItems = [
-            seatOneItems.length ? seatOneItems : items.slice(0, 1),
-            seatTwoItems.length ? seatTwoItems : items.slice(1, 2),
+            sharedItems.length || seatOneItems.length ? [...sharedItems, ...seatOneItems] : items.slice(0, 1),
+            sharedItems.length || seatTwoItems.length ? [...sharedItems, ...seatTwoItems] : items.slice(1, 2),
           ];
           selectedRecallOrder.subOrderStatuses = ['New Order', 'New Order'];
           selectedRecallOrder.splitOrderPrices = selectedRecallOrder.subOrderItems.map((subOrderItems) =>
