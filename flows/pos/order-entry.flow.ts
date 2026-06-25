@@ -184,6 +184,12 @@ export type ManualChargePercentChangeResult = {
   selectedChargesAfterPercentChange: Record<string, string>;
 };
 
+export type ManualChargeTaxChangeResult = {
+  originTaxBeforeEdit: number;
+  taxAfterConfirmCharge: number;
+  taxAfterEnteringEdit: number;
+};
+
 export type EvenSplitTipUnsplitResult = {
   combinedTipText: string;
 };
@@ -1235,6 +1241,41 @@ export class OrderEntryFlow {
       recalledChargeAfterConfirm,
       recalledSubtotal,
       selectedChargesAfterPercentChange,
+    };
+  }
+
+  async modifyManualFixedChargeTaxedThenConfirmInRecalledOrder(
+    homeUrl: string,
+  ): Promise<ManualChargeTaxChangeResult> {
+    if (!this.adminPage) {
+      throw new Error('POS-27163 requires AdminPage');
+    }
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(chineseInitialSearchDish.group);
+    await this.orderDishesPage.selectMenuCategory(chineseInitialSearchDish.category);
+    await this.orderDishesPage.addMenuItem(chineseInitialSearchDish.name);
+    await this.orderDishesPage.applyPresetCharge('manu_test_fixed');
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.clickAdmin();
+    await this.adminPage.setManualChargeTaxed('manu_test_fixed', true);
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    const originTaxBeforeEdit = Number(await this.recallPage.readOrderTaxText());
+
+    await this.recallPage.clickEdit();
+    const taxAfterEnteringEdit = await this.orderDishesPage.readTax();
+    await this.orderDishesPage.openChargeDialog();
+    await this.orderDishesPage.confirmChargeDialog();
+    const taxAfterConfirmCharge = await this.orderDishesPage.readTax();
+
+    return {
+      originTaxBeforeEdit,
+      taxAfterConfirmCharge,
+      taxAfterEnteringEdit,
     };
   }
 

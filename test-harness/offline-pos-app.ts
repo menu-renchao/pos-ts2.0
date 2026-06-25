@@ -166,6 +166,12 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <input data-testid="admin-charge-amount-name" />
       <input data-testid="admin-charge-amount" />
       <button data-testid="admin-charge-amount-save">Save Charge Amount</button>
+      <input data-testid="admin-charge-tax-name" />
+      <select data-testid="admin-charge-taxed">
+        <option value="true">Taxed</option>
+        <option value="false">Not Taxed</option>
+      </select>
+      <button data-testid="admin-charge-tax-save">Save Charge Tax</button>
       <input data-testid="admin-kds-item-name" />
       <input data-testid="admin-kds-pos-name" />
       <button data-testid="admin-kds-pos-name-save">Save Item POS Name</button>
@@ -378,6 +384,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <div data-testid="order-tip-toast"></div>
       <button data-testid="order-charge-20">Charge 20%</button>
       <button data-testid="order-charge-10">Charge 10%</button>
+      <button data-testid="order-charge-10-taxable">Taxable Charge 10%</button>
       <button data-testid="order-charge-5">Charge 5%</button>
       <button data-testid="order-charge-0">Charge 0%</button>
       <button data-testid="order-charge-open">Open Charge</button>
@@ -744,9 +751,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let currentOrderChargeRate = 0;
       let currentOrderChargeFixedAmount = null;
       let currentOrderChargeLabel = '';
+      let currentOrderChargeTaxed = false;
       let manualCharges = readStoredJson('offlineManualCharges', [
-        { amount: 10, name: 'manu_test_fixed', rate: 0, rateType: 'amount' },
-        { amount: 10, name: 'manu_test_perc', rate: 0.1, rateType: 'percent' },
+        { amount: 10, name: 'manu_test_fixed', rate: 0, rateType: 'amount', taxed: false },
+        { amount: 10, name: 'manu_test_perc', rate: 0.1, rateType: 'percent', taxed: false },
       ]);
       let currentWholeOrderDiscountRate = 0;
       let currentOrderTaxVoided = false;
@@ -878,6 +886,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const adminChargeAmountNameInput = document.querySelector('[data-testid="admin-charge-amount-name"]');
       const adminChargeAmountInput = document.querySelector('[data-testid="admin-charge-amount"]');
       const adminChargeAmountSaveButton = document.querySelector('[data-testid="admin-charge-amount-save"]');
+      const adminChargeTaxNameInput = document.querySelector('[data-testid="admin-charge-tax-name"]');
+      const adminChargeTaxedSelect = document.querySelector('[data-testid="admin-charge-taxed"]');
+      const adminChargeTaxSaveButton = document.querySelector('[data-testid="admin-charge-tax-save"]');
       const kdsItemNameInput = document.querySelector('[data-testid="admin-kds-item-name"]');
       const kdsItemPosNameInput = document.querySelector('[data-testid="admin-kds-pos-name"]');
       const kdsItemPosNameSaveButton = document.querySelector('[data-testid="admin-kds-pos-name-save"]');
@@ -1075,6 +1086,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const orderTipToast = document.querySelector('[data-testid="order-tip-toast"]');
       const orderCharge20Button = document.querySelector('[data-testid="order-charge-20"]');
       const orderCharge10Button = document.querySelector('[data-testid="order-charge-10"]');
+      const orderCharge10TaxableButton = document.querySelector('[data-testid="order-charge-10-taxable"]');
       const orderCharge5Button = document.querySelector('[data-testid="order-charge-5"]');
       const orderChargeZeroButton = document.querySelector('[data-testid="order-charge-0"]');
       const orderChargeOpenButton = document.querySelector('[data-testid="order-charge-open"]');
@@ -2398,6 +2410,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         currentOrderChargeRate = Number(charge.rate || 0);
         currentOrderChargeFixedAmount = charge.rateType === 'amount' ? Number(charge.amount || 0) : null;
         currentOrderChargeLabel = charge.name;
+        currentOrderChargeTaxed = Boolean(charge.taxed);
       }
 
       function renderPresetChargeDialog() {
@@ -2412,6 +2425,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
             currentOrderChargeRate = Number(charge.rate || 0);
             currentOrderChargeFixedAmount = charge.rateType === 'amount' ? Number(charge.amount || 0) : null;
             currentOrderChargeLabel = charge.name;
+            currentOrderChargeTaxed = Boolean(charge.taxed);
             renderPresetChargeDialog();
             renderOrderAmounts();
           });
@@ -2542,13 +2556,18 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       }
 
       function currentOrderTaxAmount() {
-        return activeOrderItems().reduce((total, item) => {
+        const itemTax = activeOrderItems().reduce((total, item) => {
           if (item.taxRate !== undefined) {
             return total + Number(item.price || 0) * Number(item.taxRate || 0);
           }
 
           return total + 0.6;
         }, 0);
+        if (!currentOrderChargeTaxed) {
+          return itemTax;
+        }
+        const taxRate = Number(activeOrderItems().find((item) => item.taxRate !== undefined)?.taxRate ?? 0.0825);
+        return itemTax + currentChargeAmount(currentActiveOrderSubtotal()) * taxRate;
       }
 
       function renderOrderAmounts() {
@@ -2784,6 +2803,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         currentOrderChargeRate = 0;
         currentOrderChargeFixedAmount = null;
         currentOrderChargeLabel = '';
+        currentOrderChargeTaxed = false;
         currentWholeOrderDiscountRate = 0;
         currentOrderTaxVoided = false;
         currentPaidAmount = 0;
@@ -2888,6 +2908,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
             currentEditingOrder.orderChargeRate = currentOrderChargeRate;
             currentEditingOrder.orderChargeFixedAmount = currentOrderChargeFixedAmount;
             currentEditingOrder.orderChargeLabel = currentOrderChargeLabel;
+            currentEditingOrder.orderChargeTaxed = currentOrderChargeTaxed;
+            currentEditingOrder.taxText = orderTax.textContent || '';
           }
           currentEditingOrder.priceEdited = currentEditingOrder.priceEdited || currentOrderPriceEdited;
           currentEditingOrder.partialPaid = currentSemiPayMode;
@@ -2928,6 +2950,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           orderChargeRate: currentOrderChargeRate,
           orderChargeFixedAmount: currentOrderChargeFixedAmount,
           orderChargeLabel: currentOrderChargeLabel,
+          orderChargeTaxed: currentOrderChargeTaxed,
+          taxText: orderTax.textContent || '',
           inventoryDeductedQuantity: 0,
           paymentRecords: currentPaymentRecords.map((record) => ({ ...record })),
           paymentType: '',
@@ -3798,24 +3822,35 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         currentOrderChargeRate = 0.2;
         currentOrderChargeFixedAmount = null;
         currentOrderChargeLabel = 'Charge(20%)';
+        currentOrderChargeTaxed = false;
         renderOrderAmounts();
       });
       orderCharge10Button.addEventListener('click', () => {
         currentOrderChargeRate = 0.1;
         currentOrderChargeFixedAmount = null;
         currentOrderChargeLabel = 'Charge(10%)';
+        currentOrderChargeTaxed = false;
+        renderOrderAmounts();
+      });
+      orderCharge10TaxableButton.addEventListener('click', () => {
+        currentOrderChargeRate = 0.1;
+        currentOrderChargeFixedAmount = null;
+        currentOrderChargeLabel = 'Charge(10%)';
+        currentOrderChargeTaxed = true;
         renderOrderAmounts();
       });
       orderCharge5Button.addEventListener('click', () => {
         currentOrderChargeRate = 0.05;
         currentOrderChargeFixedAmount = null;
         currentOrderChargeLabel = 'Charge(5%)';
+        currentOrderChargeTaxed = false;
         renderOrderAmounts();
       });
       orderChargeZeroButton.addEventListener('click', () => {
         currentOrderChargeRate = 0;
         currentOrderChargeFixedAmount = null;
         currentOrderChargeLabel = '';
+        currentOrderChargeTaxed = false;
         renderOrderAmounts();
       });
       orderChargeOpenButton.addEventListener('click', () => {
@@ -3861,6 +3896,14 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           }
           return { ...charge, amount, rate: 0 };
         });
+        localStorage.setItem('offlineManualCharges', JSON.stringify(manualCharges));
+      });
+      adminChargeTaxSaveButton.addEventListener('click', () => {
+        const chargeName = adminChargeTaxNameInput.value;
+        const taxed = adminChargeTaxedSelect.value === 'true';
+        manualCharges = manualCharges.map((charge) => (
+          charge.name === chargeName ? { ...charge, taxed } : charge
+        ));
         localStorage.setItem('offlineManualCharges', JSON.stringify(manualCharges));
       });
       orderTaxExemptButton.addEventListener('click', () => {
@@ -4726,6 +4769,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
             ? null
             : selectedRecallOrder.orderChargeFixedAmount ?? null;
           currentOrderChargeLabel = currentOrderChargeRate || currentOrderChargeFixedAmount !== null ? selectedRecallOrder.orderChargeLabel || 'Charge' : '';
+          currentOrderChargeTaxed = currentOrderChargeRate || currentOrderChargeFixedAmount !== null
+            ? Boolean(selectedRecallOrder.orderChargeTaxed)
+            : false;
           currentOrderStatus = selectedSubOrderIndex !== null
             ? selectedRecallOrder.subOrderStatuses?.[selectedSubOrderIndex] || ''
             : selectedRecallOrder.status || '';

@@ -74,6 +74,7 @@ export class OrderDishesPage extends PageObject {
   private readonly orderModifyButton: Locator;
   private readonly orderCharge20Button: Locator;
   private readonly orderCharge10Button: Locator;
+  private readonly orderCharge10TaxableButton: Locator;
   private readonly orderCharge5Button: Locator;
   private readonly orderChargeZeroButton: Locator;
   private readonly orderChargeLabel: Locator;
@@ -195,6 +196,7 @@ export class OrderDishesPage extends PageObject {
     this.orderModifyButton = page.getByTestId('order-modify');
     this.orderCharge20Button = page.getByTestId('order-charge-20');
     this.orderCharge10Button = page.getByTestId('order-charge-10');
+    this.orderCharge10TaxableButton = page.getByTestId('order-charge-10-taxable');
     this.orderCharge5Button = page.getByTestId('order-charge-5');
     this.orderChargeZeroButton = page.getByTestId('order-charge-0');
     this.orderChargeLabel = page.getByTestId('order-charge-label');
@@ -807,7 +809,7 @@ export class OrderDishesPage extends PageObject {
 
   async applyTaxableOrderCharge(rate: '10%'): Promise<void> {
     await step(`应用计税整单按比例加收 ${rate}`, async () => {
-      await this.orderCharge10Button.click();
+      await this.orderCharge10TaxableButton.click();
     });
   }
 

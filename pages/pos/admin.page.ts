@@ -123,6 +123,9 @@ export class AdminPage extends PageObject {
   private readonly chargeAmountNameInput: Locator;
   private readonly chargeAmountInput: Locator;
   private readonly chargeAmountSaveButton: Locator;
+  private readonly chargeTaxNameInput: Locator;
+  private readonly chargeTaxedSelect: Locator;
+  private readonly chargeTaxSaveButton: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -242,6 +245,9 @@ export class AdminPage extends PageObject {
     this.chargeAmountNameInput = page.getByTestId('admin-charge-amount-name');
     this.chargeAmountInput = page.getByTestId('admin-charge-amount');
     this.chargeAmountSaveButton = page.getByTestId('admin-charge-amount-save');
+    this.chargeTaxNameInput = page.getByTestId('admin-charge-tax-name');
+    this.chargeTaxedSelect = page.getByTestId('admin-charge-taxed');
+    this.chargeTaxSaveButton = page.getByTestId('admin-charge-tax-save');
   }
 
   async setUserDefaultLanguage(language: string): Promise<void> {
@@ -492,6 +498,15 @@ export class AdminPage extends PageObject {
       await this.chargeAmountNameInput.fill(chargeName);
       await this.chargeAmountInput.fill(String(amount));
       await this.chargeAmountSaveButton.click();
+    });
+  }
+
+  async setManualChargeTaxed(chargeName: string, taxed: boolean): Promise<void> {
+    await step(`修改手动加收 ${chargeName} 计税为 ${taxed ? '开启' : '关闭'}`, async () => {
+      await expect(this.adminRoot).toBeVisible();
+      await this.chargeTaxNameInput.fill(chargeName);
+      await this.chargeTaxedSelect.selectOption(taxed ? 'true' : 'false');
+      await this.chargeTaxSaveButton.click();
     });
   }
 

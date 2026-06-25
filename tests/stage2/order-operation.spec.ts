@@ -415,4 +415,23 @@ test.describe('stage2 order operation migration', () => {
     expect(result.selectedChargesAfterPercentChange).toEqual({ manu_test_perc: 'Add20%' });
     expect(result.recalledChargeAfterConfirm.manu_test_perc).toBe((result.recalledSubtotal * 0.2).toFixed(2));
   });
+
+  test('POS-27163 编辑订单时修改手动固定加收计税后确认应增加税额', async ({
+    environment,
+    page,
+  }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.modifyManualFixedChargeTaxedThenConfirmInRecalledOrder(
+      environment.posHomeUrl,
+    );
+
+    expect(result.originTaxBeforeEdit).toBe(result.taxAfterEnteringEdit);
+    expect(result.taxAfterConfirmCharge).toBeGreaterThan(result.taxAfterEnteringEdit);
+  });
 });
