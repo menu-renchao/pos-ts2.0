@@ -37,6 +37,11 @@ export class RecallPage extends PageObject {
   private readonly recalledComboSubItems: Locator;
   private readonly recallItems: Locator;
   private readonly recallRoot: Locator;
+  private readonly discountAmountInput: Locator;
+  private readonly discountAmountSubmitButton: Locator;
+  private readonly discountButton: Locator;
+  private readonly discountTip: Locator;
+  private readonly discountWholeOrderPrice: Locator;
   private readonly addSubOrderButton: Locator;
   private readonly amountInputs: Locator;
   private readonly combinedTipButton: Locator;
@@ -91,6 +96,8 @@ export class RecallPage extends PageObject {
   private readonly subOrderButton: Locator;
   private readonly cashPaymentTypeFilterButton: Locator;
   private readonly paymentTypeOrderNumber: Locator;
+  private readonly managerPasswordInput: Locator;
+  private readonly managerPasswordSubmitButton: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -99,6 +106,11 @@ export class RecallPage extends PageObject {
     this.recalledComboSubItems = page.getByTestId('recall-combo-sub-item');
     this.recallItems = page.getByTestId('recall-order-item');
     this.recallRoot = page.getByTestId('recall-page');
+    this.discountAmountInput = page.getByTestId('recall-order-discount-amount');
+    this.discountAmountSubmitButton = page.getByTestId('recall-order-discount-submit');
+    this.discountButton = page.getByTestId('recall-order-discount');
+    this.discountTip = page.getByTestId('recall-discount-tip');
+    this.discountWholeOrderPrice = page.getByTestId('recall-order-discount-whole-order-price');
     this.addSubOrderButton = page.getByTestId('split-add-suborder');
     this.amountInputs = page.getByTestId('split-amount-input');
     this.combinedTipButton = page.getByTestId('recall-combine-split');
@@ -153,12 +165,40 @@ export class RecallPage extends PageObject {
     this.subOrderButton = page.getByTestId('recall-sub-order');
     this.cashPaymentTypeFilterButton = page.getByTestId('recall-payment-type-cash');
     this.paymentTypeOrderNumber = page.getByTestId('recall-payment-type-order-number');
+    this.managerPasswordInput = page.getByTestId('recall-manager-password');
+    this.managerPasswordSubmitButton = page.getByTestId('recall-manager-password-submit');
   }
 
   async openRecentOrder(): Promise<void> {
     await step('打开 Recall 最近订单', async () => {
       await expect(this.recallRoot).toBeVisible();
       await this.recentOrderButton.click();
+    });
+  }
+
+  async openDiscountAndReadWholeOrderPrice(): Promise<string> {
+    return step('打开 Recall 折扣界面并读取整单金额', async () => {
+      await this.discountButton.click();
+      return ((await this.discountWholeOrderPrice.textContent()) ?? '').trim();
+    });
+  }
+
+  async applyWholeOrderDiscountAmount(amount: number): Promise<void> {
+    await step(`Recall 应用整单固定金额折扣 ${amount}`, async () => {
+      await this.discountAmountInput.fill(String(amount));
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      await this.discountAmountSubmitButton.click();
+    });
+  }
+
+  async readDiscountTip(): Promise<string> {
+    return step('读取 Recall 折扣权限提示', async () => ((await this.discountTip.textContent()) ?? '').trim());
+  }
+
+  async submitManagerPassword(password: string): Promise<void> {
+    await step('在 Recall 输入经理密码并确认权限', async () => {
+      await this.managerPasswordInput.fill(password);
+      await this.managerPasswordSubmitButton.click();
     });
   }
 

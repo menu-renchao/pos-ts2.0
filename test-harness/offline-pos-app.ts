@@ -395,6 +395,15 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <button data-testid="recall-crm-combine-order">Combine CRM Order</button>
       <button data-testid="recall-settle">Settle</button>
       <button data-testid="recall-crm-redeem-discount">10% Off</button>
+      <button data-testid="recall-order-discount">Recall Order Discount</button>
+      <div data-testid="recall-order-discount-whole-order-price"></div>
+      <input data-testid="recall-order-discount-amount" />
+      <button data-testid="recall-order-discount-submit">Apply Recall Amount Discount</button>
+      <div data-testid="recall-discount-tip"></div>
+      <section data-testid="recall-manager-password-popup" hidden>
+        <input data-testid="recall-manager-password" type="password" />
+        <button data-testid="recall-manager-password-submit">Submit Recall Manager Password</button>
+      </section>
       <button data-testid="recall-credit-failure-record">Credit Failure Record</button>
       <button data-testid="recall-cash">Cash</button>
       <button data-testid="recall-payment-type-cash">Cash Filter</button>
@@ -549,6 +558,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let currentEditingOrder = null;
       let pendingWholeOrderDiscountPercent = null;
       let pendingItemDiscount = null;
+      let pendingRecallWholeOrderDiscountAmount = null;
       let currentEmployeePassword = '11';
       let currentInventorySearchItem = 'superman item4';
       const inventoryRecords = {
@@ -872,6 +882,14 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const recallCrmCombineButton = document.querySelector('[data-testid="recall-crm-combine-order"]');
       const recallSettleButton = document.querySelector('[data-testid="recall-settle"]');
       const recallCrmRedeemDiscountButton = document.querySelector('[data-testid="recall-crm-redeem-discount"]');
+      const recallOrderDiscountButton = document.querySelector('[data-testid="recall-order-discount"]');
+      const recallOrderDiscountWholeOrderPrice = document.querySelector('[data-testid="recall-order-discount-whole-order-price"]');
+      const recallOrderDiscountAmountInput = document.querySelector('[data-testid="recall-order-discount-amount"]');
+      const recallOrderDiscountSubmitButton = document.querySelector('[data-testid="recall-order-discount-submit"]');
+      const recallDiscountTip = document.querySelector('[data-testid="recall-discount-tip"]');
+      const recallManagerPasswordPopup = document.querySelector('[data-testid="recall-manager-password-popup"]');
+      const recallManagerPasswordInput = document.querySelector('[data-testid="recall-manager-password"]');
+      const recallManagerPasswordSubmitButton = document.querySelector('[data-testid="recall-manager-password-submit"]');
       const recallCreditFailureRecordButton = document.querySelector('[data-testid="recall-credit-failure-record"]');
       const recallCashButton = document.querySelector('[data-testid="recall-cash"]');
       const recallPaymentTypeCashButton = document.querySelector('[data-testid="recall-payment-type-cash"]');
@@ -1556,6 +1574,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         return requestedDiscountAmount <= maxDiscountAmount;
       }
 
+      function canAuthorizeRecallWholeOrderAmountDiscount(password, subtotal, amount) {
+        const maxDiscountAmount = Number(subtotal || 0) * (wholeOrderDiscountLimitForPassword(password) / 100);
+        return Number(amount || 0) <= maxDiscountAmount;
+      }
+
       function applyItemDiscountPercent(index, percent) {
         const item = currentOrderItems[index];
         if (!item) {
@@ -1568,6 +1591,18 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         managerPasswordPopup.hidden = true;
         orderTipToast.textContent = '';
         renderOrderAmounts();
+      }
+
+      function applyRecallWholeOrderAmountDiscount(amount) {
+        if (!selectedRecallOrder) {
+          return;
+        }
+        selectedRecallOrder.wholeOrderDiscountAmount = Number(amount || 0) * -1;
+        pendingRecallWholeOrderDiscountAmount = null;
+        managerPasswordPopup.hidden = true;
+        recallManagerPasswordPopup.hidden = true;
+        recallDiscountTip.textContent = '';
+        renderRecallOrderItems();
       }
 
       function roundedSettlementTotal(amount) {
@@ -1824,6 +1859,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         pendingPrintedDeleteIndex = null;
         pendingWholeOrderDiscountPercent = null;
         pendingItemDiscount = null;
+        pendingRecallWholeOrderDiscountAmount = null;
+        recallManagerPasswordPopup.hidden = true;
+        recallManagerPasswordInput.value = '';
+        recallDiscountTip.textContent = '';
         orderSearchInput.value = '';
         orderSearchResult.textContent = '';
         orderSaveAlert.textContent = '';
@@ -1928,7 +1967,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         if (order?.settlementTotal !== null && order?.settlementTotal !== undefined) {
           return Number(Number(order.settlementTotal).toFixed(2));
         }
-        return Number(((order?.items || []).reduce((total, item) => total + Number(item.price || 0), 0) + Number(order?.tip || 0) + Number(order?.rewardDiscount || 0)).toFixed(2));
+        return Number(((order?.items || []).reduce((total, item) => total + Number(item.price || 0), 0)
+          + Number(order?.tip || 0)
+          + Number(order?.rewardDiscount || 0)
+          + Number(order?.wholeOrderDiscountAmount || 0)).toFixed(2));
       }
 
       function mergeCrmOrders(targetOrder, sourceOrder) {
@@ -2853,6 +2895,15 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           orderTipToast.textContent = managerPasswordInput.value ? 'No Permission!' : 'Failed to login';
           return;
         }
+        if (pendingRecallWholeOrderDiscountAmount != null) {
+          const subtotal = Number(selectedRecallOrder?.subtotal || 0);
+          if (canAuthorizeRecallWholeOrderAmountDiscount(managerPasswordInput.value, subtotal, pendingRecallWholeOrderDiscountAmount)) {
+            applyRecallWholeOrderAmountDiscount(pendingRecallWholeOrderDiscountAmount);
+            return;
+          }
+          recallDiscountTip.textContent = managerPasswordInput.value ? 'No Permission!' : 'Failed to login';
+          return;
+        }
         if (managerPasswordInput.value === '11' && pendingNoteAuthorization) {
           pendingNoteAuthorization = false;
           currentStaffCanAddNote = true;
@@ -3027,6 +3078,38 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           selectedRecallOrder.rewardDiscount = calculateRewardDiscount(selectedRecallOrder);
           renderRecallOrderItems();
         }
+      });
+      recallOrderDiscountButton.addEventListener('click', () => {
+        recallOrderDiscountWholeOrderPrice.textContent = Number(selectedRecallOrder?.subtotal || 0).toFixed(2);
+      });
+      recallOrderDiscountSubmitButton.addEventListener('click', () => {
+        if (!selectedRecallOrder) {
+          return;
+        }
+        const amount = Number(recallOrderDiscountAmountInput.value || '0');
+        const subtotal = Number(selectedRecallOrder.subtotal || 0);
+        if (!canAuthorizeRecallWholeOrderAmountDiscount(currentEmployeePassword, subtotal, amount)) {
+          pendingRecallWholeOrderDiscountAmount = amount;
+          recallDiscountTip.textContent = 'The discount exceeds permission limit，please input password';
+          recallManagerPasswordPopup.hidden = false;
+          return;
+        }
+        applyRecallWholeOrderAmountDiscount(amount);
+      });
+      recallManagerPasswordSubmitButton.addEventListener('click', () => {
+        if (pendingRecallWholeOrderDiscountAmount == null) {
+          return;
+        }
+        const subtotal = Number(selectedRecallOrder?.subtotal || 0);
+        if (canAuthorizeRecallWholeOrderAmountDiscount(
+          recallManagerPasswordInput.value,
+          subtotal,
+          pendingRecallWholeOrderDiscountAmount,
+        )) {
+          applyRecallWholeOrderAmountDiscount(pendingRecallWholeOrderDiscountAmount);
+          return;
+        }
+        recallDiscountTip.textContent = recallManagerPasswordInput.value ? 'No Permission!' : 'Failed to login';
       });
       recallCreditFailureRecordButton.addEventListener('click', () => {
         if (selectedRecallOrder) {

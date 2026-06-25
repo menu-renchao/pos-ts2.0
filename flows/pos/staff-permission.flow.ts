@@ -1,5 +1,6 @@
 import type { PosHomePage } from '../../pages/pos/home.page.js';
 import type { OrderDishesPage } from '../../pages/pos/order-dishes.page.js';
+import type { RecallPage } from '../../pages/pos/recall.page.js';
 import { staffDiscountRoleSamples, staffDiscountSamples } from '../../test-data/pos/permissions.js';
 
 export type WholeOrderDiscountPermissionResult = {
@@ -31,6 +32,7 @@ export class StaffPermissionFlow {
   constructor(
     private readonly homePage: PosHomePage,
     private readonly orderDishesPage: OrderDishesPage,
+    private readonly recallPage?: RecallPage,
   ) {}
 
   async rejectWholeOrderDiscountAboveServerLimitWithoutPassword(homeUrl: string): Promise<WholeOrderDiscountPermissionResult> {
@@ -132,5 +134,36 @@ export class StaffPermissionFlow {
     const discountedPrice = await this.orderDishesPage.readSelectedItemPrice();
 
     return { permissionTip, managerDeniedTip, originalPrice, discountedPrice };
+  }
+
+  async rejectRecallWholeOrderAmountDiscountAboveServerLimitWithoutPassword(
+    homeUrl: string,
+  ): Promise<WholeOrderDiscountPermissionResult> {
+    const recallPage = this.requireRecallPage();
+    await this.homePage.open(homeUrl);
+    await this.homePage.inputEmployeePassword(staffDiscountRoleSamples.server.password);
+    await this.homePage.clickPickup();
+    await this.orderDishesPage.openFoodWithoutTax(
+      staffDiscountSamples.recallDiscountOpenFoodName,
+      staffDiscountSamples.recallDiscountOpenFoodPrice,
+    );
+    await this.orderDishesPage.saveOrder();
+    await this.homePage.clickRecall();
+    await recallPage.openRecentOrder();
+    await recallPage.openDiscountAndReadWholeOrderPrice();
+    await recallPage.applyWholeOrderDiscountAmount(staffDiscountSamples.recallExcessiveWholeOrderDiscountAmount);
+    const permissionTip = await recallPage.readDiscountTip();
+
+    await recallPage.submitManagerPassword('');
+    const failedLoginTip = await recallPage.readDiscountTip();
+
+    return { permissionTip, failedLoginTip };
+  }
+
+  private requireRecallPage(): RecallPage {
+    if (!this.recallPage) {
+      throw new Error('RecallPage is required for recall staff permission flows');
+    }
+    return this.recallPage;
   }
 }
