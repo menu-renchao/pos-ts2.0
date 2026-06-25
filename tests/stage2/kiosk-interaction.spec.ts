@@ -1,8 +1,11 @@
 import { expect, test } from '../../fixtures/base-test.js';
+import { StubCrmRewardClient } from '../../clients/crm/reward.client.js';
 import { KioskInteractionFlow } from '../../flows/pos/kiosk-interaction.flow.js';
 import { KioskHomePage } from '../../pages/kiosk/home.page.js';
+import { PosCrmPage } from '../../pages/pos/crm/pos-crm.page.js';
 import { AdminPage } from '../../pages/pos/admin.page.js';
 import { PosHomePage } from '../../pages/pos/home.page.js';
+import { OrderDishesPage } from '../../pages/pos/order-dishes.page.js';
 import { RecallPage } from '../../pages/pos/recall.page.js';
 
 test.describe('stage2 kiosk interaction migration', () => {
@@ -39,5 +42,27 @@ test.describe('stage2 kiosk interaction migration', () => {
     const itemState = await flow.markKioskItemSoldOutAndReadMenuApiState(environment.posHomeUrl, menuClient);
 
     expect(itemState.outOfStock).toBe(true);
+  });
+
+  test('POS-36269 Kiosk 订单进入 POS 后应可绑定会员并兑换赠菜', {
+    annotation: { type: 'issue', description: 'POS-36269' },
+  }, async ({ environment, page }) => {
+    const flow = new KioskInteractionFlow(
+      new PosHomePage(page),
+      new KioskHomePage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+      new PosCrmPage(page),
+      new OrderDishesPage(page),
+    );
+
+    const result = await flow.bindKioskOrderToCrmMemberAndRedeemGiftDish(
+      environment.posHomeUrl,
+      new StubCrmRewardClient(),
+    );
+
+    expect(result.redeemItemPrice).toBe(0);
+    expect(result.orderSubtotal).toBe(10);
+    expect(result.afterRedeemPointBalance).toBe(result.beforeRedeemPointBalance - 10);
   });
 });

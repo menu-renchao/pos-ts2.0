@@ -172,7 +172,7 @@ These contracts gate migration for all active source rows under `stage2/*.py`.
 
 | source_file | source_class | source_test_patterns | target_specs | target_flow_methods |
 |---|---|---|---|---|
-| stage2/test_kiosk_interaction.py | TestKioskInteraction | `test_global_takeout_tax_exemption`, `test_kiosk_login_and_license_display`, `test_dish_availability_sync_from_admin_kiosk_inventory_to_admin_menu`, service charge/tax, kiosk order bind member and redeem gift dish | tests/stage2/kiosk-interaction.spec.ts | `KioskInteractionFlow.placeKioskTogoCashOrderAndReadRecallTax`, `KioskInteractionFlow.verifyKioskLicenseList`, `KioskInteractionFlow.markKioskItemSoldOutAndReadMenuApiState`, `KioskInteractionFlow.bindKioskOrderToCrmMember` |
+| stage2/test_kiosk_interaction.py | TestKioskInteraction | `test_global_takeout_tax_exemption`, `test_kiosk_login_and_license_display`, `test_dish_availability_sync_from_admin_kiosk_inventory_to_admin_menu`, `test_kiosk_order_bind_member_and_redeem_gift_dish_in_pos`, service charge/tax | tests/stage2/kiosk-interaction.spec.ts | `KioskInteractionFlow.placeKioskTogoCashOrderAndReadRecallTax`, `KioskInteractionFlow.verifyKioskLicenseList`, `KioskInteractionFlow.markKioskItemSoldOutAndReadMenuApiState`, `KioskInteractionFlow.bindKioskOrderToCrmMemberAndRedeemGiftDish` |
 | stage2/test_recall_page.py | TestRecallSearchByTime | `test_clear_sdi_convinience_fee_by_pos`, `test_sdi_order_item_togo_flag_display_in_pos`, `test_emenu_edit_search` | tests/stage2/recall-page.spec.ts | `ExternalOrderFlow.createSdiOrder`, `ExternalOrderFlow.createEmenuOrder`, `ExternalOrderFlow.verifyExternalOrderInRecall` |
 
 ### Preconditions
@@ -183,6 +183,7 @@ These contracts gate migration for all active source rows under `stage2/*.py`.
 - POS-20995 starts with `adminSettings.takeoutTaxExempt=true`, a Kiosk item `kiosk_item` priced at 10, and an empty Recall order list.
 - POS-24842 starts with `StubRestaurantClient.getAllLicenseNames(posLicenseTypes.kiosk, false)` returning every Kiosk-type license, including in-use licenses, and excluding PC licenses.
 - POS-36267 starts with Kiosk inventory fixture enabled and `kioskInventoryDish` available in `Chinese Food/Appetizers` for product line `KIOSK`.
+- POS-36269 starts with `kioskInventoryDish` priced at 10, `crmSourceRewardMember` searchable by phone `(64)673-37557`, and a redeem gift dish represented by `crmRedeemItemDish`.
 
 ### Steps
 
@@ -215,11 +216,20 @@ For `KioskInteractionFlow.markKioskItemSoldOutAndReadMenuApiState`:
 4. Read Kiosk product-line dish availability through `StubMenuClient.getAllAvailableDishInfosOfCategoryAndGroup`.
 5. Return the `kiosk_item` availability record to the spec.
 
+For `KioskInteractionFlow.bindKioskOrderToCrmMemberAndRedeemGiftDish`:
+
+1. Create a Kiosk To Go cash-paid order with `kioskInventoryDish`.
+2. Return to POS, open Recall, open the recent synced Kiosk order, and edit it.
+3. Open CRM Redeem, bind `crmSourceRewardMember.phone`, and record the pre-redeem point balance.
+4. Reopen CRM Redeem, apply `crmRedeemItemDish`, quit Redeem, and save the edited order.
+5. Reopen Recall recent order and return the redeemed item price, order subtotal, and post-redeem point balance.
+
 ### Expected Assertions
 
 - Kiosk license list contains only Kiosk-type licenses.
 - POS-24842 requires the Kiosk login list to match the POS API Kiosk license names exactly after sorting and to exclude non-Kiosk license types.
 - POS-36267 requires `kiosk_item.outOfStock` to be `true` in the Kiosk Menu API availability response after Admin Kiosk inventory marks it sold out.
+- POS-36269 requires the redeemed gift dish price to be `0`, Recall subtotal to remain `10`, and CRM points after redeem to equal the pre-redeem balance minus `10`.
 - Kiosk togo tax exemption and service charge calculations match source behavior.
 - POS-20995 requires Recall Tax text to be exactly `--` for the Kiosk To Go cash order when global Takeout tax exemption is enabled.
 - Kiosk order can bind CRM member and redeem gift dish in POS.
@@ -233,6 +243,7 @@ For `KioskInteractionFlow.markKioskItemSoldOutAndReadMenuApiState`:
 - POS-20995 uses `KioskHomePage.applyOfflineTakeoutTaxExempt`, `KioskHomePage.createCommonItem`, `KioskHomePage.openFromPosHomeUrl`, `KioskHomePage.selectLicense`, `KioskHomePage.chooseToGoOrderType`, `KioskHomePage.addItem`, `KioskHomePage.viewOrder`, `KioskHomePage.checkout`, `KioskHomePage.skipOptionalInfo`, `KioskHomePage.cashPayment`, `PosHomePage.open`, `PosHomePage.clickRecall`, `RecallPage.openRecentOrder`, and `RecallPage.readOrderTaxText`.
 - POS-24842 uses `PosHomePage.open`, `KioskHomePage.applyOfflineKioskLicenseNames`, `KioskHomePage.openFromPosHomeUrl`, and `KioskHomePage.readAllKioskLicenseNames`.
 - POS-36267 uses `PosHomePage.open`, `PosHomePage.clickAdmin`, `AdminPage.enterKiosk`, and `AdminPage.setKioskItemSoldOut`.
+- POS-36269 uses `PosHomePage.open`, `PosHomePage.clickRecall`, Kiosk order creation methods, `RecallPage.openRecentOrder`, `RecallPage.clickEdit`, `PosCrmPage.openRedeem`, `PosCrmPage.selectMemberByPhone`, `PosCrmPage.readHeaderPointBalance`, `PosCrmPage.applyRedeemItem`, `PosCrmPage.quitRedeem`, `OrderDishesPage.saveOrder`, `RecallPage.readCrmPointBalance`, `RecallPage.readAllOrderItems`, and `RecallPage.readOrderSubtotal`.
 
 ### Client/Data Responsibilities
 
@@ -242,6 +253,7 @@ For `KioskInteractionFlow.markKioskItemSoldOutAndReadMenuApiState`:
 - POS-20995 uses `StubAdminSettingsClient.setSetting`, `StubAdminSettingsClient.readSetting`, and `test-data/pos/admin-settings.ts` field `takeoutTaxExempt`.
 - POS-24842 uses `StubRestaurantClient.getAllLicenseNames`, `test-data/pos/licenses.ts`, and `posLicenseTypes.kiosk`.
 - POS-36267 uses `StubMenuClient.setDishOutOfStock`, `StubMenuClient.getAllAvailableDishInfosOfCategoryAndGroup`, and `test-data/pos/dishes.ts` field `kioskInventoryDish`.
+- POS-36269 uses `StubCrmRewardClient.findMemberByPhone`, `test-data/pos/dishes.ts` fields `kioskInventoryDish` and `crmRedeemItemDish`, plus `test-data/crm/members.ts` field `crmSourceRewardMember`.
 
 ### Stub Behavior
 
@@ -250,6 +262,7 @@ For `KioskInteractionFlow.markKioskItemSoldOutAndReadMenuApiState`:
 - POS-20995 persists the Kiosk paid order into offline saved-order state so that a POS page reload can open the synced order from Recall and expose `recall-order-tax`.
 - POS-24842 renders the filtered Kiosk license names into `kiosk-license-name` elements and intentionally keeps the PC license out of the Kiosk login list.
 - POS-36267 renders an Admin Kiosk sold-out control and mirrors that state into the MenuClient product-line availability model.
+- POS-36269 persists the Kiosk cash order into Recall, allows editing it as a POS order, binds the selected CRM member, deducts 10 points when the redeem item is applied, saves the edited order, and exposes the redeemed 0-price item in Recall.
 
 ### Live Gaps
 
@@ -261,3 +274,4 @@ For `KioskInteractionFlow.markKioskItemSoldOutAndReadMenuApiState`:
 | POS-20995-live | Real AdminSettingAPI, Kiosk license/order-type/menu/cart/checkout/cash selectors, cross-tab sync timing, and Recall tax selector are not exercised in first-round offline mode | Run live Kiosk To Go smoke and record selector/data/environment gaps before closing live validation |
 | POS-24842-live | Real PosAPI license response, Kiosk login URL/auth, license-list selector, and product-line filtering are not exercised in first-round offline mode | Run live Kiosk login smoke and compare UI list with `get_all_license_names(license_type=KIOSK, unused_only=False)` |
 | POS-36267-live | Real `food_sold_out_switch`, Admin Kiosk inventory selectors, MenuAPI KIOSK availability response, and admin-menu sync timing are not exercised in first-round offline mode | Run live Admin Kiosk inventory smoke and compare MenuAPI KIOSK item availability |
+| POS-36269-live | Real Kiosk order sync timing, Recall edit selector, CRM member search, redeem gift item selector, save behavior, and cross-app order state are not exercised in first-round offline mode | Run live Kiosk paid-order to POS Recall edit smoke and record selector/data/environment gaps |
