@@ -18,6 +18,12 @@ export function createOfflinePosHarness(): OfflinePosHarness {
           body: renderOfflinePosHome(state),
         });
       });
+      await page.route('**/emenu/**', async (route) => {
+        await route.fulfill({
+          contentType: 'text/html',
+          body: renderOfflinePosHome(state),
+        });
+      });
     },
   };
 }

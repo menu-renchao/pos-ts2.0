@@ -381,7 +381,8 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 |---|---|---|---|---|
 | stage1/test_caller.py | TestCaller | test_dine_in_caller_with_name_and_table: Dine In order with guest name and table, call order, verify Preparing display, call off, verify removal | tests/stage1/caller.spec.ts | `CallerFlow.callDineInOrderWithGuestNameAndClear` |
 | stage1/test_caller.py | TestCaller | test_dine_in_caller_with_table: Dine In order without guest name, use Recall order-card ID, call order, verify Preparing display, call off, verify removal | tests/stage1/caller.spec.ts | `CallerFlow.callDineInOrderWithoutGuestNameAndClear` |
-| stage1/test_caller.py | TestCaller | remaining Emenu caller table/name/refresh paths | tests/stage1/caller.spec.ts | not-started |
+| stage1/test_caller.py | TestCaller | test_emenu_caller_with_table: Emenu table order, call server from Emenu, verify Caller Preparing display by Recall order-card ID, call off from POS, verify removal | tests/stage1/caller.spec.ts | `CallerFlow.callEmenuOrderWithTableAndClear` |
+| stage1/test_caller.py | TestCaller | remaining Emenu caller name/refresh paths | tests/stage1/caller.spec.ts | not-started |
 
 ### Preconditions
 
@@ -389,6 +390,7 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 - `openFoodDish` provides the source-equivalent ordered item for the migrated Dine In path.
 - Guest name `CallerGuest42` is used so the source caller shortening rule is deterministic as `Cal...42`.
 - For the no-guest Dine In path, the offline Recall order-card ID is deterministic as `Area 1 Table 1 {orderNumber}`.
+- For the migrated Emenu path, `posEmenuUrl` opens the offline Emenu surface and the Emenu table order-card ID is deterministic as `Area 1 Table 1 {orderNumber}`.
 - First-round offline mode reads the saved order number or order-card ID from Recall; source `PosDBFunction.get_last_order_num` remains a live DB validation gap.
 
 ### Steps
@@ -399,6 +401,7 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 4. Call the current order from Recall.
 5. Open Caller and read the Preparing display list.
 6. Return to Recall, call off the same order, reopen Caller, and read Preparing again.
+7. For the Emenu path, open Emenu, select license/table/guest count, place the first new-category item order, close the Emenu order card, click Call Server, switch back to POS, open Recall, read the order-card ID, verify Caller Preparing, call off from POS Recall, and verify Caller Preparing removal.
 
 ### Expected Assertions
 
@@ -408,6 +411,8 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 - After call off, Caller Preparing no longer contains the shortened guest name.
 - For the no-guest Dine In path, before call off Caller Preparing contains the Recall order-card ID.
 - For the no-guest Dine In path, after call off Caller Preparing no longer contains the Recall order-card ID.
+- For the Emenu table path, before POS call off Caller Preparing contains the Recall order-card ID.
+- For the Emenu table path, after POS call off Caller Preparing no longer contains the Recall order-card ID.
 
 ### Page Responsibilities
 
@@ -415,12 +420,16 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 - `OrderDishesPage.openFoodWithoutTax`, `OrderDishesPage.inputGuestName`, and `OrderDishesPage.saveOrder` own Dine In order creation.
 - `RecallPage.openRecentOrder`, `RecallPage.readOrderNumber`, `RecallPage.readOrderCardId`, `RecallPage.callCurrentOrder`, and `RecallPage.callOffCurrentOrder` own Recall order selection and caller actions.
 - `CallerPage.waitLoaded` and `CallerPage.readInfoList` own caller display reads.
+- `EmenuMainPage.openAndStartOrder` owns Emenu URL entry, license selection, table selection, guest count, and navigation to Emenu order.
+- `EmenuMainPage.switchToPosHome` owns the first-round offline switch from Emenu back to POS.
+- `EmenuOrderPage.placeFirstCategoryItemOrder`, `EmenuOrderPage.closeOrderCard`, and `EmenuOrderPage.callServer` own Emenu order placement and call-server action.
 
 ### Client/Data Responsibilities
 
 - No external client is used in this first migrated row.
 - `test-data/pos/dishes.ts::openFoodDish` owns the ordered item sample.
-- The offline POS harness owns saved order number generation and caller display state.
+- No external client or test-data module is used by the migrated Emenu caller table row.
+- The offline POS harness owns saved order number generation, Emenu order creation, and caller display state.
 
 ### Stub Behavior
 
@@ -429,6 +438,8 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 - Recall `Call Order` marks the selected order as `preparing` for Caller.
 - Caller Preparing renders the order number plus the source-equivalent shortened guest name.
 - Caller Preparing renders the order-card ID when the selected Dine In order has no guest name.
+- Emenu `Place Order` creates a saved table order and exposes the same latest order to POS Recall.
+- Emenu `Call Server` marks that table order as `preparing` for Caller before POS Recall opens it.
 - Recall `Call Off` clears the selected order from Caller Preparing.
 
 ### Live Gaps
@@ -440,7 +451,9 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 | new-page | Source switches between POS and caller pages/windows | Define live multi-page fixture and stable Caller URL |
 | selector | Recall paging/call-off and Caller Preparing selectors are source-environment selectors | Validate real selectors and text format |
 | external-process | Python source uses caller-id execution in related areas | Replace with typed client/page boundary or live fixture |
-| cross-surface | Emenu and caller display surfaces require environment URLs/selectors | Define environment config and stable selectors |
+| cross-surface | Emenu, POS, and Caller display surfaces require environment URLs/selectors | Define environment config and stable selectors |
+| emenu | Source Emenu flow selects license, table, customer count, closes order card, clicks Call Server, and switches browser tabs; first-round offline mode uses stable harness selectors and a same-page switch button | Validate real Emenu login/license/table/customer/order-card/call-server selectors plus POS/Emenu tab switching |
+| display-area | Python source defaults caller verification to Ready area while current TS offline convention verifies Preparing for called orders | Confirm real Caller Ready/Preparing mapping for Emenu Call Server |
 
 ## Expiration Manager Flow
 

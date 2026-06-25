@@ -489,6 +489,28 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         <div data-testid="caller-preparing-list"></div>
       </section>
     </section>
+    <section data-testid="emenu-main-page" hidden>
+      <button data-testid="emenu-select-license">Select License</button>
+      <button data-testid="emenu-unused-license">Unused License</button>
+      <button data-testid="emenu-confirm-license">Confirm License</button>
+      <button data-testid="emenu-start">Start</button>
+      <button data-testid="emenu-table">Area 1 Table 1</button>
+      <button data-testid="emenu-enter-table">Enter Table</button>
+      <button data-testid="emenu-guest-number">2</button>
+      <button data-testid="emenu-continue">Continue</button>
+    </section>
+    <section data-testid="emenu-order-page" hidden>
+      <button data-testid="emenu-new-category">New Category</button>
+      <button data-testid="emenu-new-category-first-item">Emenu First Item</button>
+      <button data-testid="emenu-add-cart">Add Cart</button>
+      <button data-testid="emenu-cart">Cart</button>
+      <button data-testid="emenu-place-order">Place Order</button>
+      <section data-testid="emenu-order-card" hidden>
+        <button data-testid="emenu-order-card-close">Close Order Card</button>
+      </section>
+      <button data-testid="emenu-call-server">Call Server</button>
+      <button data-testid="emenu-switch-pos">POS</button>
+    </section>
     <section data-testid="report-password-panel" hidden>
       <input data-testid="report-password" type="password" />
       <button data-testid="report-password-save">Save</button>
@@ -661,6 +683,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let adminStaffRecords = [];
       let selectedAdminStaffName = '';
       let savedOrders = [];
+      let emenuLatestOrder = null;
       let nextOrderNumber = 100000;
       let selectedRecallOrder = null;
       let draftSplitPrices = [];
@@ -1006,6 +1029,14 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const callerPage = document.querySelector('[data-testid="caller-page"]');
       const callerReadyList = document.querySelector('[data-testid="caller-ready-list"]');
       const callerPreparingList = document.querySelector('[data-testid="caller-preparing-list"]');
+      const emenuMainPage = document.querySelector('[data-testid="emenu-main-page"]');
+      const emenuOrderPage = document.querySelector('[data-testid="emenu-order-page"]');
+      const emenuContinueButton = document.querySelector('[data-testid="emenu-continue"]');
+      const emenuSwitchPosButton = document.querySelector('[data-testid="emenu-switch-pos"]');
+      const emenuPlaceOrderButton = document.querySelector('[data-testid="emenu-place-order"]');
+      const emenuOrderCard = document.querySelector('[data-testid="emenu-order-card"]');
+      const emenuOrderCardCloseButton = document.querySelector('[data-testid="emenu-order-card-close"]');
+      const emenuCallServerButton = document.querySelector('[data-testid="emenu-call-server"]');
       const reportPasswordPanel = document.querySelector('[data-testid="report-password-panel"]');
       const reportPasswordInput = document.querySelector('[data-testid="report-password"]');
       const reportPasswordSaveButton = document.querySelector('[data-testid="report-password-save"]');
@@ -1170,6 +1201,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         orderPage.hidden = panel !== 'order';
         recallPage.hidden = panel !== 'recall';
         callerPage.hidden = panel !== 'caller';
+        emenuMainPage.hidden = true;
+        emenuOrderPage.hidden = true;
         reportPasswordPanel.hidden = panel !== 'report-password';
         reportPage.hidden = panel !== 'report';
         supportPage.hidden = panel !== 'support';
@@ -1180,6 +1213,24 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         } else if (panel === 'home') {
           history.replaceState(null, '', '#/home');
         }
+      }
+
+      function showEmenuPanel(panel) {
+        document.querySelector('[data-testid="pos-home"]').hidden = true;
+        adminPage.hidden = true;
+        deliveryPage.hidden = true;
+        joinMemberRegistration.hidden = true;
+        inventoryPage.hidden = true;
+        orderPage.hidden = true;
+        recallPage.hidden = true;
+        callerPage.hidden = true;
+        reportPasswordPanel.hidden = true;
+        reportPage.hidden = true;
+        supportPage.hidden = true;
+        messageCenter.hidden = true;
+        reservationPage.hidden = true;
+        emenuMainPage.hidden = panel !== 'main';
+        emenuOrderPage.hidden = panel !== 'order';
       }
 
       function shortenCallerGuestName(guestName) {
@@ -1215,6 +1266,45 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
             item.textContent = info;
             callerReadyList.appendChild(item);
           });
+      }
+
+      function createEmenuOrder() {
+        const order = {
+          orderNumber: String(nextOrderNumber++),
+          orderCardId: '',
+          items: [{ name: 'Emenu First Item', price: 8, unitPrice: 8, quantity: 1, state: '', taxRate: 0 }],
+          itemOption: null,
+          tip: 0,
+          splitTip: null,
+          status: '',
+          customerName: null,
+          subtotal: 8,
+          settlementTotal: null,
+          crmMember: null,
+          crmDiscountRate: 0,
+          crmDiscountMaxAmount: null,
+          crmFixedRewardAmount: 0,
+          crmPointDeduction: 0,
+          hasRedeemItem: false,
+          orderType: 'dine-in',
+          partialPaid: false,
+          rewardDiscount: 0,
+          guestPhone: '',
+          guestAddress: '',
+          deliveryInfoRows: [],
+          splitOrderPrices: [],
+          subOrderItems: [],
+          subOrderStatuses: [],
+          inventoryDeductedQuantity: 0,
+          paymentType: '',
+          hasCreditFailure: false,
+        };
+        order.orderCardId = 'Area 1 Table 1 ' + order.orderNumber;
+        savedOrders.push(order);
+        latestSavedOrderItems = [...order.items];
+        selectedRecallOrder = order;
+        emenuLatestOrder = order;
+        return order;
       }
 
       function normalizePhone(phone) {
@@ -2873,6 +2963,26 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         renderCallerDisplay();
         showPanel('caller');
       });
+      emenuContinueButton.addEventListener('click', () => {
+        showEmenuPanel('order');
+      });
+      emenuSwitchPosButton.addEventListener('click', () => {
+        document.querySelector('[data-testid="pos-home"]').hidden = false;
+        showPanel('home');
+      });
+      emenuPlaceOrderButton.addEventListener('click', () => {
+        createEmenuOrder();
+        emenuOrderCard.hidden = false;
+      });
+      emenuOrderCardCloseButton.addEventListener('click', () => {
+        emenuOrderCard.hidden = true;
+      });
+      emenuCallServerButton.addEventListener('click', () => {
+        if (emenuLatestOrder) {
+          emenuLatestOrder.callerStatus = 'preparing';
+          renderCallerDisplay();
+        }
+      });
       orderSaveButton.addEventListener('click', () => {
         saveCurrentOrder();
       });
@@ -3876,6 +3986,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       kdsCategoryRequiredSelect.value = String(currentKdsCategoryRequired);
       kdsCategoryDiscountAllowanceSelect.value = String(currentKdsCategoryDiscountAllowance);
       renderClockControls();
+      if (window.location.pathname.includes('/emenu/')) {
+        showEmenuPanel('main');
+      }
     </script>
   </body>
 </html>`;

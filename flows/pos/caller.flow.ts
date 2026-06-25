@@ -1,3 +1,5 @@
+import type { EmenuMainPage } from '../../pages/emenu/main.page.js';
+import type { EmenuOrderPage } from '../../pages/emenu/order.page.js';
 import type { CallerPage } from '../../pages/pos/caller.page.js';
 import type { PosHomePage } from '../../pages/pos/home.page.js';
 import type { OrderDishesPage } from '../../pages/pos/order-dishes.page.js';
@@ -19,6 +21,12 @@ export type DineInCallerTableResult = {
   preparingInfoAfterCallOff: string[];
 };
 
+export type EmenuCallerTableResult = {
+  orderCardId: string;
+  preparingInfoBeforeCallOff: string[];
+  preparingInfoAfterCallOff: string[];
+};
+
 const callerGuestName = 'CallerGuest42';
 
 export class CallerFlow {
@@ -27,6 +35,8 @@ export class CallerFlow {
     private readonly orderDishesPage: OrderDishesPage,
     private readonly recallPage: RecallPage,
     private readonly callerPage: CallerPage,
+    private readonly emenuMainPage?: EmenuMainPage,
+    private readonly emenuOrderPage?: EmenuOrderPage,
   ) {}
 
   async callDineInOrderWithGuestNameAndClear(homeUrl: string): Promise<DineInCallerNameResult> {
@@ -73,6 +83,38 @@ export class CallerFlow {
       await this.recallPage.openRecentOrder();
       const orderCardId = await this.recallPage.readOrderCardId();
       await this.recallPage.callCurrentOrder();
+      await this.homePage.openCaller();
+      const preparingInfoBeforeCallOff = await this.callerPage.readInfoList('preparing');
+
+      await this.homePage.clickRecall();
+      await this.recallPage.openRecentOrder();
+      await this.recallPage.callOffCurrentOrder();
+      await this.homePage.openCaller();
+      const preparingInfoAfterCallOff = await this.callerPage.readInfoList('preparing');
+
+      return {
+        orderCardId,
+        preparingInfoBeforeCallOff,
+        preparingInfoAfterCallOff,
+      };
+    });
+  }
+
+  async callEmenuOrderWithTableAndClear(emenuUrl: string, _homeUrl: string): Promise<EmenuCallerTableResult> {
+    return step('Emenu 选桌下单叫号并由 POS 销号', async () => {
+      if (!this.emenuMainPage || !this.emenuOrderPage) {
+        throw new Error('Emenu pages are required for Emenu caller flow.');
+      }
+
+      await this.emenuMainPage.openAndStartOrder(emenuUrl);
+      await this.emenuOrderPage.placeFirstCategoryItemOrder();
+      await this.emenuOrderPage.closeOrderCard();
+      await this.emenuOrderPage.callServer();
+
+      await this.emenuMainPage.switchToPosHome();
+      await this.homePage.clickRecall();
+      await this.recallPage.openRecentOrder();
+      const orderCardId = await this.recallPage.readOrderCardId();
       await this.homePage.openCaller();
       const preparingInfoBeforeCallOff = await this.callerPage.readInfoList('preparing');
 
