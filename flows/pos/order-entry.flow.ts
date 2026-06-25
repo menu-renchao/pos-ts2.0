@@ -126,6 +126,12 @@ export type ClearSplitSubOrderChargeResult = {
   thirdSubOrderPriceDetail: string;
 };
 
+export type PartialSettleAddTipResult = {
+  originalTotal: number;
+  orderStatus: string;
+  unpaidAmountAfterTip: number;
+};
+
 export type EvenSplitTipUnsplitResult = {
   combinedTipText: string;
 };
@@ -874,6 +880,29 @@ export class OrderEntryFlow {
     await this.orderDishesPage.selectOrderLineItem(3);
     await this.orderDishesPage.clearSelectedItemDiscounts();
     return this.orderDishesPage.readOrderLineText(3);
+  }
+
+  async partiallyPayTaxExemptOrderAddTipAndReadStatus(homeUrl: string): Promise<PartialSettleAddTipResult> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.changeSelectedItemPrice(2000);
+    await this.orderDishesPage.voidSelectedItemTax();
+    await this.orderDishesPage.clickSettle();
+    const originalTotal = await this.orderDishesPage.readSettlementTotal();
+
+    await this.orderDishesPage.modifySettlementPaymentAmount(500);
+    await this.orderDishesPage.settleByCash();
+    await this.orderDishesPage.addSettlementTip(100);
+    const unpaidAmountAfterTip = await this.orderDishesPage.readSettlementUnpaidAmount();
+    await this.orderDishesPage.settleByCash();
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    const orderStatus = await this.recallPage.readOrderStatus();
+
+    return { originalTotal, orderStatus, unpaidAmountAfterTip };
   }
 
   async unsplitEvenSplitOrderAfterEditingFirstSubOrderTip(homeUrl: string): Promise<EvenSplitTipUnsplitResult> {

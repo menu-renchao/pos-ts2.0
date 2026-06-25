@@ -8,7 +8,7 @@ These contracts gate migration for all active source rows under `stage2/*.py`.
 
 | source_file | source_class | source_test_patterns | target_specs | target_flow_methods |
 |---|---|---|---|---|
-| stage2/test_order_operation.py | TestOrderOperation | seat split including `test_seat_split_void_no_shared_item`, `test_seat_split_void_have_shared_item`, `test_seat_split_modify_tip`, `test_seat_split_close_unsplit`, `test_split_tip_reduce_item`, and `test_split_tip_discount_item`, amount/even split including `test_amount_split_semi_paid_add`, `test_amount_split_split`, `test_amount_split_semi_paid_unsplit`, `test_even_split_tip_unsplit`, `test_multi_pay_refund`, and `test_multi_amount_split`, void reason including `test_order_void_reason`, charge clear including `test_order_charge_clear`, discount clear including `test_whole_order_discount_clear` and `test_item_discount_clear`, tips, charge tax, charge edits, order copy/move/combine, split with zero suborder, send combo, option blank-click, language switch | tests/stage2/order-operation.spec.ts | `OrderEntryFlow.voidSecondSeatSplitSubOrderAndReadTip`, `OrderEntryFlow.preventVoidSeatSplitSubOrderWithSharedPaidItem`, `OrderEntryFlow.modifyFirstSeatSplitSubOrderTipAndReadTips`, `OrderEntryFlow.preventUnsplitSeatSplitOrderAfterPartialPayment`, `OrderEntryFlow.preventUnsplitAmountSplitOrderAfterPartialPayment`, `OrderEntryFlow.unsplitUnpaidAmountSplitOrder`, `OrderEntryFlow.preventUnsplitAmountSplitOrderAfterSemiPayment`, `OrderEntryFlow.unsplitEvenSplitOrderAfterEditingFirstSubOrderTip`, `OrderEntryFlow.reduceFirstSeatSplitSubOrderItemAndReadTips`, `OrderEntryFlow.discountFirstSeatSplitSubOrderItemAndReadTips`, `OrderEntryFlow.splitLargeOrderByMultipleAmountsAndReadTotals`, `OrderEntryFlow.openVoidReasonsForSavedOrderAndReadCount`, `OrderEntryFlow.clearChargesOnPaidDragSplitSubOrdersAndReadDetails`, `OrderEntryFlow.clearWholeOrderDiscountAndReadPriceDetail`, `OrderEntryFlow.clearThirdItemDiscountAndReadItemText`, `SettlementFlow.refundEvenPayCreditAndCashPaymentsAndReadRecords`, `AdvancedOrderFlow.splitBySeat`, `AdvancedOrderFlow.splitByAmount`, `AdvancedOrderFlow.combineOrders`, `AdvancedOrderFlow.copyOrder`, `AdvancedOrderFlow.moveItemsOrOrder`, `AdvancedOrderFlow.refundByItemOrAmount`, `AdvancedOrderFlow.applyAndEditCharges`, `AdvancedOrderFlow.applyDiscountReason` |
+| stage2/test_order_operation.py | TestOrderOperation | seat split including `test_seat_split_void_no_shared_item`, `test_seat_split_void_have_shared_item`, `test_seat_split_modify_tip`, `test_seat_split_close_unsplit`, `test_split_tip_reduce_item`, and `test_split_tip_discount_item`, amount/even split including `test_amount_split_semi_paid_add`, `test_amount_split_split`, `test_amount_split_semi_paid_unsplit`, `test_even_split_tip_unsplit`, `test_multi_pay_refund`, and `test_multi_amount_split`, void reason including `test_order_void_reason`, charge clear including `test_order_charge_clear`, discount clear including `test_whole_order_discount_clear` and `test_item_discount_clear`, tips including `test_sub_settle_add_tip`, charge tax, charge edits, order copy/move/combine, split with zero suborder, send combo, option blank-click, language switch | tests/stage2/order-operation.spec.ts | `OrderEntryFlow.voidSecondSeatSplitSubOrderAndReadTip`, `OrderEntryFlow.preventVoidSeatSplitSubOrderWithSharedPaidItem`, `OrderEntryFlow.modifyFirstSeatSplitSubOrderTipAndReadTips`, `OrderEntryFlow.preventUnsplitSeatSplitOrderAfterPartialPayment`, `OrderEntryFlow.preventUnsplitAmountSplitOrderAfterPartialPayment`, `OrderEntryFlow.unsplitUnpaidAmountSplitOrder`, `OrderEntryFlow.preventUnsplitAmountSplitOrderAfterSemiPayment`, `OrderEntryFlow.unsplitEvenSplitOrderAfterEditingFirstSubOrderTip`, `OrderEntryFlow.reduceFirstSeatSplitSubOrderItemAndReadTips`, `OrderEntryFlow.discountFirstSeatSplitSubOrderItemAndReadTips`, `OrderEntryFlow.splitLargeOrderByMultipleAmountsAndReadTotals`, `OrderEntryFlow.openVoidReasonsForSavedOrderAndReadCount`, `OrderEntryFlow.clearChargesOnPaidDragSplitSubOrdersAndReadDetails`, `OrderEntryFlow.clearWholeOrderDiscountAndReadPriceDetail`, `OrderEntryFlow.clearThirdItemDiscountAndReadItemText`, `OrderEntryFlow.partiallyPayTaxExemptOrderAddTipAndReadStatus`, `SettlementFlow.refundEvenPayCreditAndCashPaymentsAndReadRecords`, `AdvancedOrderFlow.splitBySeat`, `AdvancedOrderFlow.splitByAmount`, `AdvancedOrderFlow.combineOrders`, `AdvancedOrderFlow.copyOrder`, `AdvancedOrderFlow.moveItemsOrOrder`, `AdvancedOrderFlow.refundByItemOrAmount`, `AdvancedOrderFlow.applyAndEditCharges`, `AdvancedOrderFlow.applyDiscountReason` |
 
 ### Preconditions
 
@@ -32,6 +32,7 @@ These contracts gate migration for all active source rows under `stage2/*.py`.
 - POS-22813 creates a Dine In order with three non-combo dishes and a taxable 5% order charge before sending all items to kitchen and drag-splitting into three suborders.
 - POS-23204 whole-order discount clear creates a Dine In order with six non-combo dishes before applying a 20% whole-order discount and 20% item discounts to all six dishes.
 - POS-23204 item discount clear creates a Dine In order with three non-combo dishes before applying a 20% whole-order discount and 20% item discounts to line items 1, 2, and 3.
+- POS-23322 creates a Dine In tax-exempt 20.00 one-item order before partial cash payment and post-payment tip adjustment.
 
 ### Steps
 
@@ -55,6 +56,7 @@ These contracts gate migration for all active source rows under `stage2/*.py`.
 18. POS-22813 path: enter Dine In, add three non-combo dishes, apply a 5% taxable order charge, send all, open Recall recent order, drag-split into three suborders, edit each suborder, clear its order charge, cash-pay it, then reopen suborders 1/2/3 and read status plus price detail text.
 19. POS-23204 whole-order discount clear path: enter Dine In, add six non-combo dishes, open Discount, apply 20% whole-order discount, apply 20% item discount to all six line items, clear the whole-order discount, and read the order price detail text.
 20. POS-23204 item discount clear path: enter Dine In, add three non-combo dishes, open Discount, apply 20% whole-order discount, apply 20% item discount to line items 1/2/3, select line item 3, clear its item discount, and read the third order line text.
+21. POS-23322 path: enter Dine In, add one non-combo dish, change its price to 20.00, void item tax, open settlement, cash-pay 5.00, add 1.00 settlement tip, read unpaid amount, complete remaining cash payment, open Recall recent order, and read order status.
 
 ### Expected Assertions
 
@@ -79,6 +81,7 @@ These contracts gate migration for all active source rows under `stage2/*.py`.
 - POS-22813 verifies suborders 1, 2, and 3 are `Paid`, and each paid suborder price detail no longer contains `Charge`.
 - POS-23204 verifies the order price detail no longer contains `Discount` after clearing the whole-order discount.
 - POS-23204 item discount clear verifies the third order line text no longer contains `Discount` after clearing only that selected item's discount.
+- POS-23322 verifies unpaid amount after adding tip is within 0.01 of `originalTotal - 4.00`, then verifies Recall status is `Paid` after the remaining cash payment.
 
 ### Page Responsibilities
 
@@ -101,6 +104,7 @@ These contracts gate migration for all active source rows under `stage2/*.py`.
 - POS-22813 also uses `OrderDishesPage.applyOrderCharge`, `OrderDishesPage.sendAllToKitchen`, `OrderDishesPage.settleByCash`, `RecallPage.splitByDrag`, `RecallPage.clickEdit`, `RecallPage.openSubOrder`, `RecallPage.readOrderStatus`, and `RecallPage.readOrderPriceDetail` to validate per-suborder charge clearing after payment.
 - POS-23204 whole-order discount clear also uses `OrderDishesPage.openDiscountAndReadWholeOrderPrice`, `OrderDishesPage.applyWholeOrderDiscountPercent`, `OrderDishesPage.selectOrderLineItems`, `OrderDishesPage.applySelectedItemsDiscountPercent`, `OrderDishesPage.clearWholeOrderDiscount`, and `OrderDishesPage.readOrderPriceDetail` to validate whole-order discount clearing.
 - POS-23204 item discount clear also uses `OrderDishesPage.openDiscountAndReadWholeOrderPrice`, `OrderDishesPage.applyWholeOrderDiscountPercent`, `OrderDishesPage.selectOrderLineItems`, `OrderDishesPage.applySelectedItemsDiscountPercent`, `OrderDishesPage.selectOrderLineItem`, `OrderDishesPage.clearSelectedItemDiscounts`, and `OrderDishesPage.readOrderLineText` to validate selected item discount clearing.
+- POS-23322 also uses `OrderDishesPage.changeSelectedItemPrice`, `OrderDishesPage.voidSelectedItemTax`, `OrderDishesPage.clickSettle`, `OrderDishesPage.readSettlementTotal`, `OrderDishesPage.modifySettlementPaymentAmount`, `OrderDishesPage.settleByCash`, `OrderDishesPage.addSettlementTip`, `OrderDishesPage.readSettlementUnpaidAmount`, `RecallPage.openRecentOrder`, and `RecallPage.readOrderStatus` to validate post-partial-payment tip recalculation.
 
 ### Client/Data Responsibilities
 
@@ -122,6 +126,7 @@ These contracts gate migration for all active source rows under `stage2/*.py`.
 - POS-21855 uses `groupSwitchDish` as the source non-combo dish, with no live client dependency in offline mode.
 - POS-22813 uses `splitDiscountDishes` as the three source-equivalent non-combo dishes, with no live client dependency in offline mode.
 - POS-23204 uses `groupSwitchDish` as the repeated source-equivalent non-combo dish for both whole-order and item discount clear paths, with no live client dependency in offline mode.
+- POS-23322 uses `groupSwitchDish` as the source-equivalent non-combo dish, with no live client dependency in offline mode.
 
 ### Stub Behavior
 
@@ -143,6 +148,7 @@ These contracts gate migration for all active source rows under `stage2/*.py`.
 - POS-22813 stub behavior persists a 5% order charge on the sent parent order, creates three drag-split suborders from the three source dishes, records charge-cleared state per suborder during edit, marks each cash-paid suborder as `Paid`, and omits `Charge` from the paid suborder price detail when that suborder has been cleared.
 - POS-23204 whole-order discount clear stub behavior renders whole-order Discount in order price detail when a 20% whole-order discount is active, applies selected-item percentage discounts to all selected line items, and removes the order-level Discount price detail when the whole-order discount is cleared.
 - POS-23204 item discount clear stub behavior renders `Discount` in discounted order line text, clears only the selected line item's item discount, restores that item's original price, and removes `Discount` from the selected order line text.
+- POS-23322 stub behavior records the 5.00 cash payment as partial, recalculates settlement unpaid amount after adding a 1.00 tip, completes the remaining cash payment, saves the order, and shows Recall status as `Paid`.
 
 ### Live Gaps
 
@@ -167,6 +173,7 @@ These contracts gate migration for all active source rows under `stage2/*.py`.
 | POS-22813-live | Taxable 5% order charge selection, send-all state, drag split gesture, suborder edit charge-clear action, cash payment, and paid suborder price detail selector are only stub-verified | Run live smoke for POS-22813 and record selector/data gaps before removing live gap |
 | POS-23204-whole-discount-clear-live | Whole-order discount dialog, multi-item discount selection, clear whole-order discount action, and order price detail selector are only stub-verified | Run live smoke for POS-23204 whole-order discount clear and record selector/data gaps before removing live gap |
 | POS-23204-item-discount-clear-live | Item discount dialog, multi-item discount selection, clear selected item discount action, and order line item text selector are only stub-verified | Run live smoke for POS-23204 item discount clear and record selector/data gaps before removing live gap |
+| POS-23322-live | Settlement partial cash payment, post-partial-payment tip input recalculation, unpaid amount display, and Recall paid status selector are only stub-verified | Run live smoke for POS-23322 and record selector/data gaps before removing live gap |
 
 ## Recall Search, Sort, Edit, And Card Detail Flow
 

@@ -250,4 +250,17 @@ test.describe('stage2 order operation migration', () => {
 
     expect(thirdItemText).not.toContain('Discount');
   });
+
+  test('POS-23322 部分支付添加小费后未付金额应扣除已付现金并最终 Paid', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.partiallyPayTaxExemptOrderAddTipAndReadStatus(environment.posHomeUrl);
+
+    expect(result.unpaidAmountAfterTip).toBeCloseTo(result.originalTotal - 4, 2);
+    expect(result.orderStatus).toBe('Paid');
+  });
 });
