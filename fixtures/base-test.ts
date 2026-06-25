@@ -25,6 +25,9 @@ export const test = base.extend<PosTestFixtures>({
   adminSettingsClient: async ({}, use) => {
     await use(createStubClients().adminSettingsClient);
   },
+  adminStaffClient: async ({}, use) => {
+    await use(createStubClients().adminStaffClient);
+  },
   menuClient: async ({}, use) => {
     await use(createStubClients().menuClient);
   },

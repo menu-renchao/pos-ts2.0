@@ -1,3 +1,4 @@
+import type { AdminStaffClient } from '../../clients/pos-api/admin-staff.client.js';
 import type { PosHomePage } from '../../pages/pos/home.page.js';
 import type { OrderDishesPage } from '../../pages/pos/order-dishes.page.js';
 import type { RecallPage } from '../../pages/pos/recall.page.js';
@@ -31,6 +32,10 @@ export type MultiItemAmountDiscountPermissionResult = {
   permissionTip: string;
 };
 
+export type ZeroServerDiscountPermissionResult = {
+  permissionTip: string;
+};
+
 export type AuthorizedWholeOrderDiscountResult = {
   permissionTip: string;
   subtotal: number;
@@ -56,6 +61,7 @@ export class StaffPermissionFlow {
     private readonly homePage: PosHomePage,
     private readonly orderDishesPage: OrderDishesPage,
     private readonly recallPage?: RecallPage,
+    private readonly adminStaffClient?: AdminStaffClient,
   ) {}
 
   async rejectWholeOrderDiscountAboveServerLimitWithoutPassword(homeUrl: string): Promise<WholeOrderDiscountPermissionResult> {
@@ -211,6 +217,37 @@ export class StaffPermissionFlow {
     });
   }
 
+  async rejectAnyWholeOrderDiscountWhenServerLimitIsZero(
+    homeUrl: string,
+  ): Promise<ZeroServerDiscountPermissionResult> {
+    return step('Server 最大折扣为 0 时任意整单折扣需要授权', async () => {
+      const adminStaffClient = this.requireAdminStaffClient();
+      await adminStaffClient.editRoleMaxDiscount('Server', staffDiscountSamples.zeroServerMaximumDiscountPercent);
+      await adminStaffClient.editRoleMaxDiscount(
+        'Manager',
+        staffDiscountRoleSamples.manager.maxWholeOrderDiscountPercent,
+      );
+
+      await this.homePage.open(homeUrl);
+      await this.homePage.applyOfflineStaffDiscountLimits(await adminStaffClient.readRoleMaxDiscounts());
+      await this.homePage.inputEmployeePassword(staffDiscountRoleSamples.server.password);
+      await this.homePage.clickDineIn();
+      await this.orderDishesPage.openFoodWithoutTax(
+        staffDiscountSamples.itemDiscountFirstFoodName,
+        staffDiscountSamples.multiDiscountFirstFoodPrice,
+      );
+      await this.orderDishesPage.openFoodWithoutTax(
+        staffDiscountSamples.itemDiscountSecondFoodName,
+        staffDiscountSamples.multiDiscountSecondFoodPrice,
+      );
+      await this.orderDishesPage.openDiscountAndReadWholeOrderPrice();
+      await this.orderDishesPage.applyWholeOrderDiscountPercent(staffDiscountSamples.zeroServerWholeOrderDiscountPercent);
+      const permissionTip = await this.orderDishesPage.readDiscountTip();
+
+      return { permissionTip };
+    });
+  }
+
   async rejectRecallWholeOrderAmountDiscountAboveServerLimitWithoutPassword(
     homeUrl: string,
   ): Promise<WholeOrderDiscountPermissionResult> {
@@ -296,5 +333,12 @@ export class StaffPermissionFlow {
       throw new Error('RecallPage is required for recall staff permission flows');
     }
     return this.recallPage;
+  }
+
+  private requireAdminStaffClient(): AdminStaffClient {
+    if (!this.adminStaffClient) {
+      throw new Error('AdminStaffClient is required for admin staff permission flows');
+    }
+    return this.adminStaffClient;
   }
 }

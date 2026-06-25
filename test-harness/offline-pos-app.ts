@@ -563,6 +563,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let pendingItemDiscount = null;
       let pendingRecallWholeOrderDiscountAmount = null;
       let currentEmployeePassword = '11';
+      const defaultStaffDiscountLimits = { Server: 20, Manager: 50, Boss: 100 };
+      let currentStaffDiscountLimits = {
+        ...defaultStaffDiscountLimits,
+        ...coerceStaffDiscountLimits(readStoredJson('offlineStaffDiscountLimits', {})),
+      };
       let currentInventorySearchItem = 'superman item4';
       const inventoryRecords = {
         'superman item4': { status: 'LIMITED_STOCK', quantity: 0 },
@@ -1262,17 +1267,46 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       }
 
       function wholeOrderDiscountLimitForPassword(password) {
+        const role = staffRoleForPassword(password);
+        return role ? currentStaffDiscountLimits[role] ?? 0 : 0;
+      }
+
+      function staffRoleForPassword(password) {
         if (password === '007') {
-          return 20;
+          return 'Server';
         }
         if (password === '006') {
-          return 50;
+          return 'Manager';
         }
         if (password === '11') {
-          return 100;
+          return 'Boss';
         }
-        return 0;
+        return '';
       }
+
+      function coerceStaffDiscountLimits(value) {
+        const entries = Array.isArray(value)
+          ? value.map((limit) => [limit.role, limit.maximumDiscountPercent])
+          : Object.entries(value || {});
+        return entries.reduce((limits, [role, percent]) => {
+          if (role in defaultStaffDiscountLimits && Number.isFinite(Number(percent))) {
+            limits[role] = Number(percent);
+          }
+          return limits;
+        }, {});
+      }
+
+      function updateStaffDiscountLimits(value) {
+        currentStaffDiscountLimits = {
+          ...currentStaffDiscountLimits,
+          ...coerceStaffDiscountLimits(value),
+        };
+        localStorage.setItem('offlineStaffDiscountLimits', JSON.stringify(currentStaffDiscountLimits));
+      }
+
+      window.addEventListener('offline-staff-discount-limits-updated', (event) => {
+        updateStaffDiscountLimits(event.detail);
+      });
 
       function applyWholeOrderDiscountPercent(percent) {
         currentWholeOrderDiscountRate = Number(percent || 0) / 100;

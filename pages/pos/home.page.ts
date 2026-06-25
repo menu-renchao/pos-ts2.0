@@ -1,6 +1,7 @@
 import type { Locator, Page } from '@playwright/test';
 import { expect } from '@playwright/test';
 
+import type { StaffRoleDiscountLimit } from '../../clients/pos-api/admin-staff.client.js';
 import { step } from '../../utils/step.js';
 import { waitUntil } from '../../utils/wait.js';
 import { PageObject } from '../shared/page-object.js';
@@ -122,6 +123,18 @@ export class PosHomePage extends PageObject {
     await step('刷新 POS 首页', async () => {
       await this.page.reload();
       await expect(this.homeRoot).toBeVisible();
+    });
+  }
+
+  async applyOfflineStaffDiscountLimits(limits: readonly StaffRoleDiscountLimit[]): Promise<void> {
+    await step('同步离线员工角色最大折扣配置', async () => {
+      await this.page.evaluate((roleLimits) => {
+        const limitsByRole = Object.fromEntries(
+          roleLimits.map((limit) => [limit.role, Number(limit.maximumDiscountPercent)]),
+        );
+        localStorage.setItem('offlineStaffDiscountLimits', JSON.stringify(limitsByRole));
+        window.dispatchEvent(new CustomEvent('offline-staff-discount-limits-updated', { detail: limitsByRole }));
+      }, limits);
     });
   }
 

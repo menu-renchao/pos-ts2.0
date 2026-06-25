@@ -163,4 +163,18 @@ test.describe('stage1 admin staff migration', () => {
       expect(result.permissionTip).toContain('The discount exceeds permission limit，please input password');
     },
   );
+
+  test(
+    'POS-31576 Server 最大折扣为 0 时提交 0.1% 整单折扣应提示超权限',
+    {
+      annotation: jiraIssue('POS-31576'),
+    },
+    async ({ adminStaffClient, environment, page }) => {
+      const flow = new StaffPermissionFlow(new PosHomePage(page), new OrderDishesPage(page), undefined, adminStaffClient);
+
+      const result = await flow.rejectAnyWholeOrderDiscountWhenServerLimitIsZero(environment.posHomeUrl);
+
+      expect(result.permissionTip).toContain('The discount exceeds permission limit，please input password');
+    },
+  );
 });

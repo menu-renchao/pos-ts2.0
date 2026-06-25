@@ -63,7 +63,7 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 
 | source_file | source_class | source_test_patterns | target_specs | target_flow_methods |
 |---|---|---|---|---|
-| stage1/test_admin_staff.py | TestAdminStaff | whole-order max discount, item max discount, recall discount permission, multi-discount, report permission, create staff with selected authority | tests/stage1/admin-staff.spec.ts | `StaffPermissionFlow.rejectWholeOrderDiscountAboveServerLimitWithoutPassword`, `StaffPermissionFlow.applyWholeOrderDiscountAboveServerLimitWithManagerPassword`, `StaffPermissionFlow.applyWholeOrderDiscountAboveManagerLimitWithBossPassword`, `StaffPermissionFlow.applyItemDiscountAboveServerLimitWithManagerPassword`, `StaffPermissionFlow.applyItemDiscountAboveManagerLimitWithBossPassword`, `StaffPermissionFlow.rejectRecallWholeOrderAmountDiscountAboveServerLimitWithoutPassword`, `StaffPermissionFlow.cancelRecallWholeOrderAmountDiscountAboveServerLimit`, `StaffPermissionFlow.applyRecallWholeOrderAmountDiscountAboveManagerLimitWithBossPassword`, `StaffPermissionFlow.requirePermissionForItemDiscountAfterBossAuthorizedWholeOrderDiscount`, `StaffPermissionFlow.requirePermissionForMultiItemAmountDiscount`, `StaffPermissionFlow.configureStaffPermissions`, `StaffPermissionFlow.applyOrderDiscountWithAuthorization`, `StaffPermissionFlow.applyItemDiscountWithAuthorization`, `StaffPermissionFlow.verifyReportPermission` |
+| stage1/test_admin_staff.py | TestAdminStaff | whole-order max discount, item max discount, recall discount permission, multi-discount, report permission, create staff with selected authority | tests/stage1/admin-staff.spec.ts | `StaffPermissionFlow.rejectWholeOrderDiscountAboveServerLimitWithoutPassword`, `StaffPermissionFlow.applyWholeOrderDiscountAboveServerLimitWithManagerPassword`, `StaffPermissionFlow.applyWholeOrderDiscountAboveManagerLimitWithBossPassword`, `StaffPermissionFlow.applyItemDiscountAboveServerLimitWithManagerPassword`, `StaffPermissionFlow.applyItemDiscountAboveManagerLimitWithBossPassword`, `StaffPermissionFlow.rejectRecallWholeOrderAmountDiscountAboveServerLimitWithoutPassword`, `StaffPermissionFlow.cancelRecallWholeOrderAmountDiscountAboveServerLimit`, `StaffPermissionFlow.applyRecallWholeOrderAmountDiscountAboveManagerLimitWithBossPassword`, `StaffPermissionFlow.requirePermissionForItemDiscountAfterBossAuthorizedWholeOrderDiscount`, `StaffPermissionFlow.requirePermissionForMultiItemAmountDiscount`, `StaffPermissionFlow.rejectAnyWholeOrderDiscountWhenServerLimitIsZero`, `StaffPermissionFlow.configureStaffPermissions`, `StaffPermissionFlow.applyOrderDiscountWithAuthorization`, `StaffPermissionFlow.applyItemDiscountWithAuthorization`, `StaffPermissionFlow.verifyReportPermission` |
 
 ### Preconditions
 
@@ -71,6 +71,7 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 - Manager/boss/server password or employee context is explicit in fixture/test data.
 - Discount limits and permission sets are configured through Admin or stub staff client.
 - `test_whole_order_maximum_discount_without_pwd` uses source-equivalent role limits: Server password `007` has max whole-order discount `20%`, Manager password `006` has `50%`, Boss password `11` has `100%`.
+- `test_server_maximum_discount_zero` overrides Server to `0%` through `StubAdminStaffClient`, matching source `AdminStaffAPI.edit_role_max_discount('Server', 0)`.
 
 ### Steps
 
@@ -212,6 +213,19 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 | stub behavior | Offline harness supports multi-select order rows through modified-click selection, accepts fixed amount item discount input, compares fixed amount plus existing order/item discounts against the current employee role limit, and opens the manager password popup without applying the discount when the Server limit is exceeded. |
 | live gaps | Live AdminStaffAPI role setup, Dine In no-table entry selector, multi-select item discount selector, fixed-amount item discount selector, permission dialog behavior, and Open Food cents/display conversion must be validated in live smoke. |
 
+#### StaffPermissionFlow.rejectAnyWholeOrderDiscountWhenServerLimitIsZero
+
+| field | contract |
+|---|---|
+| source | `stage1/test_admin_staff.py::TestAdminStaff::test_server_maximum_discount_zero` |
+| jira | POS-31576 |
+| preconditions | `StubAdminStaffClient` sets Server maximum discount to `0%` and Manager maximum discount to `50%`; the offline harness receives those role limits through `PosHomePage.applyOfflineStaffDiscountLimits`; current employee logs in with Server password `007`; source Dine In no-table order is represented by no-tax Open Food `item1`/`item2` priced at `6` and `4` in offline mode. |
+| actions | Set role maximum discounts, open POS home, synchronize offline staff discount limits, login as Server, enter Dine In without table, add two Open Food no-tax items, open whole-order discount, submit `0.1%`, and read the permission prompt. |
+| page methods | `PosHomePage.open`, `PosHomePage.applyOfflineStaffDiscountLimits`, `PosHomePage.inputEmployeePassword`, `PosHomePage.clickDineIn`, `OrderDishesPage.openFoodWithoutTax`, `OrderDishesPage.openDiscountAndReadWholeOrderPrice`, `OrderDishesPage.applyWholeOrderDiscountPercent`, `OrderDishesPage.readDiscountTip` |
+| assertions | Permission prompt contains `The discount exceeds permission limit，please input password` because any positive whole-order discount, including `0.1%`, exceeds Server's configured `0%` maximum discount. |
+| stub behavior | `StubAdminStaffClient.editRoleMaxDiscount` stores the source-equivalent role configuration; `readRoleMaxDiscounts` returns the configured limits; offline harness maps password `007` to Server and reads its current configurable limit instead of the default `20%`. |
+| live gaps | Live AdminStaffAPI role setup/teardown, Dine In no-table entry selector, whole-order discount percent selector, permission dialog behavior, and Open Food cents/display conversion must be validated in live smoke. |
+
 ### Expected Assertions
 
 - Discount without permission is blocked or limited as in the source case.
@@ -222,14 +236,16 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 
 ### Page Responsibilities
 
-- `StaffAdminPage` owns staff and permission controls.
+- `PosHomePage` owns offline staff discount limit synchronization for stub-mode role setup.
+- `StaffAdminPage` owns staff and permission controls when live Admin UI selectors are introduced.
 - `OrderDishesPage` owns discount action entry points and amount reads.
 - `RecallPage` owns recalled-order discount checks.
 - `ReportPage` owns report availability reads when introduced.
 
 ### Client/Data Responsibilities
 
-- `StubPosStaffClient` owns staff/permission state.
+- `StubAdminStaffClient` owns role maximum discount setup for migrated AdminStaffAPI-style role changes.
+- `StubPosStaffClient` owns staff/permission state when staff creation/report permissions are migrated.
 - `test-data/pos/permissions.ts` owns roles and authority samples.
 - `test-data/pos/payments.ts` owns discount and expected total samples.
 
