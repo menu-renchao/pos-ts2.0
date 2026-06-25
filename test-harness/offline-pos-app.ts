@@ -490,6 +490,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <button data-testid="recall-void-order">Void Order</button>
       <div data-testid="recall-void-alert" role="alert"></div>
       <button data-testid="recall-refund-paid-order">Refund Paid Order</button>
+      <div data-testid="recall-payment-records"></div>
       <button data-testid="recall-cancel-condition">Cancel Condition</button>
       <button data-testid="recall-move-order">Move Order</button>
       <button data-testid="recall-move-item">Move Item</button>
@@ -717,6 +718,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let currentOrderTaxVoided = false;
       let currentPaidAmount = 0;
       let currentSettlementTotal = null;
+      let currentPaymentRecords = [];
+      let currentEvenPayParts = 1;
       let currentItemPosNames = JSON.parse(localStorage.getItem('currentItemPosNames') || '{}');
       let currentItemChineseNames = JSON.parse(localStorage.getItem('currentItemChineseNames') || '{}');
       let currentCrmMember = null;
@@ -1126,6 +1129,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const recallRestoreInventoryCheckbox = document.querySelector('[data-testid="recall-restore-inventory"]');
       const recallVoidOrderButton = document.querySelector('[data-testid="recall-void-order"]');
       const recallRefundPaidOrderButton = document.querySelector('[data-testid="recall-refund-paid-order"]');
+      const recallPaymentRecords = document.querySelector('[data-testid="recall-payment-records"]');
       const recallCancelConditionButton = document.querySelector('[data-testid="recall-cancel-condition"]');
       const recallMoveOrderButton = document.querySelector('[data-testid="recall-move-order"]');
       const recallMoveItemButton = document.querySelector('[data-testid="recall-move-item"]');
@@ -1478,6 +1482,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           subOrderItems: [],
           subOrderStatuses: [],
           inventoryDeductedQuantity: 0,
+          paymentRecords: [],
           paymentType: '',
           hasCreditFailure: false,
         };
@@ -1563,6 +1568,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           subOrderItems: [],
           subOrderStatuses: [],
           inventoryDeductedQuantity: 0,
+          paymentRecords: [],
           paymentType: 'cash',
           hasCreditFailure: false,
           taxText,
@@ -2654,6 +2660,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         currentOrderTaxVoided = false;
         currentPaidAmount = 0;
         currentSettlementTotal = null;
+        currentPaymentRecords = [];
+        currentEvenPayParts = 1;
         currentSplitPartTip = null;
         currentOrderStatus = '';
         currentOrderType = 'togo';
@@ -2780,6 +2788,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           subOrderItems: [],
           subOrderStatuses: [],
           inventoryDeductedQuantity: 0,
+          paymentRecords: currentPaymentRecords.map((record) => ({ ...record })),
           paymentType: '',
           hasCreditFailure: false,
         };
@@ -2809,6 +2818,65 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           + Number(order?.tip || 0)
           + Number(order?.rewardDiscount || 0)
           + Number(order?.wholeOrderDiscountAmount || 0)).toFixed(2));
+      }
+
+      function ensurePaymentRecords(order) {
+        if (!order.paymentRecords) {
+          order.paymentRecords = [];
+        }
+        return order.paymentRecords;
+      }
+
+      function paidRecordAmount(order) {
+        return roundMoney(ensurePaymentRecords(order)
+          .filter((record) => Number(record.amount || 0) > 0)
+          .reduce((sum, record) => sum + Number(record.amount || 0), 0));
+      }
+
+      function appendPaymentRecord(order, paymentType, amount) {
+        if (!order || Number(amount || 0) <= 0) {
+          return;
+        }
+        ensurePaymentRecords(order).push({
+          amount: roundMoney(amount),
+          paymentType,
+        });
+      }
+
+      function refundPaymentRecord(order, recordIndex) {
+        const records = ensurePaymentRecords(order);
+        const record = records[recordIndex];
+        if (!record || Number(record.amount || 0) <= 0 || record.refunded) {
+          return;
+        }
+        record.refunded = true;
+        records.push({
+          amount: roundMoney(Number(record.amount) * -1),
+          paymentType: record.paymentType,
+          refundedFrom: recordIndex + 1,
+        });
+      }
+
+      function renderPaymentRecords(order) {
+        recallPaymentRecords.innerHTML = '';
+        ensurePaymentRecords(order).forEach((record, index) => {
+          const row = document.createElement('div');
+          row.dataset.testid = 'recall-payment-record';
+          const amount = document.createElement('span');
+          amount.dataset.testid = 'recall-payment-record-amount';
+          amount.textContent = Number(record.amount || 0).toFixed(2);
+          const refundButton = document.createElement('button');
+          refundButton.dataset.testid = 'recall-payment-record-refund';
+          refundButton.textContent = 'Refund';
+          refundButton.disabled = Number(record.amount || 0) <= 0 || Boolean(record.refunded);
+          refundButton.addEventListener('click', () => {
+            refundPaymentRecord(order, index);
+            renderRecallOrderItems();
+          });
+          row.appendChild(amount);
+          row.appendChild(refundButton);
+          recallPaymentRecords.appendChild(row);
+        });
       }
 
       function orderItemsSubtotal(items) {
@@ -2941,6 +3009,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         renderSplitPrices(order.splitOrderPrices || []);
         renderSplitItemPrices(draftSplitItemPrices);
         renderSubOrders(order);
+        renderPaymentRecords(order);
         renderRecallItemRows(order.items || []);
         if (order.itemOption) {
           const option = document.createElement('div');
@@ -3627,17 +3696,32 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       });
       settleEvenPayButton.addEventListener('click', () => {
         currentSemiPayMode = true;
+        currentEvenPayParts = 2;
       });
       function settleCurrentOrder(paymentType) {
-        if (currentSemiPayMode) {
-          currentOrderStatus = 'Partially Paid';
-          saveCurrentOrder();
-          return;
-        }
         const unpaidAmount = Number(settleUnpaidAmount.textContent || '0');
         const requestedPaymentAmount = Number(settlePayAmountInput.value || '0') / 100;
         const paymentAmount = requestedPaymentAmount > 0 ? requestedPaymentAmount : unpaidAmount;
+        if (currentSemiPayMode) {
+          const total = Number(settleTotal.textContent || '0');
+          const splitPaymentAmount = currentPaymentRecords.length === 0
+            ? roundMoney(total / Math.max(currentEvenPayParts, 1))
+            : paymentAmount;
+          currentPaymentRecords.push({
+            amount: splitPaymentAmount,
+            paymentType,
+          });
+          currentPaidAmount = roundMoney(currentPaidAmount + splitPaymentAmount);
+          currentOrderStatus = currentPaidAmount >= total ? 'Paid' : 'Partially Paid';
+          currentSemiPayMode = currentOrderStatus !== 'Paid';
+          saveCurrentOrder();
+          return;
+        }
         if (paymentAmount > 0 && paymentAmount < unpaidAmount) {
+          currentPaymentRecords.push({
+            amount: paymentAmount,
+            paymentType,
+          });
           currentPaidAmount = roundMoney(currentPaidAmount + paymentAmount);
           currentOrderStatus = 'Partially Paid';
           settlePayAmountInput.value = '';
@@ -3649,6 +3733,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           markItemsPrinted('kitchen');
         }
         currentSettlementTotal = roundedSettlementTotal(Number(settleTotal.textContent || '0'));
+        currentPaymentRecords.push({
+          amount: paymentAmount,
+          paymentType,
+        });
         const member = selectedMemberRecord();
         if (member && paymentType === 'cash') {
           member.points += earnPointsForSubtotal(Number(orderSubtotal.textContent || '0'));
@@ -4219,6 +4307,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
             return;
           }
           selectedRecallOrder.semiPaidBeforeFinalPayment = Boolean(selectedRecallOrder.partialPaid);
+          appendPaymentRecord(
+            selectedRecallOrder,
+            'cash',
+            roundMoney(Math.max(0, orderTotal(selectedRecallOrder) - paidRecordAmount(selectedRecallOrder))),
+          );
           selectedRecallOrder.status = 'Paid';
           selectedRecallOrder.partialPaid = false;
           selectedRecallOrder.paymentType = 'cash';

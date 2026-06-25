@@ -1,5 +1,7 @@
 import { expect, test } from '../../fixtures/base-test.js';
 import { OrderEntryFlow } from '../../flows/pos/order-entry.flow.js';
+import { SettlementFlow } from '../../flows/pos/settlement.flow.js';
+import { AdminPage } from '../../pages/pos/admin.page.js';
 import { PosHomePage } from '../../pages/pos/home.page.js';
 import { OrderDishesPage } from '../../pages/pos/order-dishes.page.js';
 import { RecallPage } from '../../pages/pos/recall.page.js';
@@ -158,5 +160,21 @@ test.describe('stage2 order operation migration', () => {
     expect(result.firstSubOrderTipBeforeDiscount).toBe('4.00');
     expect(result.firstSubOrderTipAfterDiscount).toBe('3.00');
     expect(result.secondSubOrderTipAfterDiscount).toBe('3.00');
+  });
+
+  test('POS-19517 平分信用卡和现金付款后退款记录应分别等于原付款负数', {
+    annotation: [jiraIssue('POS-19517')],
+  }, async ({ environment, page }) => {
+    const settlementFlow = new SettlementFlow(
+      new PosHomePage(page),
+      new AdminPage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await settlementFlow.refundEvenPayCreditAndCashPaymentsAndReadRecords(environment.posHomeUrl);
+
+    expect(result.firstRefundAmount).toBe(-result.firstPaymentAmount);
+    expect(result.secondRefundAmount).toBe(-result.secondPaymentAmount);
   });
 });

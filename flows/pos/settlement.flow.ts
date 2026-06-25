@@ -24,6 +24,13 @@ export type CashPaymentRecallFilterResult = {
   filteredOrderNumber: string;
 };
 
+export type MultiPaymentRefundRecordResult = {
+  firstPaymentAmount: number;
+  secondPaymentAmount: number;
+  firstRefundAmount: number;
+  secondRefundAmount: number;
+};
+
 export class SettlementFlow {
   constructor(
     private readonly homePage: PosHomePage,
@@ -113,6 +120,35 @@ export class SettlementFlow {
     await this.orderDishesPage.settleByCash();
     await this.orderDishesPage.addSettlementTip(200);
     return this.orderDishesPage.readSettlementUnpaidAmount();
+  }
+
+  async refundEvenPayCreditAndCashPaymentsAndReadRecords(homeUrl: string): Promise<MultiPaymentRefundRecordResult> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup('Lunch');
+    await this.orderDishesPage.selectMenuCategory('Chicken Lunch E');
+    await this.orderDishesPage.addMenuItem('superman item1');
+    await this.orderDishesPage.changeSelectedItemPrice(11);
+    await this.orderDishesPage.voidSelectedItemTax();
+    await this.orderDishesPage.clickSettle();
+    await this.orderDishesPage.splitPaymentEvenly(2);
+    await this.orderDishesPage.settleByCredit();
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.clickSettle();
+    await this.recallPage.payCurrentOrderByCash();
+
+    const firstPaymentAmount = await this.recallPage.readPaymentRecordAmount(1);
+    const secondPaymentAmount = await this.recallPage.readPaymentRecordAmount(2);
+    await this.recallPage.refundPaymentRecord(1);
+    await this.recallPage.refundPaymentRecord(2);
+
+    return {
+      firstPaymentAmount,
+      firstRefundAmount: await this.recallPage.readPaymentRecordAmount(3),
+      secondPaymentAmount,
+      secondRefundAmount: await this.recallPage.readPaymentRecordAmount(4),
+    };
   }
 
   async readDineInCashPaymentActionOrder(homeUrl: string): Promise<string[]> {

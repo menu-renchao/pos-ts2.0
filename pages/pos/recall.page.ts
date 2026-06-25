@@ -102,6 +102,7 @@ export class RecallPage extends PageObject {
   private readonly callOffButton: Locator;
   private readonly callOrderButton: Locator;
   private readonly paymentTypeOrderNumber: Locator;
+  private readonly paymentRecords: Locator;
   private readonly managerPasswordInput: Locator;
   private readonly managerPasswordSubmitButton: Locator;
   private readonly managerPasswordCancelButton: Locator;
@@ -181,9 +182,18 @@ export class RecallPage extends PageObject {
     this.callOffButton = page.getByTestId('recall-call-off');
     this.callOrderButton = page.getByTestId('recall-call-order');
     this.paymentTypeOrderNumber = page.getByTestId('recall-payment-type-order-number');
+    this.paymentRecords = page.getByTestId('recall-payment-record');
     this.managerPasswordInput = page.getByTestId('recall-manager-password');
     this.managerPasswordSubmitButton = page.getByTestId('recall-manager-password-submit');
     this.managerPasswordCancelButton = page.getByTestId('recall-manager-password-cancel');
+  }
+
+  private paymentRecordAmount(index: number): Locator {
+    return this.paymentRecords.nth(index - 1).getByTestId('recall-payment-record-amount');
+  }
+
+  private paymentRecordRefundButton(index: number): Locator {
+    return this.paymentRecords.nth(index - 1).getByTestId('recall-payment-record-refund');
   }
 
   async openRecentOrder(): Promise<void> {
@@ -485,6 +495,18 @@ export class RecallPage extends PageObject {
     await step('Recall Refund 已支付订单', async () => {
       await this.recallRefundPaidOrderButton.click();
     });
+  }
+
+  async refundPaymentRecord(index: number): Promise<void> {
+    await step(`Recall 退款第 ${index} 条付款记录`, async () => {
+      await this.paymentRecordRefundButton(index).click();
+    });
+  }
+
+  async readPaymentRecordAmount(index: number): Promise<number> {
+    return step(`读取 Recall 第 ${index} 条付款记录金额`, async () =>
+      Number((await this.paymentRecordAmount(index).textContent()) ?? '0'),
+    );
   }
 
   async isMoveOrderVisible(): Promise<boolean> {
