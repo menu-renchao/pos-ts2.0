@@ -379,49 +379,60 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 
 | source_file | source_class | source_test_patterns | target_specs | target_flow_methods |
 |---|---|---|---|---|
-| stage1/test_caller.py | TestCaller | dine-in caller with name/table, emenu caller with table/name, POS name update and refresh | tests/stage1/caller.spec.ts | `CallerFlow.createCallableOrder`, `CallerFlow.verifyCallingDisplay`, `CallerFlow.refreshCallingInfo` |
+| stage1/test_caller.py | TestCaller | test_dine_in_caller_with_name_and_table: Dine In order with guest name and table, call order, verify Preparing display, call off, verify removal | tests/stage1/caller.spec.ts | `CallerFlow.callDineInOrderWithGuestNameAndClear` |
+| stage1/test_caller.py | TestCaller | remaining dine-in table and Emenu caller refresh paths | tests/stage1/caller.spec.ts | not-started |
 
 ### Preconditions
 
-- Table, guest name, order number, and caller display samples are typed.
-- Dine-in and Emenu order creation paths are explicit.
-- Caller display refresh must be represented by a page or client boundary, not shell-only side effects.
+- Employee password `11` can enter POS offline mode.
+- `openFoodDish` provides the source-equivalent ordered item for the migrated Dine In path.
+- Guest name `CallerGuest42` is used so the source caller shortening rule is deterministic as `Cal...42`.
+- First-round offline mode reads the saved order number from Recall; source `PosDBFunction.get_last_order_num` remains a live DB validation gap.
 
 ### Steps
 
-1. Create a dine-in or Emenu order with table/name data.
-2. Send or mark order ready according to source behavior.
-3. Open or refresh caller display.
-4. Modify name/table data when required.
-5. Read caller display state.
+1. Open POS, enter employee password, and enter Dine In.
+2. Add source-equivalent Open Food, input guest name, and save the order.
+3. Open Recall recent order and read the generated order number.
+4. Call the current order from Recall.
+5. Open Caller and read the Preparing display list.
+6. Return to Recall, call off the same order, reopen Caller, and read Preparing again.
 
 ### Expected Assertions
 
-- Caller display shows expected table area, table number, guest name, and order number.
-- Refresh reflects updated POS order information.
-- Dine-in and Emenu paths produce the same source-equivalent caller format where required.
+- Before call off, Caller Preparing contains the Recall order number.
+- Before call off, Caller Preparing contains the source-equivalent shortened guest name `Cal...42`.
+- After call off, Caller Preparing no longer contains the order number.
+- After call off, Caller Preparing no longer contains the shortened guest name.
 
 ### Page Responsibilities
 
-- `CallerPage` owns caller display and refresh controls.
-- `TablePage` owns table selection reads.
-- `EmenuOrderPage` owns Emenu order submission when introduced.
-- `OrderDishesPage` owns POS name/table modifications.
+- `PosHomePage.open`, `PosHomePage.inputEmployeePassword`, `PosHomePage.clickDineIn`, `PosHomePage.clickRecall`, and `PosHomePage.openCaller` own POS entry/navigation.
+- `OrderDishesPage.openFoodWithoutTax`, `OrderDishesPage.inputGuestName`, and `OrderDishesPage.saveOrder` own Dine In order creation.
+- `RecallPage.openRecentOrder`, `RecallPage.readOrderNumber`, `RecallPage.callCurrentOrder`, and `RecallPage.callOffCurrentOrder` own Recall order selection and caller actions.
+- `CallerPage.waitLoaded` and `CallerPage.readInfoList` own caller display reads.
 
 ### Client/Data Responsibilities
 
-- `StubPosOrderClient` owns order status and caller payload.
-- `test-data/pos/reports.ts` or dedicated caller data owns table/name/order samples.
+- No external client is used in this first migrated row.
+- `test-data/pos/dishes.ts::openFoodDish` owns the ordered item sample.
+- The offline POS harness owns saved order number generation and caller display state.
 
 ### Stub Behavior
 
-- Stub caller display reads from current test order state.
-- Stub mode does not execute external caller-id binaries.
+- Saving the Dine In order stores the guest name on the saved order.
+- Recall `Call Order` marks the selected order as `preparing` for Caller.
+- Caller Preparing renders the order number plus the source-equivalent shortened guest name.
+- Recall `Call Off` clears the selected order from Caller Preparing.
 
 ### Live Gaps
 
 | gap | reason | required before verified |
 |---|---|---|
+| db | Source reads latest order number via `PosDBFunction.get_last_order_num`; first-round offline migration reads it from Recall UI | Validate real DB adapter or live-equivalent order number read |
+| table | Source Dine In helper selects a real table; offline row only enters Dine In and tracks the caller display outcome | Confirm real table selection selectors and table-bound caller payload |
+| new-page | Source switches between POS and caller pages/windows | Define live multi-page fixture and stable Caller URL |
+| selector | Recall paging/call-off and Caller Preparing selectors are source-environment selectors | Validate real selectors and text format |
 | external-process | Python source uses caller-id execution in related areas | Replace with typed client/page boundary or live fixture |
 | cross-surface | Emenu and caller display surfaces require environment URLs/selectors | Define environment config and stable selectors |
 

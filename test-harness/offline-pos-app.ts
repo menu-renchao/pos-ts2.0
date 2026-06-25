@@ -25,6 +25,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <button data-testid="home-dine-in">Dine In</button>
       <button data-testid="home-pickup">Pickup</button>
       <button data-testid="home-recall">Recall</button>
+      <button data-testid="home-caller">Caller</button>
       <button data-testid="home-admin">Admin</button>
       <button data-testid="home-join-member">Join Member</button>
       <button data-testid="home-reservation">Reservation</button>
@@ -441,6 +442,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       </section>
       <button data-testid="recall-credit-failure-record">Credit Failure Record</button>
       <button data-testid="recall-cash">Cash</button>
+      <button data-testid="recall-call-order">Call Order</button>
+      <button data-testid="recall-call-off">Call Off</button>
       <button data-testid="recall-payment-type-cash">Cash Filter</button>
       <div data-testid="recall-payment-type-order-number"></div>
       <button data-testid="recall-void-paid-order">Void Paid Order</button>
@@ -475,6 +478,15 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       </section>
       <div data-testid="recall-sub-orders"></div>
       <button data-testid="recall-split">Split</button>
+    </section>
+    <section data-testid="caller-page" hidden>
+      <h1>Caller</h1>
+      <section data-testid="caller-ready-area">
+        <div data-testid="caller-ready-list"></div>
+      </section>
+      <section data-testid="caller-preparing-area">
+        <div data-testid="caller-preparing-list"></div>
+      </section>
     </section>
     <section data-testid="report-password-panel" hidden>
       <input data-testid="report-password" type="password" />
@@ -957,6 +969,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const recallManagerPasswordCancelButton = document.querySelector('[data-testid="recall-manager-password-cancel"]');
       const recallCreditFailureRecordButton = document.querySelector('[data-testid="recall-credit-failure-record"]');
       const recallCashButton = document.querySelector('[data-testid="recall-cash"]');
+      const recallCallOrderButton = document.querySelector('[data-testid="recall-call-order"]');
+      const recallCallOffButton = document.querySelector('[data-testid="recall-call-off"]');
       const recallPaymentTypeCashButton = document.querySelector('[data-testid="recall-payment-type-cash"]');
       const recallPaymentTypeOrderNumber = document.querySelector('[data-testid="recall-payment-type-order-number"]');
       const recallVoidPaidOrderButton = document.querySelector('[data-testid="recall-void-paid-order"]');
@@ -987,6 +1001,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const splitSubOrderSettleButton = document.querySelector('[data-testid="split-sub-order-settle"]');
       const subOrderCashPayButton = document.querySelector('[data-testid="sub-order-cash-pay"]');
       const recallSubOrders = document.querySelector('[data-testid="recall-sub-orders"]');
+      const callerPage = document.querySelector('[data-testid="caller-page"]');
+      const callerReadyList = document.querySelector('[data-testid="caller-ready-list"]');
+      const callerPreparingList = document.querySelector('[data-testid="caller-preparing-list"]');
       const reportPasswordPanel = document.querySelector('[data-testid="report-password-panel"]');
       const reportPasswordInput = document.querySelector('[data-testid="report-password"]');
       const reportPasswordSaveButton = document.querySelector('[data-testid="report-password-save"]');
@@ -1150,6 +1167,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         inventoryPage.hidden = panel !== 'inventory';
         orderPage.hidden = panel !== 'order';
         recallPage.hidden = panel !== 'recall';
+        callerPage.hidden = panel !== 'caller';
         reportPasswordPanel.hidden = panel !== 'report-password';
         reportPage.hidden = panel !== 'report';
         supportPage.hidden = panel !== 'support';
@@ -1160,6 +1178,41 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         } else if (panel === 'home') {
           history.replaceState(null, '', '#/home');
         }
+      }
+
+      function shortenCallerGuestName(guestName) {
+        return guestName ? guestName.slice(0, 3) + '...' + guestName.slice(-2) : '';
+      }
+
+      function callerDisplayItems(order) {
+        const items = [order.orderNumber];
+        if (order.customerName) {
+          items.push(shortenCallerGuestName(order.customerName));
+        }
+        return items;
+      }
+
+      function renderCallerDisplay() {
+        callerReadyList.innerHTML = '';
+        callerPreparingList.innerHTML = '';
+        savedOrders
+          .filter((order) => order.callerStatus === 'preparing')
+          .flatMap(callerDisplayItems)
+          .forEach((info) => {
+            const item = document.createElement('div');
+            item.dataset.testid = 'caller-preparing-info';
+            item.textContent = info;
+            callerPreparingList.appendChild(item);
+          });
+        savedOrders
+          .filter((order) => order.callerStatus === 'ready')
+          .flatMap(callerDisplayItems)
+          .forEach((info) => {
+            const item = document.createElement('div');
+            item.dataset.testid = 'caller-ready-info';
+            item.textContent = info;
+            callerReadyList.appendChild(item);
+          });
       }
 
       function normalizePhone(phone) {
@@ -2812,6 +2865,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       document.querySelector('[data-testid="home-recall"]').addEventListener('click', () => {
         showPanel('recall');
       });
+      document.querySelector('[data-testid="home-caller"]').addEventListener('click', () => {
+        renderCallerDisplay();
+        showPanel('caller');
+      });
       orderSaveButton.addEventListener('click', () => {
         saveCurrentOrder();
       });
@@ -3497,6 +3554,18 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
             selectedRecallOrder.crmMember.points += earnPointsForSubtotal(selectedRecallOrder.subtotal);
           }
           renderRecallOrderItems();
+        }
+      });
+      recallCallOrderButton.addEventListener('click', () => {
+        if (selectedRecallOrder) {
+          selectedRecallOrder.callerStatus = 'preparing';
+          renderCallerDisplay();
+        }
+      });
+      recallCallOffButton.addEventListener('click', () => {
+        if (selectedRecallOrder) {
+          selectedRecallOrder.callerStatus = '';
+          renderCallerDisplay();
         }
       });
       recallPaymentTypeCashButton.addEventListener('click', () => {

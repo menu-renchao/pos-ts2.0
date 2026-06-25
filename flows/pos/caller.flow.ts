@@ -1,0 +1,61 @@
+import type { CallerPage } from '../../pages/pos/caller.page.js';
+import type { PosHomePage } from '../../pages/pos/home.page.js';
+import type { OrderDishesPage } from '../../pages/pos/order-dishes.page.js';
+import type { RecallPage } from '../../pages/pos/recall.page.js';
+import { openFoodDish } from '../../test-data/pos/dishes.js';
+import { step } from '../../utils/step.js';
+
+export type DineInCallerNameResult = {
+  orderNumber: string;
+  guestName: string;
+  shortGuestName: string;
+  preparingInfoBeforeCallOff: string[];
+  preparingInfoAfterCallOff: string[];
+};
+
+const callerGuestName = 'CallerGuest42';
+
+export class CallerFlow {
+  constructor(
+    private readonly homePage: PosHomePage,
+    private readonly orderDishesPage: OrderDishesPage,
+    private readonly recallPage: RecallPage,
+    private readonly callerPage: CallerPage,
+  ) {}
+
+  async callDineInOrderWithGuestNameAndClear(homeUrl: string): Promise<DineInCallerNameResult> {
+    return step('Dine In 下单带客名后叫号并销号', async () => {
+      await this.homePage.open(homeUrl);
+      await this.homePage.inputEmployeePassword('11');
+      await this.homePage.clickDineIn();
+      await this.orderDishesPage.openFoodWithoutTax(openFoodDish.name, openFoodDish.price);
+      await this.orderDishesPage.inputGuestName(callerGuestName);
+      await this.orderDishesPage.saveOrder();
+
+      await this.homePage.clickRecall();
+      await this.recallPage.openRecentOrder();
+      const orderNumber = await this.recallPage.readOrderNumber();
+      await this.recallPage.callCurrentOrder();
+      await this.homePage.openCaller();
+      const preparingInfoBeforeCallOff = await this.callerPage.readInfoList('preparing');
+
+      await this.homePage.clickRecall();
+      await this.recallPage.openRecentOrder();
+      await this.recallPage.callOffCurrentOrder();
+      await this.homePage.openCaller();
+      const preparingInfoAfterCallOff = await this.callerPage.readInfoList('preparing');
+
+      return {
+        orderNumber,
+        guestName: callerGuestName,
+        shortGuestName: shortenCallerGuestName(callerGuestName),
+        preparingInfoBeforeCallOff,
+        preparingInfoAfterCallOff,
+      };
+    });
+  }
+}
+
+function shortenCallerGuestName(guestName: string): string {
+  return `${guestName.slice(0, 3)}...${guestName.slice(-2)}`;
+}

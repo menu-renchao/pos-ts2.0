@@ -95,6 +95,8 @@ export class RecallPage extends PageObject {
   private readonly reprintButton: Locator;
   private readonly subOrderButton: Locator;
   private readonly cashPaymentTypeFilterButton: Locator;
+  private readonly callOffButton: Locator;
+  private readonly callOrderButton: Locator;
   private readonly paymentTypeOrderNumber: Locator;
   private readonly managerPasswordInput: Locator;
   private readonly managerPasswordSubmitButton: Locator;
@@ -165,6 +167,8 @@ export class RecallPage extends PageObject {
     this.reprintButton = page.getByTestId('recall-reprint');
     this.subOrderButton = page.getByTestId('recall-sub-order');
     this.cashPaymentTypeFilterButton = page.getByTestId('recall-payment-type-cash');
+    this.callOffButton = page.getByTestId('recall-call-off');
+    this.callOrderButton = page.getByTestId('recall-call-order');
     this.paymentTypeOrderNumber = page.getByTestId('recall-payment-type-order-number');
     this.managerPasswordInput = page.getByTestId('recall-manager-password');
     this.managerPasswordSubmitButton = page.getByTestId('recall-manager-password-submit');
@@ -175,6 +179,20 @@ export class RecallPage extends PageObject {
     await step('打开 Recall 最近订单', async () => {
       await expect(this.recallRoot).toBeVisible();
       await this.recentOrderButton.click();
+    });
+  }
+
+  async callCurrentOrder(): Promise<void> {
+    await step('Recall 对当前订单叫号', async () => {
+      await expect(this.recallRoot).toBeVisible();
+      await this.callOrderButton.click();
+    });
+  }
+
+  async callOffCurrentOrder(): Promise<void> {
+    await step('Recall 对当前订单销号', async () => {
+      await expect(this.recallRoot).toBeVisible();
+      await this.callOffButton.click();
     });
   }
 

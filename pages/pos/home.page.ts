@@ -9,6 +9,7 @@ import { PageObject } from '../shared/page-object.js';
 export class PosHomePage extends PageObject {
   readonly togoButton: Locator;
   readonly recallButton: Locator;
+  readonly callerButton: Locator;
   readonly adminButton: Locator;
   readonly reservationButton: Locator;
   readonly customDeliveryButton: Locator;
@@ -51,6 +52,7 @@ export class PosHomePage extends PageObject {
     this.adminPageRoot = page.getByTestId('admin-page');
     this.togoButton = page.getByTestId('home-togo');
     this.recallButton = page.getByTestId('home-recall');
+    this.callerButton = page.getByTestId('home-caller');
     this.adminButton = page.getByTestId('home-admin');
     this.reservationButton = page.getByTestId('home-reservation');
     this.customDeliveryButton = page.getByTestId('home-custom-delivery');
@@ -206,6 +208,13 @@ export class PosHomePage extends PageObject {
     await step('从首页进入 Recall 页面', async () => {
       await this.recallButton.click();
       await expect(this.page.getByTestId('recall-page')).toBeVisible();
+    });
+  }
+
+  async openCaller(): Promise<void> {
+    await step('从首页进入 Caller 页面', async () => {
+      await this.callerButton.click();
+      await expect(this.page.getByTestId('caller-page')).toBeVisible();
     });
   }
 

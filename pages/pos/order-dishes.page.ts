@@ -309,6 +309,12 @@ export class OrderDishesPage extends PageObject {
     });
   }
 
+  async inputGuestName(name: string): Promise<void> {
+    await step(`输入点单客名 ${name}`, async () => {
+      await this.orderGuestNameInput.fill(name);
+    });
+  }
+
   async openInventoryPage(): Promise<void> {
     await step('从点单页打开库存页', async () => {
       await this.orderInventoryButton.click();
