@@ -202,6 +202,12 @@ export type ManualChargeOrderTypeMismatchResult = {
   selectedChargesAfterOrderTypeChange: Record<string, string>;
 };
 
+export type ManualChargeDeletedResult = {
+  chargeAfterConfirm: Record<string, string>;
+  chargeBeforeConfirm: Record<string, string>;
+  selectedChargesAfterDelete: Record<string, string>;
+};
+
 export type EvenSplitTipUnsplitResult = {
   combinedTipText: string;
 };
@@ -1358,6 +1364,41 @@ export class OrderEntryFlow {
       chargeAfterConfirm,
       chargeBeforeSave,
       selectedChargesAfterOrderTypeChange,
+    };
+  }
+
+  async deleteAllManualChargesThenKeepLegacySelectionInRecalledOrder(
+    homeUrl: string,
+  ): Promise<ManualChargeDeletedResult> {
+    if (!this.adminPage) {
+      throw new Error('POS-27169 requires AdminPage');
+    }
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.applyPresetCharge('manu_test_fixed');
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.clickAdmin();
+    await this.adminPage.deleteAllManualCharges();
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.clickEdit();
+
+    const chargeBeforeConfirm = await this.orderDishesPage.readOrderChargeItems();
+    await this.orderDishesPage.openChargeDialog();
+    const selectedChargesAfterDelete = await this.orderDishesPage.readSelectedPresetCharges();
+    await this.orderDishesPage.confirmChargeDialog();
+    const chargeAfterConfirm = await this.orderDishesPage.readOrderChargeItems();
+
+    return {
+      chargeAfterConfirm,
+      chargeBeforeConfirm,
+      selectedChargesAfterDelete,
     };
   }
 

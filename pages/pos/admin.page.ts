@@ -131,6 +131,7 @@ export class AdminPage extends PageObject {
   private readonly chargeOrderTypeNameInput: Locator;
   private readonly chargeOrderTypesSelect: Locator;
   private readonly chargeOrderTypesSaveButton: Locator;
+  private readonly chargeDeleteAllButton: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -256,6 +257,7 @@ export class AdminPage extends PageObject {
     this.chargeOrderTypeNameInput = page.getByTestId('admin-charge-order-type-name');
     this.chargeOrderTypesSelect = page.getByTestId('admin-charge-order-types');
     this.chargeOrderTypesSaveButton = page.getByTestId('admin-charge-order-types-save');
+    this.chargeDeleteAllButton = page.getByTestId('admin-charge-delete-all');
   }
 
   async setUserDefaultLanguage(language: string): Promise<void> {
@@ -527,6 +529,13 @@ export class AdminPage extends PageObject {
       await this.chargeOrderTypeNameInput.fill(chargeName);
       await this.chargeOrderTypesSelect.selectOption([...orderTypes]);
       await this.chargeOrderTypesSaveButton.click();
+    });
+  }
+
+  async deleteAllManualCharges(): Promise<void> {
+    await step('删除全部手动加收配置', async () => {
+      await expect(this.adminRoot).toBeVisible();
+      await this.chargeDeleteAllButton.click();
     });
   }
 

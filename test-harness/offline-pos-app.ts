@@ -180,6 +180,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         <option value="togo">To Go</option>
       </select>
       <button data-testid="admin-charge-order-types-save">Save Charge Order Types</button>
+      <button data-testid="admin-charge-delete-all">Delete All Charges</button>
       <input data-testid="admin-kds-item-name" />
       <input data-testid="admin-kds-pos-name" />
       <button data-testid="admin-kds-pos-name-save">Save Item POS Name</button>
@@ -914,6 +915,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const adminChargeOrderTypeNameInput = document.querySelector('[data-testid="admin-charge-order-type-name"]');
       const adminChargeOrderTypesSelect = document.querySelector('[data-testid="admin-charge-order-types"]');
       const adminChargeOrderTypesSaveButton = document.querySelector('[data-testid="admin-charge-order-types-save"]');
+      const adminChargeDeleteAllButton = document.querySelector('[data-testid="admin-charge-delete-all"]');
       const kdsItemNameInput = document.querySelector('[data-testid="admin-kds-item-name"]');
       const kdsItemPosNameInput = document.querySelector('[data-testid="admin-kds-pos-name"]');
       const kdsItemPosNameSaveButton = document.querySelector('[data-testid="admin-kds-pos-name-save"]');
@@ -2478,6 +2480,13 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           selected.dataset.chargeRate = chargeDisplayValue(selectedCharge, currentActiveOrderSubtotal());
           selected.textContent = selected.dataset.chargeName + ' ' + selected.dataset.chargeRate;
           selectedChargeList.appendChild(selected);
+        } else if (manualCharges.length === 0 && currentOrderChargeLabel) {
+          const selected = document.createElement('div');
+          selected.dataset.testid = 'selected-charge-item';
+          selected.dataset.chargeName = currentOrderChargeLabel;
+          selected.dataset.chargeRate = 'Add $' + currentChargeAmount(currentActiveOrderSubtotal()).toFixed(2);
+          selected.textContent = selected.dataset.chargeName + ' ' + selected.dataset.chargeRate;
+          selectedChargeList.appendChild(selected);
         }
       }
 
@@ -3951,6 +3960,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         manualCharges = manualCharges.map((charge) => (
           charge.name === chargeName ? { ...charge, orderTypes } : charge
         ));
+        localStorage.setItem('offlineManualCharges', JSON.stringify(manualCharges));
+      });
+      adminChargeDeleteAllButton.addEventListener('click', () => {
+        manualCharges = [];
         localStorage.setItem('offlineManualCharges', JSON.stringify(manualCharges));
       });
       orderTaxExemptButton.addEventListener('click', () => {

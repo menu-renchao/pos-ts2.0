@@ -474,4 +474,24 @@ test.describe('stage2 order operation migration', () => {
     expect(result.selectedChargesAfterOrderTypeChange).not.toHaveProperty('manu_test_fixed');
     expect(result.chargeAfterConfirm).toEqual({ manu_test_fixed: '10.00' });
   });
+
+  test('POS-27169 编辑订单时删除手动加收配置后应保留旧订单加收并在弹窗回显已选项', async ({
+    environment,
+    page,
+  }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.deleteAllManualChargesThenKeepLegacySelectionInRecalledOrder(
+      environment.posHomeUrl,
+    );
+
+    expect(result.chargeBeforeConfirm).toEqual({ manu_test_fixed: '10.00' });
+    expect(result.selectedChargesAfterDelete).toEqual({ manu_test_fixed: 'Add $10.00' });
+    expect(result.chargeAfterConfirm).toEqual({ manu_test_fixed: '10.00' });
+  });
 });
