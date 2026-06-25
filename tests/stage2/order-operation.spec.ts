@@ -360,4 +360,24 @@ test.describe('stage2 order operation migration', () => {
     expect(result.selectedChargesAfterRateTypeChange).toEqual({ manu_test_perc: 'Add $10.00' });
     expect(result.recalledChargeAfterConfirm).toEqual({ manu_test_perc: '10.00' });
   });
+
+  test('POS-27159 编辑订单时修改手动固定加收金额后确认应更新加收金额', async ({
+    environment,
+    page,
+  }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.modifyManualFixedChargeAmountThenConfirmInRecalledOrder(
+      environment.posHomeUrl,
+    );
+
+    expect(result.initialChargeBeforeSave).toEqual({ manu_test_fixed: '10.00' });
+    expect(result.selectedChargesAfterAmountChange).toEqual({ manu_test_fixed: 'Add $20.00' });
+    expect(result.recalledChargeAfterConfirm).toEqual({ manu_test_fixed: '20.00' });
+  });
 });

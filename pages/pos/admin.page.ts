@@ -120,6 +120,9 @@ export class AdminPage extends PageObject {
   private readonly chargeRateTypeNameInput: Locator;
   private readonly chargeRateTypeSelect: Locator;
   private readonly chargeRateTypeSaveButton: Locator;
+  private readonly chargeAmountNameInput: Locator;
+  private readonly chargeAmountInput: Locator;
+  private readonly chargeAmountSaveButton: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -236,6 +239,9 @@ export class AdminPage extends PageObject {
     this.chargeRateTypeNameInput = page.getByTestId('admin-charge-rate-type-name');
     this.chargeRateTypeSelect = page.getByTestId('admin-charge-rate-type');
     this.chargeRateTypeSaveButton = page.getByTestId('admin-charge-rate-type-save');
+    this.chargeAmountNameInput = page.getByTestId('admin-charge-amount-name');
+    this.chargeAmountInput = page.getByTestId('admin-charge-amount');
+    this.chargeAmountSaveButton = page.getByTestId('admin-charge-amount-save');
   }
 
   async setUserDefaultLanguage(language: string): Promise<void> {
@@ -477,6 +483,15 @@ export class AdminPage extends PageObject {
       await this.chargeRateTypeNameInput.fill(chargeName);
       await this.chargeRateTypeSelect.selectOption(rateType);
       await this.chargeRateTypeSaveButton.click();
+    });
+  }
+
+  async setManualChargeAmount(chargeName: string, amount: number): Promise<void> {
+    await step(`修改手动加收 ${chargeName} 金额为 ${amount}`, async () => {
+      await expect(this.adminRoot).toBeVisible();
+      await this.chargeAmountNameInput.fill(chargeName);
+      await this.chargeAmountInput.fill(String(amount));
+      await this.chargeAmountSaveButton.click();
     });
   }
 

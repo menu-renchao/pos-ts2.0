@@ -163,6 +163,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         <option value="percent">percent</option>
       </select>
       <button data-testid="admin-charge-rate-type-save">Save Charge Rate Type</button>
+      <input data-testid="admin-charge-amount-name" />
+      <input data-testid="admin-charge-amount" />
+      <button data-testid="admin-charge-amount-save">Save Charge Amount</button>
       <input data-testid="admin-kds-item-name" />
       <input data-testid="admin-kds-pos-name" />
       <button data-testid="admin-kds-pos-name-save">Save Item POS Name</button>
@@ -872,6 +875,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const adminChargeRateTypeNameInput = document.querySelector('[data-testid="admin-charge-rate-type-name"]');
       const adminChargeRateTypeSelect = document.querySelector('[data-testid="admin-charge-rate-type"]');
       const adminChargeRateTypeSaveButton = document.querySelector('[data-testid="admin-charge-rate-type-save"]');
+      const adminChargeAmountNameInput = document.querySelector('[data-testid="admin-charge-amount-name"]');
+      const adminChargeAmountInput = document.querySelector('[data-testid="admin-charge-amount"]');
+      const adminChargeAmountSaveButton = document.querySelector('[data-testid="admin-charge-amount-save"]');
       const kdsItemNameInput = document.querySelector('[data-testid="admin-kds-item-name"]');
       const kdsItemPosNameInput = document.querySelector('[data-testid="admin-kds-pos-name"]');
       const kdsItemPosNameSaveButton = document.querySelector('[data-testid="admin-kds-pos-name-save"]');
@@ -3840,6 +3846,20 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
             return { ...charge, amount: 10, rate: 0.1, rateType: 'percent' };
           }
           return { ...charge, amount: 10, rate: 0, rateType: 'amount' };
+        });
+        localStorage.setItem('offlineManualCharges', JSON.stringify(manualCharges));
+      });
+      adminChargeAmountSaveButton.addEventListener('click', () => {
+        const chargeName = adminChargeAmountNameInput.value;
+        const amount = Number(adminChargeAmountInput.value || 0);
+        manualCharges = manualCharges.map((charge) => {
+          if (charge.name !== chargeName) {
+            return charge;
+          }
+          if (charge.rateType === 'percent') {
+            return { ...charge, amount, rate: amount / 100 };
+          }
+          return { ...charge, amount, rate: 0 };
         });
         localStorage.setItem('offlineManualCharges', JSON.stringify(manualCharges));
       });

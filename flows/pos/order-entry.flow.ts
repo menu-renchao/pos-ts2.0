@@ -165,6 +165,12 @@ export type ManualChargeRateTypeToAmountResult = {
   selectedChargesAfterRateTypeChange: Record<string, string>;
 };
 
+export type ManualChargeAmountChangeResult = {
+  initialChargeBeforeSave: Record<string, string>;
+  recalledChargeAfterConfirm: Record<string, string>;
+  selectedChargesAfterAmountChange: Record<string, string>;
+};
+
 export type EvenSplitTipUnsplitResult = {
   combinedTipText: string;
 };
@@ -1109,6 +1115,41 @@ export class OrderEntryFlow {
       initialSubtotal,
       recalledChargeAfterConfirm,
       selectedChargesAfterRateTypeChange,
+    };
+  }
+
+  async modifyManualFixedChargeAmountThenConfirmInRecalledOrder(
+    homeUrl: string,
+  ): Promise<ManualChargeAmountChangeResult> {
+    if (!this.adminPage) {
+      throw new Error('POS-27159 requires AdminPage');
+    }
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.applyPresetCharge('manu_test_fixed');
+    const initialChargeBeforeSave = await this.orderDishesPage.readOrderChargeItems();
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.clickAdmin();
+    await this.adminPage.setManualChargeAmount('manu_test_fixed', 20);
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.clickEdit();
+
+    await this.orderDishesPage.openChargeDialog();
+    const selectedChargesAfterAmountChange = await this.orderDishesPage.readSelectedPresetCharges();
+    await this.orderDishesPage.confirmChargeDialog();
+    const recalledChargeAfterConfirm = await this.orderDishesPage.readOrderChargeItems();
+
+    return {
+      initialChargeBeforeSave,
+      recalledChargeAfterConfirm,
+      selectedChargesAfterAmountChange,
     };
   }
 
