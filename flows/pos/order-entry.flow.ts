@@ -110,6 +110,10 @@ export type AmountSplitUnsplitSuccessResult = {
   splitOrderCountAfterUnsplit: number;
 };
 
+export type EvenSplitTipUnsplitResult = {
+  combinedTipText: string;
+};
+
 export type ComboOptionCountResult = {
   beforeCount: number;
   afterCount: number;
@@ -705,6 +709,37 @@ export class OrderEntryFlow {
     const splitOrderCountAfterUnsplit = (await this.recallPage.readSplitOrderPrices()).length;
 
     return { splitOrderCountAfterUnsplit, unsplitAlertText };
+  }
+
+  async unsplitEvenSplitOrderAfterEditingFirstSubOrderTip(homeUrl: string): Promise<EvenSplitTipUnsplitResult> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.addTip(500);
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.openSplitOrder();
+    await this.recallPage.splitEvenly(2);
+    await this.recallPage.saveSplit();
+    await this.recallPage.openSubOrder(1);
+    await this.recallPage.clickEdit();
+    await this.orderDishesPage.addTip(600);
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.openSplitOrder();
+    await this.recallPage.unsplit();
+    await this.recallPage.saveSplit();
+
+    const combinedTipText = await this.recallPage.readOrderTipText();
+    return { combinedTipText };
   }
 
   async readFirstDragSplitSubOrderDiscountWholePrice(homeUrl: string): Promise<string> {

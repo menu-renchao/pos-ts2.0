@@ -792,6 +792,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let selectedRecallOrder = null;
       let draftSplitPrices = [];
       let draftSplitItemPrices = [];
+      let draftSplitMode = null;
       let selectedSubOrderIndex = null;
       let pendingPrintedDeleteIndex = null;
       let pendingNoteAuthorization = false;
@@ -4313,6 +4314,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         splitPanel.hidden = false;
         draftSplitPrices = [...(selectedRecallOrder?.splitOrderPrices || [])];
         draftSplitItemPrices = [];
+        draftSplitMode = null;
         renderSplitPrices(draftSplitPrices);
         renderSplitItemPrices(draftSplitItemPrices);
       });
@@ -4320,12 +4322,14 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         const total = orderTotal(selectedRecallOrder);
         draftSplitPrices = [total / 2, total / 2];
         draftSplitItemPrices = [];
+        draftSplitMode = 'even';
         renderSplitPrices(draftSplitPrices);
         renderSplitItemPrices(draftSplitItemPrices);
       });
       splitByItemButton.addEventListener('click', () => {
         draftSplitItemPrices = (selectedRecallOrder?.items || []).slice(0, 2).map((item) => Number(item.price));
         draftSplitPrices = [...draftSplitItemPrices];
+        draftSplitMode = 'item';
         renderSplitItemPrices(draftSplitItemPrices);
         renderSplitPrices(draftSplitPrices);
       });
@@ -4374,6 +4378,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           );
           selectedRecallOrder.parentBackground = 'rgba(33, 150, 243, 1)';
         }
+        draftSplitMode = 'drag';
         recallParentOrder.style.backgroundColor = selectedRecallOrder?.parentBackground || '';
         recallParentOrder.dataset.background = selectedRecallOrder?.parentBackground || '';
         renderSplitPrices(selectedRecallOrder?.splitOrderPrices || []);
@@ -4383,6 +4388,16 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       splitSaveButton.addEventListener('click', () => {
         if (selectedRecallOrder) {
           selectedRecallOrder.splitOrderPrices = [...draftSplitPrices];
+          if (draftSplitMode === 'even' && draftSplitPrices.length > 0) {
+            const splitCount = draftSplitPrices.length;
+            selectedRecallOrder.subOrderStatuses = Array.from({ length: splitCount }, () => 'New Order');
+            selectedRecallOrder.subOrderItems = Array.from({ length: splitCount }, (_, index) =>
+              selectedRecallOrder.items.filter((_, itemIndex) => itemIndex % splitCount === index),
+            );
+            selectedRecallOrder.subOrderTips = Array.from({ length: splitCount }, () =>
+              roundMoney(Number(selectedRecallOrder.tip || 0) / splitCount),
+            );
+          }
         }
         renderRecallOrderItems();
       });
@@ -4403,13 +4418,22 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         draftSplitPrices = [];
         draftSplitItemPrices = [];
         if (selectedRecallOrder) {
+          if (selectedRecallOrder.subOrderTips?.length) {
+            selectedRecallOrder.tip = roundMoney(
+              selectedRecallOrder.subOrderTips.reduce((sum, tip) => sum + Number(tip || 0), 0),
+            );
+          }
           selectedRecallOrder.splitOrderPrices = [];
+          selectedRecallOrder.subOrderItems = [];
+          selectedRecallOrder.subOrderStatuses = [];
+          selectedRecallOrder.subOrderTips = [];
         }
         renderSplitPrices(draftSplitPrices);
         renderSplitItemPrices(draftSplitItemPrices);
       });
       splitAmountInputs.forEach((input) => {
         input.addEventListener('input', () => {
+          draftSplitMode = 'amount';
           draftSplitPrices = Array.from(splitAmountInputs)
             .map((amountInput) => Number(amountInput.value || '0'))
             .filter((price) => price > 0);

@@ -113,4 +113,18 @@ test.describe('stage2 order operation migration', () => {
       'The operation cannot be done due to partial payment! Please revoke the payment before preceeding.',
     );
   });
+
+  test('POS-19383 平分分单修改子单小费后取消分单应合并小费', {
+    annotation: [jiraIssue('POS-19383')],
+  }, async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.unsplitEvenSplitOrderAfterEditingFirstSubOrderTip(environment.posHomeUrl);
+
+    expect(result.combinedTipText).toBe('8.50');
+  });
 });
