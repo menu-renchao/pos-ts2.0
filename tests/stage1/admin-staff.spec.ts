@@ -114,4 +114,22 @@ test.describe('stage1 admin staff migration', () => {
       expect(result.totalAfterCancel).toBeCloseTo(result.originalTotal, 2);
     },
   );
+
+  test(
+    'POS-31553 Recall 提交 60% 固定金额整单折扣时 Manager 权限不足且 Boss 密码应授权成功',
+    {
+      annotation: jiraIssue('POS-31553'),
+    },
+    async ({ environment, page }) => {
+      const flow = new StaffPermissionFlow(new PosHomePage(page), new OrderDishesPage(page), new RecallPage(page));
+
+      const result = await flow.applyRecallWholeOrderAmountDiscountAboveManagerLimitWithBossPassword(
+        environment.posHomeUrl,
+      );
+
+      expect(result.permissionTip).toContain('The discount exceeds permission limit，please input password');
+      expect(result.managerDeniedTip).toContain('No Permission!');
+      expect(result.originalTotal - result.totalAfterDiscount).toBeCloseTo(result.originalTotal * 0.6, 2);
+    },
+  );
 });

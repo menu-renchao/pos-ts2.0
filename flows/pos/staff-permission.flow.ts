@@ -2,6 +2,7 @@ import type { PosHomePage } from '../../pages/pos/home.page.js';
 import type { OrderDishesPage } from '../../pages/pos/order-dishes.page.js';
 import type { RecallPage } from '../../pages/pos/recall.page.js';
 import { staffDiscountRoleSamples, staffDiscountSamples } from '../../test-data/pos/permissions.js';
+import { step } from '../../utils/step.js';
 
 export type WholeOrderDiscountPermissionResult = {
   permissionTip: string;
@@ -12,6 +13,13 @@ export type CanceledRecallWholeOrderDiscountResult = {
   permissionTip: string;
   originalTotal: number;
   totalAfterCancel: number;
+};
+
+export type BossAuthorizedRecallWholeOrderDiscountResult = {
+  permissionTip: string;
+  managerDeniedTip: string;
+  originalTotal: number;
+  totalAfterDiscount: number;
 };
 
 export type AuthorizedWholeOrderDiscountResult = {
@@ -189,6 +197,37 @@ export class StaffPermissionFlow {
     const totalAfterCancel = await recallPage.readOrderTotal();
 
     return { permissionTip, originalTotal, totalAfterCancel };
+  }
+
+  async applyRecallWholeOrderAmountDiscountAboveManagerLimitWithBossPassword(
+    homeUrl: string,
+  ): Promise<BossAuthorizedRecallWholeOrderDiscountResult> {
+    return step('Recall 固定金额整单折扣 Manager 拒绝后由 Boss 授权', async () => {
+      const recallPage = this.requireRecallPage();
+      await this.homePage.open(homeUrl);
+      await this.homePage.inputEmployeePassword(staffDiscountRoleSamples.server.password);
+      await this.homePage.clickPickup();
+      await this.orderDishesPage.openFoodWithoutTax(
+        staffDiscountSamples.recallDiscountOpenFoodName,
+        staffDiscountSamples.recallDiscountOpenFoodPrice,
+      );
+      await this.orderDishesPage.saveOrder();
+      await this.homePage.clickRecall();
+      await recallPage.openRecentOrder();
+      const originalTotal = await recallPage.readOrderTotal();
+      await recallPage.openDiscountAndReadWholeOrderPrice();
+      const discountAmount = originalTotal * staffDiscountSamples.recallBossAuthorizedWholeOrderDiscountRate;
+      await recallPage.applyWholeOrderDiscountAmount(discountAmount);
+      const permissionTip = await recallPage.readDiscountTip();
+
+      await recallPage.submitManagerPassword(staffDiscountRoleSamples.manager.password);
+      const managerDeniedTip = await recallPage.readDiscountTip();
+      await recallPage.applyWholeOrderDiscountAmount(discountAmount);
+      await recallPage.submitManagerPassword(staffDiscountRoleSamples.boss.password);
+      const totalAfterDiscount = await recallPage.readOrderTotal();
+
+      return { permissionTip, managerDeniedTip, originalTotal, totalAfterDiscount };
+    });
   }
 
   private requireRecallPage(): RecallPage {

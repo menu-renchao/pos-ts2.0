@@ -34,4 +34,5 @@ export const staffDiscountSamples = {
   recallDiscountOpenFoodName: 'item1',
   recallDiscountOpenFoodPrice: 10,
   recallExcessiveWholeOrderDiscountAmount: 3,
+  recallBossAuthorizedWholeOrderDiscountRate: 0.6,
 } as const;
