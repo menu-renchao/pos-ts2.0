@@ -1,8 +1,14 @@
 import type { AdminStaffClient } from '../../clients/pos-api/admin-staff.client.js';
+import type { AdminPage } from '../../pages/pos/admin.page.js';
 import type { PosHomePage } from '../../pages/pos/home.page.js';
 import type { OrderDishesPage } from '../../pages/pos/order-dishes.page.js';
 import type { RecallPage } from '../../pages/pos/recall.page.js';
-import { staffDiscountRoleSamples, staffDiscountSamples } from '../../test-data/pos/permissions.js';
+import {
+  staffDiscountRoleSamples,
+  staffDiscountSamples,
+  staffPermissionSamples,
+  staffSamples,
+} from '../../test-data/pos/permissions.js';
 import { step } from '../../utils/step.js';
 
 export type WholeOrderDiscountPermissionResult = {
@@ -44,6 +50,11 @@ export type CumulativeOrderItemDiscountPermissionResult = {
   permissionTip: string;
 };
 
+export type AdminAnalysisPermissionResult = {
+  permissionAlert: string;
+  isInAnalysisPage: boolean;
+};
+
 export type AuthorizedWholeOrderDiscountResult = {
   permissionTip: string;
   subtotal: number;
@@ -70,6 +81,7 @@ export class StaffPermissionFlow {
     private readonly orderDishesPage: OrderDishesPage,
     private readonly recallPage?: RecallPage,
     private readonly adminStaffClient?: AdminStaffClient,
+    private readonly adminPage?: AdminPage,
   ) {}
 
   async rejectWholeOrderDiscountAboveServerLimitWithoutPassword(homeUrl: string): Promise<WholeOrderDiscountPermissionResult> {
@@ -311,6 +323,28 @@ export class StaffPermissionFlow {
     });
   }
 
+  async openAnalysisReportWithBossOverrideWhenStaffLacksPermission(
+    homeUrl: string,
+  ): Promise<AdminAnalysisPermissionResult> {
+    return step('无 Analysis 权限员工访问后台分析报表后由 Boss 授权进入', async () => {
+      const adminStaffClient = this.requireAdminStaffClient();
+      const adminPage = this.requireAdminPage();
+      await adminStaffClient.editStaffRemoveFunctions(staffSamples.noAnalysis.id, [
+        staffPermissionSamples.analysisPermissionName,
+      ]);
+
+      await this.homePage.open(homeUrl);
+      await this.homePage.applyOfflineStaffPermissionOverrides(await adminStaffClient.readStaffPermissionOverrides());
+      await this.homePage.inputEmployeePassword(staffSamples.noAnalysis.password);
+      await this.homePage.clickAdmin();
+      const permissionAlert = await adminPage.clickAnalysisAndReadPermissionAlert();
+      await adminPage.submitPermissionPassword(staffDiscountRoleSamples.boss.password);
+      const isInAnalysisPage = await adminPage.isInAnalysisPage();
+
+      return { permissionAlert, isInAnalysisPage };
+    });
+  }
+
   async rejectRecallWholeOrderAmountDiscountAboveServerLimitWithoutPassword(
     homeUrl: string,
   ): Promise<WholeOrderDiscountPermissionResult> {
@@ -403,5 +437,12 @@ export class StaffPermissionFlow {
       throw new Error('AdminStaffClient is required for admin staff permission flows');
     }
     return this.adminStaffClient;
+  }
+
+  private requireAdminPage(): AdminPage {
+    if (!this.adminPage) {
+      throw new Error('AdminPage is required for admin staff permission flows');
+    }
+    return this.adminPage;
   }
 }

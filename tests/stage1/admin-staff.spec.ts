@@ -1,5 +1,6 @@
 import { expect, test } from '../../fixtures/base-test.js';
 import { StaffPermissionFlow } from '../../flows/pos/staff-permission.flow.js';
+import { AdminPage } from '../../pages/pos/admin.page.js';
 import { PosHomePage } from '../../pages/pos/home.page.js';
 import { OrderDishesPage } from '../../pages/pos/order-dishes.page.js';
 import { RecallPage } from '../../pages/pos/recall.page.js';
@@ -196,6 +197,27 @@ test.describe('stage1 admin staff migration', () => {
         2,
       );
       expect(result.permissionTip).toContain('The discount exceeds permission limit，please input password');
+    },
+  );
+
+  test(
+    'POS-33796 无 Analysis 权限员工打开后台分析报表应提示无权限且 Boss 密码可授权进入',
+    {
+      annotation: jiraIssue('POS-33796'),
+    },
+    async ({ adminStaffClient, environment, page }) => {
+      const flow = new StaffPermissionFlow(
+        new PosHomePage(page),
+        new OrderDishesPage(page),
+        undefined,
+        adminStaffClient,
+        new AdminPage(page),
+      );
+
+      const result = await flow.openAnalysisReportWithBossOverrideWhenStaffLacksPermission(environment.posHomeUrl);
+
+      expect(result.permissionAlert).toContain('do not have permission ANALYSIS');
+      expect(result.isInAnalysisPage).toBe(true);
     },
   );
 });

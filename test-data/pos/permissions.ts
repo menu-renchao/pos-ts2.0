@@ -3,6 +3,7 @@ export const staffSamples = {
   noVoidItem: { id: 'staff-no-void', password: '22', permissions: ['order:create'] },
   noVoidPrintedItem: { id: 'staff-1', password: '123', permissions: ['order:create'] },
   noNote: { id: 'staff-1', password: '123', permissions: ['order:create'] },
+  noAnalysis: { id: '1', password: '123', removedPermission: 'ANALYSIS' },
 } as const;
 
 export const validEmployeePassword = staffSamples.manager.password;
@@ -45,4 +46,9 @@ export const staffDiscountSamples = {
   recallDiscountOpenFoodPrice: 10,
   recallExcessiveWholeOrderDiscountAmount: 3,
   recallBossAuthorizedWholeOrderDiscountRate: 0.6,
+} as const;
+
+export const staffPermissionSamples = {
+  analysisPermissionName: 'ANALYSIS',
+  analysisPermissionDeniedAlert: 'do not have permission ANALYSIS',
 } as const;

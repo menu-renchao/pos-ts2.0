@@ -1,7 +1,7 @@
 import type { Locator, Page } from '@playwright/test';
 import { expect } from '@playwright/test';
 
-import type { StaffRoleDiscountLimit } from '../../clients/pos-api/admin-staff.client.js';
+import type { StaffPermissionOverride, StaffRoleDiscountLimit } from '../../clients/pos-api/admin-staff.client.js';
 import { step } from '../../utils/step.js';
 import { waitUntil } from '../../utils/wait.js';
 import { PageObject } from '../shared/page-object.js';
@@ -135,6 +135,24 @@ export class PosHomePage extends PageObject {
         localStorage.setItem('offlineStaffDiscountLimits', JSON.stringify(limitsByRole));
         window.dispatchEvent(new CustomEvent('offline-staff-discount-limits-updated', { detail: limitsByRole }));
       }, limits);
+    });
+  }
+
+  async applyOfflineStaffPermissionOverrides(overrides: readonly StaffPermissionOverride[]): Promise<void> {
+    await step('同步离线员工权限覆盖配置', async () => {
+      await this.page.evaluate((staffOverrides) => {
+        const overridesByStaffId = Object.fromEntries(
+          staffOverrides.map((override) => [
+            override.staffId,
+            {
+              addedPermissions: override.addedPermissions,
+              removedPermissions: override.removedPermissions,
+            },
+          ]),
+        );
+        localStorage.setItem('offlineStaffPermissionOverrides', JSON.stringify(overridesByStaffId));
+        window.dispatchEvent(new CustomEvent('offline-staff-permissions-updated', { detail: overridesByStaffId }));
+      }, overrides);
     });
   }
 

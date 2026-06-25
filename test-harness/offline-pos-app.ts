@@ -176,6 +176,16 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <button data-testid="admin-tax-free-save">Save Take Out Tax Free</button>
       <div data-testid="admin-tax-free-confirmation"></div>
       <button data-testid="admin-save-settings">Save Settings</button>
+      <button data-testid="admin-analysis">Analysis</button>
+      <section data-testid="admin-permission-popup" hidden>
+        <div data-testid="admin-permission-alert" role="alert"></div>
+        <input data-testid="admin-permission-password" type="password" />
+        <button data-testid="admin-permission-submit">Submit Admin Permission</button>
+      </section>
+      <section data-testid="admin-analysis-page" hidden>
+        <iframe id="innerpage" title="Analysis"></iframe>
+        <h1>Analysis</h1>
+      </section>
       <button data-testid="admin-member-list">CRM Loyalty</button>
       <section data-testid="member-list-permission-popup" hidden>
         <input data-testid="member-list-permission-password" type="password" />
@@ -534,6 +544,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let currentSeparateSameItem = localStorage.getItem('currentSeparateSameItem') !== 'false';
       let currentStaffCanVoidPrintedItem = localStorage.getItem('currentStaffCanVoidPrintedItem') !== 'false';
       let currentStaffCanAddNote = localStorage.getItem('currentStaffCanAddNote') !== 'false';
+      let currentStaffPermissionOverrides = coerceStaffPermissionOverrides(
+        readStoredJson('offlineStaffPermissionOverrides', {}),
+      );
       let currentAutoRedirectAfterReduce = localStorage.getItem('currentAutoRedirectAfterReduce') !== 'false';
       let currentClickSettleAutoSend = localStorage.getItem('currentClickSettleAutoSend') === 'true';
       let currentCountCanBeDecimal = localStorage.getItem('currentCountCanBeDecimal') !== 'false';
@@ -984,6 +997,12 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const menuModeSelect = document.querySelector('[data-testid="admin-menu-mode"]');
       const searchMenuSelect = document.querySelector('[data-testid="admin-search-menu"]');
       const saveSettingsButton = document.querySelector('[data-testid="admin-save-settings"]');
+      const adminAnalysisButton = document.querySelector('[data-testid="admin-analysis"]');
+      const adminAnalysisPage = document.querySelector('[data-testid="admin-analysis-page"]');
+      const adminPermissionPopup = document.querySelector('[data-testid="admin-permission-popup"]');
+      const adminPermissionAlert = document.querySelector('[data-testid="admin-permission-alert"]');
+      const adminPermissionPasswordInput = document.querySelector('[data-testid="admin-permission-password"]');
+      const adminPermissionSubmitButton = document.querySelector('[data-testid="admin-permission-submit"]');
       const adminMemberListButton = document.querySelector('[data-testid="admin-member-list"]');
       const memberListPermissionPopup = document.querySelector('[data-testid="member-list-permission-popup"]');
       const memberListPermissionPasswordInput = document.querySelector('[data-testid="member-list-permission-password"]');
@@ -1306,6 +1325,62 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
 
       window.addEventListener('offline-staff-discount-limits-updated', (event) => {
         updateStaffDiscountLimits(event.detail);
+      });
+
+      function staffIdForPassword(password) {
+        if (password === '123') {
+          return '1';
+        }
+        if (password === '11') {
+          return 'staff-manager';
+        }
+        if (password === '007') {
+          return 'server';
+        }
+        if (password === '006') {
+          return 'manager';
+        }
+        return '';
+      }
+
+      function staffHasPermission(password, permission) {
+        if (password === '11') {
+          return true;
+        }
+        const staffId = staffIdForPassword(password);
+        const override = currentStaffPermissionOverrides[staffId];
+        if (override?.removedPermissions?.includes(permission)) {
+          return false;
+        }
+        return true;
+      }
+
+      function coerceStaffPermissionOverrides(value) {
+        const entries = Array.isArray(value)
+          ? value.map((override) => [override.staffId, override])
+          : Object.entries(value || {});
+        return entries.reduce((overrides, [staffId, override]) => {
+          if (!staffId || !override) {
+            return overrides;
+          }
+          overrides[staffId] = {
+            addedPermissions: Array.isArray(override.addedPermissions) ? override.addedPermissions : [],
+            removedPermissions: Array.isArray(override.removedPermissions) ? override.removedPermissions : [],
+          };
+          return overrides;
+        }, {});
+      }
+
+      function updateStaffPermissionOverrides(value) {
+        currentStaffPermissionOverrides = {
+          ...currentStaffPermissionOverrides,
+          ...coerceStaffPermissionOverrides(value),
+        };
+        localStorage.setItem('offlineStaffPermissionOverrides', JSON.stringify(currentStaffPermissionOverrides));
+      }
+
+      window.addEventListener('offline-staff-permissions-updated', (event) => {
+        updateStaffPermissionOverrides(event.detail);
       });
 
       function applyWholeOrderDiscountPercent(percent) {
@@ -2351,7 +2426,24 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         renderClockControls();
       });
       document.querySelector('[data-testid="home-admin"]').addEventListener('click', () => {
+        adminAnalysisPage.hidden = true;
+        adminPermissionPopup.hidden = true;
         showPanel('admin');
+      });
+      adminAnalysisButton.addEventListener('click', () => {
+        if (staffHasPermission(currentEmployeePassword, 'ANALYSIS')) {
+          adminPermissionPopup.hidden = true;
+          adminAnalysisPage.hidden = false;
+          return;
+        }
+        adminPermissionAlert.textContent = 'do not have permission ANALYSIS';
+        adminPermissionPopup.hidden = false;
+      });
+      adminPermissionSubmitButton.addEventListener('click', () => {
+        if (staffHasPermission(adminPermissionPasswordInput.value, 'ANALYSIS')) {
+          adminPermissionPopup.hidden = true;
+          adminAnalysisPage.hidden = false;
+        }
       });
       adminUnitPriceItemSaveButton.addEventListener('click', () => {
         const itemName = adminUnitPriceItemNameInput.value;

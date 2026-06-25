@@ -6,7 +6,12 @@ import type { CombineSameItemMode, MenuMode, RoundingStrategyOption } from '../.
 import { PageObject } from '../shared/page-object.js';
 
 export class AdminPage extends PageObject {
+  private readonly analysisButton: Locator;
+  private readonly analysisPage: Locator;
   private readonly adminRoot: Locator;
+  private readonly permissionAlert: Locator;
+  private readonly permissionPasswordInput: Locator;
+  private readonly permissionSubmitButton: Locator;
   private readonly autoRedirectAfterReduceSelect: Locator;
   private readonly combineSameItemSelect: Locator;
   private readonly clickSettleAutoSendSelect: Locator;
@@ -93,6 +98,11 @@ export class AdminPage extends PageObject {
   constructor(page: Page) {
     super(page);
     this.adminRoot = page.getByTestId('admin-page');
+    this.analysisButton = page.getByTestId('admin-analysis');
+    this.analysisPage = page.getByTestId('admin-analysis-page');
+    this.permissionAlert = page.getByTestId('admin-permission-alert');
+    this.permissionPasswordInput = page.getByTestId('admin-permission-password');
+    this.permissionSubmitButton = page.getByTestId('admin-permission-submit');
     this.autoRedirectAfterReduceSelect = page.getByTestId('admin-auto-redirect-after-reduce');
     this.combineSameItemSelect = page.getByTestId('admin-combine-same-item');
     this.clickSettleAutoSendSelect = page.getByTestId('admin-click-settle-auto-send');
@@ -182,6 +192,29 @@ export class AdminPage extends PageObject {
       await expect(this.adminRoot).toBeVisible();
       await this.languageSelect.selectOption(language);
       await this.saveLanguageButton.click();
+    });
+  }
+
+  async clickAnalysisAndReadPermissionAlert(): Promise<string> {
+    return step('点击后台 Analysis 并读取权限提示', async () => {
+      await expect(this.adminRoot).toBeVisible();
+      await this.analysisButton.click();
+      await expect(this.permissionAlert).toBeVisible();
+      return ((await this.permissionAlert.textContent()) ?? '').trim();
+    });
+  }
+
+  async submitPermissionPassword(password: string): Promise<void> {
+    await step('输入后台权限密码并确认', async () => {
+      await this.permissionPasswordInput.fill(password);
+      await this.permissionSubmitButton.click();
+    });
+  }
+
+  async isInAnalysisPage(): Promise<boolean> {
+    return step('判断是否进入后台 Analysis 页面', async () => {
+      await expect(this.analysisPage).toBeVisible();
+      return this.analysisPage.isVisible();
     });
   }
 
