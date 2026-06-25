@@ -139,6 +139,12 @@ export type NoOptionCopyTotalsResult = {
   totalBeforeNoOption: number;
 };
 
+export type CombinedNonTaxableChargeTotalsResult = {
+  combinedTotal: number;
+  firstOrderTotal: number;
+  secondOrderTotal: number;
+};
+
 export type EvenSplitTipUnsplitResult = {
   combinedTipText: string;
 };
@@ -938,6 +944,37 @@ export class OrderEntryFlow {
       totalAfterNoOption,
       totalBeforeNoOption,
     };
+  }
+
+  async combineTwoTaxExemptOrdersWithNonTaxableChargeAndReadTotals(
+    homeUrl: string,
+  ): Promise<CombinedNonTaxableChargeTotalsResult> {
+    await this.homePage.open(homeUrl);
+    const firstOrderTotal = await this.createTaxExemptOrderWithNonTaxableChargeAndReadTotal();
+    const secondOrderTotal = await this.createTaxExemptOrderWithNonTaxableChargeAndReadTotal();
+
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.combineOrder(2);
+    const combinedTotal = await this.recallPage.readOrderTotal();
+
+    return {
+      combinedTotal,
+      firstOrderTotal,
+      secondOrderTotal,
+    };
+  }
+
+  private async createTaxExemptOrderWithNonTaxableChargeAndReadTotal(): Promise<number> {
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(chineseInitialSearchDish.group);
+    await this.orderDishesPage.selectMenuCategory(chineseInitialSearchDish.category);
+    await this.orderDishesPage.addMenuItem(chineseInitialSearchDish.name);
+    await this.orderDishesPage.applyOrderCharge('10%');
+    await this.orderDishesPage.voidSelectedItemTax();
+    const total = await this.orderDishesPage.readSettlementTotal();
+    await this.orderDishesPage.saveOrder();
+    return total;
   }
 
   async unsplitEvenSplitOrderAfterEditingFirstSubOrderTip(homeUrl: string): Promise<EvenSplitTipUnsplitResult> {

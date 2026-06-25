@@ -277,4 +277,18 @@ test.describe('stage2 order operation migration', () => {
     expect(result.totalAfterCopy).toBe(result.totalAfterNoOption);
     expect(result.recalledCopiedTotal).toBe(result.totalAfterNoOption);
   });
+
+  test('POS-23671 两个免税菜品订单应用不计税加收后合单总额应相加', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.combineTwoTaxExemptOrdersWithNonTaxableChargeAndReadTotals(
+      environment.posHomeUrl,
+    );
+
+    expect(result.combinedTotal).toBeCloseTo(result.firstOrderTotal + result.secondOrderTotal, 2);
+  });
 });

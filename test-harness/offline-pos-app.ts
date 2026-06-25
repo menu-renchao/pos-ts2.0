@@ -365,6 +365,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <input data-testid="order-tip" />
       <div data-testid="order-tip-toast"></div>
       <button data-testid="order-charge-20">Charge 20%</button>
+      <button data-testid="order-charge-10">Charge 10%</button>
       <button data-testid="order-charge-5">Charge 5%</button>
       <button data-testid="order-charge-0">Charge 0%</button>
       <div data-testid="order-charge-label"></div>
@@ -1041,6 +1042,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const orderTipInput = document.querySelector('[data-testid="order-tip"]');
       const orderTipToast = document.querySelector('[data-testid="order-tip-toast"]');
       const orderCharge20Button = document.querySelector('[data-testid="order-charge-20"]');
+      const orderCharge10Button = document.querySelector('[data-testid="order-charge-10"]');
       const orderCharge5Button = document.querySelector('[data-testid="order-charge-5"]');
       const orderChargeZeroButton = document.querySelector('[data-testid="order-charge-0"]');
       const orderChargeLabel = document.querySelector('[data-testid="order-charge-label"]');
@@ -3691,6 +3693,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       orderCharge20Button.addEventListener('click', () => {
         currentOrderChargeRate = 0.2;
         currentOrderChargeLabel = 'Charge(20%)';
+        renderOrderAmounts();
+      });
+      orderCharge10Button.addEventListener('click', () => {
+        currentOrderChargeRate = 0.1;
+        currentOrderChargeLabel = 'Charge(10%)';
         renderOrderAmounts();
       });
       orderCharge5Button.addEventListener('click', () => {
