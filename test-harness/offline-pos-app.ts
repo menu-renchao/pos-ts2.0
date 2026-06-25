@@ -2717,7 +2717,14 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         }
         orderSaveAlert.textContent = '';
         if (currentEditingOrder) {
-          currentEditingOrder.items = [...currentOrderItems];
+          if (selectedSubOrderIndex !== null && currentEditingOrder.subOrderItems?.[selectedSubOrderIndex]) {
+            currentEditingOrder.subOrderItems[selectedSubOrderIndex] = [...currentOrderItems];
+            currentEditingOrder.subOrderTips = currentEditingOrder.subOrderTips || [];
+            currentEditingOrder.subOrderTips[selectedSubOrderIndex] = currentOrderTip;
+          } else {
+            currentEditingOrder.items = [...currentOrderItems];
+            currentEditingOrder.tip = currentOrderTip;
+          }
           currentEditingOrder.itemOption = currentItemOption;
           currentEditingOrder.customerName = currentCustomerName;
           currentEditingOrder.crmMember = currentCrmMember ? { ...currentCrmMember } : null;
@@ -2839,6 +2846,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
             recallItemCount.textContent = formatItemCount(order.subOrderItems?.[index] || []);
             recallOrderSubtotal.textContent = String(total);
             recallOrderTotal.textContent = String(total);
+            recallOrderTip.textContent = formatTip(order.subOrderTips?.[index] ?? order.tip ?? 0);
           });
           recallSubOrders.appendChild(card);
         });
@@ -4269,6 +4277,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
             ? [...selectedRecallOrder.subOrderItems[selectedSubOrderIndex]]
             : [...selectedRecallOrder.items];
           currentItemOption = selectedRecallOrder.itemOption || null;
+          currentOrderTip = selectedSubOrderIndex !== null
+            ? selectedRecallOrder.subOrderTips?.[selectedSubOrderIndex] ?? selectedRecallOrder.tip ?? 0
+            : selectedRecallOrder.tip || 0;
           currentCustomerName = selectedRecallOrder.customerName || null;
           orderGuestNameInput.value = selectedRecallOrder.customerName || '';
           currentCrmMember = selectedRecallOrder.crmMember ? { ...selectedRecallOrder.crmMember } : null;
@@ -4327,6 +4338,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
             sharedItems.length || seatTwoItems.length ? [...sharedItems, ...seatTwoItems] : items.slice(1, 2),
           ];
           selectedRecallOrder.subOrderStatuses = ['New Order', 'New Order'];
+          selectedRecallOrder.subOrderTips = [selectedRecallOrder.tip || 0, selectedRecallOrder.tip || 0];
           selectedRecallOrder.splitOrderPrices = selectedRecallOrder.subOrderItems.map((subOrderItems) =>
             Number(subOrderItems.reduce((sum, item) => sum + Number(item.price || 0), 0).toFixed(2)),
           );

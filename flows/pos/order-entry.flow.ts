@@ -91,6 +91,12 @@ export type SeatSplitSharedVoidAlertResult = {
   voidAlertText: string;
 };
 
+export type SeatSplitModifyTipResult = {
+  firstSubOrderTipAfterEdit: number;
+  secondSubOrderTipBeforeEdit: number;
+  secondSubOrderTipAfterEdit: number;
+};
+
 export type ComboOptionCountResult = {
   beforeCount: number;
   afterCount: number;
@@ -557,6 +563,52 @@ export class OrderEntryFlow {
     const voidAlertText = await this.recallPage.voidOrderAndReadAlert();
 
     return { voidAlertText };
+  }
+
+  async modifyFirstSeatSplitSubOrderTipAndReadTips(homeUrl: string): Promise<SeatSplitModifyTipResult> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.setGuestCount(2);
+
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.selectSeat(1);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+
+    await this.orderDishesPage.selectMenuGroup(categorySwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(categorySwitchDish.category);
+    await this.orderDishesPage.selectSeat(2);
+    await this.orderDishesPage.addMenuItem(categorySwitchDish.name);
+
+    await this.orderDishesPage.addTip(500);
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.openSplitOrder();
+    await this.recallPage.splitBySeat();
+    await this.recallPage.saveSplit();
+
+    await this.recallPage.openSubOrder(2);
+    const secondSubOrderTipBeforeEdit = await this.recallPage.readOrderTip();
+
+    await this.recallPage.openSubOrder(1);
+    await this.recallPage.clickEdit();
+    await this.orderDishesPage.addTip(600);
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.openSubOrder(1);
+    const firstSubOrderTipAfterEdit = await this.recallPage.readOrderTip();
+    await this.recallPage.openSubOrder(2);
+    const secondSubOrderTipAfterEdit = await this.recallPage.readOrderTip();
+
+    return {
+      firstSubOrderTipAfterEdit,
+      secondSubOrderTipAfterEdit,
+      secondSubOrderTipBeforeEdit,
+    };
   }
 
   async readFirstDragSplitSubOrderDiscountWholePrice(homeUrl: string): Promise<string> {

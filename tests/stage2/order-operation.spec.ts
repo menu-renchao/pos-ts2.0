@@ -35,4 +35,19 @@ test.describe('stage2 order operation migration', () => {
 
     expect(result.voidAlertText).toBe('The order has paid dishes and cannot be voided!');
   });
+
+  test('POS-19368 按座位分单编辑子单 1 小费不应影响子单 2 小费', {
+    annotation: [jiraIssue('POS-19368')],
+  }, async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.modifyFirstSeatSplitSubOrderTipAndReadTips(environment.posHomeUrl);
+
+    expect(result.firstSubOrderTipAfterEdit).toBe(6);
+    expect(result.secondSubOrderTipAfterEdit).toBe(result.secondSubOrderTipBeforeEdit);
+  });
 });
