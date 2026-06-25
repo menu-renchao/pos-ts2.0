@@ -143,4 +143,20 @@ test.describe('stage2 order operation migration', () => {
     expect(result.firstSubOrderTipAfterReduce).toBe('3.00');
     expect(result.secondSubOrderTipAfterReduce).toBe('3.00');
   });
+
+  test('POS-19389 座位分单子单折扣后应按小计重新分配小费', {
+    annotation: [jiraIssue('POS-19389')],
+  }, async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.discountFirstSeatSplitSubOrderItemAndReadTips(environment.posHomeUrl);
+
+    expect(result.firstSubOrderTipBeforeDiscount).toBe('4.00');
+    expect(result.firstSubOrderTipAfterDiscount).toBe('3.00');
+    expect(result.secondSubOrderTipAfterDiscount).toBe('3.00');
+  });
 });

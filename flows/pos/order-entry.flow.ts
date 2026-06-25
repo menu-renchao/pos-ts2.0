@@ -120,6 +120,12 @@ export type SeatSplitReduceItemTipResult = {
   secondSubOrderTipAfterReduce: string;
 };
 
+export type SeatSplitDiscountItemTipResult = {
+  firstSubOrderTipBeforeDiscount: string;
+  firstSubOrderTipAfterDiscount: string;
+  secondSubOrderTipAfterDiscount: string;
+};
+
 export type ComboOptionCountResult = {
   beforeCount: number;
   afterCount: number;
@@ -790,6 +796,52 @@ export class OrderEntryFlow {
       firstSubOrderTipAfterReduce,
       firstSubOrderTipBeforeReduce,
       secondSubOrderTipAfterReduce,
+    };
+  }
+
+  async discountFirstSeatSplitSubOrderItemAndReadTips(homeUrl: string): Promise<SeatSplitDiscountItemTipResult> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.setGuestCount(2);
+
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.selectSeat(1);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.changeSelectedItemPrice(5);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.changeSelectedItemPrice(5);
+
+    await this.orderDishesPage.selectSeat(2);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.changeSelectedItemPrice(5);
+
+    await this.orderDishesPage.addTip(600);
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.openSplitOrder();
+    await this.recallPage.splitBySeat();
+    await this.recallPage.saveSplit();
+    await this.recallPage.openSubOrder(1);
+    const firstSubOrderTipBeforeDiscount = await this.recallPage.readOrderTipText();
+    await this.recallPage.clickEdit();
+    await this.orderDishesPage.selectOrderLineItem(1);
+    await this.orderDishesPage.applySelectedItemsDiscountAmount(5);
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.openSubOrder(1);
+    const firstSubOrderTipAfterDiscount = await this.recallPage.readOrderTipText();
+    await this.recallPage.openSubOrder(2);
+    const secondSubOrderTipAfterDiscount = await this.recallPage.readOrderTipText();
+
+    return {
+      firstSubOrderTipAfterDiscount,
+      firstSubOrderTipBeforeDiscount,
+      secondSubOrderTipAfterDiscount,
     };
   }
 
