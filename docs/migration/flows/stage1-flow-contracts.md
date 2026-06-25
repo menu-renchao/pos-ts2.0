@@ -380,20 +380,22 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 | source_file | source_class | source_test_patterns | target_specs | target_flow_methods |
 |---|---|---|---|---|
 | stage1/test_caller.py | TestCaller | test_dine_in_caller_with_name_and_table: Dine In order with guest name and table, call order, verify Preparing display, call off, verify removal | tests/stage1/caller.spec.ts | `CallerFlow.callDineInOrderWithGuestNameAndClear` |
-| stage1/test_caller.py | TestCaller | remaining dine-in table and Emenu caller refresh paths | tests/stage1/caller.spec.ts | not-started |
+| stage1/test_caller.py | TestCaller | test_dine_in_caller_with_table: Dine In order without guest name, use Recall order-card ID, call order, verify Preparing display, call off, verify removal | tests/stage1/caller.spec.ts | `CallerFlow.callDineInOrderWithoutGuestNameAndClear` |
+| stage1/test_caller.py | TestCaller | remaining Emenu caller table/name/refresh paths | tests/stage1/caller.spec.ts | not-started |
 
 ### Preconditions
 
 - Employee password `11` can enter POS offline mode.
 - `openFoodDish` provides the source-equivalent ordered item for the migrated Dine In path.
 - Guest name `CallerGuest42` is used so the source caller shortening rule is deterministic as `Cal...42`.
-- First-round offline mode reads the saved order number from Recall; source `PosDBFunction.get_last_order_num` remains a live DB validation gap.
+- For the no-guest Dine In path, the offline Recall order-card ID is deterministic as `Area 1 Table 1 {orderNumber}`.
+- First-round offline mode reads the saved order number or order-card ID from Recall; source `PosDBFunction.get_last_order_num` remains a live DB validation gap.
 
 ### Steps
 
 1. Open POS, enter employee password, and enter Dine In.
-2. Add source-equivalent Open Food, input guest name, and save the order.
-3. Open Recall recent order and read the generated order number.
+2. Add source-equivalent Open Food, optionally input guest name, and save the order.
+3. Open Recall recent order and read the generated order number or source-equivalent order-card ID.
 4. Call the current order from Recall.
 5. Open Caller and read the Preparing display list.
 6. Return to Recall, call off the same order, reopen Caller, and read Preparing again.
@@ -404,12 +406,14 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 - Before call off, Caller Preparing contains the source-equivalent shortened guest name `Cal...42`.
 - After call off, Caller Preparing no longer contains the order number.
 - After call off, Caller Preparing no longer contains the shortened guest name.
+- For the no-guest Dine In path, before call off Caller Preparing contains the Recall order-card ID.
+- For the no-guest Dine In path, after call off Caller Preparing no longer contains the Recall order-card ID.
 
 ### Page Responsibilities
 
 - `PosHomePage.open`, `PosHomePage.inputEmployeePassword`, `PosHomePage.clickDineIn`, `PosHomePage.clickRecall`, and `PosHomePage.openCaller` own POS entry/navigation.
 - `OrderDishesPage.openFoodWithoutTax`, `OrderDishesPage.inputGuestName`, and `OrderDishesPage.saveOrder` own Dine In order creation.
-- `RecallPage.openRecentOrder`, `RecallPage.readOrderNumber`, `RecallPage.callCurrentOrder`, and `RecallPage.callOffCurrentOrder` own Recall order selection and caller actions.
+- `RecallPage.openRecentOrder`, `RecallPage.readOrderNumber`, `RecallPage.readOrderCardId`, `RecallPage.callCurrentOrder`, and `RecallPage.callOffCurrentOrder` own Recall order selection and caller actions.
 - `CallerPage.waitLoaded` and `CallerPage.readInfoList` own caller display reads.
 
 ### Client/Data Responsibilities
@@ -421,8 +425,10 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 ### Stub Behavior
 
 - Saving the Dine In order stores the guest name on the saved order.
+- Saving a Dine In order without guest name stores the source-equivalent order-card ID as `Area 1 Table 1 {orderNumber}`.
 - Recall `Call Order` marks the selected order as `preparing` for Caller.
 - Caller Preparing renders the order number plus the source-equivalent shortened guest name.
+- Caller Preparing renders the order-card ID when the selected Dine In order has no guest name.
 - Recall `Call Off` clears the selected order from Caller Preparing.
 
 ### Live Gaps

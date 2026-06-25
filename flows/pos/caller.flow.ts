@@ -13,6 +13,12 @@ export type DineInCallerNameResult = {
   preparingInfoAfterCallOff: string[];
 };
 
+export type DineInCallerTableResult = {
+  orderCardId: string;
+  preparingInfoBeforeCallOff: string[];
+  preparingInfoAfterCallOff: string[];
+};
+
 const callerGuestName = 'CallerGuest42';
 
 export class CallerFlow {
@@ -49,6 +55,35 @@ export class CallerFlow {
         orderNumber,
         guestName: callerGuestName,
         shortGuestName: shortenCallerGuestName(callerGuestName),
+        preparingInfoBeforeCallOff,
+        preparingInfoAfterCallOff,
+      };
+    });
+  }
+
+  async callDineInOrderWithoutGuestNameAndClear(homeUrl: string): Promise<DineInCallerTableResult> {
+    return step('Dine In 下单无客名后按桌号叫号并销号', async () => {
+      await this.homePage.open(homeUrl);
+      await this.homePage.inputEmployeePassword('11');
+      await this.homePage.clickDineIn();
+      await this.orderDishesPage.openFoodWithoutTax(openFoodDish.name, openFoodDish.price);
+      await this.orderDishesPage.saveOrder();
+
+      await this.homePage.clickRecall();
+      await this.recallPage.openRecentOrder();
+      const orderCardId = await this.recallPage.readOrderCardId();
+      await this.recallPage.callCurrentOrder();
+      await this.homePage.openCaller();
+      const preparingInfoBeforeCallOff = await this.callerPage.readInfoList('preparing');
+
+      await this.homePage.clickRecall();
+      await this.recallPage.openRecentOrder();
+      await this.recallPage.callOffCurrentOrder();
+      await this.homePage.openCaller();
+      const preparingInfoAfterCallOff = await this.callerPage.readInfoList('preparing');
+
+      return {
+        orderCardId,
         preparingInfoBeforeCallOff,
         preparingInfoAfterCallOff,
       };

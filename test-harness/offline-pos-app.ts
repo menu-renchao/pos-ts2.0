@@ -416,6 +416,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <button data-testid="recall-tip-submit">Add Tip</button>
       <div data-testid="recall-tip-toast"></div>
       <div data-testid="recall-item-count"></div>
+      <div data-testid="recall-order-card-id"></div>
       <div data-testid="recall-order-number"></div>
       <div data-testid="recall-order-status"></div>
       <div data-testid="recall-customer-name"></div>
@@ -951,6 +952,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const recallTipSubmitButton = document.querySelector('[data-testid="recall-tip-submit"]');
       const recallTipToast = document.querySelector('[data-testid="recall-tip-toast"]');
       const recallItemCount = document.querySelector('[data-testid="recall-item-count"]');
+      const recallOrderCardId = document.querySelector('[data-testid="recall-order-card-id"]');
       const recallOrderNumber = document.querySelector('[data-testid="recall-order-number"]');
       const recallCrmMemberName = document.querySelector('[data-testid="recall-crm-member-name"]');
       const recallCrmPointBalance = document.querySelector('[data-testid="recall-crm-point-balance"]');
@@ -1185,7 +1187,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       }
 
       function callerDisplayItems(order) {
-        const items = [order.orderNumber];
+        const items = [order.customerName ? order.orderNumber : order.orderCardId || order.orderNumber];
         if (order.customerName) {
           items.push(shortenCallerGuestName(order.customerName));
         }
@@ -2290,6 +2292,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           paymentType: '',
           hasCreditFailure: false,
         };
+        order.orderCardId = currentOrderType === 'dine-in' ? 'Area 1 Table 1 ' + order.orderNumber : order.orderNumber;
         order.rewardDiscount = calculateRewardDiscount(order);
         applyInventoryDelta(order, currentOrderItems);
         savedOrders.push(order);
@@ -2398,6 +2401,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           status: '',
           customerName: null,
         };
+        recallOrderCardId.textContent = order.orderCardId || order.orderNumber || '';
         recallOrderNumber.textContent = order.orderNumber || '';
         recallOrderTip.textContent = formatTip(order.tip || 0);
         recallOrderStatus.textContent = order.status || '';

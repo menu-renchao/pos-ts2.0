@@ -21,4 +21,18 @@ test.describe('stage1 caller migration', () => {
     expect(result.preparingInfoAfterCallOff).not.toContain(result.orderNumber);
     expect(result.preparingInfoAfterCallOff).not.toContain(result.shortGuestName);
   });
+
+  test('POS-31492 dine in选桌下单叫号展示桌子区域加订单号', async ({ environment, page }) => {
+    const flow = new CallerFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new CallerPage(page),
+    );
+
+    const result = await flow.callDineInOrderWithoutGuestNameAndClear(environment.posHomeUrl);
+
+    expect(result.preparingInfoBeforeCallOff).toContain(result.orderCardId);
+    expect(result.preparingInfoAfterCallOff).not.toContain(result.orderCardId);
+  });
 });
