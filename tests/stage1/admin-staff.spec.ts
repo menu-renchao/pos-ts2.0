@@ -99,4 +99,19 @@ test.describe('stage1 admin staff migration', () => {
       expect(result.failedLoginTip).toContain('Failed to login');
     },
   );
+
+  test(
+    'POS-31552 Recall 提交超出 Server 权限的固定金额整单折扣后取消授权应保持原价',
+    {
+      annotation: jiraIssue('POS-31552'),
+    },
+    async ({ environment, page }) => {
+      const flow = new StaffPermissionFlow(new PosHomePage(page), new OrderDishesPage(page), new RecallPage(page));
+
+      const result = await flow.cancelRecallWholeOrderAmountDiscountAboveServerLimit(environment.posHomeUrl);
+
+      expect(result.permissionTip).toContain('The discount exceeds permission limit，please input password');
+      expect(result.totalAfterCancel).toBeCloseTo(result.originalTotal, 2);
+    },
+  );
 });

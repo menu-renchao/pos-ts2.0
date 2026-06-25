@@ -63,7 +63,7 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 
 | source_file | source_class | source_test_patterns | target_specs | target_flow_methods |
 |---|---|---|---|---|
-| stage1/test_admin_staff.py | TestAdminStaff | whole-order max discount, item max discount, recall discount permission, multi-discount, report permission, create staff with selected authority | tests/stage1/admin-staff.spec.ts | `StaffPermissionFlow.rejectWholeOrderDiscountAboveServerLimitWithoutPassword`, `StaffPermissionFlow.applyWholeOrderDiscountAboveServerLimitWithManagerPassword`, `StaffPermissionFlow.applyWholeOrderDiscountAboveManagerLimitWithBossPassword`, `StaffPermissionFlow.applyItemDiscountAboveServerLimitWithManagerPassword`, `StaffPermissionFlow.applyItemDiscountAboveManagerLimitWithBossPassword`, `StaffPermissionFlow.rejectRecallWholeOrderAmountDiscountAboveServerLimitWithoutPassword`, `StaffPermissionFlow.configureStaffPermissions`, `StaffPermissionFlow.applyOrderDiscountWithAuthorization`, `StaffPermissionFlow.applyItemDiscountWithAuthorization`, `StaffPermissionFlow.verifyReportPermission` |
+| stage1/test_admin_staff.py | TestAdminStaff | whole-order max discount, item max discount, recall discount permission, multi-discount, report permission, create staff with selected authority | tests/stage1/admin-staff.spec.ts | `StaffPermissionFlow.rejectWholeOrderDiscountAboveServerLimitWithoutPassword`, `StaffPermissionFlow.applyWholeOrderDiscountAboveServerLimitWithManagerPassword`, `StaffPermissionFlow.applyWholeOrderDiscountAboveManagerLimitWithBossPassword`, `StaffPermissionFlow.applyItemDiscountAboveServerLimitWithManagerPassword`, `StaffPermissionFlow.applyItemDiscountAboveManagerLimitWithBossPassword`, `StaffPermissionFlow.rejectRecallWholeOrderAmountDiscountAboveServerLimitWithoutPassword`, `StaffPermissionFlow.cancelRecallWholeOrderAmountDiscountAboveServerLimit`, `StaffPermissionFlow.configureStaffPermissions`, `StaffPermissionFlow.applyOrderDiscountWithAuthorization`, `StaffPermissionFlow.applyItemDiscountWithAuthorization`, `StaffPermissionFlow.verifyReportPermission` |
 
 ### Preconditions
 
@@ -159,6 +159,19 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 | assertions | First prompt contains `The discount exceeds permission limit，please input password`; empty password confirmation then contains `Failed to login`. |
 | stub behavior | Offline harness saves the Pickup order to in-memory Recall state, renders the recent order subtotal, compares Recall fixed amount discount against the current employee role's whole-order discount amount limit, opens a Recall-owned manager password popup when Server `007` exceeds the limit, and returns `Failed to login` for empty password. |
 | live gaps | Live AdminStaffAPI role setup, Pickup customer-info selectors, Recall fixed-amount discount selectors, Recall permission dialog behavior, and Open Food cents/display conversion must be validated in live smoke. |
+
+#### StaffPermissionFlow.cancelRecallWholeOrderAmountDiscountAboveServerLimit
+
+| field | contract |
+|---|---|
+| source | `stage1/test_admin_staff.py::TestAdminStaff::test_recall_whole_order_maximum_discount_cancel` |
+| jira | POS-31552 |
+| preconditions | Server/Manager/Boss discount limits are represented by `staffDiscountRoleSamples`; current employee logs in with Server password `007`; source Pickup order is represented by a saved no-tax Open Food `item1` priced at `10`; fixed amount discount `3` exceeds the Server whole-order discount amount limit `10 * 0.2`. |
+| actions | Open POS home, login as Server, enter Pickup, add Open Food no tax, save the order, open Recall, select the recent order, read original order total, open Recall discount, submit fixed amount whole-order discount `3`, read permission prompt, cancel the Recall manager password dialog, read order total again. |
+| page methods | `PosHomePage.open`, `PosHomePage.inputEmployeePassword`, `PosHomePage.clickPickup`, `OrderDishesPage.openFoodWithoutTax`, `OrderDishesPage.saveOrder`, `PosHomePage.clickRecall`, `RecallPage.openRecentOrder`, `RecallPage.readOrderTotal`, `RecallPage.openDiscountAndReadWholeOrderPrice`, `RecallPage.applyWholeOrderDiscountAmount`, `RecallPage.readDiscountTip`, `RecallPage.cancelManagerPassword` |
+| assertions | First prompt contains `The discount exceeds permission limit，please input password`; after canceling the authorization dialog, Recall order total equals the original total, matching the source pre-discount/last-discount equality check. |
+| stub behavior | Offline harness saves the Pickup order to in-memory Recall state, opens a Recall-owned manager password popup for the blocked discount, and the cancel action clears the pending fixed discount without mutating `selectedRecallOrder.wholeOrderDiscountAmount` or order total. |
+| live gaps | Live AdminStaffAPI role setup, Pickup customer-info selectors, Recall fixed-amount discount selectors, Recall permission dialog cancel behavior, pre/last discount price selectors, and Open Food cents/display conversion must be validated in live smoke. |
 
 ### Expected Assertions
 

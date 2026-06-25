@@ -8,6 +8,12 @@ export type WholeOrderDiscountPermissionResult = {
   failedLoginTip: string;
 };
 
+export type CanceledRecallWholeOrderDiscountResult = {
+  permissionTip: string;
+  originalTotal: number;
+  totalAfterCancel: number;
+};
+
 export type AuthorizedWholeOrderDiscountResult = {
   permissionTip: string;
   subtotal: number;
@@ -158,6 +164,31 @@ export class StaffPermissionFlow {
     const failedLoginTip = await recallPage.readDiscountTip();
 
     return { permissionTip, failedLoginTip };
+  }
+
+  async cancelRecallWholeOrderAmountDiscountAboveServerLimit(
+    homeUrl: string,
+  ): Promise<CanceledRecallWholeOrderDiscountResult> {
+    const recallPage = this.requireRecallPage();
+    await this.homePage.open(homeUrl);
+    await this.homePage.inputEmployeePassword(staffDiscountRoleSamples.server.password);
+    await this.homePage.clickPickup();
+    await this.orderDishesPage.openFoodWithoutTax(
+      staffDiscountSamples.recallDiscountOpenFoodName,
+      staffDiscountSamples.recallDiscountOpenFoodPrice,
+    );
+    await this.orderDishesPage.saveOrder();
+    await this.homePage.clickRecall();
+    await recallPage.openRecentOrder();
+    const originalTotal = await recallPage.readOrderTotal();
+    await recallPage.openDiscountAndReadWholeOrderPrice();
+    await recallPage.applyWholeOrderDiscountAmount(staffDiscountSamples.recallExcessiveWholeOrderDiscountAmount);
+    const permissionTip = await recallPage.readDiscountTip();
+
+    await recallPage.cancelManagerPassword();
+    const totalAfterCancel = await recallPage.readOrderTotal();
+
+    return { permissionTip, originalTotal, totalAfterCancel };
   }
 
   private requireRecallPage(): RecallPage {

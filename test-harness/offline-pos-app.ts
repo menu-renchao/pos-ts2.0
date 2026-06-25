@@ -403,6 +403,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <section data-testid="recall-manager-password-popup" hidden>
         <input data-testid="recall-manager-password" type="password" />
         <button data-testid="recall-manager-password-submit">Submit Recall Manager Password</button>
+        <button data-testid="recall-manager-password-cancel">Cancel Recall Manager Password</button>
       </section>
       <button data-testid="recall-credit-failure-record">Credit Failure Record</button>
       <button data-testid="recall-cash">Cash</button>
@@ -890,6 +891,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const recallManagerPasswordPopup = document.querySelector('[data-testid="recall-manager-password-popup"]');
       const recallManagerPasswordInput = document.querySelector('[data-testid="recall-manager-password"]');
       const recallManagerPasswordSubmitButton = document.querySelector('[data-testid="recall-manager-password-submit"]');
+      const recallManagerPasswordCancelButton = document.querySelector('[data-testid="recall-manager-password-cancel"]');
       const recallCreditFailureRecordButton = document.querySelector('[data-testid="recall-credit-failure-record"]');
       const recallCashButton = document.querySelector('[data-testid="recall-cash"]');
       const recallPaymentTypeCashButton = document.querySelector('[data-testid="recall-payment-type-cash"]');
@@ -3110,6 +3112,12 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           return;
         }
         recallDiscountTip.textContent = recallManagerPasswordInput.value ? 'No Permission!' : 'Failed to login';
+      });
+      recallManagerPasswordCancelButton.addEventListener('click', () => {
+        pendingRecallWholeOrderDiscountAmount = null;
+        recallManagerPasswordInput.value = '';
+        recallManagerPasswordPopup.hidden = true;
+        renderRecallOrderItems();
       });
       recallCreditFailureRecordButton.addEventListener('click', () => {
         if (selectedRecallOrder) {

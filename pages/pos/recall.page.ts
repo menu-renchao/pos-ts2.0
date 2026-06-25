@@ -98,6 +98,7 @@ export class RecallPage extends PageObject {
   private readonly paymentTypeOrderNumber: Locator;
   private readonly managerPasswordInput: Locator;
   private readonly managerPasswordSubmitButton: Locator;
+  private readonly managerPasswordCancelButton: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -167,6 +168,7 @@ export class RecallPage extends PageObject {
     this.paymentTypeOrderNumber = page.getByTestId('recall-payment-type-order-number');
     this.managerPasswordInput = page.getByTestId('recall-manager-password');
     this.managerPasswordSubmitButton = page.getByTestId('recall-manager-password-submit');
+    this.managerPasswordCancelButton = page.getByTestId('recall-manager-password-cancel');
   }
 
   async openRecentOrder(): Promise<void> {
@@ -199,6 +201,12 @@ export class RecallPage extends PageObject {
     await step('在 Recall 输入经理密码并确认权限', async () => {
       await this.managerPasswordInput.fill(password);
       await this.managerPasswordSubmitButton.click();
+    });
+  }
+
+  async cancelManagerPassword(): Promise<void> {
+    await step('取消 Recall 经理密码授权', async () => {
+      await this.managerPasswordCancelButton.click();
     });
   }
 
