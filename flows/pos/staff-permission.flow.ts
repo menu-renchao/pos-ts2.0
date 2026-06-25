@@ -13,6 +13,10 @@ export type AuthorizedWholeOrderDiscountResult = {
   discount: number;
 };
 
+export type BossAuthorizedWholeOrderDiscountResult = AuthorizedWholeOrderDiscountResult & {
+  managerDeniedTip: string;
+};
+
 export class StaffPermissionFlow {
   constructor(
     private readonly homePage: PosHomePage,
@@ -47,5 +51,25 @@ export class StaffPermissionFlow {
     const { subtotal, discount } = await this.orderDishesPage.readWholeOrderDiscountSummary();
 
     return { permissionTip, subtotal, discount };
+  }
+
+  async applyWholeOrderDiscountAboveManagerLimitWithBossPassword(
+    homeUrl: string,
+  ): Promise<BossAuthorizedWholeOrderDiscountResult> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.inputEmployeePassword(staffDiscountRoleSamples.server.password);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.openFoodWithoutTax(staffDiscountSamples.openFoodName, staffDiscountSamples.openFoodPrice);
+    await this.orderDishesPage.openDiscountAndReadWholeOrderPrice();
+    await this.orderDishesPage.applyWholeOrderDiscountPercent(staffDiscountSamples.bossAuthorizedWholeOrderDiscountPercent);
+    const permissionTip = await this.orderDishesPage.readDiscountTip();
+
+    await this.orderDishesPage.submitManagerPassword(staffDiscountRoleSamples.manager.password);
+    const managerDeniedTip = await this.orderDishesPage.readDiscountTip();
+    await this.orderDishesPage.applyWholeOrderDiscountPercent(staffDiscountSamples.bossAuthorizedWholeOrderDiscountPercent);
+    await this.orderDishesPage.submitManagerPassword(staffDiscountRoleSamples.boss.password);
+    const { subtotal, discount } = await this.orderDishesPage.readWholeOrderDiscountSummary();
+
+    return { permissionTip, managerDeniedTip, subtotal, discount };
   }
 }

@@ -2812,9 +2812,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
             applyWholeOrderDiscountPercent(pendingWholeOrderDiscountPercent);
             return;
           }
-          orderTipToast.textContent = managerPasswordInput.value
-            ? 'The discount exceeds permission limit，please input password'
-            : 'Failed to login';
+          orderTipToast.textContent = managerPasswordInput.value ? 'No Permission!' : 'Failed to login';
           return;
         }
         if (managerPasswordInput.value === '11' && pendingNoteAuthorization) {
