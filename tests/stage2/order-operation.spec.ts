@@ -305,4 +305,19 @@ test.describe('stage2 order operation migration', () => {
 
     expect(result.combinedTotal).toBeCloseTo(result.firstOrderTotal + result.secondOrderTotal, 2);
   });
+
+  test('POS-27156 编辑订单时修改手动加收名称后重新选择应更新订单加收名称', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.renameManualFixedChargeThenReapplyInRecalledOrder(environment.posHomeUrl);
+
+    expect(result.recalledChargeBeforeReapply).toEqual({ manu_test_fixed: '10.00' });
+    expect(result.modifiedChargeSelectedInDialog).toBe(true);
+    expect(result.recalledChargeAfterReapply).toEqual({ mod_test1: '10.00' });
+  });
 });

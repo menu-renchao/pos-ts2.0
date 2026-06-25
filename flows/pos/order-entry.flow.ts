@@ -145,6 +145,12 @@ export type CombinedNonTaxableChargeTotalsResult = {
   secondOrderTotal: number;
 };
 
+export type RenameManualChargeResult = {
+  modifiedChargeSelectedInDialog: boolean;
+  recalledChargeAfterReapply: Record<string, string>;
+  recalledChargeBeforeReapply: Record<string, string>;
+};
+
 export type EvenSplitTipUnsplitResult = {
   combinedTipText: string;
 };
@@ -981,6 +987,40 @@ export class OrderEntryFlow {
       combinedTotal,
       firstOrderTotal,
       secondOrderTotal,
+    };
+  }
+
+  async renameManualFixedChargeThenReapplyInRecalledOrder(homeUrl: string): Promise<RenameManualChargeResult> {
+    if (!this.adminPage) {
+      throw new Error('POS-27156 requires AdminPage');
+    }
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.applyPresetCharge('manu_test_fixed');
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.clickAdmin();
+    await this.adminPage.renameManualCharge('manu_test_fixed', 'mod_test1');
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.clickEdit();
+    const recalledChargeBeforeReapply = await this.orderDishesPage.readOrderChargeItems();
+
+    await this.orderDishesPage.openChargeDialog();
+    const selectedCharges = await this.orderDishesPage.readSelectedPresetCharges();
+    const modifiedChargeSelectedInDialog = Boolean(selectedCharges.mod_test1);
+    await this.orderDishesPage.reapplyPresetCharge('mod_test1');
+    const recalledChargeAfterReapply = await this.orderDishesPage.readOrderChargeItems();
+
+    return {
+      modifiedChargeSelectedInDialog,
+      recalledChargeAfterReapply,
+      recalledChargeBeforeReapply,
     };
   }
 

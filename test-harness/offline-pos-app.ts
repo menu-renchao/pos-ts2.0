@@ -154,6 +154,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         <option value="nearest_5_or_10">nearest_5_or_10</option>
         <option value="no_rounding">no_rounding</option>
       </select>
+      <input data-testid="admin-charge-old-name" />
+      <input data-testid="admin-charge-new-name" />
+      <button data-testid="admin-charge-rename">Rename Charge</button>
       <input data-testid="admin-kds-item-name" />
       <input data-testid="admin-kds-pos-name" />
       <button data-testid="admin-kds-pos-name-save">Save Item POS Name</button>
@@ -368,6 +371,12 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <button data-testid="order-charge-10">Charge 10%</button>
       <button data-testid="order-charge-5">Charge 5%</button>
       <button data-testid="order-charge-0">Charge 0%</button>
+      <button data-testid="order-charge-open">Open Charge</button>
+      <section data-testid="order-charge-dialog" hidden>
+        <div data-testid="preset-charge-list"></div>
+        <div data-testid="selected-charge-list"></div>
+        <button data-testid="order-charge-ok">OK Charge</button>
+      </section>
       <div data-testid="order-charge-label"></div>
       <div data-testid="order-charge-price"></div>
       <button data-testid="order-tax-exempt">Void Item Tax</button>
@@ -724,7 +733,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let currentKioskOrderType = '';
       let currentCategoryName = '';
       let currentOrderChargeRate = 0;
+      let currentOrderChargeFixedAmount = null;
       let currentOrderChargeLabel = '';
+      let manualCharges = readStoredJson('offlineManualCharges', [
+        { amount: 10, name: 'manu_test_fixed', rate: 0, rateType: 'amount' },
+      ]);
       let currentWholeOrderDiscountRate = 0;
       let currentOrderTaxVoided = false;
       let currentPaidAmount = 0;
@@ -846,6 +859,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const kdsCategoryRequiredSelect = document.querySelector('[data-testid="admin-kds-category-required"]');
       const kdsCategoryDiscountAllowanceSelect = document.querySelector('[data-testid="admin-kds-category-discount-allowance"]');
       const roundingStrategySelect = document.querySelector('[data-testid="admin-rounding-strategy"]');
+      const adminChargeOldNameInput = document.querySelector('[data-testid="admin-charge-old-name"]');
+      const adminChargeNewNameInput = document.querySelector('[data-testid="admin-charge-new-name"]');
+      const adminChargeRenameButton = document.querySelector('[data-testid="admin-charge-rename"]');
       const kdsItemNameInput = document.querySelector('[data-testid="admin-kds-item-name"]');
       const kdsItemPosNameInput = document.querySelector('[data-testid="admin-kds-pos-name"]');
       const kdsItemPosNameSaveButton = document.querySelector('[data-testid="admin-kds-pos-name-save"]');
@@ -1045,6 +1061,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const orderCharge10Button = document.querySelector('[data-testid="order-charge-10"]');
       const orderCharge5Button = document.querySelector('[data-testid="order-charge-5"]');
       const orderChargeZeroButton = document.querySelector('[data-testid="order-charge-0"]');
+      const orderChargeOpenButton = document.querySelector('[data-testid="order-charge-open"]');
+      const orderChargeDialog = document.querySelector('[data-testid="order-charge-dialog"]');
+      const presetChargeList = document.querySelector('[data-testid="preset-charge-list"]');
+      const selectedChargeList = document.querySelector('[data-testid="selected-charge-list"]');
+      const orderChargeOkButton = document.querySelector('[data-testid="order-charge-ok"]');
       const orderChargeLabel = document.querySelector('[data-testid="order-charge-label"]');
       const orderChargePrice = document.querySelector('[data-testid="order-charge-price"]');
       const orderTaxExemptButton = document.querySelector('[data-testid="order-tax-exempt"]');
@@ -2324,6 +2345,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       }
 
       function currentChargeAmount(subtotal) {
+        if (currentOrderChargeFixedAmount !== null && currentOrderChargeFixedAmount !== undefined) {
+          return Number(currentOrderChargeFixedAmount);
+        }
         if (!currentOrderChargeRate) {
           return 0;
         }
@@ -2333,6 +2357,38 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
             .reduce((total, item) => total + Number(item.price || 0), 0)
           : Number(subtotal || 0);
         return roundMoney(chargeableSubtotal * currentOrderChargeRate);
+      }
+
+      function renderPresetChargeDialog() {
+        presetChargeList.innerHTML = '';
+        selectedChargeList.innerHTML = '';
+        manualCharges.forEach((charge) => {
+          const button = document.createElement('button');
+          button.dataset.testid = 'preset-charge';
+          button.dataset.chargeName = charge.name;
+          button.textContent = charge.name + ' Add $' + Number(charge.amount).toFixed(2);
+          button.addEventListener('click', () => {
+            currentOrderChargeRate = Number(charge.rate || 0);
+            currentOrderChargeFixedAmount = charge.rateType === 'amount' ? Number(charge.amount || 0) : null;
+            currentOrderChargeLabel = charge.name;
+            renderPresetChargeDialog();
+            renderOrderAmounts();
+          });
+          presetChargeList.appendChild(button);
+        });
+        if (currentOrderChargeRate || currentOrderChargeFixedAmount !== null) {
+          const selectedCharge = manualCharges.find((charge) => (
+            charge.name === currentOrderChargeLabel
+            || Number(charge.amount || 0) === Number(currentOrderChargeFixedAmount || 0)
+            || Number(charge.rate || 0) === currentOrderChargeRate
+          ));
+          const selected = document.createElement('div');
+          selected.dataset.testid = 'selected-charge-item';
+          selected.dataset.chargeName = selectedCharge?.name || currentOrderChargeLabel;
+          selected.dataset.chargeRate = 'Add $' + Number(selectedCharge?.amount || currentChargeAmount(currentActiveOrderSubtotal())).toFixed(2);
+          selected.textContent = selected.dataset.chargeName + ' ' + selected.dataset.chargeRate;
+          selectedChargeList.appendChild(selected);
+        }
       }
 
       function currentWholeOrderDiscountAmount(subtotal) {
@@ -2474,7 +2530,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         orderTax.textContent = currentOrderTaxVoided ? '0' : String(Number(currentOrderTaxAmount().toFixed(2)));
         orderSubtotal.textContent = currentEditableCombo() ? '$' + roundMoney(subtotal).toFixed(2) : String(roundMoney(subtotal));
         orderDiscountAmount.textContent = wholeOrderDiscount ? wholeOrderDiscount.toFixed(2) : '';
-        orderPriceDetail.textContent = wholeOrderDiscount ? 'Discount ' + wholeOrderDiscount.toFixed(2) : '';
+        orderPriceDetail.textContent = [
+          wholeOrderDiscount ? 'Discount ' + wholeOrderDiscount.toFixed(2) : '',
+          chargeAmount ? (currentOrderChargeLabel || 'Charge') + ' ' + chargeAmount.toFixed(2) : '',
+        ].filter(Boolean).join('\\n');
         orderReward.textContent = formatRewardDiscount(rewardDiscount, currentCrmDiscountRate);
         const settlementAmount = roundMoney(subtotal + wholeOrderDiscount + rewardDiscount + chargeAmount + currentOrderTip);
         const unpaidBeforePaid = currentOrderTaxVoided
@@ -2686,6 +2745,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         currentOrderTip = 0;
         currentOrderPriceEdited = false;
         currentOrderChargeRate = 0;
+        currentOrderChargeFixedAmount = null;
         currentOrderChargeLabel = '';
         currentWholeOrderDiscountRate = 0;
         currentOrderTaxVoided = false;
@@ -2766,7 +2826,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
             currentEditingOrder.subOrderItems[selectedSubOrderIndex] = [...currentOrderItems];
             currentEditingOrder.subOrderStatuses[selectedSubOrderIndex] = currentOrderStatus || currentEditingOrder.subOrderStatuses[selectedSubOrderIndex];
             currentEditingOrder.subOrderChargeCleared = currentEditingOrder.subOrderChargeCleared || [];
-            currentEditingOrder.subOrderChargeCleared[selectedSubOrderIndex] = currentOrderChargeRate === 0;
+            currentEditingOrder.subOrderChargeCleared[selectedSubOrderIndex] = currentOrderChargeRate === 0
+              && currentOrderChargeFixedAmount === null;
             currentEditingOrder.subOrderTips = currentEditingOrder.subOrderTips || [];
             const nextSubOrderTotal = orderItemsSubtotal(currentOrderItems);
             if (currentEditingOrder.priceEdited && previousSubOrderTotal !== nextSubOrderTotal) {
@@ -2788,6 +2849,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           currentEditingOrder.hasRedeemItem = currentHasRedeemItem;
           if (selectedSubOrderIndex === null) {
             currentEditingOrder.orderChargeRate = currentOrderChargeRate;
+            currentEditingOrder.orderChargeFixedAmount = currentOrderChargeFixedAmount;
             currentEditingOrder.orderChargeLabel = currentOrderChargeLabel;
           }
           currentEditingOrder.priceEdited = currentEditingOrder.priceEdited || currentOrderPriceEdited;
@@ -2827,6 +2889,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           subOrderStatuses: [],
           subOrderChargeCleared: [],
           orderChargeRate: currentOrderChargeRate,
+          orderChargeFixedAmount: currentOrderChargeFixedAmount,
           orderChargeLabel: currentOrderChargeLabel,
           inventoryDeductedQuantity: 0,
           paymentRecords: currentPaymentRecords.map((record) => ({ ...record })),
@@ -2837,6 +2900,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         order.rewardDiscount = calculateRewardDiscount(order);
         applyInventoryDelta(order, currentOrderItems);
         savedOrders.push(order);
+        persistSavedOrders();
         latestSavedOrderItems = [...order.items];
         latestSavedItemOption = order.itemOption;
         selectedRecallOrder = order;
@@ -2864,6 +2928,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       }
 
       function orderChargeAmount(order, items) {
+        if (order?.orderChargeFixedAmount !== null && order?.orderChargeFixedAmount !== undefined) {
+          return Number(order.orderChargeFixedAmount);
+        }
         const rate = Number(order?.orderChargeRate || 0);
         if (!rate) {
           return 0;
@@ -2878,7 +2945,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         if (charge) {
           lines.push((order?.orderChargeLabel || 'Charge') + ' ' + charge.toFixed(2));
         }
-        return lines.join(' ');
+        return lines.join('\\n');
       }
 
       function ensurePaymentRecords(order) {
@@ -3692,23 +3759,43 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       });
       orderCharge20Button.addEventListener('click', () => {
         currentOrderChargeRate = 0.2;
+        currentOrderChargeFixedAmount = null;
         currentOrderChargeLabel = 'Charge(20%)';
         renderOrderAmounts();
       });
       orderCharge10Button.addEventListener('click', () => {
         currentOrderChargeRate = 0.1;
+        currentOrderChargeFixedAmount = null;
         currentOrderChargeLabel = 'Charge(10%)';
         renderOrderAmounts();
       });
       orderCharge5Button.addEventListener('click', () => {
         currentOrderChargeRate = 0.05;
+        currentOrderChargeFixedAmount = null;
         currentOrderChargeLabel = 'Charge(5%)';
         renderOrderAmounts();
       });
       orderChargeZeroButton.addEventListener('click', () => {
         currentOrderChargeRate = 0;
+        currentOrderChargeFixedAmount = null;
         currentOrderChargeLabel = '';
         renderOrderAmounts();
+      });
+      orderChargeOpenButton.addEventListener('click', () => {
+        orderChargeDialog.hidden = false;
+        renderPresetChargeDialog();
+      });
+      orderChargeOkButton.addEventListener('click', () => {
+        orderChargeDialog.hidden = true;
+        renderOrderAmounts();
+      });
+      adminChargeRenameButton.addEventListener('click', () => {
+        const oldName = adminChargeOldNameInput.value;
+        const newName = adminChargeNewNameInput.value;
+        manualCharges = manualCharges.map((charge) => (
+          charge.name === oldName ? { ...charge, name: newName } : charge
+        ));
+        localStorage.setItem('offlineManualCharges', JSON.stringify(manualCharges));
       });
       orderTaxExemptButton.addEventListener('click', () => {
         currentOrderTaxVoided = true;
@@ -4559,7 +4646,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           currentOrderChargeRate = selectedSubOrderIndex !== null && selectedRecallOrder.subOrderChargeCleared?.[selectedSubOrderIndex]
             ? 0
             : Number(selectedRecallOrder.orderChargeRate || 0);
-          currentOrderChargeLabel = currentOrderChargeRate ? selectedRecallOrder.orderChargeLabel || 'Charge' : '';
+          currentOrderChargeFixedAmount = selectedSubOrderIndex !== null && selectedRecallOrder.subOrderChargeCleared?.[selectedSubOrderIndex]
+            ? null
+            : selectedRecallOrder.orderChargeFixedAmount ?? null;
+          currentOrderChargeLabel = currentOrderChargeRate || currentOrderChargeFixedAmount !== null ? selectedRecallOrder.orderChargeLabel || 'Charge' : '';
           currentOrderStatus = selectedSubOrderIndex !== null
             ? selectedRecallOrder.subOrderStatuses?.[selectedSubOrderIndex] || ''
             : selectedRecallOrder.status || '';

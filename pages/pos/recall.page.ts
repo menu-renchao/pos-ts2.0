@@ -582,6 +582,19 @@ export class RecallPage extends PageObject {
     return step('读取 Recall 订单总额文本', async () => ((await this.orderTotal.textContent()) ?? '').trim());
   }
 
+  async readOrderChargeItems(): Promise<Record<string, string>> {
+    return step('读取 Recall 订单加收明细', async () => {
+      const detail = ((await this.orderPriceDetail.textContent()) ?? '').trim();
+      const entries = detail
+        .split(/\n+/)
+        .map((line) => line.trim().match(/^(.+)\s+(-?\d+\.\d{2})$/))
+        .filter((match): match is RegExpMatchArray => Boolean(match))
+        .filter((match) => match[1] !== 'Subtotal')
+        .map((match) => [match[1] ?? '', match[2] ?? ''] as const);
+      return Object.fromEntries(entries);
+    });
+  }
+
   async readOrderSubtotal(): Promise<number> {
     return step('读取 Recall 订单小计', async () => Number((await this.orderSubtotal.textContent()) ?? '0'));
   }

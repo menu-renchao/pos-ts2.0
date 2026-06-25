@@ -811,6 +811,37 @@ export class OrderDishesPage extends PageObject {
     });
   }
 
+  async applyPresetCharge(name: string): Promise<void> {
+    await step(`应用预设加收 ${name}`, async () => {
+      await this.page.getByTestId('order-charge-open').click();
+      await this.page.getByTestId('preset-charge').filter({ hasText: name }).click();
+      await this.page.getByTestId('order-charge-ok').click();
+    });
+  }
+
+  async openChargeDialog(): Promise<void> {
+    await step('打开整单加收弹窗', async () => {
+      await this.page.getByTestId('order-charge-open').click();
+    });
+  }
+
+  async readSelectedPresetCharges(): Promise<Record<string, string>> {
+    return step('读取已选预设加收', async () => this.page.getByTestId('selected-charge-item').evaluateAll((nodes) => Object.fromEntries(
+      nodes.map((node) => {
+        const element = node as HTMLElement;
+        return [element.dataset.chargeName ?? '', element.dataset.chargeRate ?? ''];
+      }).filter(([name]) => Boolean(name)),
+    )));
+  }
+
+  async reapplyPresetCharge(name: string): Promise<void> {
+    await step(`重新选择预设加收 ${name}`, async () => {
+      await this.page.getByTestId('preset-charge').filter({ hasText: name }).click();
+      await this.page.getByTestId('preset-charge').filter({ hasText: name }).click();
+      await this.page.getByTestId('order-charge-ok').click();
+    });
+  }
+
   async openDiscountAndReadWholeOrderPrice(): Promise<string> {
     return step('打开折扣界面并读取整单金额', async () => {
       await this.orderDiscountButton.click();
@@ -850,6 +881,19 @@ export class OrderDishesPage extends PageObject {
 
   async readOrderPriceDetail(): Promise<string> {
     return step('读取点单页订单价格明细', async () => ((await this.orderPriceDetail.textContent()) ?? '').trim());
+  }
+
+  async readOrderChargeItems(): Promise<Record<string, string>> {
+    return step('读取点单页订单加收明细', async () => {
+      const detail = ((await this.orderPriceDetail.textContent()) ?? '').trim();
+      const entries = detail
+        .split(/\n+/)
+        .map((line) => line.trim().match(/^(.+)\s+(-?\d+\.\d{2})$/))
+        .filter((match): match is RegExpMatchArray => Boolean(match))
+        .filter((match) => match[1] !== 'Subtotal')
+        .map((match) => [match[1] ?? '', match[2] ?? ''] as const);
+      return Object.fromEntries(entries);
+    });
   }
 
   async readDiscountTip(): Promise<string> {

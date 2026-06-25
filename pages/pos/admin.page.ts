@@ -114,6 +114,9 @@ export class AdminPage extends PageObject {
   private readonly separateSameItemSelect: Locator;
   private readonly staffNoteSelect: Locator;
   private readonly staffVoidPrintedItemSelect: Locator;
+  private readonly chargeOldNameInput: Locator;
+  private readonly chargeNewNameInput: Locator;
+  private readonly chargeRenameButton: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -224,6 +227,9 @@ export class AdminPage extends PageObject {
     this.separateSameItemSelect = page.getByTestId('admin-separate-same-item');
     this.staffNoteSelect = page.getByTestId('admin-staff-note');
     this.staffVoidPrintedItemSelect = page.getByTestId('admin-staff-void-printed-item');
+    this.chargeOldNameInput = page.getByTestId('admin-charge-old-name');
+    this.chargeNewNameInput = page.getByTestId('admin-charge-new-name');
+    this.chargeRenameButton = page.getByTestId('admin-charge-rename');
   }
 
   async setUserDefaultLanguage(language: string): Promise<void> {
@@ -447,6 +453,15 @@ export class AdminPage extends PageObject {
       await expect(this.adminRoot).toBeVisible();
       await this.roundingStrategySelect.selectOption(roundingStrategy);
       await this.saveSettingsButton.click();
+    });
+  }
+
+  async renameManualCharge(oldName: string, newName: string): Promise<void> {
+    await step(`修改手动加收名称 ${oldName} -> ${newName}`, async () => {
+      await expect(this.adminRoot).toBeVisible();
+      await this.chargeOldNameInput.fill(oldName);
+      await this.chargeNewNameInput.fill(newName);
+      await this.chargeRenameButton.click();
     });
   }
 
