@@ -98,6 +98,12 @@ export class AdminPage extends PageObject {
   private readonly staffRoleSelect: Locator;
   private readonly staffSaveButton: Locator;
   private readonly staffSectionButton: Locator;
+  private readonly staffWageInput: Locator;
+  private readonly staffWageTypeSelect: Locator;
+  private readonly attendanceSearchButton: Locator;
+  private readonly lastAttendanceRow: Locator;
+  private readonly attendanceWageValue: Locator;
+  private readonly attendanceWageTypeValue: Locator;
   private readonly searchMenuSelect: Locator;
   private readonly separateSameItemSelect: Locator;
   private readonly staffNoteSelect: Locator;
@@ -196,6 +202,12 @@ export class AdminPage extends PageObject {
     this.staffRoleSelect = page.getByTestId('admin-staff-role');
     this.staffSaveButton = page.getByTestId('admin-staff-save');
     this.staffSectionButton = page.getByTestId('admin-staff');
+    this.staffWageInput = page.getByTestId('admin-staff-wage');
+    this.staffWageTypeSelect = page.getByTestId('admin-staff-wage-type');
+    this.attendanceSearchButton = page.getByTestId('admin-attendance-search');
+    this.lastAttendanceRow = page.getByTestId('admin-attendance-last-row');
+    this.attendanceWageValue = page.getByTestId('admin-attendance-wage');
+    this.attendanceWageTypeValue = page.getByTestId('admin-attendance-wage-type');
     this.searchMenuSelect = page.getByTestId('admin-search-menu');
     this.separateSameItemSelect = page.getByTestId('admin-separate-same-item');
     this.staffNoteSelect = page.getByTestId('admin-staff-note');
@@ -267,6 +279,42 @@ export class AdminPage extends PageObject {
       await this.page.getByTestId('admin-staff-row').filter({ hasText: staffName }).click();
       await expect(this.staffNameInput).toHaveValue(staffName);
     });
+  }
+
+  async inputStaffWage(wage: string): Promise<void> {
+    await step(`设置员工工资为 ${wage}`, async () => {
+      await this.staffWageInput.fill(wage);
+    });
+  }
+
+  async selectWageType(wageType: string): Promise<void> {
+    await step(`设置员工工资类型为 ${wageType}`, async () => {
+      await this.staffWageTypeSelect.selectOption({ label: wageType });
+    });
+  }
+
+  async clickAttendanceSearch(): Promise<void> {
+    await step('打开 Staff Attendance 搜索结果', async () => {
+      await this.attendanceSearchButton.click();
+      await expect(this.lastAttendanceRow).toBeVisible();
+    });
+  }
+
+  async clickLastAttendance(): Promise<void> {
+    await step('打开最后一条 Staff Attendance 记录', async () => {
+      await this.lastAttendanceRow.click();
+      await expect(this.attendanceWageValue).toBeVisible();
+    });
+  }
+
+  async readAttendanceWage(): Promise<string> {
+    return step('读取 Staff Attendance wage', async () => ((await this.attendanceWageValue.textContent()) ?? '').trim());
+  }
+
+  async readAttendanceWageType(): Promise<string> {
+    return step('读取 Staff Attendance wage type', async () =>
+      ((await this.attendanceWageTypeValue.textContent()) ?? '').trim(),
+    );
   }
 
   async isAuthorityEnabled(authority: StaffPermissionName): Promise<boolean> {

@@ -88,6 +88,14 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         <input data-testid="admin-staff-code" />
         <select data-testid="admin-staff-role">
           <option value="Manager">Manager</option>
+          <option value="Boss">Boss</option>
+        </select>
+        <input data-testid="admin-staff-wage" />
+        <select data-testid="admin-staff-wage-type">
+          <option value="1">Hourly</option>
+          <option value="2">Weekly</option>
+          <option value="3">Biweekly</option>
+          <option value="4">Monthly</option>
         </select>
         <label>
           <input data-testid="admin-authority-DINE_IN" type="checkbox" />
@@ -102,6 +110,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           ADMIN_STAFF
         </label>
         <button data-testid="admin-staff-save">Save Staff</button>
+        <button data-testid="admin-attendance-search">Attendance Search</button>
+        <div data-testid="admin-attendance-list"></div>
+        <button data-testid="admin-attendance-last-row" hidden>Last Attendance</button>
+        <div data-testid="admin-attendance-wage" hidden></div>
+        <div data-testid="admin-attendance-wage-type" hidden></div>
       </section>
       <select data-testid="admin-auto-redirect-after-reduce">
         <option value="true">true</option>
@@ -598,6 +611,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let cashDrawerMode = 'cash-in';
       let userDefaultLanguage = localStorage.getItem('userDefaultLanguage') || 'Default';
       let clockState = 'off';
+      let currentClockStaffSnapshot = null;
       let deliveryHistoricalAddress = '';
       let messages = [];
       let currentOrderItems = [];
@@ -693,7 +707,17 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let adminGlobalOptions = [];
       let selectedGlobalOptionName = '';
       let adminCreatedMenuItems = [];
-      let adminStaffRecords = [];
+      let adminStaffRecords = [
+        {
+          name: 'Boss',
+          code: '11',
+          role: 'Boss',
+          wage: '',
+          wageType: '1',
+          permissions: ['DINE_IN', 'ADMIN', 'ADMIN_STAFF'],
+        },
+      ];
+      let attendanceRecords = [];
       let selectedAdminStaffName = '';
       let savedOrders = [];
       let emenuLatestOrder = null;
@@ -812,7 +836,13 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const adminStaffNameInput = document.querySelector('[data-testid="admin-staff-name"]');
       const adminStaffCodeInput = document.querySelector('[data-testid="admin-staff-code"]');
       const adminStaffRoleSelect = document.querySelector('[data-testid="admin-staff-role"]');
+      const adminStaffWageInput = document.querySelector('[data-testid="admin-staff-wage"]');
+      const adminStaffWageTypeSelect = document.querySelector('[data-testid="admin-staff-wage-type"]');
       const adminStaffSaveButton = document.querySelector('[data-testid="admin-staff-save"]');
+      const adminAttendanceSearchButton = document.querySelector('[data-testid="admin-attendance-search"]');
+      const adminAttendanceLastRow = document.querySelector('[data-testid="admin-attendance-last-row"]');
+      const adminAttendanceWage = document.querySelector('[data-testid="admin-attendance-wage"]');
+      const adminAttendanceWageType = document.querySelector('[data-testid="admin-attendance-wage-type"]');
       const adminAuthorityDineIn = document.querySelector('[data-testid="admin-authority-DINE_IN"]');
       const adminAuthorityAdmin = document.querySelector('[data-testid="admin-authority-ADMIN"]');
       const adminAuthorityAdminStaff = document.querySelector('[data-testid="admin-authority-ADMIN_STAFF"]');
@@ -1637,9 +1667,38 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         adminStaffNameInput.value = staff?.name || '';
         adminStaffCodeInput.value = staff?.code || '';
         adminStaffRoleSelect.value = staff?.role || 'Manager';
+        adminStaffWageInput.value = staff?.wage || '';
+        adminStaffWageTypeSelect.value = staff?.wageType || '1';
         ['DINE_IN', 'ADMIN', 'ADMIN_STAFF'].forEach((permission) => {
           setStaffAuthority(permission, staff?.permissions?.includes(permission));
         });
+      }
+
+      function currentEmployeeStaff() {
+        if (currentEmployeePassword === '11') {
+          return adminStaffRecords.find((staff) => staff.name === 'Boss') || {
+            name: 'Boss',
+            wage: '',
+            wageType: '1',
+          };
+        }
+        return {
+          name: 'Employee',
+          wage: '',
+          wageType: '1',
+        };
+      }
+
+      function renderLastAttendance() {
+        const lastRecord = attendanceRecords[attendanceRecords.length - 1];
+        adminAttendanceLastRow.hidden = !lastRecord;
+        adminAttendanceLastRow.textContent = lastRecord
+          ? lastRecord.staffName + ' ' + lastRecord.wage + ' ' + lastRecord.wageType
+          : '';
+        adminAttendanceWage.hidden = !lastRecord;
+        adminAttendanceWageType.hidden = !lastRecord;
+        adminAttendanceWage.textContent = lastRecord?.wage || '';
+        adminAttendanceWageType.textContent = lastRecord?.wageType || '';
       }
 
       function renderAdminStaffList() {
@@ -2699,6 +2758,12 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       });
       checkInButton.addEventListener('click', () => {
         if (clockState === 'off') {
+          const staff = currentEmployeeStaff();
+          currentClockStaffSnapshot = {
+            staffName: staff.name,
+            wage: staff.wage || '',
+            wageType: staff.wageType || '1',
+          };
           clockState = 'clocked-in';
           clockText.textContent = 'Clocked In at ' + clockNow();
         }
@@ -2715,6 +2780,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         renderClockControls();
       });
       checkoutButton.addEventListener('click', () => {
+        if (currentClockStaffSnapshot) {
+          attendanceRecords.push({ ...currentClockStaffSnapshot });
+          currentClockStaffSnapshot = null;
+        }
         clockState = 'off';
         clockText.textContent = 'Checked Out';
         renderClockControls();
@@ -2744,12 +2813,20 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           name: adminStaffNameInput.value,
           code: adminStaffCodeInput.value,
           role: adminStaffRoleSelect.value,
+          wage: adminStaffWageInput.value,
+          wageType: adminStaffWageTypeSelect.value,
           permissions: creatableStaffPermissionsForCurrentEmployee(),
         };
         adminStaffRecords = adminStaffRecords.filter((record) => record.name !== staff.name);
         adminStaffRecords.push(staff);
         renderAdminStaffList();
         showSelectedAdminStaff(staff);
+      });
+      adminAttendanceSearchButton.addEventListener('click', () => {
+        renderLastAttendance();
+      });
+      adminAttendanceLastRow.addEventListener('click', () => {
+        renderLastAttendance();
       });
       adminAnalysisButton.addEventListener('click', () => {
         if (staffHasPermission(currentEmployeePassword, 'ANALYSIS')) {
