@@ -193,4 +193,18 @@ test.describe('stage1 admin menu migration', () => {
       expect(prices.afterMemberPrice).toBe(5);
     },
   );
+
+  test(
+    'POS-42096 重新配置中文多语言后点菜订单区应展示中文菜名',
+    {
+      annotation: jiraIssue('POS-42096'),
+    },
+    async ({ environment, page }) => {
+      const flow = new AdminMenuFlow(new PosHomePage(page), new AdminPage(page), new OrderDishesPage(page));
+
+      const itemName = await flow.configureChineseLanguageAndReadOrderedItemName(environment.posHomeUrl);
+
+      expect(itemName).toContain('普通菜1');
+    },
+  );
 });

@@ -1036,6 +1036,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 | stage1/test_admin_menu.py | TestAdminMenu | `test_redeem_price` item switches from regular price to benefit/member price after CRM member selection | tests/stage1/admin-menu.spec.ts | `AdminMenuFlow.orderBenefitPriceItemAndReadPrices` |
 | stage1/test_admin_menu.py | TestAdminMenu | `test_batch_edit_price` batch edits regular price and member price, then member ordering uses edited member price | tests/stage1/admin-menu.spec.ts | `AdminMenuFlow.batchEditRegularAndMemberPriceThenReadOrderPrices` |
 | stage1/test_admin_menu.py | TestAdminMenu | `test_batch_edit_member_price` batch reduces member price based on existing member price, then member ordering uses reduced price | tests/stage1/admin-menu.spec.ts | `AdminMenuFlow.batchReduceBenefitMemberPriceThenReadOrderPrices` |
+| stage1/test_admin_menu.py | TestAdminMenu | `test_display_menu_name_after_modify_language` Chinese language menu ordering displays Chinese item name in the order area | tests/stage1/admin-menu.spec.ts | `AdminMenuFlow.configureChineseLanguageAndReadOrderedItemName` |
 
 ### Preconditions
 
@@ -1057,6 +1058,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - POS-37830 uses source-equivalent item `benefit` under `Lunch` / `Chicken Lunch E`, regular price `8.00`, benefit/member price `6.00`, and CRM member `(64)673-37557`.
 - POS-37832 uses source-equivalent item `taxtest` under `Lunch` / `Chicken Lunch E`, batch edited regular price `100.00`, member price `89.00`, and CRM member `(64)673-37557`.
 - POS-37831 uses source-equivalent item `benefit` under `Lunch` / `Chicken Lunch E`, regular price `8.00`, existing member price `6.00`, batch action `reduce_by_dollar` amount `1`, base `member`, and CRM member `(64)673-37557`.
+- POS-42096 uses source-equivalent item `hn_normal_item1` under `Lunch` / `hn_cate`, Chinese name `普通菜1`, Chinese menu group `午餐菜单`, and Chinese language option.
 
 ### Steps
 
@@ -1090,6 +1092,9 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 28. For POS-37831, enter Admin Menu and batch edit `benefit` member price by reducing the current member price `6.00` by `1.00`.
 29. Return to POS home, enter Dine In, order `benefit`, and read the current item price before member selection.
 30. Open Redeem, select source member `(64)673-37557`, and read the current item price again.
+31. For POS-42096, enter Admin Menu, configure `hn_normal_item1` with Chinese name `普通菜1`, and return to POS home.
+32. Switch POS language to Chinese, enter Dine In, select `午餐菜单` / `hn_cate`, order `普通菜1`, and read the selected order item display name.
+33. Restore POS language to Default after reading the order item name.
 
 ### Expected Assertions
 
@@ -1109,6 +1114,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - POS-37830 verifies `benefit` shows regular price `8.00` before member selection and member price `6.00` after selecting the CRM member.
 - POS-37832 verifies `taxtest` shows edited regular price `100.00` before member selection and edited member price `89.00` after selecting the CRM member.
 - POS-37831 verifies `benefit` keeps regular price `8.00` before member selection and uses reduced member price `5.00` after selecting the CRM member.
+- POS-42096 verifies the selected order item display name contains `普通菜1` after ordering the configured Chinese menu item.
 
 ### Page Responsibilities
 
@@ -1138,6 +1144,9 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `AdminPage.batchEditItemPrices` owns the POS-37831 batch member-price edit action after the flow computes the source-equivalent reduced member price.
 - `OrderDishesPage.selectMenuGroup`, `OrderDishesPage.selectMenuCategory`, `OrderDishesPage.addMenuItem`, and `OrderDishesPage.readSelectedItemPrice` own the POS-37831 order-line price reads.
 - `PosCrmPage.openRedeem` and `PosCrmPage.selectMemberByPhone` own the POS-37831 CRM member selection path.
+- `AdminPage.setItemChineseName` owns the POS-42096 Admin item language configuration.
+- `PosHomePage.switchLanguage` owns the POS-42096 Chinese/default language switching.
+- `OrderDishesPage.selectMenuGroup`, `OrderDishesPage.selectMenuCategory`, `OrderDishesPage.addMenuItem`, and `OrderDishesPage.readSelectedOrderItem` own the POS-42096 Chinese ordering and order-area display read.
 
 ### Client/Data Responsibilities
 
@@ -1159,6 +1168,8 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - `test-data/crm/members.ts` owns `crmSourceRewardMember`, preserving source phone `(64)673-37557` for POS-37832.
 - `test-data/pos/dishes.ts` owns `benefitPriceDish`, preserving source item `benefit`, regular price `8.00`, and current member price `6.00` for POS-37831.
 - `test-data/crm/members.ts` owns `crmSourceRewardMember`, preserving source phone `(64)673-37557` for POS-37831.
+- `test-data/pos/dishes.ts` owns `chineseInitialSearchDish` and `chineseMenuGroups`, preserving source item `hn_normal_item1`, category `hn_cate`, and Chinese menu group `午餐菜单` for POS-42096.
+- `test-data/pos/languages.ts` owns the Chinese/default language option names for POS-42096.
 
 ### Stub Behavior
 
@@ -1182,6 +1193,8 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 - Offline harness persists Admin batch price overrides in browser storage so a source-equivalent refresh/back-to-home path keeps edited regular and member prices.
 - Offline harness applies the edited member price to current order lines after CRM member selection and reverts to the edited regular unit price when the member is removed.
 - Offline harness supports POS-37831 through the same batch member-price persistence path, with the flow calculating `6.00 - 1.00 = 5.00` before saving the override.
+- Offline harness stores configured Chinese item names in browser storage and renders them on menu buttons when Chinese language is active.
+- Offline harness stores an order-line `displayName` so the order area can show the localized Chinese name while internal item identity remains the original menu item name.
 
 ### Live Gaps
 
@@ -1195,6 +1208,7 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 | cleanup | Source restores `hn_normal_item1` Chinese name in `finally` | Add live cleanup fixture or afterEach restore before live verification |
 | selector | POS-37832 Admin category batch price editor, member price editor, save completion, and order-line price selectors need live confirmation | Confirm stable selectors and live persistence before marking live verified |
 | selector | POS-37831 Admin batch member-price editor controls for reduce-by-dollar and base-on-member need live confirmation | Confirm stable selectors and live persistence before marking live verified |
+| selector | POS-42096 Admin item edit, Chinese language delete/add controls, Chinese menu selectors, and order-area item display selectors need live confirmation | Confirm stable selectors and cleanup restore before marking live verified |
 | selector | POS-35406 Global Option category navigation, item checkbox selection, batch edit Add Printer dialog, and printer selector need live confirmation | Confirm stable selectors and the save/refresh signal for assigned printers |
 | cleanup | POS-35406 creates a Global Option and must delete it even when printer assignment fails | Add live cleanup fixture using UI or API before live verification |
 | selector | POS-36298 Admin Menu product-line count display needs live DOM confirmation | Confirm stable selector for the POS product-line menu item count |

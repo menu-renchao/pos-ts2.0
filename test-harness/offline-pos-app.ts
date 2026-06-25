@@ -1206,10 +1206,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       }
 
       function displayItemName(item) {
+        const itemName = item.displayName || item.name || '';
         if (item.inKitchenQuantity) {
-          return '(' + item.inKitchenQuantity + 'In Kitchen) ' + item.name;
+          return '(' + item.inKitchenQuantity + 'In Kitchen) ' + itemName;
         }
-        return item.name || '';
+        return itemName;
       }
 
       function itemLineColor(item) {
@@ -1292,6 +1293,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         if (dish.comboSubItems) {
           currentOrderItems.push({
             name: dish.name,
+            displayName: orderDisplayName(dish),
             price: dish.price,
             unitPrice: dish.price,
             quantity: 1,
@@ -1326,6 +1328,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         }
         currentOrderItems.push({
           name: dish.name,
+          displayName: orderDisplayName(dish),
           price: currentCrmMember && dish.benefitPrice !== undefined ? dish.benefitPrice : dish.price,
           unitPrice: dish.price,
           quantity: 1,
@@ -1476,6 +1479,14 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           return chineseConfig.chineseName;
         }
         return currentItemPosNames[dish.name] || dish.posName || dish.name;
+      }
+
+      function orderDisplayName(dish) {
+        const chineseConfig = currentItemChineseNames[dish.name];
+        if (effectiveLanguage() === 'Chinese' && chineseConfig?.chineseName) {
+          return chineseConfig.chineseName;
+        }
+        return dish.name;
       }
 
       function currentChargeAmount(subtotal) {

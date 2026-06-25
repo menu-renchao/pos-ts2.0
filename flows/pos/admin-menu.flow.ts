@@ -9,6 +9,7 @@ import { crmSourceRewardMember } from '../../test-data/crm/members.js';
 import {
   batchPropertyMenuItems,
   benefitPriceDish,
+  chineseMenuGroups,
   chineseInitialSearchDish,
   quickComboBatchEditDish,
   requiredMenuPropertyLabels,
@@ -16,6 +17,7 @@ import {
   unitPriceDish,
   weightQuickComboDish,
 } from '../../test-data/pos/dishes.js';
+import { languageOptions } from '../../test-data/pos/languages.js';
 
 const posMenuProductLine = 'POS Menu';
 const emenuProductLine = 'Emenu Menu';
@@ -367,5 +369,29 @@ export class AdminMenuFlow {
       beforeMemberPrice,
       afterMemberPrice,
     };
+  }
+
+  async configureChineseLanguageAndReadOrderedItemName(homeUrl: string): Promise<string> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.setItemChineseName(
+      chineseInitialSearchDish.group,
+      chineseInitialSearchDish.category,
+      chineseInitialSearchDish.name,
+      chineseInitialSearchDish.chineseName,
+    );
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.switchLanguage(languageOptions.chinese);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(chineseMenuGroups.lunch);
+    await this.orderDishesPage.selectMenuCategory(chineseInitialSearchDish.category);
+    await this.orderDishesPage.addMenuItem(chineseInitialSearchDish.chineseName);
+    const orderedItem = await this.orderDishesPage.readSelectedOrderItem();
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.switchLanguage(languageOptions.default);
+
+    return orderedItem.name;
   }
 }
