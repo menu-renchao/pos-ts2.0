@@ -444,6 +444,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <div data-testid="recall-guest-phone"></div>
       <div data-testid="recall-guest-address"></div>
       <div data-testid="recall-order-subtotal"></div>
+      <div data-testid="recall-order-tax"></div>
       <div data-testid="recall-order-reward">0</div>
       <div data-testid="recall-order-total"></div>
       <div data-testid="recall-crm-member-name"></div>
@@ -532,6 +533,18 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       </section>
       <button data-testid="emenu-call-server">Call Server</button>
       <button data-testid="emenu-switch-pos">POS</button>
+    </section>
+    <section data-testid="kiosk-page" hidden>
+      <button data-testid="kiosk-select-license">Kiosk License</button>
+      <button data-testid="kiosk-order-type-to-go">To Go</button>
+      <button data-testid="kiosk-menu-group">Chinese Food</button>
+      <button data-testid="kiosk-menu-category">Appetizers</button>
+      <button data-testid="kiosk-item">kiosk_item</button>
+      <button data-testid="kiosk-view-order">View Order</button>
+      <button data-testid="kiosk-checkout">Checkout</button>
+      <button data-testid="kiosk-skip">Skip</button>
+      <button data-testid="kiosk-cash-payment">Cash</button>
+      <div data-testid="kiosk-cart-count">0</div>
     </section>
     <section data-testid="report-password-panel" hidden>
       <input data-testid="report-password" type="password" />
@@ -653,6 +666,16 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let currentShiftScheduleEnabled = localStorage.getItem('offlineShiftScheduleEnabled') === 'true';
       let currentAutoClockOutEnabled = localStorage.getItem('offlineAutoClockOutEnabled') === 'true';
       let currentShiftPlans = readStoredJson('offlineShiftPlans', []);
+      let currentTakeoutTaxExempt = localStorage.getItem('offlineTakeoutTaxExempt') === 'true';
+      let currentKioskItem = readStoredJson('offlineKioskItem', {
+        category: 'Appetizers',
+        group: 'Chinese Food',
+        name: 'kiosk_item',
+        price: 10,
+        taxRate: 0.0825,
+      });
+      let currentKioskCartItems = [];
+      let currentKioskOrderType = '';
       let currentCategoryName = '';
       let currentOrderChargeRate = 0;
       let currentOrderChargeLabel = '';
@@ -728,7 +751,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       ];
       let attendanceRecords = [];
       let selectedAdminStaffName = '';
-      let savedOrders = [];
+      let savedOrders = readStoredJson('offlineSavedOrders', []);
       let emenuLatestOrder = null;
       let nextOrderNumber = 100000;
       let selectedRecallOrder = null;
@@ -1021,6 +1044,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const recallGuestPhone = document.querySelector('[data-testid="recall-guest-phone"]');
       const recallGuestAddress = document.querySelector('[data-testid="recall-guest-address"]');
       const recallOrderSubtotal = document.querySelector('[data-testid="recall-order-subtotal"]');
+      const recallOrderTax = document.querySelector('[data-testid="recall-order-tax"]');
       const recallOrderReward = document.querySelector('[data-testid="recall-order-reward"]');
       const recallOrderTotal = document.querySelector('[data-testid="recall-order-total"]');
       const recallTipMethod = document.querySelector('[data-testid="recall-tip-method"]');
@@ -1098,6 +1122,15 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const emenuOrderCard = document.querySelector('[data-testid="emenu-order-card"]');
       const emenuOrderCardCloseButton = document.querySelector('[data-testid="emenu-order-card-close"]');
       const emenuCallServerButton = document.querySelector('[data-testid="emenu-call-server"]');
+      const kioskPage = document.querySelector('[data-testid="kiosk-page"]');
+      const kioskSelectLicenseButton = document.querySelector('[data-testid="kiosk-select-license"]');
+      const kioskOrderTypeToGoButton = document.querySelector('[data-testid="kiosk-order-type-to-go"]');
+      const kioskItemButton = document.querySelector('[data-testid="kiosk-item"]');
+      const kioskViewOrderButton = document.querySelector('[data-testid="kiosk-view-order"]');
+      const kioskCheckoutButton = document.querySelector('[data-testid="kiosk-checkout"]');
+      const kioskSkipButton = document.querySelector('[data-testid="kiosk-skip"]');
+      const kioskCashPaymentButton = document.querySelector('[data-testid="kiosk-cash-payment"]');
+      const kioskCartCount = document.querySelector('[data-testid="kiosk-cart-count"]');
       const reportPasswordPanel = document.querySelector('[data-testid="report-password-panel"]');
       const reportPasswordInput = document.querySelector('[data-testid="report-password"]');
       const reportPasswordSaveButton = document.querySelector('[data-testid="report-password-save"]');
@@ -1288,6 +1321,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         supportPage.hidden = panel !== 'support';
         messageCenter.hidden = panel !== 'message-center';
         reservationPage.hidden = panel !== 'reservation';
+        kioskPage.hidden = panel !== 'kiosk';
         if (panel === 'order') {
           history.replaceState(null, '', '#/orderDishes');
         } else if (panel === 'home') {
@@ -1312,6 +1346,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         reservationPage.hidden = true;
         emenuMainPage.hidden = panel !== 'main';
         emenuOrderPage.hidden = panel !== 'order';
+        kioskPage.hidden = panel !== 'kiosk';
       }
 
       function shortenCallerGuestName(guestName) {
@@ -1386,6 +1421,63 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         selectedRecallOrder = order;
         emenuLatestOrder = order;
         return order;
+      }
+
+      function persistSavedOrders() {
+        localStorage.setItem('offlineSavedOrders', JSON.stringify(savedOrders));
+      }
+
+      function renderKioskItem() {
+        kioskItemButton.textContent = currentKioskItem.name;
+        kioskCartCount.textContent = String(currentKioskCartItems.length);
+      }
+
+      function createKioskPaidOrder() {
+        const items = currentKioskCartItems.length ? [...currentKioskCartItems] : [{ ...currentKioskItem }];
+        const subtotal = items.reduce((total, item) => total + Number(item.price || 0), 0);
+        const taxText =
+          currentTakeoutTaxExempt && currentKioskOrderType === 'togo'
+            ? '--'
+            : String(Number((subtotal * Number(items[0]?.taxRate || 0)).toFixed(2)));
+        const orderNumber = String(nextOrderNumber++);
+        const order = {
+          orderNumber,
+          orderCardId: orderNumber,
+          items,
+          itemOption: null,
+          tip: 0,
+          splitTip: null,
+          status: 'Paid',
+          customerName: null,
+          subtotal,
+          settlementTotal: subtotal,
+          crmMember: null,
+          crmDiscountRate: 0,
+          crmDiscountMaxAmount: null,
+          crmFixedRewardAmount: 0,
+          crmPointDeduction: 0,
+          hasRedeemItem: false,
+          orderType: 'kiosk-togo',
+          partialPaid: false,
+          rewardDiscount: 0,
+          guestPhone: '',
+          guestAddress: '',
+          deliveryInfoRows: [],
+          splitOrderPrices: [],
+          subOrderItems: [],
+          subOrderStatuses: [],
+          inventoryDeductedQuantity: 0,
+          paymentType: 'cash',
+          hasCreditFailure: false,
+          taxText,
+        };
+        savedOrders.push(order);
+        selectedRecallOrder = order;
+        latestSavedOrderItems = [...order.items];
+        latestSavedItemOption = null;
+        currentKioskCartItems = [];
+        persistSavedOrders();
+        renderKioskItem();
       }
 
       function normalizePhone(phone) {
@@ -1673,6 +1765,15 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         currentShiftScheduleEnabled = Boolean(event.detail?.shiftScheduleEnabled);
         currentAutoClockOutEnabled = Boolean(event.detail?.shiftAutoClockOutEnabled);
         currentShiftPlans = Array.isArray(event.detail?.shiftPlans) ? event.detail.shiftPlans : [];
+      });
+
+      window.addEventListener('offline-kiosk-item-updated', (event) => {
+        currentKioskItem = event.detail || currentKioskItem;
+        renderKioskItem();
+      });
+
+      window.addEventListener('offline-takeout-tax-exempt-updated', (event) => {
+        currentTakeoutTaxExempt = Boolean(event.detail);
       });
 
       function currentEmployeeShiftPlan() {
@@ -2668,6 +2769,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         recallGuestPhone.textContent = formatRecallPhone(order.guestPhone || '');
         recallGuestAddress.textContent = order.guestAddress || '';
         recallOrderSubtotal.textContent = String(order.subtotal ?? orderTotal(order));
+        recallOrderTax.textContent = order.taxText ?? '';
         recallOrderReward.textContent = formatRewardDiscount(order.rewardDiscount || 0, order.crmDiscountRate);
         recallOrderTotal.textContent =
           order?.settlementTotal !== null && order?.settlementTotal !== undefined
@@ -3205,6 +3307,29 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       emenuPlaceOrderButton.addEventListener('click', () => {
         createEmenuOrder();
         emenuOrderCard.hidden = false;
+      });
+      kioskSelectLicenseButton.addEventListener('click', () => {
+        document.body.dataset.kioskLicense = 'selected';
+      });
+      kioskOrderTypeToGoButton.addEventListener('click', () => {
+        currentKioskOrderType = 'togo';
+      });
+      kioskItemButton.addEventListener('click', () => {
+        currentKioskCartItems.push({ ...currentKioskItem, quantity: 1 });
+        renderKioskItem();
+      });
+      kioskViewOrderButton.addEventListener('click', () => {
+        document.body.dataset.kioskCart = 'viewing';
+      });
+      kioskCheckoutButton.addEventListener('click', () => {
+        document.body.dataset.kioskCheckout = 'started';
+      });
+      kioskSkipButton.addEventListener('click', () => {
+        document.body.dataset.kioskSkipCount = String(Number(document.body.dataset.kioskSkipCount || '0') + 1);
+      });
+      kioskCashPaymentButton.addEventListener('click', () => {
+        createKioskPaidOrder();
+        document.body.dataset.kioskPayment = 'cash';
       });
       emenuOrderCardCloseButton.addEventListener('click', () => {
         emenuOrderCard.hidden = true;
@@ -4225,7 +4350,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       clockText.textContent = localStorage.getItem('offlineClockText') || '';
       applyAutoClockOutIfDue();
       renderClockControls();
-      if (window.location.pathname.includes('/emenu/')) {
+      renderKioskItem();
+      if (window.location.pathname.includes('/kpos/kiosklite')) {
+        showPanel('kiosk');
+      } else if (window.location.pathname.includes('/emenu/')) {
         showEmenuPanel('main');
       }
     </script>

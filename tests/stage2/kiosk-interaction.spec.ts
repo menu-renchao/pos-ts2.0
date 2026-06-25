@@ -1,0 +1,17 @@
+import { expect, test } from '../../fixtures/base-test.js';
+import { KioskInteractionFlow } from '../../flows/pos/kiosk-interaction.flow.js';
+import { KioskHomePage } from '../../pages/kiosk/home.page.js';
+import { PosHomePage } from '../../pages/pos/home.page.js';
+import { RecallPage } from '../../pages/pos/recall.page.js';
+
+test.describe('stage2 kiosk interaction migration', () => {
+  test('POS-20995 全局外带免税开启后 Kiosk To Go 订单在 Recall 中应显示免税', {
+    annotation: { type: 'issue', description: 'POS-20995' },
+  }, async ({ adminSettingsClient, environment, page }) => {
+    const flow = new KioskInteractionFlow(new PosHomePage(page), new KioskHomePage(page), new RecallPage(page));
+
+    const taxText = await flow.placeKioskTogoCashOrderAndReadRecallTax(environment.posHomeUrl, adminSettingsClient);
+
+    expect(taxText).toBe('--');
+  });
+});

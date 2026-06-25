@@ -24,6 +24,12 @@ export function createOfflinePosHarness(): OfflinePosHarness {
           body: renderOfflinePosHome(state),
         });
       });
+      await page.route('**/kpos/kiosklite/**', async (route) => {
+        await route.fulfill({
+          contentType: 'text/html',
+          body: renderOfflinePosHome(state),
+        });
+      });
     },
   };
 }

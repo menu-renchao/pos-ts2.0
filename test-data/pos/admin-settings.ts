@@ -12,6 +12,7 @@ export const adminSettings = {
   roundingStrategy: 'roundingStrategy',
   shiftSchedule: 'shiftSchedule',
   autoClockOut: 'autoClockOut',
+  takeoutTaxExempt: 'takeoutTaxExempt',
 } as const;
 
 export type AdminSettingName = (typeof adminSettings)[keyof typeof adminSettings];

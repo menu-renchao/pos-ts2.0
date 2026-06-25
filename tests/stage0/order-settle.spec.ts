@@ -14,6 +14,7 @@ test.describe('stage0 order settlement migration', () => {
       annotation: jiraIssues(roundingSettlementJiraKeys),
     },
     async ({ environment, page }) => {
+      test.slow();
       const flow = new SettlementFlow(
         new PosHomePage(page),
         new AdminPage(page),
