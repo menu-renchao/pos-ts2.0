@@ -208,6 +208,10 @@ export type ManualChargeDeletedResult = {
   selectedChargesAfterDelete: Record<string, string>;
 };
 
+export type RenameAutoChargeResult = {
+  recalledChargeAfterRename: Record<string, string>;
+};
+
 export type EvenSplitTipUnsplitResult = {
   combinedTipText: string;
 };
@@ -1399,6 +1403,34 @@ export class OrderEntryFlow {
       chargeAfterConfirm,
       chargeBeforeConfirm,
       selectedChargesAfterDelete,
+    };
+  }
+
+  async renameAutoFixedChargeThenReadRecalledOrderCharge(homeUrl: string): Promise<RenameAutoChargeResult> {
+    if (!this.adminPage) {
+      throw new Error('POS-27170 requires AdminPage');
+    }
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.setupAutoFixedCharge('auto_test_fixed', 10);
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.clickAdmin();
+    await this.adminPage.renameAutoCharge('auto_test_fixed', 'auto_test1');
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.clickEdit();
+    const recalledChargeAfterRename = await this.orderDishesPage.readOrderChargeItems();
+
+    return {
+      recalledChargeAfterRename,
     };
   }
 

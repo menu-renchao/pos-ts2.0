@@ -119,6 +119,7 @@ export class AdminPage extends PageObject {
   private readonly chargeOldNameInput: Locator;
   private readonly chargeNewNameInput: Locator;
   private readonly chargeRenameButton: Locator;
+  private readonly autoFixedChargeSetupButton: Locator;
   private readonly chargeRateTypeNameInput: Locator;
   private readonly chargeRateTypeSelect: Locator;
   private readonly chargeRateTypeSaveButton: Locator;
@@ -245,6 +246,7 @@ export class AdminPage extends PageObject {
     this.chargeOldNameInput = page.getByTestId('admin-charge-old-name');
     this.chargeNewNameInput = page.getByTestId('admin-charge-new-name');
     this.chargeRenameButton = page.getByTestId('admin-charge-rename');
+    this.autoFixedChargeSetupButton = page.getByTestId('admin-auto-fixed-charge-setup');
     this.chargeRateTypeNameInput = page.getByTestId('admin-charge-rate-type-name');
     this.chargeRateTypeSelect = page.getByTestId('admin-charge-rate-type');
     this.chargeRateTypeSaveButton = page.getByTestId('admin-charge-rate-type-save');
@@ -486,6 +488,24 @@ export class AdminPage extends PageObject {
 
   async renameManualCharge(oldName: string, newName: string): Promise<void> {
     await step(`修改手动加收名称 ${oldName} -> ${newName}`, async () => {
+      await expect(this.adminRoot).toBeVisible();
+      await this.chargeOldNameInput.fill(oldName);
+      await this.chargeNewNameInput.fill(newName);
+      await this.chargeRenameButton.click();
+    });
+  }
+
+  async setupAutoFixedCharge(chargeName: string, amount: number): Promise<void> {
+    await step(`配置自动固定加收 ${chargeName} 为 ${amount}`, async () => {
+      await expect(this.adminRoot).toBeVisible();
+      await this.chargeOldNameInput.fill(chargeName);
+      await this.chargeAmountInput.fill(String(amount));
+      await this.autoFixedChargeSetupButton.click();
+    });
+  }
+
+  async renameAutoCharge(oldName: string, newName: string): Promise<void> {
+    await step(`修改自动加收名称 ${oldName} -> ${newName}`, async () => {
       await expect(this.adminRoot).toBeVisible();
       await this.chargeOldNameInput.fill(oldName);
       await this.chargeNewNameInput.fill(newName);

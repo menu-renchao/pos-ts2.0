@@ -494,4 +494,17 @@ test.describe('stage2 order operation migration', () => {
     expect(result.selectedChargesAfterDelete).toEqual({ manu_test_fixed: 'Add $10.00' });
     expect(result.chargeAfterConfirm).toEqual({ manu_test_fixed: '10.00' });
   });
+
+  test('POS-27170 编辑订单时修改自动加收名称后应按新名称显示加收', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.renameAutoFixedChargeThenReadRecalledOrderCharge(environment.posHomeUrl);
+
+    expect(result.recalledChargeAfterRename).toEqual({ auto_test1: '10.00' });
+  });
 });
