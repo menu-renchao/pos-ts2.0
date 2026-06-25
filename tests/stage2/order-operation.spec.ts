@@ -434,4 +434,24 @@ test.describe('stage2 order operation migration', () => {
     expect(result.originTaxBeforeEdit).toBe(result.taxAfterEnteringEdit);
     expect(result.taxAfterConfirmCharge).toBeGreaterThan(result.taxAfterEnteringEdit);
   });
+
+  test('POS-27164 编辑订单时修改手动加收订单类型满足当前 Dine In 应保留加收', async ({
+    environment,
+    page,
+  }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.keepManualFixedChargeWhenOrderTypeStillMatchesAfterEdit(
+      environment.posHomeUrl,
+    );
+
+    expect(result.chargeBeforeConfirm).toEqual({ manu_test_fixed: '10.00' });
+    expect(result.selectedChargesAfterOrderTypeChange.manu_test_fixed).toBeTruthy();
+    expect(result.chargeAfterConfirm).toEqual({ manu_test_fixed: '10.00' });
+  });
 });

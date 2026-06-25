@@ -172,6 +172,14 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         <option value="false">Not Taxed</option>
       </select>
       <button data-testid="admin-charge-tax-save">Save Charge Tax</button>
+      <input data-testid="admin-charge-order-type-name" />
+      <select data-testid="admin-charge-order-types" multiple>
+        <option value="dine-in">Dine In</option>
+        <option value="delivery">Delivery</option>
+        <option value="pickup">Pick Up</option>
+        <option value="togo">To Go</option>
+      </select>
+      <button data-testid="admin-charge-order-types-save">Save Charge Order Types</button>
       <input data-testid="admin-kds-item-name" />
       <input data-testid="admin-kds-pos-name" />
       <button data-testid="admin-kds-pos-name-save">Save Item POS Name</button>
@@ -753,8 +761,22 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let currentOrderChargeLabel = '';
       let currentOrderChargeTaxed = false;
       let manualCharges = readStoredJson('offlineManualCharges', [
-        { amount: 10, name: 'manu_test_fixed', rate: 0, rateType: 'amount', taxed: false },
-        { amount: 10, name: 'manu_test_perc', rate: 0.1, rateType: 'percent', taxed: false },
+        {
+          amount: 10,
+          name: 'manu_test_fixed',
+          orderTypes: ['dine-in', 'delivery', 'pickup', 'togo'],
+          rate: 0,
+          rateType: 'amount',
+          taxed: false,
+        },
+        {
+          amount: 10,
+          name: 'manu_test_perc',
+          orderTypes: ['dine-in', 'delivery', 'pickup', 'togo'],
+          rate: 0.1,
+          rateType: 'percent',
+          taxed: false,
+        },
       ]);
       let currentWholeOrderDiscountRate = 0;
       let currentOrderTaxVoided = false;
@@ -889,6 +911,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const adminChargeTaxNameInput = document.querySelector('[data-testid="admin-charge-tax-name"]');
       const adminChargeTaxedSelect = document.querySelector('[data-testid="admin-charge-taxed"]');
       const adminChargeTaxSaveButton = document.querySelector('[data-testid="admin-charge-tax-save"]');
+      const adminChargeOrderTypeNameInput = document.querySelector('[data-testid="admin-charge-order-type-name"]');
+      const adminChargeOrderTypesSelect = document.querySelector('[data-testid="admin-charge-order-types"]');
+      const adminChargeOrderTypesSaveButton = document.querySelector('[data-testid="admin-charge-order-types-save"]');
       const kdsItemNameInput = document.querySelector('[data-testid="admin-kds-item-name"]');
       const kdsItemPosNameInput = document.querySelector('[data-testid="admin-kds-pos-name"]');
       const kdsItemPosNameSaveButton = document.querySelector('[data-testid="admin-kds-pos-name-save"]');
@@ -2394,11 +2419,20 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         return 'Add $' + Number(charge?.amount ?? currentChargeAmount(subtotal)).toFixed(2);
       }
 
+      function chargeAppliesToCurrentOrderType(charge) {
+        return !Array.isArray(charge?.orderTypes)
+          || charge.orderTypes.length === 0
+          || charge.orderTypes.includes(currentOrderType);
+      }
+
       function selectedManualCharge() {
         return manualCharges.find((charge) => (
-          charge.name === currentOrderChargeLabel
-          || Number(charge.amount || 0) === Number(currentOrderChargeFixedAmount || 0)
-          || Number(charge.rate || 0) === currentOrderChargeRate
+          chargeAppliesToCurrentOrderType(charge)
+          && (
+            charge.name === currentOrderChargeLabel
+            || Number(charge.amount || 0) === Number(currentOrderChargeFixedAmount || 0)
+            || Number(charge.rate || 0) === currentOrderChargeRate
+          )
         ));
       }
 
@@ -2416,7 +2450,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       function renderPresetChargeDialog() {
         presetChargeList.innerHTML = '';
         selectedChargeList.innerHTML = '';
-        manualCharges.forEach((charge) => {
+        manualCharges.filter(chargeAppliesToCurrentOrderType).forEach((charge) => {
           const button = document.createElement('button');
           button.dataset.testid = 'preset-charge';
           button.dataset.chargeName = charge.name;
@@ -3906,6 +3940,14 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         ));
         localStorage.setItem('offlineManualCharges', JSON.stringify(manualCharges));
       });
+      adminChargeOrderTypesSaveButton.addEventListener('click', () => {
+        const chargeName = adminChargeOrderTypeNameInput.value;
+        const orderTypes = [...adminChargeOrderTypesSelect.selectedOptions].map((option) => option.value);
+        manualCharges = manualCharges.map((charge) => (
+          charge.name === chargeName ? { ...charge, orderTypes } : charge
+        ));
+        localStorage.setItem('offlineManualCharges', JSON.stringify(manualCharges));
+      });
       orderTaxExemptButton.addEventListener('click', () => {
         currentOrderTaxVoided = true;
         renderOrderAmounts();
@@ -4775,6 +4817,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           currentOrderStatus = selectedSubOrderIndex !== null
             ? selectedRecallOrder.subOrderStatuses?.[selectedSubOrderIndex] || ''
             : selectedRecallOrder.status || '';
+          currentOrderType = selectedRecallOrder.orderType || currentOrderType;
           currentOrderPriceEdited = Boolean(selectedRecallOrder.priceEdited);
           currentCustomerName = selectedRecallOrder.customerName || null;
           orderGuestNameInput.value = selectedRecallOrder.customerName || '';

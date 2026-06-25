@@ -6,6 +6,8 @@ import type { CombineSameItemMode, MenuMode, RoundingStrategyOption } from '../.
 import type { StaffPermissionName } from '../../clients/pos-api/admin-staff.client.js';
 import { PageObject } from '../shared/page-object.js';
 
+export type ManualChargeOrderType = 'delivery' | 'dine-in' | 'pickup' | 'togo';
+
 export class AdminPage extends PageObject {
   private readonly analysisButton: Locator;
   private readonly analysisPage: Locator;
@@ -126,6 +128,9 @@ export class AdminPage extends PageObject {
   private readonly chargeTaxNameInput: Locator;
   private readonly chargeTaxedSelect: Locator;
   private readonly chargeTaxSaveButton: Locator;
+  private readonly chargeOrderTypeNameInput: Locator;
+  private readonly chargeOrderTypesSelect: Locator;
+  private readonly chargeOrderTypesSaveButton: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -248,6 +253,9 @@ export class AdminPage extends PageObject {
     this.chargeTaxNameInput = page.getByTestId('admin-charge-tax-name');
     this.chargeTaxedSelect = page.getByTestId('admin-charge-taxed');
     this.chargeTaxSaveButton = page.getByTestId('admin-charge-tax-save');
+    this.chargeOrderTypeNameInput = page.getByTestId('admin-charge-order-type-name');
+    this.chargeOrderTypesSelect = page.getByTestId('admin-charge-order-types');
+    this.chargeOrderTypesSaveButton = page.getByTestId('admin-charge-order-types-save');
   }
 
   async setUserDefaultLanguage(language: string): Promise<void> {
@@ -507,6 +515,18 @@ export class AdminPage extends PageObject {
       await this.chargeTaxNameInput.fill(chargeName);
       await this.chargeTaxedSelect.selectOption(taxed ? 'true' : 'false');
       await this.chargeTaxSaveButton.click();
+    });
+  }
+
+  async setManualChargeOrderTypes(
+    chargeName: string,
+    orderTypes: readonly ManualChargeOrderType[],
+  ): Promise<void> {
+    await step(`修改手动加收 ${chargeName} 订单类型为 ${orderTypes.join(', ')}`, async () => {
+      await expect(this.adminRoot).toBeVisible();
+      await this.chargeOrderTypeNameInput.fill(chargeName);
+      await this.chargeOrderTypesSelect.selectOption([...orderTypes]);
+      await this.chargeOrderTypesSaveButton.click();
     });
   }
 

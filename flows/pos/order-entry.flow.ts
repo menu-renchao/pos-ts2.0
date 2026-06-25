@@ -190,6 +190,12 @@ export type ManualChargeTaxChangeResult = {
   taxAfterEnteringEdit: number;
 };
 
+export type ManualChargeOrderTypeMatchResult = {
+  chargeAfterConfirm: Record<string, string>;
+  chargeBeforeConfirm: Record<string, string>;
+  selectedChargesAfterOrderTypeChange: Record<string, string>;
+};
+
 export type EvenSplitTipUnsplitResult = {
   combinedTipText: string;
 };
@@ -1276,6 +1282,41 @@ export class OrderEntryFlow {
       originTaxBeforeEdit,
       taxAfterConfirmCharge,
       taxAfterEnteringEdit,
+    };
+  }
+
+  async keepManualFixedChargeWhenOrderTypeStillMatchesAfterEdit(
+    homeUrl: string,
+  ): Promise<ManualChargeOrderTypeMatchResult> {
+    if (!this.adminPage) {
+      throw new Error('POS-27164 requires AdminPage');
+    }
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.applyPresetCharge('manu_test_fixed');
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.clickAdmin();
+    await this.adminPage.setManualChargeOrderTypes('manu_test_fixed', ['dine-in', 'delivery']);
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.clickEdit();
+
+    const chargeBeforeConfirm = await this.orderDishesPage.readOrderChargeItems();
+    await this.orderDishesPage.openChargeDialog();
+    const selectedChargesAfterOrderTypeChange = await this.orderDishesPage.readSelectedPresetCharges();
+    await this.orderDishesPage.confirmChargeDialog();
+    const chargeAfterConfirm = await this.orderDishesPage.readOrderChargeItems();
+
+    return {
+      chargeAfterConfirm,
+      chargeBeforeConfirm,
+      selectedChargesAfterOrderTypeChange,
     };
   }
 
