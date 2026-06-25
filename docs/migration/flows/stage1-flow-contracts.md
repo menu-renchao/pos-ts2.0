@@ -330,7 +330,7 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 | stage1/test_checkin_checkout.py | TestCheckInCheckOut | test_checkin_edit_staff_attendance: Boss wage edited after Check In must not change the checkout attendance wage snapshot | tests/stage1/checkin-checkout.spec.ts | `AttendanceFlow.checkoutBossAfterEditingWageAndReadAttendance` |
 | stage1/test_checkin_checkout.py | TestCheckInCheckOut | test_checkin_out_edit_attendance: editing wage and wage type on the latest Staff Attendance record must persist after save | tests/stage1/checkin-checkout.spec.ts | `AttendanceFlow.checkoutBossThenEditAttendanceWageAndRead` |
 | stage1/test_checkin_checkout.py | TestCheckInCheckOut | test_checkin_success_after_earlist_checkin_time: staff can check in when current time is within configured earliest check-in window | tests/stage1/checkin-checkout.spec.ts | `AttendanceFlow.checkInWithinEarliestAllowedTime` |
-| stage1/test_checkin_checkout.py | TestCheckInCheckOut | remaining auto checkout cases | tests/stage1/checkin-checkout.spec.ts | not-started |
+| stage1/test_checkin_checkout.py | TestCheckInCheckOut | test_auto_checkout_success_after_set_auto_checkout_time: staff is automatically checked out after configured auto clock-out time | tests/stage1/checkin-checkout.spec.ts | `AttendanceFlow.checkInThenAutoCheckoutAfterConfiguredTime` |
 | stage1/test_cashin_cashout.py | TestCashInCashOut | test_cash_in_chinese: Chinese mode opens Cash In/Out and page text contains `现金备款` | tests/stage1/cashin-cashout.spec.ts | `CashDrawerFlow.openCashInChinesePage` |
 | stage1/test_cashin_cashout.py | TestCashInCashOut | test_cashout_chinese: Chinese mode completes Cash In, reopens Cash In/Out, verifies Cash Out text `现金结算`, and completes Cash Out | tests/stage1/cashin-cashout.spec.ts | `CashDrawerFlow.completeCashInAndOpenCashOutChinesePage` |
 
@@ -343,6 +343,7 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 - For `test_checkin_edit_staff_attendance`, Boss wage is changed from `20`/`Hourly` to `30`/`Weekly` after Check In, but the checkout attendance record must keep the Check In snapshot.
 - For `test_checkin_out_edit_attendance`, a completed Boss attendance record exists and its editable wage fields can be changed to `40` and `Monthly`.
 - For `test_checkin_success_after_earlist_checkin_time`, shift schedule is enabled, staff `55` has a same-day shift plan with start offset `5`, end offset `5`, and earliest clock-in offset `5`, and employee password `123` represents that scheduled staff for the shift check.
+- For `test_auto_checkout_success_after_set_auto_checkout_time`, shift schedule and auto clock out are enabled, staff `55` has a same-day shift plan with start offset `-5`, end offset `1`, earliest clock-in offset `1`, and auto clock-out offset `1`, and employee password `123` represents that scheduled staff.
 - For `test_cash_in_chinese`, POS home can switch to Chinese mode and employee password `11` is accepted before opening Cash In/Out.
 - For `test_cashout_chinese`, the first Cash In completion changes the offline cash drawer state so the next Cash In/Out entry displays Cash Out text.
 
@@ -357,8 +358,9 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 7. For `AttendanceFlow.checkoutBossAfterEditingWageAndReadAttendance`, set Boss wage `20`/`Hourly`, Check In, edit Boss to `30`/`Weekly`, Checkout, then read the last Staff Attendance wage and wage type.
 8. For `AttendanceFlow.checkoutBossThenEditAttendanceWageAndRead`, create a Boss attendance record from `20`/`Hourly`, open the latest Staff Attendance record, edit wage to `40` and wage type to `Monthly`, save, re-search the latest record, then read wage and wage type.
 9. For `AttendanceFlow.checkInWithinEarliestAllowedTime`, enable `adminSettings.shiftSchedule`, save the staff `55` shift plan, open POS, synchronize offline shift state, log out and log in with password `123`, open Check In, read the clock status, then Checkout and clear the shift setup.
-10. For `CashDrawerFlow.openCashInChinesePage`, open POS home, switch language to Chinese, open Cash In/Out with password `11`, and read the page title text.
-11. For `CashDrawerFlow.completeCashInAndOpenCashOutChinesePage`, complete Cash In with note `test`, close the source-equivalent cover, reopen Cash In/Out, read Cash Out page text, then complete Cash Out with the same note.
+10. For `AttendanceFlow.checkInThenAutoCheckoutAfterConfiguredTime`, enable `adminSettings.shiftSchedule` and `adminSettings.autoClockOut`, save the staff `55` auto clock-out shift plan, open POS, synchronize offline shift state, log out and log in with password `123`, Check In, refresh to simulate the elapsed auto clock-out window, read the clock status, then clear the shift setup.
+11. For `CashDrawerFlow.openCashInChinesePage`, open POS home, switch language to Chinese, open Cash In/Out with password `11`, and read the page title text.
+12. For `CashDrawerFlow.completeCashInAndOpenCashOutChinesePage`, complete Cash In with note `test`, close the source-equivalent cover, reopen Cash In/Out, read Cash Out page text, then complete Cash Out with the same note.
 
 ### Expected Assertions
 
@@ -367,7 +369,7 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 - `AttendanceFlow.checkoutBossAfterEditingWageAndReadAttendance` returns wage `20` and wage type `1`, proving the attendance record uses Check In time wage data instead of the later Staff edit.
 - `AttendanceFlow.checkoutBossThenEditAttendanceWageAndRead` returns wage `40` and wage type `4`, proving Staff Attendance edits persist after save and reload.
 - `AttendanceFlow.checkInWithinEarliestAllowedTime` returns clock status containing `Clocked In`, proving the configured earliest clock-in window allows the scheduled staff to check in.
-- Auto-checkout scenarios use deterministic time setup or are marked `live-gap`.
+- `AttendanceFlow.checkInThenAutoCheckoutAfterConfiguredTime` returns clock status that does not contain `Clocked In`, proving the configured auto clock-out path moves the employee out of successful Check In state after refresh.
 - Cash-in/cash-out amounts, reasons, and visible records match source expectations.
 - `CashDrawerFlow.openCashInChinesePage` returns page text containing `现金备款`, matching the source `expected_ret`.
 - `CashDrawerFlow.completeCashInAndOpenCashOutChinesePage` returns page text containing `现金结算`, matching the source `expected_ret` after completing Cash In.
@@ -381,6 +383,7 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 - `CashInOutPage.closeCover` owns the source-equivalent cover click after completing Cash In.
 - `PosHomePage.openCheckIn` and `PosHomePage.clickCheckoutButton` own POS Check In/Checkout entry and action.
 - `PosHomePage.applyOfflineShiftSchedule`, `PosHomePage.logoutAndLogin`, and `PosHomePage.readClockText` own offline shift synchronization, employee re-login, and clock status reads for earliest clock-in validation.
+- `PosHomePage.refreshAndReadClockText` owns the source-equivalent POS refresh and post-refresh clock status read used by auto clock-out validation.
 - `AdminPage.inputStaffWage`, `AdminPage.selectWageType`, and `AdminPage.clickStaffSave` own Boss wage setup.
 - `AdminPage.inputStaffWage`, `AdminPage.selectWageType`, and `AdminPage.clickStaffSave` also own the post-Check In Boss wage edit used by `test_checkin_edit_staff_attendance`.
 - `AdminPage.clickAttendanceSearch`, `AdminPage.clickLastAttendance`, `AdminPage.readAttendanceWage`, and `AdminPage.readAttendanceWageType` own Staff Attendance record reads.
@@ -397,6 +400,7 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 - `test_checkin_edit_staff_attendance` uses source literals `20`/`Hourly` before Check In and `30`/`Weekly` after Check In; no external client or typed test-data dependency is required in first-round offline mode.
 - `test_checkin_out_edit_attendance` uses source literals `20`/`Hourly` for the original Boss attendance and `40`/`Monthly` for the Staff Attendance edit; no external client or typed test-data dependency is required in first-round offline mode.
 - `test_checkin_success_after_earlist_checkin_time` uses `StubAdminSettingsClient.setSetting` and `StubAdminSettingsClient.readSetting` for `adminSettings.shiftSchedule`, plus `StubStaffShiftPlanClient.saveShiftPlan`, `readShiftPlans`, and `deleteShiftPlan` for source-equivalent staff `55` shift setup.
+- `test_auto_checkout_success_after_set_auto_checkout_time` uses `StubAdminSettingsClient.setSetting` and `StubAdminSettingsClient.readSetting` for `adminSettings.shiftSchedule` and `adminSettings.autoClockOut`, plus `StubStaffShiftPlanClient.saveShiftPlan`, `readShiftPlans`, and `deleteShiftPlan` for source-equivalent staff `55` auto clock-out setup.
 - `test_cash_in_chinese` has no external client or typed test-data dependency in first-round offline mode.
 - `test_cashout_chinese` uses only the source literal note `test`; no external client or typed test-data dependency is required in first-round offline mode.
 
@@ -407,6 +411,7 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 - Offline Staff Attendance keeps the Check In wage snapshot even if Boss wage settings are edited before Checkout.
 - Offline Staff Attendance persists wage and wage type edits on the latest record after Save and renders the saved values when searched again.
 - Offline shift schedule state is stored in localStorage and updated through `offline-shift-schedule-updated`; when enabled, password `123` maps to shift staff `55`, and Check In succeeds only when a plan exists and `startOffsetMinutes >= earliestClockInOffset`.
+- Offline auto clock-out state is stored in localStorage and updated through `offline-shift-schedule-updated`; when enabled and the current staff's shift plan has `autoClockOutOffset`, the next POS refresh converts a persisted `clocked-in` state to `Checked Out`.
 - Stub cash drawer stores deterministic cash-in/cash-out records.
 - Offline POS renders the Cash In/Out page title as `现金备款` after switching the home language to Chinese.
 - Offline POS toggles cash drawer mode from Cash In to Cash Out after note OK, renders `现金结算` on the next Chinese entry, and toggles back after completing Cash Out.
@@ -421,6 +426,7 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 | attendance wage snapshot | Real Staff edit persistence after Check In and attendance snapshot timing need live validation | Run live smoke for `test_checkin_edit_staff_attendance` and record selector/data gaps |
 | attendance record edit | Real Attendance edit dialog/input/select/save selectors, close/reopen Staff behavior, save refresh timing, and wage type value mapping need live validation | Run live smoke for `test_checkin_out_edit_attendance` and record selector/data gaps |
 | earliest clock-in | Real AdminSettingAPI shift schedule, StaffShiftPlanAPI save/delete/get, POS refresh/logout/login, Check In timing calculation, and success selector require live validation | Run live smoke for `test_checkin_success_after_earlist_checkin_time` and record selector/data/API gaps |
+| auto clock-out | Real AdminSettingAPI auto checkout, StaffShiftPlanAPI autoClockOutTime, POS refresh/logout/login, four-minute timing wait, and check-in success selector require live validation | Run live smoke for `test_auto_checkout_success_after_set_auto_checkout_time` and record selector/data/API/timing gaps |
 | cash-in Chinese page | Real home submenu, password popup, language persistence, loading behavior, and Cash In/Out title selector/text need live validation | Run live smoke for `test_cash_in_chinese` and record selector/data gaps |
 | cash-out Chinese page | Real complete button, base amount alert/confirm, note input, keyboard hide, cover click, Cash In-to-Cash Out state transition, and Cash Out title text need live validation | Run live smoke for `test_cashout_chinese` and record selector/data gaps |
 

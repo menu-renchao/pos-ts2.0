@@ -44,4 +44,18 @@ test.describe('stage1 check-in checkout migration', () => {
 
     expect(clockText).toContain('Clocked In');
   });
+
+  test('POS-43836 配置自动打卡下班后员工到自动下班时间应不再显示打卡成功', {
+    annotation: { type: 'issue', description: 'POS-43836' },
+  }, async ({ adminSettingsClient, environment, page, staffShiftPlanClient }) => {
+    const flow = new AttendanceFlow(new PosHomePage(page), new AdminPage(page));
+
+    const clockText = await flow.checkInThenAutoCheckoutAfterConfiguredTime(
+      environment.posHomeUrl,
+      adminSettingsClient,
+      staffShiftPlanClient,
+    );
+
+    expect(clockText).not.toContain('Clocked In');
+  });
 });

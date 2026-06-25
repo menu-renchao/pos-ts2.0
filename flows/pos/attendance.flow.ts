@@ -147,4 +147,40 @@ export class AttendanceFlow {
       return clockText;
     });
   }
+
+  async checkInThenAutoCheckoutAfterConfiguredTime(
+    homeUrl: string,
+    adminSettingsClient: AdminSettingsClient,
+    staffShiftPlanClient: StaffShiftPlanClient,
+  ): Promise<string> {
+    return step('配置自动打卡下班后员工到自动下班时间自动下班', async () => {
+      await adminSettingsClient.setSetting(adminSettings.shiftSchedule, true);
+      await adminSettingsClient.setSetting(adminSettings.autoClockOut, true);
+      await staffShiftPlanClient.saveShiftPlan({
+        staffId: 55,
+        workDayOffset: 0,
+        startOffsetMinutes: -5,
+        endOffsetMinutes: 1,
+        earliestClockInOffset: 1,
+        autoClockOutOffset: 1,
+      });
+
+      await this.homePage.open(homeUrl);
+      await this.homePage.applyOfflineShiftSchedule(
+        (await adminSettingsClient.readSetting(adminSettings.shiftSchedule)) === true,
+        await staffShiftPlanClient.readShiftPlans(),
+        (await adminSettingsClient.readSetting(adminSettings.autoClockOut)) === true,
+      );
+      await this.homePage.logoutAndLogin('123');
+      await this.homePage.openCheckIn();
+      const clockText = await this.homePage.refreshAndReadClockText();
+
+      await staffShiftPlanClient.deleteShiftPlan(55);
+      await adminSettingsClient.setSetting(adminSettings.shiftSchedule, false);
+      await adminSettingsClient.setSetting(adminSettings.autoClockOut, false);
+      await this.homePage.applyOfflineShiftSchedule(false, [], false);
+
+      return clockText;
+    });
+  }
 }

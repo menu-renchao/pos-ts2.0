@@ -616,8 +616,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let currentLanguage = localStorage.getItem('currentLanguage') || 'Default';
       let cashDrawerMode = 'cash-in';
       let userDefaultLanguage = localStorage.getItem('userDefaultLanguage') || 'Default';
-      let clockState = 'off';
-      let currentClockStaffSnapshot = null;
+      let clockState = localStorage.getItem('offlineClockState') || 'off';
+      let currentClockStaffSnapshot = readStoredJson('offlineClockStaffSnapshot', null);
       let deliveryHistoricalAddress = '';
       let messages = [];
       let currentOrderItems = [];
@@ -651,6 +651,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let currentKdsCategoryDiscountAllowance = localStorage.getItem('currentKdsCategoryDiscountAllowance') !== 'false';
       let currentRoundingStrategy = localStorage.getItem('currentRoundingStrategy') || 'no_rounding';
       let currentShiftScheduleEnabled = localStorage.getItem('offlineShiftScheduleEnabled') === 'true';
+      let currentAutoClockOutEnabled = localStorage.getItem('offlineAutoClockOutEnabled') === 'true';
       let currentShiftPlans = readStoredJson('offlineShiftPlans', []);
       let currentCategoryName = '';
       let currentOrderChargeRate = 0;
@@ -674,7 +675,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let pendingWholeOrderDiscountPercent = null;
       let pendingItemDiscount = null;
       let pendingRecallWholeOrderDiscountAmount = null;
-      let currentEmployeePassword = '11';
+      let currentEmployeePassword = localStorage.getItem('offlineEmployeePassword') || '11';
       const defaultStaffDiscountLimits = { Server: 20, Manager: 50, Boss: 100 };
       let currentStaffDiscountLimits = {
         ...defaultStaffDiscountLimits,
@@ -1197,6 +1198,16 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         checkoutButton.hidden = clockState === 'off';
       }
 
+      function persistClockState() {
+        localStorage.setItem('offlineClockState', clockState);
+        localStorage.setItem('offlineClockText', clockText.textContent || '');
+        if (currentClockStaffSnapshot) {
+          localStorage.setItem('offlineClockStaffSnapshot', JSON.stringify(currentClockStaffSnapshot));
+        } else {
+          localStorage.removeItem('offlineClockStaffSnapshot');
+        }
+      }
+
       function renderCashInOutTitle() {
         if (currentLanguage === 'Chinese') {
           cashInOutTitle.textContent = cashDrawerMode === 'cash-in' ? '现金备款' : '现金结算';
@@ -1660,6 +1671,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
 
       window.addEventListener('offline-shift-schedule-updated', (event) => {
         currentShiftScheduleEnabled = Boolean(event.detail?.shiftScheduleEnabled);
+        currentAutoClockOutEnabled = Boolean(event.detail?.shiftAutoClockOutEnabled);
         currentShiftPlans = Array.isArray(event.detail?.shiftPlans) ? event.detail.shiftPlans : [];
       });
 
@@ -1680,6 +1692,27 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           Number(plan.earliestClockInOffset || 0) >= 0 &&
           Number(plan.startOffsetMinutes || 0) >= Number(plan.earliestClockInOffset || 0)
         );
+      }
+
+      function shouldAutoClockOutCurrentEmployee() {
+        if (!currentAutoClockOutEnabled || clockState !== 'clocked-in') {
+          return false;
+        }
+        const plan = currentEmployeeShiftPlan();
+        return plan?.autoClockOutOffset !== undefined && plan?.autoClockOutOffset !== null;
+      }
+
+      function applyAutoClockOutIfDue() {
+        if (!shouldAutoClockOutCurrentEmployee()) {
+          return;
+        }
+        if (currentClockStaffSnapshot) {
+          attendanceRecords.push({ ...currentClockStaffSnapshot });
+          currentClockStaffSnapshot = null;
+        }
+        clockState = 'off';
+        clockText.textContent = 'Checked Out';
+        persistClockState();
       }
 
       function canOpenReportWithPassword(password) {
@@ -2774,6 +2807,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         }
         toast.textContent = '';
         currentEmployeePassword = passwordInput.value;
+        localStorage.setItem('offlineEmployeePassword', currentEmployeePassword);
         document.body.dataset.employeeContext = 'accepted';
       });
       switchChineseButton.addEventListener('click', () => {
@@ -2804,6 +2838,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         if (clockState === 'off') {
           if (!canCurrentEmployeeClockIn()) {
             clockText.textContent = 'Cannot Clock In';
+            persistClockState();
             renderClockControls();
             return;
           }
@@ -2815,17 +2850,20 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           };
           clockState = 'clocked-in';
           clockText.textContent = 'Clocked In at ' + clockNow();
+          persistClockState();
         }
         renderClockControls();
       });
       breakButton.addEventListener('click', () => {
         clockState = 'on-break';
         clockText.textContent = 'On Break from ' + clockNow();
+        persistClockState();
         renderClockControls();
       });
       backToWorkButton.addEventListener('click', () => {
         clockState = 'clocked-in';
         clockText.textContent = 'Clocked In at ' + clockNow();
+        persistClockState();
         renderClockControls();
       });
       checkoutButton.addEventListener('click', () => {
@@ -2835,6 +2873,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         }
         clockState = 'off';
         clockText.textContent = 'Checked Out';
+        persistClockState();
         renderClockControls();
       });
       document.querySelector('[data-testid="home-admin"]').addEventListener('click', () => {
@@ -4183,6 +4222,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       countCanBeDecimalSelect.value = String(currentCountCanBeDecimal);
       kdsCategoryRequiredSelect.value = String(currentKdsCategoryRequired);
       kdsCategoryDiscountAllowanceSelect.value = String(currentKdsCategoryDiscountAllowance);
+      clockText.textContent = localStorage.getItem('offlineClockText') || '';
+      applyAutoClockOutIfDue();
       renderClockControls();
       if (window.location.pathname.includes('/emenu/')) {
         showEmenuPanel('main');

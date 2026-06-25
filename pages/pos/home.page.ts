@@ -228,6 +228,13 @@ export class PosHomePage extends PageObject {
     });
   }
 
+  async refreshAndReadClockText(): Promise<string> {
+    return step('刷新 POS 首页并读取员工打卡状态文案', async () => {
+      await this.refresh();
+      return this.readClockText();
+    });
+  }
+
   async applyOfflineStaffDiscountLimits(limits: readonly StaffRoleDiscountLimit[]): Promise<void> {
     await step('同步离线员工角色最大折扣配置', async () => {
       await this.page.evaluate((roleLimits) => {
@@ -258,19 +265,24 @@ export class PosHomePage extends PageObject {
     });
   }
 
-  async applyOfflineShiftSchedule(enabled: boolean, plans: readonly StaffShiftPlan[]): Promise<void> {
+  async applyOfflineShiftSchedule(
+    enabled: boolean,
+    plans: readonly StaffShiftPlan[],
+    autoClockOutEnabled = false,
+  ): Promise<void> {
     await step('同步离线员工排班配置', async () => {
       await this.page.evaluate(
-        ({ shiftScheduleEnabled, shiftPlans }) => {
+        ({ shiftScheduleEnabled, shiftPlans, shiftAutoClockOutEnabled }) => {
           localStorage.setItem('offlineShiftScheduleEnabled', String(shiftScheduleEnabled));
           localStorage.setItem('offlineShiftPlans', JSON.stringify(shiftPlans));
+          localStorage.setItem('offlineAutoClockOutEnabled', String(shiftAutoClockOutEnabled));
           window.dispatchEvent(
             new CustomEvent('offline-shift-schedule-updated', {
-              detail: { shiftScheduleEnabled, shiftPlans },
+              detail: { shiftScheduleEnabled, shiftPlans, shiftAutoClockOutEnabled },
             }),
           );
         },
-        { shiftScheduleEnabled: enabled, shiftPlans: plans },
+        { shiftScheduleEnabled: enabled, shiftPlans: plans, shiftAutoClockOutEnabled: autoClockOutEnabled },
       );
     });
   }

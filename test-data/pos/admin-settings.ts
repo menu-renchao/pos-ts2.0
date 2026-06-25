@@ -11,6 +11,7 @@ export const adminSettings = {
   countCanBeDecimal: 'countCanBeDecimal',
   roundingStrategy: 'roundingStrategy',
   shiftSchedule: 'shiftSchedule',
+  autoClockOut: 'autoClockOut',
 } as const;
 
 export type AdminSettingName = (typeof adminSettings)[keyof typeof adminSettings];
