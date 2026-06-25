@@ -158,6 +158,13 @@ export type ManualChargeRateTypeToPercentResult = {
   selectedChargesAfterRateTypeChange: Record<string, string>;
 };
 
+export type ManualChargeRateTypeToAmountResult = {
+  initialChargeBeforeSave: Record<string, string>;
+  initialSubtotal: number;
+  recalledChargeAfterConfirm: Record<string, string>;
+  selectedChargesAfterRateTypeChange: Record<string, string>;
+};
+
 export type EvenSplitTipUnsplitResult = {
   combinedTipText: string;
 };
@@ -1064,6 +1071,43 @@ export class OrderEntryFlow {
       initialChargeBeforeSave,
       recalledChargeAfterReapply,
       recalledSubtotal,
+      selectedChargesAfterRateTypeChange,
+    };
+  }
+
+  async convertManualPercentChargeToFixedThenConfirmInRecalledOrder(
+    homeUrl: string,
+  ): Promise<ManualChargeRateTypeToAmountResult> {
+    if (!this.adminPage) {
+      throw new Error('POS-27158 requires AdminPage');
+    }
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.applyPresetCharge('manu_test_perc');
+    const initialChargeBeforeSave = await this.orderDishesPage.readOrderChargeItems();
+    const initialSubtotal = await this.orderDishesPage.readSubtotal();
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.clickAdmin();
+    await this.adminPage.setManualChargeRateType('manu_test_perc', 'amount');
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.clickEdit();
+
+    await this.orderDishesPage.openChargeDialog();
+    const selectedChargesAfterRateTypeChange = await this.orderDishesPage.readSelectedPresetCharges();
+    await this.orderDishesPage.confirmChargeDialog();
+    const recalledChargeAfterConfirm = await this.orderDishesPage.readOrderChargeItems();
+
+    return {
+      initialChargeBeforeSave,
+      initialSubtotal,
+      recalledChargeAfterConfirm,
       selectedChargesAfterRateTypeChange,
     };
   }

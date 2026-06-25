@@ -842,6 +842,12 @@ export class OrderDishesPage extends PageObject {
     });
   }
 
+  async confirmChargeDialog(): Promise<void> {
+    await step('确认整单加收弹窗', async () => {
+      await this.page.getByTestId('order-charge-ok').click();
+    });
+  }
+
   async openDiscountAndReadWholeOrderPrice(): Promise<string> {
     return step('打开折扣界面并读取整单金额', async () => {
       await this.orderDiscountButton.click();

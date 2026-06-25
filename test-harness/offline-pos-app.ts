@@ -743,6 +743,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let currentOrderChargeLabel = '';
       let manualCharges = readStoredJson('offlineManualCharges', [
         { amount: 10, name: 'manu_test_fixed', rate: 0, rateType: 'amount' },
+        { amount: 10, name: 'manu_test_perc', rate: 0.1, rateType: 'percent' },
       ]);
       let currentWholeOrderDiscountRate = 0;
       let currentOrderTaxVoided = false;
@@ -2375,6 +2376,24 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         return 'Add $' + Number(charge?.amount ?? currentChargeAmount(subtotal)).toFixed(2);
       }
 
+      function selectedManualCharge() {
+        return manualCharges.find((charge) => (
+          charge.name === currentOrderChargeLabel
+          || Number(charge.amount || 0) === Number(currentOrderChargeFixedAmount || 0)
+          || Number(charge.rate || 0) === currentOrderChargeRate
+        ));
+      }
+
+      function syncCurrentChargeFromManualConfig() {
+        const charge = selectedManualCharge();
+        if (!charge) {
+          return;
+        }
+        currentOrderChargeRate = Number(charge.rate || 0);
+        currentOrderChargeFixedAmount = charge.rateType === 'amount' ? Number(charge.amount || 0) : null;
+        currentOrderChargeLabel = charge.name;
+      }
+
       function renderPresetChargeDialog() {
         presetChargeList.innerHTML = '';
         selectedChargeList.innerHTML = '';
@@ -2393,11 +2412,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           presetChargeList.appendChild(button);
         });
         if (currentOrderChargeRate || currentOrderChargeFixedAmount !== null) {
-          const selectedCharge = manualCharges.find((charge) => (
-            charge.name === currentOrderChargeLabel
-            || Number(charge.amount || 0) === Number(currentOrderChargeFixedAmount || 0)
-            || Number(charge.rate || 0) === currentOrderChargeRate
-          ));
+          const selectedCharge = selectedManualCharge();
           const selected = document.createElement('div');
           selected.dataset.testid = 'selected-charge-item';
           selected.dataset.chargeName = selectedCharge?.name || currentOrderChargeLabel;
@@ -3802,6 +3817,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         renderPresetChargeDialog();
       });
       orderChargeOkButton.addEventListener('click', () => {
+        syncCurrentChargeFromManualConfig();
         orderChargeDialog.hidden = true;
         renderOrderAmounts();
       });
