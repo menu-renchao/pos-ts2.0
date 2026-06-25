@@ -4,6 +4,12 @@ export const staffSamples = {
   noVoidPrintedItem: { id: 'staff-1', password: '123', permissions: ['order:create'] },
   noNote: { id: 'staff-1', password: '123', permissions: ['order:create'] },
   noAnalysis: { id: '1', password: '123', removedPermission: 'ANALYSIS' },
+  personalReportOnly: {
+    id: '1',
+    password: '123',
+    removedPermissions: ['VIEW_HISTORY_ORDERS', 'REPORT', 'TOTAL_REPORT'],
+    addedPermissions: ['PERSONAL_REPORT'],
+  },
 } as const;
 
 export const validEmployeePassword = staffSamples.manager.password;
@@ -51,4 +57,8 @@ export const staffDiscountSamples = {
 export const staffPermissionSamples = {
   analysisPermissionName: 'ANALYSIS',
   analysisPermissionDeniedAlert: 'do not have permission ANALYSIS',
+  viewHistoryOrdersPermissionName: 'VIEW_HISTORY_ORDERS',
+  reportPermissionName: 'REPORT',
+  totalReportPermissionName: 'TOTAL_REPORT',
+  personalReportPermissionName: 'PERSONAL_REPORT',
 } as const;

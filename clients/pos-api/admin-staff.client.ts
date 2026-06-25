@@ -19,6 +19,7 @@ export interface AdminStaffClient {
   editRoleMaxDiscount(role: StaffRoleName, maximumDiscountPercent: number): Promise<void>;
   readRoleMaxDiscounts(): Promise<StaffRoleDiscountLimit[]>;
   editStaffRemoveFunctions(staffId: string, permissions: readonly StaffPermissionName[]): Promise<void>;
+  editStaffAddFunctions(staffId: string, permissions: readonly StaffPermissionName[]): Promise<void>;
   readStaffPermissionOverrides(): Promise<StaffPermissionOverride[]>;
 }
 
@@ -49,6 +50,20 @@ export class StubAdminStaffClient implements AdminStaffClient {
       const removedPermissions = [...new Set([...current.removedPermissions, ...permissions])];
       this.permissionOverrides.set(staffId, {
         ...current,
+        removedPermissions,
+      });
+    });
+  }
+
+  async editStaffAddFunctions(staffId: string, permissions: readonly StaffPermissionName[]): Promise<void> {
+    await step(`增加员工 ${staffId} 权限 ${permissions.join(', ')}`, async () => {
+      const current = this.permissionOverrideFor(staffId);
+      const addedPermissions = [...new Set([...current.addedPermissions, ...permissions])];
+      const addedPermissionSet = new Set<StaffPermissionName>(permissions);
+      const removedPermissions = current.removedPermissions.filter((permission) => !addedPermissionSet.has(permission));
+      this.permissionOverrides.set(staffId, {
+        ...current,
+        addedPermissions,
         removedPermissions,
       });
     });

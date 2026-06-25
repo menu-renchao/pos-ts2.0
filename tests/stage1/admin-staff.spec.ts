@@ -4,6 +4,7 @@ import { AdminPage } from '../../pages/pos/admin.page.js';
 import { PosHomePage } from '../../pages/pos/home.page.js';
 import { OrderDishesPage } from '../../pages/pos/order-dishes.page.js';
 import { RecallPage } from '../../pages/pos/recall.page.js';
+import { ReportPage } from '../../pages/pos/report.page.js';
 import { jiraIssue } from '../../utils/jira.js';
 
 test.describe('stage1 admin staff migration', () => {
@@ -218,6 +219,28 @@ test.describe('stage1 admin staff migration', () => {
 
       expect(result.permissionAlert).toContain('do not have permission ANALYSIS');
       expect(result.isInAnalysisPage).toBe(true);
+    },
+  );
+
+  test(
+    'POS-33771 无 View History 权限员工查看个人报表应展示当天 Staff Report 时间范围',
+    {
+      annotation: jiraIssue('POS-33771'),
+    },
+    async ({ adminStaffClient, environment, page }) => {
+      const flow = new StaffPermissionFlow(
+        new PosHomePage(page),
+        new OrderDishesPage(page),
+        undefined,
+        adminStaffClient,
+        undefined,
+        new ReportPage(page),
+      );
+
+      const result = await flow.openTodayStaffReportWhenStaffOnlyHasPersonalReport(environment.posHomeUrl);
+
+      expect(result.startTime).toContain(result.today);
+      expect(result.endTime).toContain(result.tomorrow);
     },
   );
 });

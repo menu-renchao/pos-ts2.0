@@ -3,6 +3,7 @@ import type { AdminPage } from '../../pages/pos/admin.page.js';
 import type { PosHomePage } from '../../pages/pos/home.page.js';
 import type { OrderDishesPage } from '../../pages/pos/order-dishes.page.js';
 import type { RecallPage } from '../../pages/pos/recall.page.js';
+import type { ReportPage } from '../../pages/pos/report.page.js';
 import {
   staffDiscountRoleSamples,
   staffDiscountSamples,
@@ -55,6 +56,13 @@ export type AdminAnalysisPermissionResult = {
   isInAnalysisPage: boolean;
 };
 
+export type StaffReportDateRangeResult = {
+  startTime: string;
+  endTime: string;
+  today: string;
+  tomorrow: string;
+};
+
 export type AuthorizedWholeOrderDiscountResult = {
   permissionTip: string;
   subtotal: number;
@@ -82,6 +90,7 @@ export class StaffPermissionFlow {
     private readonly recallPage?: RecallPage,
     private readonly adminStaffClient?: AdminStaffClient,
     private readonly adminPage?: AdminPage,
+    private readonly reportPage?: ReportPage,
   ) {}
 
   async rejectWholeOrderDiscountAboveServerLimitWithoutPassword(homeUrl: string): Promise<WholeOrderDiscountPermissionResult> {
@@ -345,6 +354,33 @@ export class StaffPermissionFlow {
     });
   }
 
+  async openTodayStaffReportWhenStaffOnlyHasPersonalReport(homeUrl: string): Promise<StaffReportDateRangeResult> {
+    return step('无 View History 权限员工查看当天 Staff Report', async () => {
+      const adminStaffClient = this.requireAdminStaffClient();
+      const reportPage = this.requireReportPage();
+
+      await adminStaffClient.editStaffRemoveFunctions(
+        staffSamples.personalReportOnly.id,
+        staffSamples.personalReportOnly.removedPermissions,
+      );
+      await adminStaffClient.editStaffAddFunctions(
+        staffSamples.personalReportOnly.id,
+        staffSamples.personalReportOnly.addedPermissions,
+      );
+
+      await this.homePage.open(homeUrl);
+      await this.homePage.applyOfflineStaffPermissionOverrides(await adminStaffClient.readStaffPermissionOverrides());
+      await this.homePage.inputEmployeePassword(staffSamples.personalReportOnly.password);
+      await this.homePage.clickReport();
+      await reportPage.inputPasswordInPopup(staffSamples.personalReportOnly.password);
+      await reportPage.enterTotalReport();
+      await reportPage.openStaffReport();
+      const { startTime, endTime } = await reportPage.readStaffReportDateRange();
+
+      return { startTime, endTime, today: localIsoDate(0), tomorrow: localIsoDate(1) };
+    });
+  }
+
   async rejectRecallWholeOrderAmountDiscountAboveServerLimitWithoutPassword(
     homeUrl: string,
   ): Promise<WholeOrderDiscountPermissionResult> {
@@ -445,4 +481,20 @@ export class StaffPermissionFlow {
     }
     return this.adminPage;
   }
+
+  private requireReportPage(): ReportPage {
+    if (!this.reportPage) {
+      throw new Error('ReportPage is required for staff report permission flows');
+    }
+    return this.reportPage;
+  }
+}
+
+function localIsoDate(offsetDays: number): string {
+  const date = new Date();
+  date.setDate(date.getDate() + offsetDays);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }

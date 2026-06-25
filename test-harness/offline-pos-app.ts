@@ -459,11 +459,17 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
     </section>
     <section data-testid="report-page" hidden>
       <h1>Report</h1>
+      <button data-testid="report-total-report">Total Report</button>
+      <button data-testid="report-staff-report">Staff Report</button>
       <select data-testid="report-order-type">
         <option value="ALL">ALL</option>
         <option value="CUSTOM_D">CUSTOM_D</option>
       </select>
       <div data-testid="report-overview-net-sales">$0.00</div>
+      <section data-testid="report-right-iframe" hidden>
+        <div data-testid="report-start-time"></div>
+        <div data-testid="report-end-time"></div>
+      </section>
     </section>
     <section data-testid="delivery-page" hidden>
       <input data-testid="delivery-phone" />
@@ -949,8 +955,13 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const reportPasswordInput = document.querySelector('[data-testid="report-password"]');
       const reportPasswordSaveButton = document.querySelector('[data-testid="report-password-save"]');
       const reportPage = document.querySelector('[data-testid="report-page"]');
+      const reportTotalReportButton = document.querySelector('[data-testid="report-total-report"]');
+      const reportStaffReportButton = document.querySelector('[data-testid="report-staff-report"]');
       const reportOrderTypeSelect = document.querySelector('[data-testid="report-order-type"]');
       const reportOverviewNetSales = document.querySelector('[data-testid="report-overview-net-sales"]');
+      const reportRightIframe = document.querySelector('[data-testid="report-right-iframe"]');
+      const reportStartTime = document.querySelector('[data-testid="report-start-time"]');
+      const reportEndTime = document.querySelector('[data-testid="report-end-time"]');
       const supportPage = document.querySelector('[data-testid="support-page"]');
       const messageCenter = document.querySelector('[data-testid="message-center"]');
       const messageClearAllButton = document.querySelector('[data-testid="message-clear-all"]');
@@ -1348,6 +1359,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           return true;
         }
         const staffId = staffIdForPassword(password);
+        if (!staffId) {
+          return false;
+        }
         const override = currentStaffPermissionOverrides[staffId];
         if (override?.removedPermissions?.includes(permission)) {
           return false;
@@ -1382,6 +1396,14 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       window.addEventListener('offline-staff-permissions-updated', (event) => {
         updateStaffPermissionOverrides(event.detail);
       });
+
+      function canOpenReportWithPassword(password) {
+        return (
+          staffHasPermission(password, 'REPORT') ||
+          staffHasPermission(password, 'TOTAL_REPORT') ||
+          staffHasPermission(password, 'PERSONAL_REPORT')
+        );
+      }
 
       function applyWholeOrderDiscountPercent(percent) {
         currentWholeOrderDiscountRate = Number(percent || 0) / 100;
@@ -1915,6 +1937,21 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           .filter((order) => selectedType === 'ALL' || reportOrderType(order) === selectedType)
           .reduce((total, order) => total + Number(order.subtotal || 0), 0);
         reportOverviewNetSales.textContent = '$' + roundMoney(netSales).toFixed(2);
+      }
+
+      function localIsoDate(offsetDays) {
+        const date = new Date();
+        date.setDate(date.getDate() + offsetDays);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return year + '-' + month + '-' + day;
+      }
+
+      function renderStaffReportDateRange() {
+        reportRightIframe.hidden = false;
+        reportStartTime.textContent = localIsoDate(0) + ' 00:00:00';
+        reportEndTime.textContent = localIsoDate(1) + ' 00:00:00';
       }
 
       function earnPointsForSubtotal(subtotal) {
@@ -3542,13 +3579,19 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         showPanel('report-password');
       });
       reportPasswordSaveButton.addEventListener('click', () => {
-        if (reportPasswordInput.value === '11') {
+        if (canOpenReportWithPassword(reportPasswordInput.value)) {
           showPanel('report');
           renderReportOverview();
         }
       });
       reportOrderTypeSelect.addEventListener('change', () => {
         renderReportOverview();
+      });
+      reportTotalReportButton.addEventListener('click', () => {
+        reportRightIframe.hidden = true;
+      });
+      reportStaffReportButton.addEventListener('click', () => {
+        renderStaffReportDateRange();
       });
       document.querySelector('[data-testid="home-support"]').addEventListener('click', () => {
         showPanel('support');

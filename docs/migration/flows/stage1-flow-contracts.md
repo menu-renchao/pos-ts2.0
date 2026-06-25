@@ -63,7 +63,7 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 
 | source_file | source_class | source_test_patterns | target_specs | target_flow_methods |
 |---|---|---|---|---|
-| stage1/test_admin_staff.py | TestAdminStaff | whole-order max discount, item max discount, recall discount permission, multi-discount, report permission, create staff with selected authority | tests/stage1/admin-staff.spec.ts | `StaffPermissionFlow.rejectWholeOrderDiscountAboveServerLimitWithoutPassword`, `StaffPermissionFlow.applyWholeOrderDiscountAboveServerLimitWithManagerPassword`, `StaffPermissionFlow.applyWholeOrderDiscountAboveManagerLimitWithBossPassword`, `StaffPermissionFlow.applyItemDiscountAboveServerLimitWithManagerPassword`, `StaffPermissionFlow.applyItemDiscountAboveManagerLimitWithBossPassword`, `StaffPermissionFlow.rejectRecallWholeOrderAmountDiscountAboveServerLimitWithoutPassword`, `StaffPermissionFlow.cancelRecallWholeOrderAmountDiscountAboveServerLimit`, `StaffPermissionFlow.applyRecallWholeOrderAmountDiscountAboveManagerLimitWithBossPassword`, `StaffPermissionFlow.requirePermissionForItemDiscountAfterBossAuthorizedWholeOrderDiscount`, `StaffPermissionFlow.requirePermissionForMultiItemAmountDiscount`, `StaffPermissionFlow.rejectAnyWholeOrderDiscountWhenServerLimitIsZero`, `StaffPermissionFlow.requirePermissionForSecondItemDiscountAfterWholeOrderAndItemDiscounts`, `StaffPermissionFlow.openAnalysisReportWithBossOverrideWhenStaffLacksPermission`, `StaffPermissionFlow.configureStaffPermissions`, `StaffPermissionFlow.applyOrderDiscountWithAuthorization`, `StaffPermissionFlow.applyItemDiscountWithAuthorization`, `StaffPermissionFlow.verifyReportPermission` |
+| stage1/test_admin_staff.py | TestAdminStaff | whole-order max discount, item max discount, recall discount permission, multi-discount, report permission, create staff with selected authority | tests/stage1/admin-staff.spec.ts | `StaffPermissionFlow.rejectWholeOrderDiscountAboveServerLimitWithoutPassword`, `StaffPermissionFlow.applyWholeOrderDiscountAboveServerLimitWithManagerPassword`, `StaffPermissionFlow.applyWholeOrderDiscountAboveManagerLimitWithBossPassword`, `StaffPermissionFlow.applyItemDiscountAboveServerLimitWithManagerPassword`, `StaffPermissionFlow.applyItemDiscountAboveManagerLimitWithBossPassword`, `StaffPermissionFlow.rejectRecallWholeOrderAmountDiscountAboveServerLimitWithoutPassword`, `StaffPermissionFlow.cancelRecallWholeOrderAmountDiscountAboveServerLimit`, `StaffPermissionFlow.applyRecallWholeOrderAmountDiscountAboveManagerLimitWithBossPassword`, `StaffPermissionFlow.requirePermissionForItemDiscountAfterBossAuthorizedWholeOrderDiscount`, `StaffPermissionFlow.requirePermissionForMultiItemAmountDiscount`, `StaffPermissionFlow.rejectAnyWholeOrderDiscountWhenServerLimitIsZero`, `StaffPermissionFlow.requirePermissionForSecondItemDiscountAfterWholeOrderAndItemDiscounts`, `StaffPermissionFlow.openAnalysisReportWithBossOverrideWhenStaffLacksPermission`, `StaffPermissionFlow.openTodayStaffReportWhenStaffOnlyHasPersonalReport`, `StaffPermissionFlow.configureStaffPermissions`, `StaffPermissionFlow.applyOrderDiscountWithAuthorization`, `StaffPermissionFlow.applyItemDiscountWithAuthorization`, `StaffPermissionFlow.verifyReportPermission` |
 
 ### Preconditions
 
@@ -74,6 +74,7 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 - `test_server_maximum_discount_zero` overrides Server to `0%` through `StubAdminStaffClient`, matching source `AdminStaffAPI.edit_role_max_discount('Server', 0)`.
 - `test_multi_whole_order_item_maximum_discount` configures Server/Manager/Boss to `20%`/`50%`/`100%` through `StubAdminStaffClient`, then validates cumulative whole-order plus item discount permission.
 - `test_staff_visit_without_analysis_authority` removes `ANALYSIS` from staff `1` through `StubAdminStaffClient`, matching source `AdminStaffAPI.edit_staff_remove_functions('1', [PosPermissionNames.ANALYSIS])`.
+- `test_staff_visit_without_view_history_authority` removes `VIEW_HISTORY_ORDERS`, `REPORT`, and `TOTAL_REPORT` from staff `1`, adds `PERSONAL_REPORT`, and validates today's Staff Report date range.
 
 ### Steps
 
@@ -254,6 +255,19 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 | stub behavior | Offline harness maps password `123` to staff id `1`, checks removed permissions before opening Analysis, shows an Admin permission popup with the source-equivalent alert text, and opens the Analysis page when an authorized password is submitted. |
 | live gaps | Live AdminStaffAPI setup/teardown, Admin Analysis navigation selector, permission dialog selector/text, Boss override behavior, and source iframe `id=innerpage` must be validated in live smoke. |
 
+#### StaffPermissionFlow.openTodayStaffReportWhenStaffOnlyHasPersonalReport
+
+| field | contract |
+|---|---|
+| source | `stage1/test_admin_staff.py::TestAdminStaff::test_staff_visit_without_view_history_authority` |
+| jira | POS-33771 |
+| preconditions | `StubAdminStaffClient` removes `VIEW_HISTORY_ORDERS`, `REPORT`, and `TOTAL_REPORT` from staff id `1`, then adds `PERSONAL_REPORT`; the offline harness receives staff permission overrides through `PosHomePage.applyOfflineStaffPermissionOverrides`; current employee logs in with password `123`. |
+| actions | Remove and add staff permissions, open POS home, synchronize offline staff permission overrides, login as staff `123`, open Report, enter report popup password `123`, enter Total Report, open Staff Report, and read the Staff Report start/end time range. |
+| page methods | `PosHomePage.open`, `PosHomePage.applyOfflineStaffPermissionOverrides`, `PosHomePage.inputEmployeePassword`, `PosHomePage.clickReport`, `ReportPage.inputPasswordInPopup`, `ReportPage.enterTotalReport`, `ReportPage.openStaffReport`, `ReportPage.readStaffReportDateRange` |
+| assertions | Staff Report start time contains today's local ISO date; Staff Report end time contains tomorrow's local ISO date, matching the source assertions against `datetime.date.today()` and `today + 1 day`. |
+| stub behavior | `StubAdminStaffClient.editStaffRemoveFunctions` and `editStaffAddFunctions` store staff permission overrides for staff `1`; offline harness maps password `123` to staff `1`, allows Report access through `PERSONAL_REPORT` even after `REPORT` and `TOTAL_REPORT` are removed, and renders deterministic Staff Report date range values for the local current day. |
+| live gaps | Live AdminStaffAPI setup/teardown, Report password dialog selector, Total Report navigation, Staff Report selector, iframe switching, and real date range selectors must be validated in live smoke. |
+
 ### Expected Assertions
 
 - Discount without permission is blocked or limited as in the source case.
@@ -270,7 +284,7 @@ These contracts gate migration for all active source rows under `stage1/*.py`.
 - `AdminPage` owns Admin Analysis navigation, permission alert, override password submission, and Analysis page visibility.
 - `OrderDishesPage` owns discount action entry points and amount reads.
 - `RecallPage` owns recalled-order discount checks.
-- `ReportPage` owns report availability reads when introduced.
+- `ReportPage` owns report password submission, Total Report/Staff Report navigation, and Staff Report date range reads.
 
 ### Client/Data Responsibilities
 
