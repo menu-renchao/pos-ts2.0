@@ -23,4 +23,9 @@ export const staffDiscountSamples = {
   permissionExceededTip: 'The discount exceeds permission limit，please input password',
   failedLoginTip: 'Failed to login',
   noPermissionTip: 'No Permission!',
+  itemDiscountFirstFoodName: 'item1',
+  itemDiscountFirstFoodPrice: 4,
+  itemDiscountSecondFoodName: 'item2',
+  itemDiscountSecondFoodPrice: 6,
+  managerAuthorizedItemDiscountPercent: 60,
 } as const;

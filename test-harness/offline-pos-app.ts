@@ -286,6 +286,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <section data-testid="global-option-area" hidden>Global Option Area</section>
       <button data-testid="item-discount-10">10% Discount</button>
       <button data-testid="item-discount-50">50% Discount</button>
+      <input data-testid="item-discount-percent" />
+      <button data-testid="item-discount-submit">Apply Item Discount</button>
       <button data-testid="order-discount">Order Discount</button>
       <div data-testid="order-discount-whole-order-price"></div>
       <div data-testid="order-discount-amount"></div>
@@ -546,6 +548,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let currentSettlementSelectMode = false;
       let currentEditingOrder = null;
       let pendingWholeOrderDiscountPercent = null;
+      let pendingItemDiscount = null;
       let currentEmployeePassword = '11';
       let currentInventorySearchItem = 'superman item4';
       const inventoryRecords = {
@@ -780,6 +783,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const globalOptionArea = document.querySelector('[data-testid="global-option-area"]');
       const itemDiscountButton = document.querySelector('[data-testid="item-discount-10"]');
       const itemHalfDiscountButton = document.querySelector('[data-testid="item-discount-50"]');
+      const itemDiscountPercentInput = document.querySelector('[data-testid="item-discount-percent"]');
+      const itemDiscountSubmitButton = document.querySelector('[data-testid="item-discount-submit"]');
       const orderDiscountButton = document.querySelector('[data-testid="order-discount"]');
       const orderDiscountWholeOrderPrice = document.querySelector('[data-testid="order-discount-whole-order-price"]');
       const orderDiscountAmount = document.querySelector('[data-testid="order-discount-amount"]');
@@ -1541,6 +1546,30 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         return roundMoney(Number(subtotal || 0) * currentWholeOrderDiscountRate) * -1;
       }
 
+      function currentActiveOrderSubtotal() {
+        return activeOrderItems().reduce((total, item) => total + Number(item.price || 0), 0);
+      }
+
+      function canAuthorizeItemDiscount(password, originalPrice, percent) {
+        const maxDiscountAmount = currentActiveOrderSubtotal() * (wholeOrderDiscountLimitForPassword(password) / 100);
+        const requestedDiscountAmount = Number(originalPrice || 0) * (Number(percent || 0) / 100);
+        return requestedDiscountAmount <= maxDiscountAmount;
+      }
+
+      function applyItemDiscountPercent(index, percent) {
+        const item = currentOrderItems[index];
+        if (!item) {
+          return;
+        }
+        const originalPrice = Number(item.originalPrice ?? item.price ?? 0);
+        item.originalPrice = originalPrice;
+        item.price = roundMoney(originalPrice * (1 - Number(percent || 0) / 100));
+        pendingItemDiscount = null;
+        managerPasswordPopup.hidden = true;
+        orderTipToast.textContent = '';
+        renderOrderAmounts();
+      }
+
       function roundedSettlementTotal(amount) {
         const cents = Math.round(Number(amount || 0) * 100);
         if (currentRoundingStrategy === 'nearest_5') {
@@ -1794,6 +1823,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         currentEditingOrder = null;
         pendingPrintedDeleteIndex = null;
         pendingWholeOrderDiscountPercent = null;
+        pendingItemDiscount = null;
         orderSearchInput.value = '';
         orderSearchResult.textContent = '';
         orderSaveAlert.textContent = '';
@@ -2717,7 +2747,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       openFoodNoTaxButton.addEventListener('click', () => {
         const name = openFoodNameInput.value || 'Open Food';
         const price = Number(openFoodPriceInput.value || '0');
-        currentOrderItems.push({ name, price, state: '', taxRate: 0 });
+        currentOrderItems.push({ name, price, unitPrice: price, quantity: 1, state: '', taxRate: 0 });
         renderOrderAmounts();
       });
       orderPickupButton.addEventListener('click', () => {
@@ -2806,6 +2836,14 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         renderOrderAmounts();
       });
       managerPasswordSubmitButton.addEventListener('click', () => {
+        if (pendingItemDiscount) {
+          if (canAuthorizeItemDiscount(managerPasswordInput.value, pendingItemDiscount.originalPrice, pendingItemDiscount.percent)) {
+            applyItemDiscountPercent(pendingItemDiscount.index, pendingItemDiscount.percent);
+            return;
+          }
+          orderTipToast.textContent = managerPasswordInput.value ? 'No Permission!' : 'Failed to login';
+          return;
+        }
         if (pendingWholeOrderDiscountPercent != null) {
           const passwordLimit = wholeOrderDiscountLimitForPassword(managerPasswordInput.value);
           if (Number(pendingWholeOrderDiscountPercent) <= passwordLimit) {
@@ -2846,6 +2884,23 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           currentOrderItems[0].price = Math.floor(currentOrderItems[0].price * 50) / 100;
           renderOrderAmounts();
         }
+      });
+      itemDiscountSubmitButton.addEventListener('click', () => {
+        const selectedIndex = selectedOrderItemIndex >= 0 ? selectedOrderItemIndex : 0;
+        const selectedItem = currentOrderItems[selectedIndex];
+        if (!selectedItem) {
+          return;
+        }
+        const percent = Number(itemDiscountPercentInput.value || '0');
+        const originalPrice = Number(selectedItem.originalPrice ?? selectedItem.price ?? 0);
+        selectedItem.originalPrice = originalPrice;
+        if (!canAuthorizeItemDiscount(currentEmployeePassword, originalPrice, percent)) {
+          pendingItemDiscount = { index: selectedIndex, originalPrice, percent };
+          orderTipToast.textContent = 'The discount exceeds permission limit，please input password';
+          managerPasswordPopup.hidden = false;
+          return;
+        }
+        applyItemDiscountPercent(selectedIndex, percent);
       });
       orderDiscountButton.addEventListener('click', () => {
         const subtotal = activeOrderItems().reduce((total, item) => total + Number(item.price || 0), 0);

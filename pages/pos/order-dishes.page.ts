@@ -18,6 +18,8 @@ export class OrderDishesPage extends PageObject {
   private readonly currentCategoryName: Locator;
   private readonly itemDiscountButton: Locator;
   private readonly itemHalfDiscountButton: Locator;
+  private readonly itemDiscountPercentInput: Locator;
+  private readonly itemDiscountSubmitButton: Locator;
   private readonly itemPrice: Locator;
   private readonly itemPriceInput: Locator;
   private readonly itemPriceSubmitButton: Locator;
@@ -126,6 +128,8 @@ export class OrderDishesPage extends PageObject {
     this.customerSubmitButton = page.getByTestId('customer-submit');
     this.itemDiscountButton = page.getByTestId('item-discount-10');
     this.itemHalfDiscountButton = page.getByTestId('item-discount-50');
+    this.itemDiscountPercentInput = page.getByTestId('item-discount-percent');
+    this.itemDiscountSubmitButton = page.getByTestId('item-discount-submit');
     this.itemPrice = page.getByTestId('order-item-price');
     this.itemPriceInput = page.getByTestId('item-price-input');
     this.itemPriceSubmitButton = page.getByTestId('item-price-submit');
@@ -504,6 +508,14 @@ export class OrderDishesPage extends PageObject {
   async applyHalfDiscount(): Promise<void> {
     await step('给当前菜品应用 50% 单菜折扣', async () => {
       await this.itemHalfDiscountButton.click();
+    });
+  }
+
+  async applyItemDiscountPercent(percent: number): Promise<void> {
+    await step(`给当前菜品应用 ${percent}% 单菜折扣`, async () => {
+      await this.itemDiscountPercentInput.fill(String(percent));
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      await this.itemDiscountSubmitButton.click();
     });
   }
 
