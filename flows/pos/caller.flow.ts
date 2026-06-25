@@ -27,7 +27,16 @@ export type EmenuCallerTableResult = {
   preparingInfoAfterCallOff: string[];
 };
 
+export type EmenuCallerNameResult = {
+  orderNumber: string;
+  guestName: string;
+  shortGuestName: string;
+  preparingInfoBeforeCallOff: string[];
+  preparingInfoAfterCallOff: string[];
+};
+
 const callerGuestName = 'CallerGuest42';
+const emenuEditedGuestName = 'EmenuGuest42';
 
 export class CallerFlow {
   constructor(
@@ -126,6 +135,49 @@ export class CallerFlow {
 
       return {
         orderCardId,
+        preparingInfoBeforeCallOff,
+        preparingInfoAfterCallOff,
+      };
+    });
+  }
+
+  async callEmenuOrderWithEditedGuestNameAndClear(
+    emenuUrl: string,
+    _homeUrl: string,
+  ): Promise<EmenuCallerNameResult> {
+    return step('Emenu 下单后 POS 修改客名并销号', async () => {
+      if (!this.emenuMainPage || !this.emenuOrderPage) {
+        throw new Error('Emenu pages are required for Emenu caller flow.');
+      }
+
+      await this.emenuMainPage.openAndStartOrder(emenuUrl);
+      await this.emenuOrderPage.placeFirstCategoryItemOrder();
+      await this.emenuOrderPage.closeOrderCard();
+      await this.emenuOrderPage.callServer();
+
+      await this.emenuMainPage.switchToPosHome();
+      await this.homePage.clickRecall();
+      await this.recallPage.openRecentOrder();
+      const orderNumber = await this.recallPage.readOrderNumber();
+      await this.recallPage.clickEdit();
+      await this.orderDishesPage.inputGuestName(emenuEditedGuestName);
+      await this.orderDishesPage.sendAllToKitchen();
+
+      await this.homePage.clickRecall();
+      await this.recallPage.openRecentOrder();
+      await this.homePage.openCaller();
+      const preparingInfoBeforeCallOff = await this.callerPage.readInfoList('preparing');
+
+      await this.homePage.clickRecall();
+      await this.recallPage.openRecentOrder();
+      await this.recallPage.callOffCurrentOrder();
+      await this.homePage.openCaller();
+      const preparingInfoAfterCallOff = await this.callerPage.readInfoList('preparing');
+
+      return {
+        orderNumber,
+        guestName: emenuEditedGuestName,
+        shortGuestName: shortenCallerGuestName(emenuEditedGuestName),
         preparingInfoBeforeCallOff,
         preparingInfoAfterCallOff,
       };

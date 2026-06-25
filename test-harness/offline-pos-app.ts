@@ -2339,6 +2339,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         if (currentEditingOrder) {
           currentEditingOrder.items = [...currentOrderItems];
           currentEditingOrder.itemOption = currentItemOption;
+          currentEditingOrder.customerName = currentCustomerName;
           currentEditingOrder.crmMember = currentCrmMember ? { ...currentCrmMember } : null;
           currentEditingOrder.crmDiscountRate = currentCrmDiscountRate;
           currentEditingOrder.crmDiscountMaxAmount = currentCrmDiscountMaxAmount;
@@ -2987,9 +2988,14 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         saveCurrentOrder();
       });
       orderSendKitchenButton.addEventListener('click', () => {
+        const wasEditingOrder = Boolean(currentEditingOrder);
         markItemsPrinted('kitchen');
         currentOrderStatus = 'Sent';
         saveCurrentOrder();
+        renderCallerDisplay();
+        if (wasEditingOrder) {
+          showPanel('home');
+        }
       });
       orderCharge20Button.addEventListener('click', () => {
         currentOrderChargeRate = 0.2;
