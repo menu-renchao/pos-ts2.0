@@ -82,4 +82,19 @@ test.describe('stage2 order operation migration', () => {
       'The operation cannot be done due to partial payment! Please revoke the payment before preceeding.',
     );
   });
+
+  test('POS-19377 按金额分单未付款时取消分单应成功且无提示', {
+    annotation: [jiraIssue('POS-19377')],
+  }, async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.unsplitUnpaidAmountSplitOrder(environment.posHomeUrl);
+
+    expect(result.unsplitAlertText).toBe('');
+    expect(result.splitOrderCountAfterUnsplit).toBe(0);
+  });
 });

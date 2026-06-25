@@ -105,6 +105,11 @@ export type AmountSplitUnsplitAlertResult = {
   unsplitAlertText: string;
 };
 
+export type AmountSplitUnsplitSuccessResult = {
+  unsplitAlertText: string;
+  splitOrderCountAfterUnsplit: number;
+};
+
 export type ComboOptionCountResult = {
   beforeCount: number;
   afterCount: number;
@@ -673,6 +678,29 @@ export class OrderEntryFlow {
     const unsplitAlertText = await this.recallPage.unsplitAndReadAlert();
 
     return { unsplitAlertText };
+  }
+
+  async unsplitUnpaidAmountSplitOrder(homeUrl: string): Promise<AmountSplitUnsplitSuccessResult> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.addTip(500);
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.openSplitOrder();
+    await this.recallPage.splitByAmounts([1, 9.6]);
+    await this.recallPage.saveSplit();
+    await this.recallPage.saveSplitAmountCreate();
+    const unsplitAlertText = await this.recallPage.unsplitAndReadAlert();
+    const splitOrderCountAfterUnsplit = (await this.recallPage.readSplitOrderPrices()).length;
+
+    return { splitOrderCountAfterUnsplit, unsplitAlertText };
   }
 
   async readFirstDragSplitSubOrderDiscountWholePrice(homeUrl: string): Promise<string> {
