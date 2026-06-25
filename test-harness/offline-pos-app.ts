@@ -358,7 +358,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <div data-testid="order-discount-whole-order-price"></div>
       <div data-testid="order-discount-amount"></div>
       <input data-testid="order-discount-percent" />
+      <button data-testid="order-discount-clear-whole">Clear Whole Order Discount</button>
       <button data-testid="order-discount-submit">Apply Order Discount</button>
+      <div data-testid="order-price-detail"></div>
       <input data-testid="order-tip" />
       <div data-testid="order-tip-toast"></div>
       <button data-testid="order-charge-20">Charge 20%</button>
@@ -1030,7 +1032,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const orderDiscountWholeOrderPrice = document.querySelector('[data-testid="order-discount-whole-order-price"]');
       const orderDiscountAmount = document.querySelector('[data-testid="order-discount-amount"]');
       const orderDiscountPercentInput = document.querySelector('[data-testid="order-discount-percent"]');
+      const orderDiscountClearWholeButton = document.querySelector('[data-testid="order-discount-clear-whole"]');
       const orderDiscountSubmitButton = document.querySelector('[data-testid="order-discount-submit"]');
+      const orderPriceDetail = document.querySelector('[data-testid="order-price-detail"]');
       const orderTipInput = document.querySelector('[data-testid="order-tip"]');
       const orderTipToast = document.querySelector('[data-testid="order-tip-toast"]');
       const orderCharge20Button = document.querySelector('[data-testid="order-charge-20"]');
@@ -2454,6 +2458,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         orderTax.textContent = currentOrderTaxVoided ? '0' : String(Number(currentOrderTaxAmount().toFixed(2)));
         orderSubtotal.textContent = currentEditableCombo() ? '$' + roundMoney(subtotal).toFixed(2) : String(roundMoney(subtotal));
         orderDiscountAmount.textContent = wholeOrderDiscount ? wholeOrderDiscount.toFixed(2) : '';
+        orderPriceDetail.textContent = wholeOrderDiscount ? 'Discount ' + wholeOrderDiscount.toFixed(2) : '';
         orderReward.textContent = formatRewardDiscount(rewardDiscount, currentCrmDiscountRate);
         const settlementAmount = roundMoney(subtotal + wholeOrderDiscount + rewardDiscount + chargeAmount + currentOrderTip);
         const unpaidBeforePaid = currentOrderTaxVoided
@@ -4189,6 +4194,18 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           return;
         }
         const percent = Number(itemDiscountPercentInput.value || '0');
+        const selectedIndexes = selectedItemDiscountIndexes();
+        if (selectedIndexes.length > 1) {
+          selectedIndexes.forEach((index) => {
+            const item = currentOrderItems[index];
+            if (item) {
+              item.originalPrice = Number(item.originalPrice ?? item.price ?? 0);
+              applyItemDiscountPercent(index, percent);
+            }
+          });
+          renderOrderAmounts();
+          return;
+        }
         const originalPrice = Number(selectedItem.originalPrice ?? selectedItem.price ?? 0);
         selectedItem.originalPrice = originalPrice;
         if (!canAuthorizeItemDiscount(currentEmployeePassword, originalPrice, percent)) {
@@ -4212,6 +4229,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           return;
         }
         applyWholeOrderDiscountPercent(percent);
+      });
+      orderDiscountClearWholeButton.addEventListener('click', () => {
+        applyWholeOrderDiscountPercent(0);
       });
       itemPriceSubmitButton.addEventListener('click', () => {
         const selectedItem = currentOrderItems[selectedOrderItemIndex] || currentOrderItems[0];

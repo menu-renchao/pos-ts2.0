@@ -226,4 +226,16 @@ test.describe('stage2 order operation migration', () => {
     expect(result.thirdSubOrderStatus).toBe('Paid');
     expect(result.thirdSubOrderPriceDetail).not.toContain('Charge');
   });
+
+  test('POS-23204 清空整单折扣后价格明细不应包含 Discount', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const priceDetail = await orderEntryFlow.clearWholeOrderDiscountAndReadPriceDetail(environment.posHomeUrl);
+
+    expect(priceDetail).not.toContain('Discount');
+  });
 });

@@ -65,8 +65,10 @@ export class OrderDishesPage extends PageObject {
   private readonly orderDiscountButton: Locator;
   private readonly orderDiscountAmount: Locator;
   private readonly orderDiscountPercentInput: Locator;
+  private readonly orderDiscountClearWholeButton: Locator;
   private readonly orderDiscountSubmitButton: Locator;
   private readonly orderDiscountWholeOrderPrice: Locator;
+  private readonly orderPriceDetail: Locator;
   private readonly orderExitButton: Locator;
   private readonly orderModifyButton: Locator;
   private readonly orderCharge20Button: Locator;
@@ -182,8 +184,10 @@ export class OrderDishesPage extends PageObject {
     this.orderDiscountButton = page.getByTestId('order-discount');
     this.orderDiscountAmount = page.getByTestId('order-discount-amount');
     this.orderDiscountPercentInput = page.getByTestId('order-discount-percent');
+    this.orderDiscountClearWholeButton = page.getByTestId('order-discount-clear-whole');
     this.orderDiscountSubmitButton = page.getByTestId('order-discount-submit');
     this.orderDiscountWholeOrderPrice = page.getByTestId('order-discount-whole-order-price');
+    this.orderPriceDetail = page.getByTestId('order-price-detail');
     this.orderExitButton = page.getByTestId('order-exit').or(page.locator('#exitBt'));
     this.orderModifyButton = page.getByTestId('order-modify');
     this.orderCharge20Button = page.getByTestId('order-charge-20');
@@ -805,6 +809,23 @@ export class OrderDishesPage extends PageObject {
       await this.orderDiscountPercentInput.fill(String(percent));
       await this.orderDiscountSubmitButton.click();
     });
+  }
+
+  async applySelectedItemsDiscountPercent(percent: number): Promise<void> {
+    await step(`给选中菜品应用 ${percent}% 单菜折扣`, async () => {
+      await this.itemDiscountPercentInput.fill(String(percent));
+      await this.itemDiscountSubmitButton.click();
+    });
+  }
+
+  async clearWholeOrderDiscount(): Promise<void> {
+    await step('清空整单折扣', async () => {
+      await this.orderDiscountClearWholeButton.click();
+    });
+  }
+
+  async readOrderPriceDetail(): Promise<string> {
+    return step('读取点单页订单价格明细', async () => ((await this.orderPriceDetail.textContent()) ?? '').trim());
   }
 
   async readDiscountTip(): Promise<string> {
