@@ -196,6 +196,12 @@ export type ManualChargeOrderTypeMatchResult = {
   selectedChargesAfterOrderTypeChange: Record<string, string>;
 };
 
+export type ManualChargeOrderTypeMismatchResult = {
+  chargeAfterConfirm: Record<string, string>;
+  chargeBeforeSave: Record<string, string>;
+  selectedChargesAfterOrderTypeChange: Record<string, string>;
+};
+
 export type EvenSplitTipUnsplitResult = {
   combinedTipText: string;
 };
@@ -1316,6 +1322,41 @@ export class OrderEntryFlow {
     return {
       chargeAfterConfirm,
       chargeBeforeConfirm,
+      selectedChargesAfterOrderTypeChange,
+    };
+  }
+
+  async keepExistingManualFixedChargeWhenOrderTypeNoLongerMatchesAfterEdit(
+    homeUrl: string,
+  ): Promise<ManualChargeOrderTypeMismatchResult> {
+    if (!this.adminPage) {
+      throw new Error('POS-27165 requires AdminPage');
+    }
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.applyPresetCharge('manu_test_fixed');
+    const chargeBeforeSave = await this.orderDishesPage.readOrderChargeItems();
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.clickAdmin();
+    await this.adminPage.setManualChargeOrderTypes('manu_test_fixed', ['delivery']);
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.clickEdit();
+
+    await this.orderDishesPage.openChargeDialog();
+    const selectedChargesAfterOrderTypeChange = await this.orderDishesPage.readSelectedPresetCharges();
+    await this.orderDishesPage.confirmChargeDialog();
+    const chargeAfterConfirm = await this.orderDishesPage.readOrderChargeItems();
+
+    return {
+      chargeAfterConfirm,
+      chargeBeforeSave,
       selectedChargesAfterOrderTypeChange,
     };
   }

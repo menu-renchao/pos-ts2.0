@@ -454,4 +454,24 @@ test.describe('stage2 order operation migration', () => {
     expect(result.selectedChargesAfterOrderTypeChange.manu_test_fixed).toBeTruthy();
     expect(result.chargeAfterConfirm).toEqual({ manu_test_fixed: '10.00' });
   });
+
+  test('POS-27165 编辑订单时修改手动加收订单类型不满足当前 Dine In 弹窗不应再选中但订单保留原加收', async ({
+    environment,
+    page,
+  }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.keepExistingManualFixedChargeWhenOrderTypeNoLongerMatchesAfterEdit(
+      environment.posHomeUrl,
+    );
+
+    expect(result.chargeBeforeSave).toEqual({ manu_test_fixed: '10.00' });
+    expect(result.selectedChargesAfterOrderTypeChange).not.toHaveProperty('manu_test_fixed');
+    expect(result.chargeAfterConfirm).toEqual({ manu_test_fixed: '10.00' });
+  });
 });

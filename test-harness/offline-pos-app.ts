@@ -2426,13 +2426,18 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       }
 
       function selectedManualCharge() {
-        return manualCharges.find((charge) => (
-          chargeAppliesToCurrentOrderType(charge)
-          && (
-            charge.name === currentOrderChargeLabel
-            || Number(charge.amount || 0) === Number(currentOrderChargeFixedAmount || 0)
-            || Number(charge.rate || 0) === currentOrderChargeRate
-          )
+        const applicableCharges = manualCharges.filter(chargeAppliesToCurrentOrderType);
+        const chargeByName = applicableCharges.find((charge) => charge.name === currentOrderChargeLabel);
+        if (chargeByName) {
+          return chargeByName;
+        }
+        return applicableCharges.find((charge) => (
+          (charge.rateType === 'amount'
+            && currentOrderChargeFixedAmount !== null
+            && Number(charge.amount || 0) === Number(currentOrderChargeFixedAmount || 0))
+          || (charge.rateType === 'percent'
+            && currentOrderChargeRate > 0
+            && Number(charge.rate || 0) === currentOrderChargeRate)
         ));
       }
 
@@ -2465,11 +2470,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           });
           presetChargeList.appendChild(button);
         });
-        if (currentOrderChargeRate || currentOrderChargeFixedAmount !== null) {
-          const selectedCharge = selectedManualCharge();
+        const selectedCharge = selectedManualCharge();
+        if (selectedCharge) {
           const selected = document.createElement('div');
           selected.dataset.testid = 'selected-charge-item';
-          selected.dataset.chargeName = selectedCharge?.name || currentOrderChargeLabel;
+          selected.dataset.chargeName = selectedCharge.name;
           selected.dataset.chargeRate = chargeDisplayValue(selectedCharge, currentActiveOrderSubtotal());
           selected.textContent = selected.dataset.chargeName + ' ' + selected.dataset.chargeRate;
           selectedChargeList.appendChild(selected);
