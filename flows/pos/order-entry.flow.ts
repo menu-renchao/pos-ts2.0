@@ -176,6 +176,14 @@ export type ManualChargeAmountChangeResult = {
   selectedChargesAfterAmountChange: Record<string, string>;
 };
 
+export type ManualChargePercentChangeResult = {
+  initialChargeBeforeSave: Record<string, string>;
+  initialSubtotal: number;
+  recalledChargeAfterConfirm: Record<string, string>;
+  recalledSubtotal: number;
+  selectedChargesAfterPercentChange: Record<string, string>;
+};
+
 export type EvenSplitTipUnsplitResult = {
   combinedTipText: string;
 };
@@ -1188,6 +1196,45 @@ export class OrderEntryFlow {
       initialChargeBeforeSave,
       recalledChargeAfterConfirm,
       selectedChargesAfterAmountChange,
+    };
+  }
+
+  async modifyManualPercentChargeValueThenConfirmInRecalledOrder(
+    homeUrl: string,
+  ): Promise<ManualChargePercentChangeResult> {
+    if (!this.adminPage) {
+      throw new Error('POS-27160 requires AdminPage');
+    }
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.applyPresetCharge('manu_test_perc');
+    const initialChargeBeforeSave = await this.orderDishesPage.readOrderChargeItems();
+    const initialSubtotal = await this.orderDishesPage.readSubtotal();
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.clickAdmin();
+    await this.adminPage.setManualChargeAmount('manu_test_perc', 20);
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.clickEdit();
+
+    await this.orderDishesPage.openChargeDialog();
+    const selectedChargesAfterPercentChange = await this.orderDishesPage.readSelectedPresetCharges();
+    await this.orderDishesPage.confirmChargeDialog();
+    const recalledSubtotal = await this.orderDishesPage.readSubtotal();
+    const recalledChargeAfterConfirm = await this.orderDishesPage.readOrderChargeItems();
+
+    return {
+      initialChargeBeforeSave,
+      initialSubtotal,
+      recalledChargeAfterConfirm,
+      recalledSubtotal,
+      selectedChargesAfterPercentChange,
     };
   }
 

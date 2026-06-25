@@ -395,4 +395,24 @@ test.describe('stage2 order operation migration', () => {
     expect(result.selectedChargesAfterAmountChange).toEqual({ manu_test_fixed: 'Add $20.00' });
     expect(result.recalledChargeAfterConfirm).toEqual({ manu_test_fixed: '20.00' });
   });
+
+  test('POS-27160 编辑订单时修改手动百分比加收值后确认应按新百分比重算', async ({
+    environment,
+    page,
+  }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.modifyManualPercentChargeValueThenConfirmInRecalledOrder(
+      environment.posHomeUrl,
+    );
+
+    expect(result.initialChargeBeforeSave.manu_test_perc).toBe((result.initialSubtotal * 0.1).toFixed(2));
+    expect(result.selectedChargesAfterPercentChange).toEqual({ manu_test_perc: 'Add20%' });
+    expect(result.recalledChargeAfterConfirm.manu_test_perc).toBe((result.recalledSubtotal * 0.2).toFixed(2));
+  });
 });
