@@ -2482,7 +2482,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           || (charge.rateType === 'percent'
             && currentOrderChargeRate > 0
             && Number(charge.rate || 0) === currentOrderChargeRate)
-        ));
+        )) || applicableCharges[0];
       }
 
       function syncCurrentChargeFromAutoConfig() {
@@ -4973,6 +4973,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
             : selectedRecallOrder.orderChargeFixedAmount ?? null;
           currentOrderChargeLabel = currentOrderChargeRate || currentOrderChargeFixedAmount !== null ? selectedRecallOrder.orderChargeLabel || 'Charge' : '';
           currentOrderChargeTriggerMode = currentOrderChargeLabel ? selectedRecallOrder.orderChargeTriggerMode || '' : '';
+          currentOrderType = selectedRecallOrder.orderType || currentOrderType;
           syncCurrentChargeFromAutoConfig();
           if (currentOrderChargeTriggerMode !== 'auto') {
             currentOrderChargeTaxed = currentOrderChargeRate || currentOrderChargeFixedAmount !== null
@@ -4982,7 +4983,6 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           currentOrderStatus = selectedSubOrderIndex !== null
             ? selectedRecallOrder.subOrderStatuses?.[selectedSubOrderIndex] || ''
             : selectedRecallOrder.status || '';
-          currentOrderType = selectedRecallOrder.orderType || currentOrderType;
           currentOrderPriceEdited = Boolean(selectedRecallOrder.priceEdited);
           currentCustomerName = selectedRecallOrder.customerName || null;
           orderGuestNameInput.value = selectedRecallOrder.customerName || '';

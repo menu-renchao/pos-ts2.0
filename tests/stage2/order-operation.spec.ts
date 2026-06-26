@@ -662,4 +662,21 @@ test.describe('stage2 order operation migration', () => {
       manu_test_fixed: '10.00',
     });
   });
+
+  test('POS-27192 编辑页送厨时修改自动固定加收后应使用新加收', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.saveEditAfterModifyingAutoFixedCharge(
+      environment.posHomeUrl,
+    );
+
+    expect(result.recallChargeAfterEditSave).toEqual({
+      mod_test1: '20.00',
+    });
+  });
 });
