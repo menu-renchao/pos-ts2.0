@@ -613,6 +613,13 @@ export class RecallPage extends PageObject {
     });
   }
 
+  async moveCurrentSubOrderToNewOrder(): Promise<void> {
+    await step('Recall 将当前子单移为新订单', async () => {
+      await expect(this.recallRoot).toBeVisible();
+      await this.moveOrderButton.click();
+    });
+  }
+
   async moveFirstItemToExistingOrder(orderIndex: number): Promise<void> {
     await step(`Recall 移第 1 个菜到第 ${orderIndex} 个订单`, async () => {
       await expect(this.recallRoot).toBeVisible();

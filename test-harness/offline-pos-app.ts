@@ -3479,6 +3479,44 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         selectRecallOrder(targetOrder);
       }
 
+      function moveCurrentSubOrderToNewOrder() {
+        if (!selectedRecallOrder || selectedSubOrderIndex === null) {
+          return;
+        }
+        const subOrderItems = selectedRecallOrder.subOrderItems?.[selectedSubOrderIndex] || [];
+        if (!subOrderItems.length) {
+          return;
+        }
+        const subOrderCharge = orderChargeAmount(selectedRecallOrder, subOrderItems, selectedSubOrderIndex);
+        const movedOrder = {
+          ...selectedRecallOrder,
+          combinedOrderCharges: undefined,
+          items: subOrderItems.map((item) => ({ ...item })),
+          orderChargeFixedAmount: subOrderCharge || null,
+          orderChargeLabel: subOrderCharge ? selectedRecallOrder.orderChargeLabel : '',
+          orderChargeRate: 0,
+          orderChargeTaxed: Boolean(selectedRecallOrder.orderChargeTaxed),
+          orderChargeTriggerMode: subOrderCharge ? selectedRecallOrder.orderChargeTriggerMode : '',
+          orderNumber: String(nextOrderNumber++),
+          paymentRecords: [],
+          settlementTotal: null,
+          splitOrderPrices: [],
+          subOrderChargeCleared: [],
+          subOrderItems: [],
+          subOrderStatuses: [],
+          subtotal: orderItemsSubtotal(subOrderItems),
+          tip: selectedRecallOrder.subOrderTips?.[selectedSubOrderIndex] || 0,
+        };
+        movedOrder.orderCardId = movedOrder.orderType === 'dine-in'
+          ? 'Area 1 Table 1 ' + movedOrder.orderNumber
+          : movedOrder.orderNumber;
+        selectedRecallOrder.subOrderItems[selectedSubOrderIndex] = [];
+        selectedRecallOrder.subOrderStatuses[selectedSubOrderIndex] = 'Moved';
+        savedOrders.push(movedOrder);
+        persistSavedOrders();
+        selectRecallOrder(movedOrder);
+      }
+
       function renderSplitPrices(prices) {
         splitOrderPrices.innerHTML = '';
         prices.forEach((price) => {
@@ -5103,6 +5141,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         }
         moveFirstRecallItemToNewOrder();
       });
+      recallMoveOrderButton.addEventListener('click', () => {
+        moveCurrentSubOrderToNewOrder();
+      });
       recallCopyOrderButton.addEventListener('click', () => {
         if (!selectedRecallOrder) {
           return;
@@ -5469,6 +5510,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
               roundMoney(Number(selectedRecallOrder.tip || 0) / splitCount),
             );
           }
+          persistSavedOrders();
         }
         renderRecallOrderItems();
       });

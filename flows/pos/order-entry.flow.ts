@@ -288,6 +288,11 @@ export type AutoChargeMoveItemResult = {
   originalOrderCharge: Record<string, string>;
 };
 
+export type AutoChargeMoveOrderResult = {
+  movedOrderCharge: Record<string, string>;
+  subOrderChargeBeforeMove: Record<string, string>;
+};
+
 export type ManualChargeMoveItemResult = {
   movedItemPrice: number;
   sourceOrderCharge: Record<string, string>;
@@ -2269,6 +2274,47 @@ export class OrderEntryFlow {
       targetOrderCharge,
       targetOrderSubtotalAfterMove,
       targetOrderSubtotalBeforeMove,
+    };
+  }
+
+  async moveSubOrderAfterModifyingAutoCharge(homeUrl: string): Promise<AutoChargeMoveOrderResult> {
+    if (!this.adminPage) {
+      throw new Error('POS-27324 requires AdminPage');
+    }
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.setupAutoFixedCharge('auto_test_fixed', 10);
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    for (let index = 0; index < 2; index += 1) {
+      await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+      await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+      await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    }
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.openSplitOrder();
+    await this.recallPage.splitByDrag();
+    await this.recallPage.saveSplit();
+    await this.recallPage.openSubOrder(1);
+    const subOrderChargeBeforeMove = await this.recallPage.readOrderChargeItems();
+
+    await this.homePage.clickAdmin();
+    await this.adminPage.renameAutoCharge('auto_test_fixed', 'mod_test1');
+    await this.adminPage.setAutoChargeAmount('mod_test1', 20);
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.openSubOrder(1);
+    await this.recallPage.moveCurrentSubOrderToNewOrder();
+    const movedOrderCharge = await this.recallPage.readOrderChargeItems();
+
+    return {
+      movedOrderCharge,
+      subOrderChargeBeforeMove,
     };
   }
 

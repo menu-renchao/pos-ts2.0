@@ -892,4 +892,18 @@ test.describe('stage2 order operation migration', () => {
       manu_test_fixed: '10.00',
     });
   });
+
+  test('POS-27324 移单时修改自动加收后子单应保留旧加收快照', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.moveSubOrderAfterModifyingAutoCharge(environment.posHomeUrl);
+
+    expect(result.subOrderChargeBeforeMove).toHaveProperty('auto_test_fixed');
+    expect(result.movedOrderCharge).toEqual(result.subOrderChargeBeforeMove);
+  });
 });
