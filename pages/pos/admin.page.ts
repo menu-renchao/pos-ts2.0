@@ -120,6 +120,7 @@ export class AdminPage extends PageObject {
   private readonly chargeNewNameInput: Locator;
   private readonly chargeRenameButton: Locator;
   private readonly autoFixedChargeSetupButton: Locator;
+  private readonly autoPercentChargeSetupButton: Locator;
   private readonly chargeRateTypeNameInput: Locator;
   private readonly chargeRateTypeSelect: Locator;
   private readonly chargeRateTypeSaveButton: Locator;
@@ -247,6 +248,7 @@ export class AdminPage extends PageObject {
     this.chargeNewNameInput = page.getByTestId('admin-charge-new-name');
     this.chargeRenameButton = page.getByTestId('admin-charge-rename');
     this.autoFixedChargeSetupButton = page.getByTestId('admin-auto-fixed-charge-setup');
+    this.autoPercentChargeSetupButton = page.getByTestId('admin-auto-percent-charge-setup');
     this.chargeRateTypeNameInput = page.getByTestId('admin-charge-rate-type-name');
     this.chargeRateTypeSelect = page.getByTestId('admin-charge-rate-type');
     this.chargeRateTypeSaveButton = page.getByTestId('admin-charge-rate-type-save');
@@ -501,6 +503,15 @@ export class AdminPage extends PageObject {
       await this.chargeOldNameInput.fill(chargeName);
       await this.chargeAmountInput.fill(String(amount));
       await this.autoFixedChargeSetupButton.click();
+    });
+  }
+
+  async setupAutoPercentCharge(chargeName: string, percent: number): Promise<void> {
+    await step(`配置自动百分比加收 ${chargeName} 为 ${percent}%`, async () => {
+      await expect(this.adminRoot).toBeVisible();
+      await this.chargeOldNameInput.fill(chargeName);
+      await this.chargeAmountInput.fill(String(percent));
+      await this.autoPercentChargeSetupButton.click();
     });
   }
 

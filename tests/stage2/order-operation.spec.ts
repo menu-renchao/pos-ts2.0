@@ -527,4 +527,22 @@ test.describe('stage2 order operation migration', () => {
       (result.recalledSubtotal * 0.1).toFixed(2),
     );
   });
+
+  test('POS-27172 编辑订单时修改自动百分比加收为固定金额后应显示 10.00', async ({
+    environment,
+    page,
+  }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.convertAutoPercentChargeToFixedThenReadRecalledOrderCharge(
+      environment.posHomeUrl,
+    );
+
+    expect(result.recalledChargeAfterRateTypeChange).toEqual({ auto_test_percentage: '10.00' });
+  });
 });

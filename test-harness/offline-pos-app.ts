@@ -158,6 +158,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <input data-testid="admin-charge-new-name" />
       <button data-testid="admin-charge-rename">Rename Charge</button>
       <button data-testid="admin-auto-fixed-charge-setup">Setup Auto Fixed Charge</button>
+      <button data-testid="admin-auto-percent-charge-setup">Setup Auto Percent Charge</button>
       <input data-testid="admin-charge-rate-type-name" />
       <select data-testid="admin-charge-rate-type">
         <option value="amount">amount</option>
@@ -907,6 +908,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const adminChargeNewNameInput = document.querySelector('[data-testid="admin-charge-new-name"]');
       const adminChargeRenameButton = document.querySelector('[data-testid="admin-charge-rename"]');
       const adminAutoFixedChargeSetupButton = document.querySelector('[data-testid="admin-auto-fixed-charge-setup"]');
+      const adminAutoPercentChargeSetupButton = document.querySelector('[data-testid="admin-auto-percent-charge-setup"]');
       const adminChargeRateTypeNameInput = document.querySelector('[data-testid="admin-charge-rate-type-name"]');
       const adminChargeRateTypeSelect = document.querySelector('[data-testid="admin-charge-rate-type"]');
       const adminChargeRateTypeSaveButton = document.querySelector('[data-testid="admin-charge-rate-type-save"]');
@@ -3997,6 +3999,21 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
             orderTypes: ['dine-in', 'delivery', 'pickup', 'togo'],
             rate: 0,
             rateType: 'amount',
+            taxed: false,
+          },
+        ];
+        localStorage.setItem('offlineAutoCharges', JSON.stringify(autoCharges));
+      });
+      adminAutoPercentChargeSetupButton.addEventListener('click', () => {
+        const chargeName = adminChargeOldNameInput.value || 'auto_test_percentage';
+        const percent = Number(adminChargeAmountInput.value || 10);
+        autoCharges = [
+          {
+            amount: percent,
+            name: chargeName,
+            orderTypes: ['dine-in', 'delivery', 'pickup', 'togo'],
+            rate: percent / 100,
+            rateType: 'percent',
             taxed: false,
           },
         ];
