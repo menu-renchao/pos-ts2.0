@@ -82,6 +82,7 @@ export class RecallPage extends PageObject {
   private readonly recallGuestAddress: Locator;
   private readonly recallGuestPhone: Locator;
   private readonly recallRefundPaidOrderButton: Locator;
+  private readonly recallSendKitchenButton: Locator;
   private readonly saveEditButton: Locator;
   private readonly saveSplitAmountButton: Locator;
   private readonly saveSplitButton: Locator;
@@ -166,6 +167,7 @@ export class RecallPage extends PageObject {
     this.recallGuestAddress = page.getByTestId('recall-guest-address');
     this.recallGuestPhone = page.getByTestId('recall-guest-phone');
     this.recallRefundPaidOrderButton = page.getByTestId('recall-refund-paid-order');
+    this.recallSendKitchenButton = page.getByTestId('recall-send-kitchen');
     this.saveEditButton = page.getByTestId('recall-save-edit');
     this.saveSplitAmountButton = page.getByTestId('split-save-amount');
     this.saveSplitButton = page.getByTestId('split-save');
@@ -552,6 +554,13 @@ export class RecallPage extends PageObject {
   async clickEdit(): Promise<void> {
     await step('点击 Recall 编辑订单', async () => {
       await this.editButton.click();
+    });
+  }
+
+  async sendKitchenFromDetail(): Promise<void> {
+    await step('从 Recall 详情页送厨', async () => {
+      await expect(this.recallRoot).toBeVisible();
+      await this.recallSendKitchenButton.click();
     });
   }
 

@@ -243,6 +243,10 @@ export type AutoChargeDeletedResult = {
   recalledChargeAfterDelete: Record<string, string>;
 };
 
+export type AutoChargeRecallSendKitchenResult = {
+  recallChargeAfterSendKitchen: Record<string, string>;
+};
+
 export type EvenSplitTipUnsplitResult = {
   combinedTipText: string;
 };
@@ -1678,6 +1682,37 @@ export class OrderEntryFlow {
 
     return {
       recalledChargeAfterDelete,
+    };
+  }
+
+  async sendKitchenFromRecallAfterModifyingAutoFixedCharge(
+    homeUrl: string,
+  ): Promise<AutoChargeRecallSendKitchenResult> {
+    if (!this.adminPage) {
+      throw new Error('POS-27190 requires AdminPage');
+    }
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.setupAutoFixedCharge('auto_test_fixed', 10);
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.clickAdmin();
+    await this.adminPage.setAutoChargeAmount('auto_test_fixed', 20);
+    await this.adminPage.renameAutoCharge('auto_test_fixed', 'mod_test1');
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.sendKitchenFromDetail();
+    const recallChargeAfterSendKitchen = await this.recallPage.readOrderChargeItems();
+
+    return {
+      recallChargeAfterSendKitchen,
     };
   }
 

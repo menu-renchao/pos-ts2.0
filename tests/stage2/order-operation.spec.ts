@@ -628,4 +628,21 @@ test.describe('stage2 order operation migration', () => {
 
     expect(result.recalledChargeAfterDelete).toEqual({});
   });
+
+  test('POS-27190 详情页送厨时修改自动固定加收后应保留原加收', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.sendKitchenFromRecallAfterModifyingAutoFixedCharge(
+      environment.posHomeUrl,
+    );
+
+    expect(result.recallChargeAfterSendKitchen).toEqual({
+      auto_test_fixed: '10.00',
+    });
+  });
 });

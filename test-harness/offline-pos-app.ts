@@ -480,6 +480,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <button data-testid="recall-sub-order">Sub Order</button>
       <button data-testid="recall-combine-split">Combine Split</button>
       <button data-testid="recall-edit">Edit</button>
+      <button data-testid="recall-send-kitchen">Send Kitchen</button>
       <input data-testid="recall-guest-name" />
       <button data-testid="recall-save-edit">Save Edit</button>
       <div data-testid="recall-order-tip"></div>
@@ -1183,6 +1184,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const recallSubOrderButton = document.querySelector('[data-testid="recall-sub-order"]');
       const recallCombineSplitButton = document.querySelector('[data-testid="recall-combine-split"]');
       const recallEditButton = document.querySelector('[data-testid="recall-edit"]');
+      const recallSendKitchenButton = document.querySelector('[data-testid="recall-send-kitchen"]');
       const recallGuestNameInput = document.querySelector('[data-testid="recall-guest-name"]');
       const recallSaveEditButton = document.querySelector('[data-testid="recall-save-edit"]');
       const recallOrderTip = document.querySelector('[data-testid="recall-order-tip"]');
@@ -4997,6 +4999,18 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           orderPage.hidden = false;
           renderOrderAmounts();
           renderCurrentCrmState();
+        }
+      });
+      recallSendKitchenButton.addEventListener('click', () => {
+        if (selectedRecallOrder) {
+          selectedRecallOrder.items = selectedRecallOrder.items.map((item) => ({
+            ...item,
+            printMode: 'kitchen',
+            sentToKitchen: true,
+          }));
+          selectedRecallOrder.status = 'Sent';
+          renderRecallOrderItems();
+          renderCallerDisplay();
         }
       });
       recallSaveEditButton.addEventListener('click', () => {
