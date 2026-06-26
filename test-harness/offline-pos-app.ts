@@ -3105,8 +3105,19 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           + Number(order?.wholeOrderDiscountAmount || 0)).toFixed(2));
       }
 
-      function orderChargeAmount(order, items) {
+      function orderChargeAmount(order, items, subOrderIndex = null) {
         if (order?.orderChargeFixedAmount !== null && order?.orderChargeFixedAmount !== undefined) {
+          if (subOrderIndex !== null && Array.isArray(order?.splitOrderPrices) && order.splitOrderPrices.length) {
+            const splitTotal = order.splitOrderPrices.reduce((sum, price) => sum + Number(price || 0), 0);
+            if (splitTotal) {
+              return roundMoney(Number(order.orderChargeFixedAmount) * (Number(order.splitOrderPrices[subOrderIndex] || 0) / splitTotal));
+            }
+          }
+          const parentSubtotal = orderItemsSubtotal(order?.items || []);
+          const currentSubtotal = orderItemsSubtotal(items || []);
+          if (parentSubtotal && currentSubtotal && currentSubtotal !== parentSubtotal) {
+            return roundMoney(Number(order.orderChargeFixedAmount) * (currentSubtotal / parentSubtotal));
+          }
           return Number(order.orderChargeFixedAmount);
         }
         const rate = Number(order?.orderChargeRate || 0);
@@ -3119,7 +3130,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       function priceDetailText(order, items, subOrderIndex = null) {
         const lines = ['Subtotal ' + orderItemsSubtotal(items || []).toFixed(2)];
         const chargeCleared = subOrderIndex !== null && Boolean(order?.subOrderChargeCleared?.[subOrderIndex]);
-        const charge = chargeCleared ? 0 : orderChargeAmount(order, items || []);
+        const charge = chargeCleared ? 0 : orderChargeAmount(order, items || [], subOrderIndex);
         if (charge) {
           lines.push((order?.orderChargeLabel || 'Charge') + ' ' + charge.toFixed(2));
         }

@@ -679,4 +679,19 @@ test.describe('stage2 order operation migration', () => {
       mod_test1: '20.00',
     });
   });
+
+  test('POS-27229 详情页分单时修改自动固定加收后子单应保留旧加收分摊', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.splitRecallOrderAfterModifyingAutoFixedCharge(
+      environment.posHomeUrl,
+    );
+
+    expect(result.firstSubOrderCharge.auto_test_fixed).toContain('5.0');
+  });
 });
