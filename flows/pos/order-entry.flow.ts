@@ -259,6 +259,10 @@ export type AutoChargeRecallSplitResult = {
   firstSubOrderCharge: Record<string, string>;
 };
 
+export type AutoChargeEditSplitResult = {
+  firstSubOrderCharge: Record<string, string>;
+};
+
 export type ManualChargeEditSplitResult = {
   expectedFirstSubOrderCharge: string;
   firstSubOrderCharge: Record<string, string>;
@@ -1870,6 +1874,44 @@ export class OrderEntryFlow {
       firstSubOrderCharge,
       firstSubOrderSubtotal,
       originalSubtotal,
+    };
+  }
+
+  async splitEditOrderAfterModifyingAutoFixedCharge(homeUrl: string): Promise<AutoChargeEditSplitResult> {
+    if (!this.adminPage) {
+      throw new Error('POS-27248 requires AdminPage');
+    }
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.setupAutoFixedCharge('auto_test1', 10);
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.selectMenuGroup(categorySwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(categorySwitchDish.category);
+    await this.orderDishesPage.addMenuItem(categorySwitchDish.name);
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.clickAdmin();
+    await this.adminPage.renameAutoCharge('auto_test1', 'mod_test1');
+    await this.adminPage.setAutoChargeAmount('mod_test1', 20);
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.clickEdit();
+    await this.recallPage.openSplitOrder();
+    await this.recallPage.splitEvenly(2);
+    await this.recallPage.saveSplit();
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.openSubOrder(1);
+    const firstSubOrderCharge = await this.recallPage.readOrderChargeItems();
+
+    return {
+      firstSubOrderCharge,
     };
   }
 

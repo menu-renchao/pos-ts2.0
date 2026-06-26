@@ -3094,6 +3094,22 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         renderRecallOrderItems();
       }
 
+      function syncEditingOrderBeforeRecallSplit() {
+        if (!currentEditingOrder || currentEditingOrder !== selectedRecallOrder || selectedSubOrderIndex !== null) {
+          return;
+        }
+        selectedRecallOrder.items = [...currentOrderItems];
+        selectedRecallOrder.itemOption = currentItemOption;
+        selectedRecallOrder.tip = currentOrderTip;
+        selectedRecallOrder.subtotal = Number(orderSubtotal.textContent || currentActiveOrderSubtotal());
+        selectedRecallOrder.orderChargeRate = currentOrderChargeRate;
+        selectedRecallOrder.orderChargeFixedAmount = currentOrderChargeFixedAmount;
+        selectedRecallOrder.orderChargeLabel = currentOrderChargeLabel;
+        selectedRecallOrder.orderChargeTaxed = currentOrderChargeTaxed;
+        selectedRecallOrder.orderChargeTriggerMode = currentOrderChargeTriggerMode;
+        selectedRecallOrder.taxText = orderTax.textContent || '';
+      }
+
       function orderTotal(order) {
         if (order?.settlementTotal !== null && order?.settlementTotal !== undefined) {
           return Number(Number(order.settlementTotal).toFixed(2));
@@ -5035,6 +5051,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         recallPrintFileCount.textContent = '3';
       });
       recallSplitButton.addEventListener('click', () => {
+        syncEditingOrderBeforeRecallSplit();
         splitPanel.hidden = false;
         draftSplitPrices = [...(selectedRecallOrder?.splitOrderPrices || [])];
         draftSplitItemPrices = [];

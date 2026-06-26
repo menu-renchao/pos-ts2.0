@@ -709,4 +709,19 @@ test.describe('stage2 order operation migration', () => {
 
     expect(result.firstSubOrderCharge.manu_test_fixed).toBe(result.expectedFirstSubOrderCharge);
   });
+
+  test('POS-27248 编辑页分单时修改自动固定加收后子单应使用新加收分摊', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.splitEditOrderAfterModifyingAutoFixedCharge(
+      environment.posHomeUrl,
+    );
+
+    expect(result.firstSubOrderCharge.mod_test1).toBe('10.00');
+  });
 });
