@@ -1964,6 +1964,25 @@ export class OrderEntryFlow {
       throw new Error('POS-27258 requires AdminPage');
     }
 
+    return this.copyOrderAfterModifyingAutoChargeMinGuestValue(homeUrl, 1);
+  }
+
+  async copyOrderAfterModifyingAutoChargeMinGuestMismatch(homeUrl: string): Promise<AutoChargeCopyMinGuestResult> {
+    if (!this.adminPage) {
+      throw new Error('POS-27259 requires AdminPage');
+    }
+
+    return this.copyOrderAfterModifyingAutoChargeMinGuestValue(homeUrl, 2);
+  }
+
+  private async copyOrderAfterModifyingAutoChargeMinGuestValue(
+    homeUrl: string,
+    minGuest: number,
+  ): Promise<AutoChargeCopyMinGuestResult> {
+    if (!this.adminPage) {
+      throw new Error('auto charge min guest copy flow requires AdminPage');
+    }
+
     await this.homePage.open(homeUrl);
     await this.homePage.clickAdmin();
     await this.adminPage.setupAutoFixedCharge('auto_test1', 10);
@@ -1975,7 +1994,7 @@ export class OrderEntryFlow {
     await this.orderDishesPage.saveOrder();
 
     await this.homePage.clickAdmin();
-    await this.adminPage.setAutoChargeMinGuest('auto_test1', 1);
+    await this.adminPage.setAutoChargeMinGuest('auto_test1', minGuest);
     await this.homePage.open(homeUrl);
     await this.homePage.clickRecall();
     await this.recallPage.openRecentOrder();

@@ -754,4 +754,19 @@ test.describe('stage2 order operation migration', () => {
 
     expect(result.copiedOrderCharge.auto_test1).toBe('10.00');
   });
+
+  test('POS-27259 复制订单时修改自动加收最小人数不满足条件后不应显示加收', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.copyOrderAfterModifyingAutoChargeMinGuestMismatch(
+      environment.posHomeUrl,
+    );
+
+    expect(result.copiedOrderCharge).toEqual({});
+  });
 });
