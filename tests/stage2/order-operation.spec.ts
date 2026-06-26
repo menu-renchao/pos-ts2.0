@@ -560,4 +560,24 @@ test.describe('stage2 order operation migration', () => {
 
     expect(result.recalledChargeAfterAmountChange).toEqual({ auto_test_fixed: '20.00' });
   });
+
+  test('POS-27174 编辑订单时修改自动百分比加收值后应按新百分比重算', async ({
+    environment,
+    page,
+  }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.modifyAutoPercentChargeValueThenReadRecalledOrderCharge(
+      environment.posHomeUrl,
+    );
+
+    expect(result.recalledChargeAfterPercentChange.auto_test_percentage).toBe(
+      (result.recalledSubtotal * 0.2).toFixed(2),
+    );
+  });
 });
