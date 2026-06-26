@@ -208,6 +208,10 @@ export type ManualChargeDeletedResult = {
   selectedChargesAfterDelete: Record<string, string>;
 };
 
+export type ManualChargeEditSendKitchenResult = {
+  recallChargeAfterEditSendKitchen: Record<string, string>;
+};
+
 export type RenameAutoChargeResult = {
   recalledChargeAfterRename: Record<string, string>;
 };
@@ -1438,6 +1442,38 @@ export class OrderEntryFlow {
       chargeAfterConfirm,
       chargeBeforeConfirm,
       selectedChargesAfterDelete,
+    };
+  }
+
+  async sendKitchenFromEditAfterModifyingManualFixedCharge(
+    homeUrl: string,
+  ): Promise<ManualChargeEditSendKitchenResult> {
+    if (!this.adminPage) {
+      throw new Error('POS-27191 requires AdminPage');
+    }
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.applyPresetCharge('manu_test_fixed');
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.clickAdmin();
+    await this.adminPage.setManualChargeAmount('manu_test_fixed', 20);
+    await this.adminPage.renameManualCharge('manu_test_fixed', 'mod_test1');
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.clickEdit();
+    await this.orderDishesPage.sendAllToKitchen();
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    const recallChargeAfterEditSendKitchen = await this.recallPage.readOrderChargeItems();
+
+    return {
+      recallChargeAfterEditSendKitchen,
     };
   }
 

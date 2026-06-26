@@ -645,4 +645,21 @@ test.describe('stage2 order operation migration', () => {
       auto_test_fixed: '10.00',
     });
   });
+
+  test('POS-27191 编辑页送厨时修改手动固定加收后应保留原加收', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.sendKitchenFromEditAfterModifyingManualFixedCharge(
+      environment.posHomeUrl,
+    );
+
+    expect(result.recallChargeAfterEditSendKitchen).toEqual({
+      manu_test_fixed: '10.00',
+    });
+  });
 });
