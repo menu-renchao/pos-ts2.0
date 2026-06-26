@@ -3419,6 +3419,47 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         selectRecallOrder(targetOrder);
       }
 
+      function moveFirstRecallItemToNewOrder() {
+        if (!selectedRecallOrder || !selectedRecallOrder.items?.length) {
+          return;
+        }
+        const movedItem = selectedRecallOrder.items.shift();
+        selectedRecallOrder.subtotal = orderItemsSubtotal(selectedRecallOrder.items);
+
+        const movedOrder = {
+          ...selectedRecallOrder,
+          combinedOrderCharges: undefined,
+          crmDiscountRate: 0,
+          crmFixedRewardAmount: 0,
+          crmPointDeduction: 0,
+          hasRedeemItem: false,
+          itemOption: null,
+          items: [movedItem],
+          orderChargeFixedAmount: null,
+          orderChargeLabel: '',
+          orderChargeRate: 0,
+          orderChargeTaxed: false,
+          orderChargeTriggerMode: '',
+          orderNumber: String(nextOrderNumber++),
+          paymentRecords: [],
+          rewardDiscount: 0,
+          settlementTotal: null,
+          splitOrderPrices: [],
+          subOrderChargeCleared: [],
+          subOrderItems: [],
+          subOrderStatuses: [],
+          subtotal: orderItemsSubtotal([movedItem]),
+          taxText: '',
+          tip: 0,
+        };
+        movedOrder.orderCardId = movedOrder.orderType === 'dine-in'
+          ? 'Area 1 Table 1 ' + movedOrder.orderNumber
+          : movedOrder.orderNumber;
+        savedOrders.push(movedOrder);
+        persistSavedOrders();
+        selectRecallOrder(movedOrder);
+      }
+
       function renderSplitPrices(prices) {
         splitOrderPrices.innerHTML = '';
         prices.forEach((price) => {
@@ -5033,6 +5074,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         const orderIndex = Number(recallCrmCombineInput.value || '1');
         const sourceOrder = savedOrders[savedOrders.length - orderIndex];
         mergeCrmOrders(selectedRecallOrder, sourceOrder);
+      });
+      recallMoveItemButton.addEventListener('click', () => {
+        moveFirstRecallItemToNewOrder();
       });
       recallCopyOrderButton.addEventListener('click', () => {
         if (!selectedRecallOrder) {

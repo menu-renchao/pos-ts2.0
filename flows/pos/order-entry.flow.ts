@@ -57,6 +57,11 @@ export type OptionOrderRecallResult = {
   recalledItems: RecalledOrderItem[];
 };
 
+export type TogoOrderRecallResult = {
+  orderedItem: RecalledOrderItem;
+  recalledItems: RecalledOrderItem[];
+};
+
 export type EvenSplitSummary = {
   originalTotal: number;
   splitOrderCount: number;
@@ -278,6 +283,11 @@ export type ManualChargeCombineResult = {
   combinedOrderChargeTotal: string;
 };
 
+export type AutoChargeMoveItemResult = {
+  movedOrderCharge: Record<string, string>;
+  originalOrderCharge: Record<string, string>;
+};
+
 export type ManualChargeEditSplitResult = {
   expectedFirstSubOrderCharge: string;
   firstSubOrderCharge: Record<string, string>;
@@ -466,15 +476,24 @@ export class OrderEntryFlow {
   ) {}
 
   async createTogoOrderAndReadRecall(homeUrl: string, dish: DishSample): Promise<RecalledOrderItem[]> {
+    const result = await this.createTogoOrderAndReadOrderedAndRecall(homeUrl, dish);
+    return result.recalledItems;
+  }
+
+  async createTogoOrderAndReadOrderedAndRecall(homeUrl: string, dish: DishSample): Promise<TogoOrderRecallResult> {
     await this.homePage.open(homeUrl);
     await this.homePage.clickTogo();
     await this.orderDishesPage.selectMenuGroup(dish.group);
-    await this.orderDishesPage.selectMenuCategory(dish.category);
+    if (dish.category) {
+      await this.orderDishesPage.selectMenuCategory(dish.category);
+    }
     await this.orderDishesPage.addMenuItem(dish.name);
+    const orderedItem = await this.orderDishesPage.readSelectedOrderItem();
     await this.orderDishesPage.saveOrder();
     await this.homePage.clickRecall();
     await this.recallPage.openRecentOrder();
-    return this.recallPage.readAllOrderItems();
+    const recalledItems = await this.recallPage.readAllOrderItems();
+    return { orderedItem, recalledItems };
   }
 
   async readChineseMenuGroups(homeUrl: string): Promise<string[]> {
@@ -2171,6 +2190,40 @@ export class OrderEntryFlow {
     return {
       combinedOrderChargeItems,
       combinedOrderChargeTotal,
+    };
+  }
+
+  async moveFirstItemToNewOrderAfterModifyingAutoCharge(homeUrl: string): Promise<AutoChargeMoveItemResult> {
+    if (!this.adminPage) {
+      throw new Error('POS-27314 requires AdminPage');
+    }
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.setupAutoFixedCharge('auto_test1', 10);
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    for (let index = 0; index < 2; index += 1) {
+      await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+      await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+      await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    }
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.clickAdmin();
+    await this.adminPage.renameAutoCharge('auto_test1', 'mod_test1');
+    await this.adminPage.setAutoChargeAmount('mod_test1', 20);
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.moveFirstItemToNewOrder();
+    const movedOrderCharge = await this.recallPage.readOrderChargeItems();
+    await this.recallPage.openPreviousOrder();
+    const originalOrderCharge = await this.recallPage.readOrderChargeItems();
+
+    return {
+      movedOrderCharge,
+      originalOrderCharge,
     };
   }
 

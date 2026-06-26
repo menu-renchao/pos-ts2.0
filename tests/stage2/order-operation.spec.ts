@@ -852,4 +852,22 @@ test.describe('stage2 order operation migration', () => {
     });
     expect(result.combinedOrderChargeTotal).toBe('20.00');
   });
+
+  test('POS-27314 移菜到新单时修改自动加收后新单无加收且原单保留旧加收', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.moveFirstItemToNewOrderAfterModifyingAutoCharge(
+      environment.posHomeUrl,
+    );
+
+    expect(result.movedOrderCharge).toEqual({});
+    expect(result.originalOrderCharge).toEqual({
+      auto_test1: '10.00',
+    });
+  });
 });

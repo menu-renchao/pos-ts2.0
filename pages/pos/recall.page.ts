@@ -1,6 +1,7 @@
 import type { Locator, Page } from '@playwright/test';
 import { expect } from '@playwright/test';
 
+import { parseCurrency } from '../../utils/money.js';
 import { step } from '../../utils/step.js';
 import { PageObject } from '../shared/page-object.js';
 
@@ -182,7 +183,7 @@ export class RecallPage extends PageObject {
     this.unsplitButton = page.getByTestId('split-unsplit');
     this.voidAlert = page.getByTestId('recall-void-alert');
     this.voidPaidOrderButton = page.getByTestId('recall-void-paid-order');
-    this.voidOrderButton = page.getByTestId('recall-void-order');
+    this.voidOrderButton = page.getByTestId('recall-void-order').or(page.locator('#void-submit')).first();
     this.voidReasonChooseButton = page.getByTestId('recall-void-reason-choose');
     this.voidReasonOptions = page.getByTestId('recall-void-reason-option');
     this.restoreInventoryCheckbox = page.getByTestId('recall-restore-inventory');
@@ -261,7 +262,10 @@ export class RecallPage extends PageObject {
 
   async readAllOrderItems(): Promise<RecalledOrderItem[]> {
     return step('读取 Recall 订单菜品列表', async () => {
-      await expect(this.recallItems.first()).toBeVisible();
+      if (!(await this.recallItems.first().isVisible().catch(() => false))) {
+        return this.readLiveOrderItems();
+      }
+
       const itemElements = await this.recallItems.all();
       const items: RecalledOrderItem[] = [];
       for (const itemElement of itemElements) {
@@ -281,6 +285,32 @@ export class RecallPage extends PageObject {
       }
       return items;
     });
+  }
+
+  private async readLiveOrderItems(): Promise<RecalledOrderItem[]> {
+    const liveItems = this.page.locator('[id*="itemdsh"]:visible');
+    await expect(liveItems.first()).toBeVisible();
+    const itemElements = await liveItems.all();
+    const items: RecalledOrderItem[] = [];
+
+    for (const itemElement of itemElements) {
+      const liveItem = await itemElement.evaluate((line) => {
+        const name =
+          line.children.item(3)?.querySelector<HTMLElement>('.itemNameORDEREDtxt')?.textContent?.trim() ??
+          line.querySelector<HTMLElement>('.itemNameORDEREDtxt')?.textContent?.trim() ??
+          '';
+        const priceText = line.children.item(4)?.textContent?.trim() ?? '';
+        return { name, priceText };
+      });
+      if (liveItem.name) {
+        items.push({
+          name: liveItem.name,
+          price: parseCurrency(liveItem.priceText),
+        });
+      }
+    }
+
+    return items;
   }
 
   async readComboSubItemNames(): Promise<string[]> {
@@ -495,11 +525,34 @@ export class RecallPage extends PageObject {
 
   async voidOrder(restoreInventory = true): Promise<void> {
     await step(`Recall Void 订单${restoreInventory ? '并恢复库存' : '且不恢复库存'}`, async () => {
-      if (restoreInventory) {
-        await this.restoreInventoryCheckbox.check();
-      } else {
-        await this.restoreInventoryCheckbox.uncheck();
+      const liveVoidSubmitButton = this.page.locator('#void-submit');
+      if ((await liveVoidSubmitButton.count()) > 0) {
+        if (!(await liveVoidSubmitButton.isVisible().catch(() => false))) {
+          await this.page.locator('#voidodtxt').click({ timeout: 5_000 }).catch(async () => {
+            await this.page.evaluate(() => document.getElementById('voidodtxt')?.click());
+          });
+          await expect(liveVoidSubmitButton).toBeVisible({ timeout: 10_000 });
+        }
+        await this.setRestoreInventory(restoreInventory);
+        await liveVoidSubmitButton.click({ timeout: 5_000 }).catch(async (error: unknown) => {
+          const clicked = await this.page
+            .evaluate(() => {
+              const submit = document.getElementById('void-submit');
+              if (!submit) {
+                return false;
+              }
+              submit.click();
+              return true;
+            })
+            .catch(() => false);
+          if (!clicked) {
+            throw error;
+          }
+        });
+        return;
       }
+
+      await this.setRestoreInventory(restoreInventory);
       await this.voidOrderButton.click();
     });
   }
@@ -549,6 +602,13 @@ export class RecallPage extends PageObject {
 
   async isMoveItemVisible(): Promise<boolean> {
     return step('判断 Recall 移菜按钮是否展示', async () => this.moveItemButton.isVisible());
+  }
+
+  async moveFirstItemToNewOrder(): Promise<void> {
+    await step('Recall 移第 1 个菜到新订单', async () => {
+      await expect(this.recallRoot).toBeVisible();
+      await this.moveItemButton.click();
+    });
   }
 
   async clickEdit(): Promise<void> {
@@ -716,5 +776,30 @@ export class RecallPage extends PageObject {
     return step('读取 Recall 分单菜品金额列表', async () =>
       (await this.splitItemPrices.allTextContents()).map((price) => Number(price)),
     );
+  }
+
+  private async setRestoreInventory(restoreInventory: boolean): Promise<void> {
+    if (await this.restoreInventoryCheckbox.isVisible().catch(() => false)) {
+      if (restoreInventory) {
+        await this.restoreInventoryCheckbox.check();
+      } else {
+        await this.restoreInventoryCheckbox.uncheck();
+      }
+      return;
+    }
+
+    await this.page.evaluate((restore) => {
+      const checkboxes = Array.from(document.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'));
+      const restoreCheckbox = checkboxes.find((checkbox) => {
+        const label = checkbox.id ? document.querySelector(`label[for="${CSS.escape(checkbox.id)}"]`) : null;
+        const context = [label?.textContent, checkbox.closest('label')?.textContent, checkbox.parentElement?.textContent]
+          .filter(Boolean)
+          .join(' ');
+        return /restore/i.test(context) && /inventory/i.test(context);
+      });
+      if (restoreCheckbox && restoreCheckbox.checked !== restore) {
+        restoreCheckbox.click();
+      }
+    }, restoreInventory);
   }
 }
