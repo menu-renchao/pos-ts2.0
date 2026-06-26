@@ -833,4 +833,23 @@ test.describe('stage2 order operation migration', () => {
 
     expect(result.copiedOrderCharge).toEqual({});
   });
+
+  test('POS-27303 合单时修改和删除手动加收配置后应累加旧订单加收', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.combineOrdersAfterModifyingManualCharges(
+      environment.posHomeUrl,
+    );
+
+    expect(result.combinedOrderChargeItems).toEqual({
+      auto_test1: '10.00',
+      auto_test2: '10.00',
+    });
+    expect(result.combinedOrderChargeTotal).toBe('20.00');
+  });
 });

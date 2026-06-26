@@ -273,6 +273,11 @@ export type AutoChargeCopyMinGuestResult = {
   copiedOrderCharge: Record<string, string>;
 };
 
+export type ManualChargeCombineResult = {
+  combinedOrderChargeItems: Record<string, string>;
+  combinedOrderChargeTotal: string;
+};
+
 export type ManualChargeEditSplitResult = {
   expectedFirstSubOrderCharge: string;
   firstSubOrderCharge: Record<string, string>;
@@ -2122,6 +2127,50 @@ export class OrderEntryFlow {
 
     return {
       copiedOrderCharge,
+    };
+  }
+
+  async combineOrdersAfterModifyingManualCharges(homeUrl: string): Promise<ManualChargeCombineResult> {
+    if (!this.adminPage) {
+      throw new Error('POS-27303 requires AdminPage');
+    }
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.setupManualFixedCharge('auto_test1', 10);
+    await this.adminPage.setupManualFixedCharge('auto_test2', 10);
+    await this.homePage.open(homeUrl);
+
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.applyPresetCharge('auto_test1');
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.applyPresetCharge('auto_test2');
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.clickAdmin();
+    await this.adminPage.renameManualCharge('auto_test1', 'mod_test1');
+    await this.adminPage.setManualChargeAmount('mod_test1', 20);
+    await this.adminPage.deleteChargeByName('auto_test2');
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.combineOrder(2);
+    const combinedOrderChargeItems = await this.recallPage.readOrderChargeItems();
+    const combinedOrderChargeTotal = Object.values(combinedOrderChargeItems)
+      .reduce((sum, value) => sum + Number(value), 0)
+      .toFixed(2);
+
+    return {
+      combinedOrderChargeItems,
+      combinedOrderChargeTotal,
     };
   }
 

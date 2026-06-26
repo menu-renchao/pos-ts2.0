@@ -157,6 +157,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <input data-testid="admin-charge-old-name" />
       <input data-testid="admin-charge-new-name" />
       <button data-testid="admin-charge-rename">Rename Charge</button>
+      <button data-testid="admin-manual-fixed-charge-setup">Setup Manual Fixed Charge</button>
       <button data-testid="admin-auto-fixed-charge-setup">Setup Auto Fixed Charge</button>
       <button data-testid="admin-auto-percent-charge-setup">Setup Auto Percent Charge</button>
       <input data-testid="admin-charge-rate-type-name" />
@@ -924,6 +925,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const adminChargeOldNameInput = document.querySelector('[data-testid="admin-charge-old-name"]');
       const adminChargeNewNameInput = document.querySelector('[data-testid="admin-charge-new-name"]');
       const adminChargeRenameButton = document.querySelector('[data-testid="admin-charge-rename"]');
+      const adminManualFixedChargeSetupButton = document.querySelector('[data-testid="admin-manual-fixed-charge-setup"]');
       const adminAutoFixedChargeSetupButton = document.querySelector('[data-testid="admin-auto-fixed-charge-setup"]');
       const adminAutoPercentChargeSetupButton = document.querySelector('[data-testid="admin-auto-percent-charge-setup"]');
       const adminChargeRateTypeNameInput = document.querySelector('[data-testid="admin-charge-rate-type-name"]');
@@ -3236,6 +3238,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       }
 
       function orderChargeAmount(order, items, subOrderIndex = null) {
+        if (Array.isArray(order?.combinedOrderCharges)) {
+          return roundMoney(order.combinedOrderCharges.reduce((sum, charge) => sum + Number(charge.amount || 0), 0));
+        }
         if (order?.orderChargeFixedAmount !== null && order?.orderChargeFixedAmount !== undefined) {
           if (subOrderIndex !== null && Array.isArray(order?.splitOrderPrices) && order.splitOrderPrices.length) {
             const splitTotal = order.splitOrderPrices.reduce((sum, price) => sum + Number(price || 0), 0);
@@ -3259,6 +3264,14 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
 
       function priceDetailText(order, items, subOrderIndex = null) {
         const lines = ['Subtotal ' + orderItemsSubtotal(items || []).toFixed(2)];
+        if (Array.isArray(order?.combinedOrderCharges)) {
+          order.combinedOrderCharges
+            .filter((charge) => Number(charge.amount || 0) !== 0)
+            .forEach((charge) => {
+              lines.push((charge.label || 'Charge') + ' ' + Number(charge.amount || 0).toFixed(2));
+            });
+          return lines.join('\\n');
+        }
         const chargeCleared = subOrderIndex !== null && Boolean(order?.subOrderChargeCleared?.[subOrderIndex]);
         const charge = chargeCleared ? 0 : orderChargeAmount(order, items || [], subOrderIndex);
         if (charge) {
@@ -3369,12 +3382,36 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         });
       }
 
+      function snapshotOrderCharge(order) {
+        const amount = orderChargeAmount(order, order?.items || []);
+        if (!amount) {
+          return null;
+        }
+        return {
+          amount,
+          label: order.orderChargeLabel || 'Charge',
+        };
+      }
+
       function mergeCrmOrders(targetOrder, sourceOrder) {
         if (!targetOrder || !sourceOrder) {
           return;
         }
+        const targetCharge = snapshotOrderCharge(targetOrder);
+        const sourceCharge = snapshotOrderCharge(sourceOrder);
         targetOrder.items = [...targetOrder.items, ...sourceOrder.items];
         targetOrder.subtotal = Number((Number(targetOrder.subtotal || 0) + Number(sourceOrder.subtotal || 0)).toFixed(2));
+        targetOrder.combinedOrderCharges = [
+          ...(targetOrder.combinedOrderCharges || []),
+          targetCharge,
+          sourceCharge,
+        ].filter(Boolean);
+        if (targetOrder.combinedOrderCharges.length) {
+          targetOrder.orderChargeRate = 0;
+          targetOrder.orderChargeFixedAmount = null;
+          targetOrder.orderChargeLabel = '';
+          targetOrder.orderChargeTriggerMode = '';
+        }
         if (targetOrder.crmDiscountRate) {
           targetOrder.rewardDiscount = calculateRewardDiscount(targetOrder);
         }
@@ -4136,6 +4173,25 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         ));
         localStorage.setItem('offlineManualCharges', JSON.stringify(manualCharges));
         localStorage.setItem('offlineAutoCharges', JSON.stringify(autoCharges));
+      });
+      adminManualFixedChargeSetupButton.addEventListener('click', () => {
+        const chargeName = adminChargeOldNameInput.value || 'manu_test_fixed';
+        const amount = Number(adminChargeAmountInput.value || 10);
+        manualCharges = [
+          ...manualCharges.filter((charge) => charge.name !== chargeName),
+          {
+            amount,
+            minAmount: 0,
+            minGuest: 0,
+            minMile: 0,
+            name: chargeName,
+            orderTypes: ['dine-in', 'delivery', 'pickup', 'togo'],
+            rate: 0,
+            rateType: 'amount',
+            taxed: false,
+          },
+        ];
+        localStorage.setItem('offlineManualCharges', JSON.stringify(manualCharges));
       });
       adminAutoFixedChargeSetupButton.addEventListener('click', () => {
         const chargeName = adminChargeOldNameInput.value || 'auto_test_fixed';

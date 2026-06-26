@@ -120,6 +120,7 @@ export class AdminPage extends PageObject {
   private readonly chargeOldNameInput: Locator;
   private readonly chargeNewNameInput: Locator;
   private readonly chargeRenameButton: Locator;
+  private readonly manualFixedChargeSetupButton: Locator;
   private readonly autoFixedChargeSetupButton: Locator;
   private readonly autoPercentChargeSetupButton: Locator;
   private readonly chargeRateTypeNameInput: Locator;
@@ -260,6 +261,7 @@ export class AdminPage extends PageObject {
     this.chargeOldNameInput = page.getByTestId('admin-charge-old-name');
     this.chargeNewNameInput = page.getByTestId('admin-charge-new-name');
     this.chargeRenameButton = page.getByTestId('admin-charge-rename');
+    this.manualFixedChargeSetupButton = page.getByTestId('admin-manual-fixed-charge-setup');
     this.autoFixedChargeSetupButton = page.getByTestId('admin-auto-fixed-charge-setup');
     this.autoPercentChargeSetupButton = page.getByTestId('admin-auto-percent-charge-setup');
     this.chargeRateTypeNameInput = page.getByTestId('admin-charge-rate-type-name');
@@ -522,6 +524,15 @@ export class AdminPage extends PageObject {
     });
   }
 
+  async setupManualFixedCharge(chargeName: string, amount: number): Promise<void> {
+    await step(`配置手动固定加收 ${chargeName} 为 ${amount}`, async () => {
+      await expect(this.adminRoot).toBeVisible();
+      await this.chargeOldNameInput.fill(chargeName);
+      await this.chargeAmountInput.fill(String(amount));
+      await this.manualFixedChargeSetupButton.click();
+    });
+  }
+
   async setupAutoFixedCharge(chargeName: string, amount: number): Promise<void> {
     await step(`配置自动固定加收 ${chargeName} 为 ${amount}`, async () => {
       await expect(this.adminRoot).toBeVisible();
@@ -673,6 +684,14 @@ export class AdminPage extends PageObject {
 
   async deleteAutoChargeByName(chargeName: string): Promise<void> {
     await step(`删除自动加收 ${chargeName}`, async () => {
+      await expect(this.adminRoot).toBeVisible();
+      await this.chargeOldNameInput.fill(chargeName);
+      await this.chargeDeleteAllButton.click();
+    });
+  }
+
+  async deleteChargeByName(chargeName: string): Promise<void> {
+    await step(`删除加收 ${chargeName}`, async () => {
       await expect(this.adminRoot).toBeVisible();
       await this.chargeOldNameInput.fill(chargeName);
       await this.chargeDeleteAllButton.click();
