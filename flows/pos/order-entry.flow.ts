@@ -239,6 +239,10 @@ export type AutoChargeTaxChangeResult = {
   taxBeforeSave: number;
 };
 
+export type AutoChargeDeletedResult = {
+  recalledChargeAfterDelete: Record<string, string>;
+};
+
 export type EvenSplitTipUnsplitResult = {
   combinedTipText: string;
 };
@@ -1644,6 +1648,36 @@ export class OrderEntryFlow {
     return {
       taxAfterEnteringEdit,
       taxBeforeSave,
+    };
+  }
+
+  async removeDeletedAutoFixedChargeFromRecalledOrderEdit(
+    homeUrl: string,
+  ): Promise<AutoChargeDeletedResult> {
+    if (!this.adminPage) {
+      throw new Error('POS-27182 requires AdminPage');
+    }
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.setupAutoFixedCharge('auto_test_fixed', 10);
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.clickAdmin();
+    await this.adminPage.deleteAutoChargeByName('auto_test_fixed');
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.clickEdit();
+    const recalledChargeAfterDelete = await this.orderDishesPage.readOrderChargeItems();
+
+    return {
+      recalledChargeAfterDelete,
     };
   }
 

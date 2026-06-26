@@ -4097,8 +4097,15 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         localStorage.setItem('offlineAutoCharges', JSON.stringify(autoCharges));
       });
       adminChargeDeleteAllButton.addEventListener('click', () => {
-        manualCharges = [];
+        const chargeName = adminChargeOldNameInput.value;
+        if (chargeName) {
+          manualCharges = manualCharges.filter((charge) => charge.name !== chargeName);
+          autoCharges = autoCharges.filter((charge) => charge.name !== chargeName);
+        } else {
+          manualCharges = [];
+        }
         localStorage.setItem('offlineManualCharges', JSON.stringify(manualCharges));
+        localStorage.setItem('offlineAutoCharges', JSON.stringify(autoCharges));
       });
       orderTaxExemptButton.addEventListener('click', () => {
         currentOrderTaxVoided = true;

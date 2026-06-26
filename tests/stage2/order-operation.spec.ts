@@ -613,4 +613,19 @@ test.describe('stage2 order operation migration', () => {
 
     expect(result.taxAfterEnteringEdit).toBeGreaterThan(result.taxBeforeSave);
   });
+
+  test('POS-27182 编辑订单时删除自动固定加收后不应显示加收', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.removeDeletedAutoFixedChargeFromRecalledOrderEdit(
+      environment.posHomeUrl,
+    );
+
+    expect(result.recalledChargeAfterDelete).toEqual({});
+  });
 });

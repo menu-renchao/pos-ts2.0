@@ -605,6 +605,15 @@ export class AdminPage extends PageObject {
   async deleteAllManualCharges(): Promise<void> {
     await step('删除全部手动加收配置', async () => {
       await expect(this.adminRoot).toBeVisible();
+      await this.chargeOldNameInput.fill('');
+      await this.chargeDeleteAllButton.click();
+    });
+  }
+
+  async deleteAutoChargeByName(chargeName: string): Promise<void> {
+    await step(`删除自动加收 ${chargeName}`, async () => {
+      await expect(this.adminRoot).toBeVisible();
+      await this.chargeOldNameInput.fill(chargeName);
       await this.chargeDeleteAllButton.click();
     });
   }
