@@ -739,4 +739,19 @@ test.describe('stage2 order operation migration', () => {
 
     expect(result.copiedOrderCharge.mod_test1).toBe(result.expectedCopiedCharge);
   });
+
+  test('POS-27258 复制订单时修改自动加收最小人数满足条件后应保留加收', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.copyOrderAfterModifyingAutoChargeMinGuest(
+      environment.posHomeUrl,
+    );
+
+    expect(result.copiedOrderCharge.auto_test1).toBe('10.00');
+  });
 });

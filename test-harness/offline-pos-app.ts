@@ -182,6 +182,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         <option value="togo">To Go</option>
       </select>
       <button data-testid="admin-charge-order-types-save">Save Charge Order Types</button>
+      <input data-testid="admin-charge-min-guest-name" />
+      <input data-testid="admin-charge-min-guest" />
+      <button data-testid="admin-charge-min-guest-save">Save Charge Min Guest</button>
       <button data-testid="admin-charge-delete-all">Delete All Charges</button>
       <input data-testid="admin-kds-item-name" />
       <input data-testid="admin-kds-pos-name" />
@@ -922,6 +925,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const adminChargeOrderTypeNameInput = document.querySelector('[data-testid="admin-charge-order-type-name"]');
       const adminChargeOrderTypesSelect = document.querySelector('[data-testid="admin-charge-order-types"]');
       const adminChargeOrderTypesSaveButton = document.querySelector('[data-testid="admin-charge-order-types-save"]');
+      const adminChargeMinGuestNameInput = document.querySelector('[data-testid="admin-charge-min-guest-name"]');
+      const adminChargeMinGuestInput = document.querySelector('[data-testid="admin-charge-min-guest"]');
+      const adminChargeMinGuestSaveButton = document.querySelector('[data-testid="admin-charge-min-guest-save"]');
       const adminChargeDeleteAllButton = document.querySelector('[data-testid="admin-charge-delete-all"]');
       const kdsItemNameInput = document.querySelector('[data-testid="admin-kds-item-name"]');
       const kdsItemPosNameInput = document.querySelector('[data-testid="admin-kds-pos-name"]');
@@ -2438,8 +2444,18 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           || charge.orderTypes.includes(orderType);
       }
 
+      function chargeAppliesToGuestCount(charge, guestCount) {
+        const minGuest = Number(charge?.minGuest || 0);
+        return minGuest <= 0 || Number(guestCount || 1) >= minGuest;
+      }
+
+      function chargeAppliesToOrderContext(charge, orderType, guestCount) {
+        return chargeAppliesToOrderType(charge, orderType)
+          && chargeAppliesToGuestCount(charge, guestCount);
+      }
+
       function chargeAppliesToCurrentOrderType(charge) {
-        return chargeAppliesToOrderType(charge, currentOrderType);
+        return chargeAppliesToOrderContext(charge, currentOrderType, currentGuestCount);
       }
 
       function selectedManualCharge() {
@@ -3049,6 +3065,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           priceEdited: currentOrderPriceEdited,
           status: currentOrderStatus,
           customerName: currentCustomerName,
+          guestCount: currentGuestCount,
           subtotal: Number(orderSubtotal.textContent || '0'),
           settlementTotal: currentSettlementTotal,
           crmMember: selectedMemberRecord(),
@@ -3119,7 +3136,12 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           return;
         }
         const orderType = order.orderType || currentOrderType;
-        const applicableCharges = autoCharges.filter((charge) => chargeAppliesToOrderType(charge, orderType));
+        const guestCount = Number(order.guestCount || currentGuestCount || 1);
+        const applicableCharges = autoCharges.filter((charge) => chargeAppliesToOrderContext(
+          charge,
+          orderType,
+          guestCount,
+        ));
         const chargeByName = applicableCharges.find((charge) => charge.name === order.orderChargeLabel);
         const chargeByValue = applicableCharges.find((charge) => (
           (charge.rateType === 'amount'
@@ -4063,6 +4085,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         autoCharges = [
           {
             amount,
+            minGuest: 0,
             name: chargeName,
             orderTypes: ['dine-in', 'delivery', 'pickup', 'togo'],
             rate: 0,
@@ -4078,6 +4101,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         autoCharges = [
           {
             amount: percent,
+            minGuest: 0,
             name: chargeName,
             orderTypes: ['dine-in', 'delivery', 'pickup', 'togo'],
             rate: percent / 100,
@@ -4155,6 +4179,18 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         ));
         autoCharges = autoCharges.map((charge) => (
           charge.name === chargeName ? { ...charge, orderTypes } : charge
+        ));
+        localStorage.setItem('offlineManualCharges', JSON.stringify(manualCharges));
+        localStorage.setItem('offlineAutoCharges', JSON.stringify(autoCharges));
+      });
+      adminChargeMinGuestSaveButton.addEventListener('click', () => {
+        const chargeName = adminChargeMinGuestNameInput.value;
+        const minGuest = Number(adminChargeMinGuestInput.value || 0);
+        manualCharges = manualCharges.map((charge) => (
+          charge.name === chargeName ? { ...charge, minGuest } : charge
+        ));
+        autoCharges = autoCharges.map((charge) => (
+          charge.name === chargeName ? { ...charge, minGuest } : charge
         ));
         localStorage.setItem('offlineManualCharges', JSON.stringify(manualCharges));
         localStorage.setItem('offlineAutoCharges', JSON.stringify(autoCharges));

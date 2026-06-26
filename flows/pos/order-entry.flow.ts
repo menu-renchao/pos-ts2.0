@@ -269,6 +269,10 @@ export type AutoChargeCopyResult = {
   expectedCopiedCharge: string;
 };
 
+export type AutoChargeCopyMinGuestResult = {
+  copiedOrderCharge: Record<string, string>;
+};
+
 export type ManualChargeEditSplitResult = {
   expectedFirstSubOrderCharge: string;
   firstSubOrderCharge: Record<string, string>;
@@ -1952,6 +1956,34 @@ export class OrderEntryFlow {
       copiedOrderCharge,
       copiedOrderSubtotal,
       expectedCopiedCharge,
+    };
+  }
+
+  async copyOrderAfterModifyingAutoChargeMinGuest(homeUrl: string): Promise<AutoChargeCopyMinGuestResult> {
+    if (!this.adminPage) {
+      throw new Error('POS-27258 requires AdminPage');
+    }
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.setupAutoFixedCharge('auto_test1', 10);
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.clickAdmin();
+    await this.adminPage.setAutoChargeMinGuest('auto_test1', 1);
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.copyCurrentOrder();
+    const copiedOrderCharge = await this.recallPage.readOrderChargeItems();
+
+    return {
+      copiedOrderCharge,
     };
   }
 

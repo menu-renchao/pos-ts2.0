@@ -133,6 +133,9 @@ export class AdminPage extends PageObject {
   private readonly chargeOrderTypeNameInput: Locator;
   private readonly chargeOrderTypesSelect: Locator;
   private readonly chargeOrderTypesSaveButton: Locator;
+  private readonly chargeMinGuestNameInput: Locator;
+  private readonly chargeMinGuestInput: Locator;
+  private readonly chargeMinGuestSaveButton: Locator;
   private readonly chargeDeleteAllButton: Locator;
 
   constructor(page: Page) {
@@ -261,6 +264,9 @@ export class AdminPage extends PageObject {
     this.chargeOrderTypeNameInput = page.getByTestId('admin-charge-order-type-name');
     this.chargeOrderTypesSelect = page.getByTestId('admin-charge-order-types');
     this.chargeOrderTypesSaveButton = page.getByTestId('admin-charge-order-types-save');
+    this.chargeMinGuestNameInput = page.getByTestId('admin-charge-min-guest-name');
+    this.chargeMinGuestInput = page.getByTestId('admin-charge-min-guest');
+    this.chargeMinGuestSaveButton = page.getByTestId('admin-charge-min-guest-save');
     this.chargeDeleteAllButton = page.getByTestId('admin-charge-delete-all');
   }
 
@@ -599,6 +605,15 @@ export class AdminPage extends PageObject {
       await this.chargeOrderTypeNameInput.fill(chargeName);
       await this.chargeOrderTypesSelect.selectOption([...orderTypes]);
       await this.chargeOrderTypesSaveButton.click();
+    });
+  }
+
+  async setAutoChargeMinGuest(chargeName: string, minGuest: number): Promise<void> {
+    await step(`修改自动加收 ${chargeName} 最小人数为 ${minGuest}`, async () => {
+      await expect(this.adminRoot).toBeVisible();
+      await this.chargeMinGuestNameInput.fill(chargeName);
+      await this.chargeMinGuestInput.fill(String(minGuest));
+      await this.chargeMinGuestSaveButton.click();
     });
   }
 
