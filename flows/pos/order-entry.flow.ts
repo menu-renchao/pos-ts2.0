@@ -221,6 +221,10 @@ export type AutoChargeRateTypeToAmountResult = {
   recalledChargeAfterRateTypeChange: Record<string, string>;
 };
 
+export type AutoChargeAmountChangeResult = {
+  recalledChargeAfterAmountChange: Record<string, string>;
+};
+
 export type EvenSplitTipUnsplitResult = {
   combinedTipText: string;
 };
@@ -1502,6 +1506,36 @@ export class OrderEntryFlow {
 
     return {
       recalledChargeAfterRateTypeChange,
+    };
+  }
+
+  async modifyAutoFixedChargeAmountThenReadRecalledOrderCharge(
+    homeUrl: string,
+  ): Promise<AutoChargeAmountChangeResult> {
+    if (!this.adminPage) {
+      throw new Error('POS-27173 requires AdminPage');
+    }
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.setupAutoFixedCharge('auto_test_fixed', 10);
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.clickAdmin();
+    await this.adminPage.setAutoChargeAmount('auto_test_fixed', 20);
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.clickEdit();
+    const recalledChargeAfterAmountChange = await this.orderDishesPage.readOrderChargeItems();
+
+    return {
+      recalledChargeAfterAmountChange,
     };
   }
 

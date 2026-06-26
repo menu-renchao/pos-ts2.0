@@ -551,6 +551,15 @@ export class AdminPage extends PageObject {
     });
   }
 
+  async setAutoChargeAmount(chargeName: string, amount: number): Promise<void> {
+    await step(`修改自动加收 ${chargeName} 金额为 ${amount}`, async () => {
+      await expect(this.adminRoot).toBeVisible();
+      await this.chargeAmountNameInput.fill(chargeName);
+      await this.chargeAmountInput.fill(String(amount));
+      await this.chargeAmountSaveButton.click();
+    });
+  }
+
   async setManualChargeTaxed(chargeName: string, taxed: boolean): Promise<void> {
     await step(`修改手动加收 ${chargeName} 计税为 ${taxed ? '开启' : '关闭'}`, async () => {
       await expect(this.adminRoot).toBeVisible();

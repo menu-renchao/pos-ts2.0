@@ -4055,7 +4055,17 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           }
           return { ...charge, amount, rate: 0 };
         });
+        autoCharges = autoCharges.map((charge) => {
+          if (charge.name !== chargeName) {
+            return charge;
+          }
+          if (charge.rateType === 'percent') {
+            return { ...charge, amount, rate: amount / 100 };
+          }
+          return { ...charge, amount, rate: 0 };
+        });
         localStorage.setItem('offlineManualCharges', JSON.stringify(manualCharges));
+        localStorage.setItem('offlineAutoCharges', JSON.stringify(autoCharges));
       });
       adminChargeTaxSaveButton.addEventListener('click', () => {
         const chargeName = adminChargeTaxNameInput.value;

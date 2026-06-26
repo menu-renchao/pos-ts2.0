@@ -545,4 +545,19 @@ test.describe('stage2 order operation migration', () => {
 
     expect(result.recalledChargeAfterRateTypeChange).toEqual({ auto_test_percentage: '10.00' });
   });
+
+  test('POS-27173 编辑订单时修改自动固定加收金额后应显示 20.00', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.modifyAutoFixedChargeAmountThenReadRecalledOrderCharge(
+      environment.posHomeUrl,
+    );
+
+    expect(result.recalledChargeAfterAmountChange).toEqual({ auto_test_fixed: '20.00' });
+  });
 });
