@@ -569,6 +569,15 @@ export class AdminPage extends PageObject {
     });
   }
 
+  async setAutoChargeTaxed(chargeName: string, taxed: boolean): Promise<void> {
+    await step(`修改自动加收 ${chargeName} 计税为 ${taxed ? '开启' : '关闭'}`, async () => {
+      await expect(this.adminRoot).toBeVisible();
+      await this.chargeTaxNameInput.fill(chargeName);
+      await this.chargeTaxedSelect.selectOption(taxed ? 'true' : 'false');
+      await this.chargeTaxSaveButton.click();
+    });
+  }
+
   async setManualChargeOrderTypes(
     chargeName: string,
     orderTypes: readonly ManualChargeOrderType[],

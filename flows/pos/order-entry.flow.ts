@@ -234,6 +234,11 @@ export type AutoChargeOrderTypeMismatchResult = {
   recalledChargeAfterOrderTypeChange: Record<string, string>;
 };
 
+export type AutoChargeTaxChangeResult = {
+  taxAfterEnteringEdit: number;
+  taxBeforeSave: number;
+};
+
 export type EvenSplitTipUnsplitResult = {
   combinedTipText: string;
 };
@@ -1607,6 +1612,38 @@ export class OrderEntryFlow {
 
     return {
       recalledChargeAfterOrderTypeChange,
+    };
+  }
+
+  async increaseTaxWhenAutoFixedChargeBecomesTaxedAfterEdit(
+    homeUrl: string,
+  ): Promise<AutoChargeTaxChangeResult> {
+    if (!this.adminPage) {
+      throw new Error('POS-27177 requires AdminPage');
+    }
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.setupAutoFixedCharge('auto_test_fixed', 10);
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(chineseInitialSearchDish.group);
+    await this.orderDishesPage.selectMenuCategory(chineseInitialSearchDish.category);
+    await this.orderDishesPage.addMenuItem(chineseInitialSearchDish.name);
+    const taxBeforeSave = await this.orderDishesPage.readTax();
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.clickAdmin();
+    await this.adminPage.setAutoChargeTaxed('auto_test_fixed', true);
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.clickEdit();
+    const taxAfterEnteringEdit = await this.orderDishesPage.readTax();
+
+    return {
+      taxAfterEnteringEdit,
+      taxBeforeSave,
     };
   }
 

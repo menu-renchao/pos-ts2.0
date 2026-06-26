@@ -4078,7 +4078,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         manualCharges = manualCharges.map((charge) => (
           charge.name === chargeName ? { ...charge, taxed } : charge
         ));
+        autoCharges = autoCharges.map((charge) => (
+          charge.name === chargeName ? { ...charge, taxed } : charge
+        ));
         localStorage.setItem('offlineManualCharges', JSON.stringify(manualCharges));
+        localStorage.setItem('offlineAutoCharges', JSON.stringify(autoCharges));
       });
       adminChargeOrderTypesSaveButton.addEventListener('click', () => {
         const chargeName = adminChargeOrderTypeNameInput.value;
@@ -4961,9 +4965,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           currentOrderChargeLabel = currentOrderChargeRate || currentOrderChargeFixedAmount !== null ? selectedRecallOrder.orderChargeLabel || 'Charge' : '';
           currentOrderChargeTriggerMode = currentOrderChargeLabel ? selectedRecallOrder.orderChargeTriggerMode || '' : '';
           syncCurrentChargeFromAutoConfig();
-          currentOrderChargeTaxed = currentOrderChargeRate || currentOrderChargeFixedAmount !== null
-            ? Boolean(selectedRecallOrder.orderChargeTaxed)
-            : false;
+          if (currentOrderChargeTriggerMode !== 'auto') {
+            currentOrderChargeTaxed = currentOrderChargeRate || currentOrderChargeFixedAmount !== null
+              ? Boolean(selectedRecallOrder.orderChargeTaxed)
+              : false;
+          }
           currentOrderStatus = selectedSubOrderIndex !== null
             ? selectedRecallOrder.subOrderStatuses?.[selectedSubOrderIndex] || ''
             : selectedRecallOrder.status || '';

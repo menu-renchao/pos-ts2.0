@@ -598,4 +598,19 @@ test.describe('stage2 order operation migration', () => {
 
     expect(result.recalledChargeAfterOrderTypeChange).toEqual({});
   });
+
+  test('POS-27177 编辑订单时修改自动固定加收计税后税额应增加', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.increaseTaxWhenAutoFixedChargeBecomesTaxedAfterEdit(
+      environment.posHomeUrl,
+    );
+
+    expect(result.taxAfterEnteringEdit).toBeGreaterThan(result.taxBeforeSave);
+  });
 });
