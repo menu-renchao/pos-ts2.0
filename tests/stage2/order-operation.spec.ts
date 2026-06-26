@@ -906,4 +906,18 @@ test.describe('stage2 order operation migration', () => {
     expect(result.subOrderChargeBeforeMove).toHaveProperty('auto_test_fixed');
     expect(result.movedOrderCharge).toEqual(result.subOrderChargeBeforeMove);
   });
+
+  test('POS-27325 移单时删除自动加收后子单应保留旧加收快照', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.moveSubOrderAfterDeletingAutoCharge(environment.posHomeUrl);
+
+    expect(result.subOrderChargeBeforeMove).toHaveProperty('auto_test_fixed');
+    expect(result.movedOrderCharge).toEqual(result.subOrderChargeBeforeMove);
+  });
 });

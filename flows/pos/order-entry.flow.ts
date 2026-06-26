@@ -2282,6 +2282,51 @@ export class OrderEntryFlow {
       throw new Error('POS-27324 requires AdminPage');
     }
 
+    const subOrderChargeBeforeMove = await this.createAutoChargeSplitSubOrderAndReadCharge(homeUrl);
+
+    await this.homePage.clickAdmin();
+    await this.adminPage.renameAutoCharge('auto_test_fixed', 'mod_test1');
+    await this.adminPage.setAutoChargeAmount('mod_test1', 20);
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.openSubOrder(1);
+    await this.recallPage.moveCurrentSubOrderToNewOrder();
+    const movedOrderCharge = await this.recallPage.readOrderChargeItems();
+
+    return {
+      movedOrderCharge,
+      subOrderChargeBeforeMove,
+    };
+  }
+
+  async moveSubOrderAfterDeletingAutoCharge(homeUrl: string): Promise<AutoChargeMoveOrderResult> {
+    if (!this.adminPage) {
+      throw new Error('POS-27325 requires AdminPage');
+    }
+
+    const subOrderChargeBeforeMove = await this.createAutoChargeSplitSubOrderAndReadCharge(homeUrl);
+
+    await this.homePage.clickAdmin();
+    await this.adminPage.deleteAutoChargeByName('auto_test_fixed');
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.openSubOrder(1);
+    await this.recallPage.moveCurrentSubOrderToNewOrder();
+    const movedOrderCharge = await this.recallPage.readOrderChargeItems();
+
+    return {
+      movedOrderCharge,
+      subOrderChargeBeforeMove,
+    };
+  }
+
+  private async createAutoChargeSplitSubOrderAndReadCharge(homeUrl: string): Promise<Record<string, string>> {
+    if (!this.adminPage) {
+      throw new Error('auto charge split suborder flow requires AdminPage');
+    }
+
     await this.homePage.open(homeUrl);
     await this.homePage.clickAdmin();
     await this.adminPage.setupAutoFixedCharge('auto_test_fixed', 10);
@@ -2300,22 +2345,7 @@ export class OrderEntryFlow {
     await this.recallPage.splitByDrag();
     await this.recallPage.saveSplit();
     await this.recallPage.openSubOrder(1);
-    const subOrderChargeBeforeMove = await this.recallPage.readOrderChargeItems();
-
-    await this.homePage.clickAdmin();
-    await this.adminPage.renameAutoCharge('auto_test_fixed', 'mod_test1');
-    await this.adminPage.setAutoChargeAmount('mod_test1', 20);
-    await this.homePage.open(homeUrl);
-    await this.homePage.clickRecall();
-    await this.recallPage.openRecentOrder();
-    await this.recallPage.openSubOrder(1);
-    await this.recallPage.moveCurrentSubOrderToNewOrder();
-    const movedOrderCharge = await this.recallPage.readOrderChargeItems();
-
-    return {
-      movedOrderCharge,
-      subOrderChargeBeforeMove,
-    };
+    return this.recallPage.readOrderChargeItems();
   }
 
   private async createTaxExemptOrderWithChargeAndReadTotal(options: { taxableCharge: boolean }): Promise<number> {
