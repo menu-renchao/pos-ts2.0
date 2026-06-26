@@ -136,6 +136,9 @@ export class AdminPage extends PageObject {
   private readonly chargeMinGuestNameInput: Locator;
   private readonly chargeMinGuestInput: Locator;
   private readonly chargeMinGuestSaveButton: Locator;
+  private readonly chargeMinMileNameInput: Locator;
+  private readonly chargeMinMileInput: Locator;
+  private readonly chargeMinMileSaveButton: Locator;
   private readonly chargeDeleteAllButton: Locator;
 
   constructor(page: Page) {
@@ -267,6 +270,9 @@ export class AdminPage extends PageObject {
     this.chargeMinGuestNameInput = page.getByTestId('admin-charge-min-guest-name');
     this.chargeMinGuestInput = page.getByTestId('admin-charge-min-guest');
     this.chargeMinGuestSaveButton = page.getByTestId('admin-charge-min-guest-save');
+    this.chargeMinMileNameInput = page.getByTestId('admin-charge-min-mile-name');
+    this.chargeMinMileInput = page.getByTestId('admin-charge-min-mile');
+    this.chargeMinMileSaveButton = page.getByTestId('admin-charge-min-mile-save');
     this.chargeDeleteAllButton = page.getByTestId('admin-charge-delete-all');
   }
 
@@ -614,6 +620,15 @@ export class AdminPage extends PageObject {
       await this.chargeMinGuestNameInput.fill(chargeName);
       await this.chargeMinGuestInput.fill(String(minGuest));
       await this.chargeMinGuestSaveButton.click();
+    });
+  }
+
+  async setAutoChargeMinMile(chargeName: string, minMile: number): Promise<void> {
+    await step(`修改自动加收 ${chargeName} 最小里程为 ${minMile}`, async () => {
+      await expect(this.adminRoot).toBeVisible();
+      await this.chargeMinMileNameInput.fill(chargeName);
+      await this.chargeMinMileInput.fill(String(minMile));
+      await this.chargeMinMileSaveButton.click();
     });
   }
 

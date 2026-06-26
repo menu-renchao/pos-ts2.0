@@ -2,6 +2,7 @@ import { expect, test } from '../../fixtures/base-test.js';
 import { OrderEntryFlow } from '../../flows/pos/order-entry.flow.js';
 import { SettlementFlow } from '../../flows/pos/settlement.flow.js';
 import { AdminPage } from '../../pages/pos/admin.page.js';
+import { DeliveryPage } from '../../pages/pos/delivery.page.js';
 import { PosHomePage } from '../../pages/pos/home.page.js';
 import { OrderDishesPage } from '../../pages/pos/order-dishes.page.js';
 import { RecallPage } from '../../pages/pos/recall.page.js';
@@ -764,6 +765,22 @@ test.describe('stage2 order operation migration', () => {
     );
 
     const result = await orderEntryFlow.copyOrderAfterModifyingAutoChargeMinGuestMismatch(
+      environment.posHomeUrl,
+    );
+
+    expect(result.copiedOrderCharge).toEqual({});
+  });
+
+  test('POS-27271 复制配送订单时修改自动加收最小里程不满足条件后不应显示加收', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+      new DeliveryPage(page),
+    );
+
+    const result = await orderEntryFlow.copyDeliveryOrderAfterModifyingAutoChargeMinMileMismatch(
       environment.posHomeUrl,
     );
 

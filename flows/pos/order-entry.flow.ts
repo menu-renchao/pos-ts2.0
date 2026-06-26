@@ -2006,6 +2006,38 @@ export class OrderEntryFlow {
     };
   }
 
+  async copyDeliveryOrderAfterModifyingAutoChargeMinMileMismatch(
+    homeUrl: string,
+  ): Promise<AutoChargeCopyMinGuestResult> {
+    if (!this.adminPage || !this.deliveryPage) {
+      throw new Error('POS-27271 requires AdminPage and DeliveryPage');
+    }
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.setupAutoFixedCharge('auto_test1', 10);
+    await this.adminPage.setAutoChargeOrderTypes('auto_test1', ['delivery']);
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDelivery();
+    await this.deliveryPage.createDeliveryOrder(deliveryOrderInfoSample);
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.clickAdmin();
+    await this.adminPage.setAutoChargeMinMile('auto_test1', 5);
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.copyCurrentOrder();
+    const copiedOrderCharge = await this.recallPage.readOrderChargeItems();
+
+    return {
+      copiedOrderCharge,
+    };
+  }
+
   private async createTaxExemptOrderWithChargeAndReadTotal(options: { taxableCharge: boolean }): Promise<number> {
     await this.homePage.clickDineIn();
     await this.orderDishesPage.selectMenuGroup(chineseInitialSearchDish.group);
