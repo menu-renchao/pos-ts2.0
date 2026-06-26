@@ -259,6 +259,13 @@ export type AutoChargeRecallSplitResult = {
   firstSubOrderCharge: Record<string, string>;
 };
 
+export type ManualChargeEditSplitResult = {
+  expectedFirstSubOrderCharge: string;
+  firstSubOrderCharge: Record<string, string>;
+  firstSubOrderSubtotal: number;
+  originalSubtotal: number;
+};
+
 export type EvenSplitTipUnsplitResult = {
   combinedTipText: string;
 };
@@ -1821,6 +1828,48 @@ export class OrderEntryFlow {
 
     return {
       firstSubOrderCharge,
+    };
+  }
+
+  async splitEditOrderAfterModifyingManualFixedCharge(homeUrl: string): Promise<ManualChargeEditSplitResult> {
+    if (!this.adminPage) {
+      throw new Error('POS-27242 requires AdminPage');
+    }
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.selectMenuGroup(categorySwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(categorySwitchDish.category);
+    await this.orderDishesPage.addMenuItem(categorySwitchDish.name);
+    await this.orderDishesPage.applyPresetCharge('manu_test_fixed');
+    const originalSubtotal = await this.orderDishesPage.readSubtotal();
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.clickAdmin();
+    await this.adminPage.setManualChargeAmount('manu_test_fixed', 20);
+    await this.adminPage.renameManualCharge('manu_test_fixed', 'mod_test1');
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.clickEdit();
+    await this.recallPage.openSplitOrder();
+    await this.recallPage.splitByDrag();
+    await this.recallPage.saveSplit();
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.openSubOrder(1);
+    const firstSubOrderSubtotal = await this.recallPage.readOrderSubtotal();
+    const firstSubOrderCharge = await this.recallPage.readOrderChargeItems();
+    const expectedFirstSubOrderCharge = ((firstSubOrderSubtotal / originalSubtotal) * 10).toFixed(2);
+
+    return {
+      expectedFirstSubOrderCharge,
+      firstSubOrderCharge,
+      firstSubOrderSubtotal,
+      originalSubtotal,
     };
   }
 

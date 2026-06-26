@@ -694,4 +694,19 @@ test.describe('stage2 order operation migration', () => {
 
     expect(result.firstSubOrderCharge.auto_test_fixed).toContain('5.0');
   });
+
+  test('POS-27242 编辑页分单时修改手动固定加收后子单应保留旧加收按小计分摊', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.splitEditOrderAfterModifyingManualFixedCharge(
+      environment.posHomeUrl,
+    );
+
+    expect(result.firstSubOrderCharge.manu_test_fixed).toBe(result.expectedFirstSubOrderCharge);
+  });
 });
