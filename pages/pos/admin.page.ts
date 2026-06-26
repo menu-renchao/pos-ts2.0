@@ -522,6 +522,15 @@ export class AdminPage extends PageObject {
     });
   }
 
+  async setAutoChargeRateType(chargeName: string, rateType: 'amount' | 'percent'): Promise<void> {
+    await step(`修改自动加收 ${chargeName} 比例类型为 ${rateType}`, async () => {
+      await expect(this.adminRoot).toBeVisible();
+      await this.chargeRateTypeNameInput.fill(chargeName);
+      await this.chargeRateTypeSelect.selectOption(rateType);
+      await this.chargeRateTypeSaveButton.click();
+    });
+  }
+
   async setManualChargeAmount(chargeName: string, amount: number): Promise<void> {
     await step(`修改手动加收 ${chargeName} 金额为 ${amount}`, async () => {
       await expect(this.adminRoot).toBeVisible();

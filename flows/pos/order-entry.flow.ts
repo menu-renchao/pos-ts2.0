@@ -212,6 +212,11 @@ export type RenameAutoChargeResult = {
   recalledChargeAfterRename: Record<string, string>;
 };
 
+export type AutoChargeRateTypeToPercentResult = {
+  recalledChargeAfterRateTypeChange: Record<string, string>;
+  recalledSubtotal: number;
+};
+
 export type EvenSplitTipUnsplitResult = {
   combinedTipText: string;
 };
@@ -1431,6 +1436,38 @@ export class OrderEntryFlow {
 
     return {
       recalledChargeAfterRename,
+    };
+  }
+
+  async convertAutoFixedChargeToPercentThenReadRecalledOrderCharge(
+    homeUrl: string,
+  ): Promise<AutoChargeRateTypeToPercentResult> {
+    if (!this.adminPage) {
+      throw new Error('POS-27171 requires AdminPage');
+    }
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.setupAutoFixedCharge('auto_test_fixed', 10);
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.clickAdmin();
+    await this.adminPage.setAutoChargeRateType('auto_test_fixed', 'percent');
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.clickEdit();
+    const recalledSubtotal = await this.orderDishesPage.readSubtotal();
+    const recalledChargeAfterRateTypeChange = await this.orderDishesPage.readOrderChargeItems();
+
+    return {
+      recalledChargeAfterRateTypeChange,
+      recalledSubtotal,
     };
   }
 

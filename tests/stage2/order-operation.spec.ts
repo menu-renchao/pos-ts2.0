@@ -507,4 +507,24 @@ test.describe('stage2 order operation migration', () => {
 
     expect(result.recalledChargeAfterRename).toEqual({ auto_test1: '10.00' });
   });
+
+  test('POS-27171 编辑订单时修改自动固定加收为百分比后应按小计计算加收', async ({
+    environment,
+    page,
+  }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.convertAutoFixedChargeToPercentThenReadRecalledOrderCharge(
+      environment.posHomeUrl,
+    );
+
+    expect(result.recalledChargeAfterRateTypeChange.auto_test_fixed).toBe(
+      (result.recalledSubtotal * 0.1).toFixed(2),
+    );
+  });
 });
