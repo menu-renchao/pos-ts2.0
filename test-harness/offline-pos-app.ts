@@ -3160,7 +3160,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       }
 
       function syncCopiedOrderFromCurrentAutoConfig(order) {
-        if (!order || order.orderChargeTriggerMode !== 'auto') {
+        if (!order || !['auto', 'manual'].includes(order.orderChargeTriggerMode)) {
           return;
         }
         const orderType = order.orderType || currentOrderType;
@@ -3183,6 +3183,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         ));
         const charge = chargeByName || chargeByValue || applicableCharges[0];
         if (!charge) {
+          if (order.orderChargeTriggerMode === 'manual') {
+            return;
+          }
           order.orderChargeRate = 0;
           order.orderChargeFixedAmount = null;
           order.orderChargeLabel = '';
@@ -3194,6 +3197,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         order.orderChargeFixedAmount = charge.rateType === 'amount' ? Number(charge.amount || 0) : null;
         order.orderChargeLabel = charge.name;
         order.orderChargeTaxed = Boolean(charge.taxed);
+        order.orderChargeTriggerMode = 'auto';
       }
 
       function orderTotal(order) {
