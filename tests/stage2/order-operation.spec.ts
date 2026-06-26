@@ -580,4 +580,22 @@ test.describe('stage2 order operation migration', () => {
       (result.recalledSubtotal * 0.2).toFixed(2),
     );
   });
+
+  test('POS-27176 编辑订单时修改自动加收适用类型不含当前 Dine In 后不应显示加收', async ({
+    environment,
+    page,
+  }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.removeAutoChargeWhenOrderTypeNoLongerMatchesAfterEdit(
+      environment.posHomeUrl,
+    );
+
+    expect(result.recalledChargeAfterOrderTypeChange).toEqual({});
+  });
 });

@@ -581,6 +581,18 @@ export class AdminPage extends PageObject {
     });
   }
 
+  async setAutoChargeOrderTypes(
+    chargeName: string,
+    orderTypes: readonly ManualChargeOrderType[],
+  ): Promise<void> {
+    await step(`修改自动加收 ${chargeName} 订单类型为 ${orderTypes.join(', ')}`, async () => {
+      await expect(this.adminRoot).toBeVisible();
+      await this.chargeOrderTypeNameInput.fill(chargeName);
+      await this.chargeOrderTypesSelect.selectOption([...orderTypes]);
+      await this.chargeOrderTypesSaveButton.click();
+    });
+  }
+
   async deleteAllManualCharges(): Promise<void> {
     await step('删除全部手动加收配置', async () => {
       await expect(this.adminRoot).toBeVisible();

@@ -2489,6 +2489,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         }
         const charge = selectedAutoCharge();
         if (!charge) {
+          currentOrderChargeRate = 0;
+          currentOrderChargeFixedAmount = null;
+          currentOrderChargeLabel = '';
+          currentOrderChargeTaxed = false;
+          currentOrderChargeTriggerMode = '';
           return;
         }
         currentOrderChargeRate = Number(charge.rate || 0);
@@ -4081,7 +4086,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         manualCharges = manualCharges.map((charge) => (
           charge.name === chargeName ? { ...charge, orderTypes } : charge
         ));
+        autoCharges = autoCharges.map((charge) => (
+          charge.name === chargeName ? { ...charge, orderTypes } : charge
+        ));
         localStorage.setItem('offlineManualCharges', JSON.stringify(manualCharges));
+        localStorage.setItem('offlineAutoCharges', JSON.stringify(autoCharges));
       });
       adminChargeDeleteAllButton.addEventListener('click', () => {
         manualCharges = [];
