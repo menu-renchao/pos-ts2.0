@@ -288,6 +288,14 @@ export type AutoChargeMoveItemResult = {
   originalOrderCharge: Record<string, string>;
 };
 
+export type ManualChargeMoveItemResult = {
+  movedItemPrice: number;
+  sourceOrderCharge: Record<string, string>;
+  targetOrderCharge: Record<string, string>;
+  targetOrderSubtotalAfterMove: number;
+  targetOrderSubtotalBeforeMove: number;
+};
+
 export type ManualChargeEditSplitResult = {
   expectedFirstSubOrderCharge: string;
   firstSubOrderCharge: Record<string, string>;
@@ -2224,6 +2232,43 @@ export class OrderEntryFlow {
     return {
       movedOrderCharge,
       originalOrderCharge,
+    };
+  }
+
+  async moveFirstItemToExistingOrderWithManualCharge(homeUrl: string): Promise<ManualChargeMoveItemResult> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    const targetOrderSubtotalBeforeMove = await this.orderDishesPage.readSubtotal();
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.clickDineIn();
+    for (let index = 0; index < 2; index += 1) {
+      await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+      await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+      await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    }
+    await this.orderDishesPage.applyPresetCharge('manu_test_fixed');
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    const sourceOrderItems = await this.recallPage.readAllOrderItems();
+    const movedItemPrice = sourceOrderItems[0]?.price ?? 0;
+    await this.recallPage.moveFirstItemToExistingOrder(2);
+    const targetOrderSubtotalAfterMove = await this.recallPage.readOrderSubtotal();
+    const targetOrderCharge = await this.recallPage.readOrderChargeItems();
+    await this.recallPage.openRecentOrder();
+    const sourceOrderCharge = await this.recallPage.readOrderChargeItems();
+
+    return {
+      movedItemPrice,
+      sourceOrderCharge,
+      targetOrderCharge,
+      targetOrderSubtotalAfterMove,
+      targetOrderSubtotalBeforeMove,
     };
   }
 

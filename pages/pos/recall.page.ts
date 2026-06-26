@@ -53,6 +53,7 @@ export class RecallPage extends PageObject {
   private readonly itemSplitButton: Locator;
   private readonly moveItemButton: Locator;
   private readonly moveOrderButton: Locator;
+  private readonly moveTargetOrderIndexInput: Locator;
   private readonly orderTotal: Locator;
   private readonly parentOrderCard: Locator;
   private readonly orderStatus: Locator;
@@ -138,6 +139,7 @@ export class RecallPage extends PageObject {
     this.itemSplitButton = page.getByTestId('split-by-item');
     this.moveItemButton = page.getByTestId('recall-move-item');
     this.moveOrderButton = page.getByTestId('recall-move-order');
+    this.moveTargetOrderIndexInput = page.getByTestId('recall-move-target-order-index');
     this.orderTotal = page.getByTestId('recall-order-total');
     this.parentOrderCard = page.getByTestId('recall-parent-order');
     this.orderStatus = page.getByTestId('recall-order-status');
@@ -607,6 +609,14 @@ export class RecallPage extends PageObject {
   async moveFirstItemToNewOrder(): Promise<void> {
     await step('Recall 移第 1 个菜到新订单', async () => {
       await expect(this.recallRoot).toBeVisible();
+      await this.moveItemButton.click();
+    });
+  }
+
+  async moveFirstItemToExistingOrder(orderIndex: number): Promise<void> {
+    await step(`Recall 移第 1 个菜到第 ${orderIndex} 个订单`, async () => {
+      await expect(this.recallRoot).toBeVisible();
+      await this.moveTargetOrderIndexInput.fill(String(orderIndex));
       await this.moveItemButton.click();
     });
   }

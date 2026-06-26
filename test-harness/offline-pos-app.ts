@@ -557,6 +557,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <div data-testid="recall-payment-records"></div>
       <button data-testid="recall-cancel-condition">Cancel Condition</button>
       <button data-testid="recall-move-order">Move Order</button>
+      <input data-testid="recall-move-target-order-index" />
       <button data-testid="recall-move-item">Move Item</button>
       <button data-testid="recall-print">Print</button>
       <button data-testid="recall-reprint" hidden>Reprint</button>
@@ -1266,6 +1267,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const recallPaymentRecords = document.querySelector('[data-testid="recall-payment-records"]');
       const recallCancelConditionButton = document.querySelector('[data-testid="recall-cancel-condition"]');
       const recallMoveOrderButton = document.querySelector('[data-testid="recall-move-order"]');
+      const recallMoveTargetOrderIndexInput = document.querySelector('[data-testid="recall-move-target-order-index"]');
       const recallMoveItemButton = document.querySelector('[data-testid="recall-move-item"]');
       const recallPrintButton = document.querySelector('[data-testid="recall-print"]');
       const recallReprintButton = document.querySelector('[data-testid="recall-reprint"]');
@@ -3460,6 +3462,23 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         selectRecallOrder(movedOrder);
       }
 
+      function moveFirstRecallItemToExistingOrder(orderIndex) {
+        if (!selectedRecallOrder || !selectedRecallOrder.items?.length) {
+          return;
+        }
+        const targetOrder = savedOrders[savedOrders.length - Number(orderIndex || 0)];
+        if (!targetOrder || targetOrder === selectedRecallOrder) {
+          return;
+        }
+        const movedItem = selectedRecallOrder.items.shift();
+        selectedRecallOrder.subtotal = orderItemsSubtotal(selectedRecallOrder.items);
+        targetOrder.items = [...(targetOrder.items || []), movedItem];
+        targetOrder.subtotal = orderItemsSubtotal(targetOrder.items);
+        targetOrder.rewardDiscount = calculateRewardDiscount(targetOrder);
+        persistSavedOrders();
+        selectRecallOrder(targetOrder);
+      }
+
       function renderSplitPrices(prices) {
         splitOrderPrices.innerHTML = '';
         prices.forEach((price) => {
@@ -5076,6 +5095,12 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         mergeCrmOrders(selectedRecallOrder, sourceOrder);
       });
       recallMoveItemButton.addEventListener('click', () => {
+        const targetOrderIndex = recallMoveTargetOrderIndexInput.value;
+        if (targetOrderIndex) {
+          moveFirstRecallItemToExistingOrder(targetOrderIndex);
+          recallMoveTargetOrderIndexInput.value = '';
+          return;
+        }
         moveFirstRecallItemToNewOrder();
       });
       recallCopyOrderButton.addEventListener('click', () => {

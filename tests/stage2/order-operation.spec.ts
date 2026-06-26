@@ -870,4 +870,26 @@ test.describe('stage2 order operation migration', () => {
       auto_test1: '10.00',
     });
   });
+
+  test('POS-27317 移菜到已有订单时目标单不继承手动加收且源单保留加收', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.moveFirstItemToExistingOrderWithManualCharge(
+      environment.posHomeUrl,
+    );
+
+    expect(result.targetOrderSubtotalAfterMove).toBeCloseTo(
+      result.targetOrderSubtotalBeforeMove + result.movedItemPrice,
+      2,
+    );
+    expect(result.targetOrderCharge.manu_test_fixed).toBeUndefined();
+    expect(result.sourceOrderCharge).toEqual({
+      manu_test_fixed: '10.00',
+    });
+  });
 });
