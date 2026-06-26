@@ -263,6 +263,12 @@ export type AutoChargeEditSplitResult = {
   firstSubOrderCharge: Record<string, string>;
 };
 
+export type AutoChargeCopyResult = {
+  copiedOrderCharge: Record<string, string>;
+  copiedOrderSubtotal: number;
+  expectedCopiedCharge: string;
+};
+
 export type ManualChargeEditSplitResult = {
   expectedFirstSubOrderCharge: string;
   firstSubOrderCharge: Record<string, string>;
@@ -1912,6 +1918,40 @@ export class OrderEntryFlow {
 
     return {
       firstSubOrderCharge,
+    };
+  }
+
+  async copyOrderAfterModifyingAutoChargeToPercent(homeUrl: string): Promise<AutoChargeCopyResult> {
+    if (!this.adminPage) {
+      throw new Error('POS-27257 requires AdminPage');
+    }
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.setupAutoFixedCharge('auto_test1', 10);
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.clickAdmin();
+    await this.adminPage.renameAutoCharge('auto_test1', 'mod_test1');
+    await this.adminPage.setAutoChargeRateType('mod_test1', 'percent');
+    await this.adminPage.setAutoChargeAmount('mod_test1', 20);
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.copyCurrentOrder();
+    const copiedOrderSubtotal = await this.recallPage.readOrderSubtotal();
+    const copiedOrderCharge = await this.recallPage.readOrderChargeItems();
+    const expectedCopiedCharge = (copiedOrderSubtotal * 0.2).toFixed(2);
+
+    return {
+      copiedOrderCharge,
+      copiedOrderSubtotal,
+      expectedCopiedCharge,
     };
   }
 

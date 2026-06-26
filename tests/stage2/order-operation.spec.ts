@@ -724,4 +724,19 @@ test.describe('stage2 order operation migration', () => {
 
     expect(result.firstSubOrderCharge.mod_test1).toBe('10.00');
   });
+
+  test('POS-27257 复制订单时修改自动加收为百分比后复制单应使用新加收计算', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.copyOrderAfterModifyingAutoChargeToPercent(
+      environment.posHomeUrl,
+    );
+
+    expect(result.copiedOrderCharge.mod_test1).toBe(result.expectedCopiedCharge);
+  });
 });

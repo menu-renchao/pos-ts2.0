@@ -2432,10 +2432,14 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         return 'Add $' + Number(charge?.amount ?? currentChargeAmount(subtotal)).toFixed(2);
       }
 
-      function chargeAppliesToCurrentOrderType(charge) {
+      function chargeAppliesToOrderType(charge, orderType) {
         return !Array.isArray(charge?.orderTypes)
           || charge.orderTypes.length === 0
-          || charge.orderTypes.includes(currentOrderType);
+          || charge.orderTypes.includes(orderType);
+      }
+
+      function chargeAppliesToCurrentOrderType(charge) {
+        return chargeAppliesToOrderType(charge, currentOrderType);
       }
 
       function selectedManualCharge() {
@@ -3108,6 +3112,36 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         selectedRecallOrder.orderChargeTaxed = currentOrderChargeTaxed;
         selectedRecallOrder.orderChargeTriggerMode = currentOrderChargeTriggerMode;
         selectedRecallOrder.taxText = orderTax.textContent || '';
+      }
+
+      function syncCopiedOrderFromCurrentAutoConfig(order) {
+        if (!order || order.orderChargeTriggerMode !== 'auto') {
+          return;
+        }
+        const orderType = order.orderType || currentOrderType;
+        const applicableCharges = autoCharges.filter((charge) => chargeAppliesToOrderType(charge, orderType));
+        const chargeByName = applicableCharges.find((charge) => charge.name === order.orderChargeLabel);
+        const chargeByValue = applicableCharges.find((charge) => (
+          (charge.rateType === 'amount'
+            && order.orderChargeFixedAmount !== null
+            && Number(charge.amount || 0) === Number(order.orderChargeFixedAmount || 0))
+          || (charge.rateType === 'percent'
+            && Number(order.orderChargeRate || 0) > 0
+            && Number(charge.rate || 0) === Number(order.orderChargeRate || 0))
+        ));
+        const charge = chargeByName || chargeByValue || applicableCharges[0];
+        if (!charge) {
+          order.orderChargeRate = 0;
+          order.orderChargeFixedAmount = null;
+          order.orderChargeLabel = '';
+          order.orderChargeTaxed = false;
+          order.orderChargeTriggerMode = '';
+          return;
+        }
+        order.orderChargeRate = Number(charge.rate || 0);
+        order.orderChargeFixedAmount = charge.rateType === 'amount' ? Number(charge.amount || 0) : null;
+        order.orderChargeLabel = charge.name;
+        order.orderChargeTaxed = Boolean(charge.taxed);
       }
 
       function orderTotal(order) {
@@ -4807,6 +4841,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           ? 'Area 1 Table 1 ' + copiedOrder.orderNumber
           : copiedOrder.orderNumber;
         copiedOrder.status = copiedOrder.status || 'New Order';
+        syncCopiedOrderFromCurrentAutoConfig(copiedOrder);
         savedOrders.push(copiedOrder);
         selectRecallOrder(copiedOrder);
         persistSavedOrders();
