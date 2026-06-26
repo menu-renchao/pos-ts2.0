@@ -818,4 +818,19 @@ test.describe('stage2 order operation migration', () => {
       manu_test_fixed: '10.00',
     });
   });
+
+  test('POS-27288 复制订单时修改手动加收为自动且最小金额不满足后不应显示加收', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.copyOrderAfterChangingManualChargeTriggerToAutoWithMinAmountMismatch(
+      environment.posHomeUrl,
+    );
+
+    expect(result.copiedOrderCharge).toEqual({});
+  });
 });

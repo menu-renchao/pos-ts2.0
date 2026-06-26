@@ -140,6 +140,9 @@ export class AdminPage extends PageObject {
   private readonly chargeMinMileNameInput: Locator;
   private readonly chargeMinMileInput: Locator;
   private readonly chargeMinMileSaveButton: Locator;
+  private readonly chargeMinAmountNameInput: Locator;
+  private readonly chargeMinAmountInput: Locator;
+  private readonly chargeMinAmountSaveButton: Locator;
   private readonly chargeTriggerNameInput: Locator;
   private readonly chargeTriggerModeSelect: Locator;
   private readonly chargeTriggerModeSaveButton: Locator;
@@ -277,6 +280,9 @@ export class AdminPage extends PageObject {
     this.chargeMinMileNameInput = page.getByTestId('admin-charge-min-mile-name');
     this.chargeMinMileInput = page.getByTestId('admin-charge-min-mile');
     this.chargeMinMileSaveButton = page.getByTestId('admin-charge-min-mile-save');
+    this.chargeMinAmountNameInput = page.getByTestId('admin-charge-min-amount-name');
+    this.chargeMinAmountInput = page.getByTestId('admin-charge-min-amount');
+    this.chargeMinAmountSaveButton = page.getByTestId('admin-charge-min-amount-save');
     this.chargeTriggerNameInput = page.getByTestId('admin-charge-trigger-name');
     this.chargeTriggerModeSelect = page.getByTestId('admin-charge-trigger-mode');
     this.chargeTriggerModeSaveButton = page.getByTestId('admin-charge-trigger-save');
@@ -636,6 +642,15 @@ export class AdminPage extends PageObject {
       await this.chargeMinMileNameInput.fill(chargeName);
       await this.chargeMinMileInput.fill(String(minMile));
       await this.chargeMinMileSaveButton.click();
+    });
+  }
+
+  async setChargeMinAmount(chargeName: string, minAmount: number): Promise<void> {
+    await step(`修改加收 ${chargeName} 最小金额为 ${minAmount}`, async () => {
+      await expect(this.adminRoot).toBeVisible();
+      await this.chargeMinAmountNameInput.fill(chargeName);
+      await this.chargeMinAmountInput.fill(String(minAmount));
+      await this.chargeMinAmountSaveButton.click();
     });
   }
 

@@ -188,6 +188,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <input data-testid="admin-charge-min-mile-name" />
       <input data-testid="admin-charge-min-mile" />
       <button data-testid="admin-charge-min-mile-save">Save Charge Min Mile</button>
+      <input data-testid="admin-charge-min-amount-name" />
+      <input data-testid="admin-charge-min-amount" />
+      <button data-testid="admin-charge-min-amount-save">Save Charge Min Amount</button>
       <input data-testid="admin-charge-trigger-name" />
       <select data-testid="admin-charge-trigger-mode">
         <option value="auto">Auto</option>
@@ -941,6 +944,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const adminChargeMinMileNameInput = document.querySelector('[data-testid="admin-charge-min-mile-name"]');
       const adminChargeMinMileInput = document.querySelector('[data-testid="admin-charge-min-mile"]');
       const adminChargeMinMileSaveButton = document.querySelector('[data-testid="admin-charge-min-mile-save"]');
+      const adminChargeMinAmountNameInput = document.querySelector('[data-testid="admin-charge-min-amount-name"]');
+      const adminChargeMinAmountInput = document.querySelector('[data-testid="admin-charge-min-amount"]');
+      const adminChargeMinAmountSaveButton = document.querySelector('[data-testid="admin-charge-min-amount-save"]');
       const adminChargeTriggerNameInput = document.querySelector('[data-testid="admin-charge-trigger-name"]');
       const adminChargeTriggerModeSelect = document.querySelector('[data-testid="admin-charge-trigger-mode"]');
       const adminChargeTriggerSaveButton = document.querySelector('[data-testid="admin-charge-trigger-save"]');
@@ -2470,10 +2476,16 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         return minMile <= 0 || Number(deliveryDistance || 0) >= minMile;
       }
 
-      function chargeAppliesToOrderContext(charge, orderType, guestCount, deliveryDistance) {
+      function chargeAppliesToMinAmount(charge, subtotal) {
+        const minAmount = Number(charge?.minAmount || 0);
+        return minAmount <= 0 || Number(subtotal || 0) >= minAmount;
+      }
+
+      function chargeAppliesToOrderContext(charge, orderType, guestCount, deliveryDistance, subtotal) {
         return chargeAppliesToOrderType(charge, orderType)
           && chargeAppliesToGuestCount(charge, guestCount)
-          && chargeAppliesToDeliveryDistance(charge, deliveryDistance);
+          && chargeAppliesToDeliveryDistance(charge, deliveryDistance)
+          && chargeAppliesToMinAmount(charge, subtotal);
       }
 
       function chargeAppliesToCurrentOrderType(charge) {
@@ -2482,6 +2494,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           currentOrderType,
           currentGuestCount,
           currentDeliveryDistance,
+          currentActiveOrderSubtotal(),
         );
       }
 
@@ -3166,11 +3179,22 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         const orderType = order.orderType || currentOrderType;
         const guestCount = Number(order.guestCount || currentGuestCount || 1);
         const deliveryDistance = Number(order.deliveryDistance || currentDeliveryDistance || 0);
+        const subtotal = Number(order.subtotal || 0);
+        const currentAutoCandidate = autoCharges.find((charge) => (
+          charge.name === order.orderChargeLabel
+          || (charge.rateType === 'amount'
+            && order.orderChargeFixedAmount !== null
+            && Number(charge.amount || 0) === Number(order.orderChargeFixedAmount || 0))
+          || (charge.rateType === 'percent'
+            && Number(order.orderChargeRate || 0) > 0
+            && Number(charge.rate || 0) === Number(order.orderChargeRate || 0))
+        ));
         const applicableCharges = autoCharges.filter((charge) => chargeAppliesToOrderContext(
           charge,
           orderType,
           guestCount,
           deliveryDistance,
+          subtotal,
         ));
         const chargeByName = applicableCharges.find((charge) => charge.name === order.orderChargeLabel);
         const chargeByValue = applicableCharges.find((charge) => (
@@ -3183,7 +3207,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         ));
         const charge = chargeByName || chargeByValue || applicableCharges[0];
         if (!charge) {
-          if (order.orderChargeTriggerMode === 'manual') {
+          if (order.orderChargeTriggerMode === 'manual' && !currentAutoCandidate) {
             return;
           }
           order.orderChargeRate = 0;
@@ -4119,6 +4143,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         autoCharges = [
           {
             amount,
+            minAmount: 0,
             minGuest: 0,
             minMile: 0,
             name: chargeName,
@@ -4136,6 +4161,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         autoCharges = [
           {
             amount: percent,
+            minAmount: 0,
             minGuest: 0,
             minMile: 0,
             name: chargeName,
@@ -4239,6 +4265,18 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         ));
         autoCharges = autoCharges.map((charge) => (
           charge.name === chargeName ? { ...charge, minMile } : charge
+        ));
+        localStorage.setItem('offlineManualCharges', JSON.stringify(manualCharges));
+        localStorage.setItem('offlineAutoCharges', JSON.stringify(autoCharges));
+      });
+      adminChargeMinAmountSaveButton.addEventListener('click', () => {
+        const chargeName = adminChargeMinAmountNameInput.value;
+        const minAmount = Number(adminChargeMinAmountInput.value || 0);
+        manualCharges = manualCharges.map((charge) => (
+          charge.name === chargeName ? { ...charge, minAmount } : charge
+        ));
+        autoCharges = autoCharges.map((charge) => (
+          charge.name === chargeName ? { ...charge, minAmount } : charge
         ));
         localStorage.setItem('offlineManualCharges', JSON.stringify(manualCharges));
         localStorage.setItem('offlineAutoCharges', JSON.stringify(autoCharges));
