@@ -786,4 +786,19 @@ test.describe('stage2 order operation migration', () => {
 
     expect(result.copiedOrderCharge).toEqual({});
   });
+
+  test('POS-27286 复制订单时修改自动加收触发类型为手动后不应显示加收', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.copyOrderAfterChangingAutoChargeTriggerToManual(
+      environment.posHomeUrl,
+    );
+
+    expect(result.copiedOrderCharge).toEqual({});
+  });
 });

@@ -188,6 +188,12 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <input data-testid="admin-charge-min-mile-name" />
       <input data-testid="admin-charge-min-mile" />
       <button data-testid="admin-charge-min-mile-save">Save Charge Min Mile</button>
+      <input data-testid="admin-charge-trigger-name" />
+      <select data-testid="admin-charge-trigger-mode">
+        <option value="auto">Auto</option>
+        <option value="manual">Manual</option>
+      </select>
+      <button data-testid="admin-charge-trigger-save">Save Charge Trigger</button>
       <button data-testid="admin-charge-delete-all">Delete All Charges</button>
       <input data-testid="admin-kds-item-name" />
       <input data-testid="admin-kds-pos-name" />
@@ -935,6 +941,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const adminChargeMinMileNameInput = document.querySelector('[data-testid="admin-charge-min-mile-name"]');
       const adminChargeMinMileInput = document.querySelector('[data-testid="admin-charge-min-mile"]');
       const adminChargeMinMileSaveButton = document.querySelector('[data-testid="admin-charge-min-mile-save"]');
+      const adminChargeTriggerNameInput = document.querySelector('[data-testid="admin-charge-trigger-name"]');
+      const adminChargeTriggerModeSelect = document.querySelector('[data-testid="admin-charge-trigger-mode"]');
+      const adminChargeTriggerSaveButton = document.querySelector('[data-testid="admin-charge-trigger-save"]');
       const adminChargeDeleteAllButton = document.querySelector('[data-testid="admin-charge-delete-all"]');
       const kdsItemNameInput = document.querySelector('[data-testid="admin-kds-item-name"]');
       const kdsItemPosNameInput = document.querySelector('[data-testid="admin-kds-pos-name"]');
@@ -4227,6 +4236,31 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         autoCharges = autoCharges.map((charge) => (
           charge.name === chargeName ? { ...charge, minMile } : charge
         ));
+        localStorage.setItem('offlineManualCharges', JSON.stringify(manualCharges));
+        localStorage.setItem('offlineAutoCharges', JSON.stringify(autoCharges));
+      });
+      adminChargeTriggerSaveButton.addEventListener('click', () => {
+        const chargeName = adminChargeTriggerNameInput.value;
+        const triggerMode = adminChargeTriggerModeSelect.value;
+        if (triggerMode === 'manual') {
+          const charge = autoCharges.find((entry) => entry.name === chargeName);
+          if (charge) {
+            autoCharges = autoCharges.filter((entry) => entry.name !== chargeName);
+            manualCharges = [
+              ...manualCharges.filter((entry) => entry.name !== chargeName),
+              charge,
+            ];
+          }
+        } else {
+          const charge = manualCharges.find((entry) => entry.name === chargeName);
+          if (charge) {
+            manualCharges = manualCharges.filter((entry) => entry.name !== chargeName);
+            autoCharges = [
+              ...autoCharges.filter((entry) => entry.name !== chargeName),
+              charge,
+            ];
+          }
+        }
         localStorage.setItem('offlineManualCharges', JSON.stringify(manualCharges));
         localStorage.setItem('offlineAutoCharges', JSON.stringify(autoCharges));
       });

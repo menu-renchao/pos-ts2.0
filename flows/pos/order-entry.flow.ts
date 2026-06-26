@@ -2038,6 +2038,36 @@ export class OrderEntryFlow {
     };
   }
 
+  async copyOrderAfterChangingAutoChargeTriggerToManual(
+    homeUrl: string,
+  ): Promise<AutoChargeCopyMinGuestResult> {
+    if (!this.adminPage) {
+      throw new Error('POS-27286 requires AdminPage');
+    }
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.setupAutoFixedCharge('auto_test_fixed', 10);
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.clickAdmin();
+    await this.adminPage.setChargeTriggerMode('auto_test_fixed', 'manual');
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.copyCurrentOrder();
+    const copiedOrderCharge = await this.recallPage.readOrderChargeItems();
+
+    return {
+      copiedOrderCharge,
+    };
+  }
+
   private async createTaxExemptOrderWithChargeAndReadTotal(options: { taxableCharge: boolean }): Promise<number> {
     await this.homePage.clickDineIn();
     await this.orderDishesPage.selectMenuGroup(chineseInitialSearchDish.group);

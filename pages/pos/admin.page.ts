@@ -7,6 +7,7 @@ import type { StaffPermissionName } from '../../clients/pos-api/admin-staff.clie
 import { PageObject } from '../shared/page-object.js';
 
 export type ManualChargeOrderType = 'delivery' | 'dine-in' | 'pickup' | 'togo';
+export type ChargeTriggerMode = 'auto' | 'manual';
 
 export class AdminPage extends PageObject {
   private readonly analysisButton: Locator;
@@ -139,6 +140,9 @@ export class AdminPage extends PageObject {
   private readonly chargeMinMileNameInput: Locator;
   private readonly chargeMinMileInput: Locator;
   private readonly chargeMinMileSaveButton: Locator;
+  private readonly chargeTriggerNameInput: Locator;
+  private readonly chargeTriggerModeSelect: Locator;
+  private readonly chargeTriggerModeSaveButton: Locator;
   private readonly chargeDeleteAllButton: Locator;
 
   constructor(page: Page) {
@@ -273,6 +277,9 @@ export class AdminPage extends PageObject {
     this.chargeMinMileNameInput = page.getByTestId('admin-charge-min-mile-name');
     this.chargeMinMileInput = page.getByTestId('admin-charge-min-mile');
     this.chargeMinMileSaveButton = page.getByTestId('admin-charge-min-mile-save');
+    this.chargeTriggerNameInput = page.getByTestId('admin-charge-trigger-name');
+    this.chargeTriggerModeSelect = page.getByTestId('admin-charge-trigger-mode');
+    this.chargeTriggerModeSaveButton = page.getByTestId('admin-charge-trigger-save');
     this.chargeDeleteAllButton = page.getByTestId('admin-charge-delete-all');
   }
 
@@ -629,6 +636,15 @@ export class AdminPage extends PageObject {
       await this.chargeMinMileNameInput.fill(chargeName);
       await this.chargeMinMileInput.fill(String(minMile));
       await this.chargeMinMileSaveButton.click();
+    });
+  }
+
+  async setChargeTriggerMode(chargeName: string, triggerMode: ChargeTriggerMode): Promise<void> {
+    await step(`修改加收 ${chargeName} 触发类型为 ${triggerMode}`, async () => {
+      await expect(this.adminRoot).toBeVisible();
+      await this.chargeTriggerNameInput.fill(chargeName);
+      await this.chargeTriggerModeSelect.selectOption(triggerMode);
+      await this.chargeTriggerModeSaveButton.click();
     });
   }
 
