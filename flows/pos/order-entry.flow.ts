@@ -7,7 +7,7 @@ import type { RecalledItemOption, RecalledOrderItem, RecallPage, RecallPrintStat
 import type { ReportPage } from '../../pages/pos/report.page.js';
 import type { DishSample, OptionOrderSample } from '../../test-data/pos/domain-types.js';
 import { testEnvironment } from '../../fixtures/environment.js';
-import { combineSameItemModes, menuModes } from '../../test-data/pos/admin-settings.js';
+import { combineSameItemModes, menuModes, roundingStrategyOptions } from '../../test-data/pos/admin-settings.js';
 import {
   categoryOptionDish,
   chineseInitialSearchDish,
@@ -289,6 +289,17 @@ export type AutoChargeMoveItemResult = {
 export type AutoChargeMoveOrderResult = {
   movedOrderCharge: Record<string, string>;
   subOrderChargeBeforeMove: Record<string, string>;
+};
+
+export type CreditPayAddTipServerChangeResult = {
+  paymentAmountAfterServerChange: number;
+  paymentAmountAfterTip: number;
+  serverNameAfter: string;
+  serverNameBefore: string;
+  statusAfterServerChange: string;
+  statusAfterTip: string;
+  totalAfterServerChange: number;
+  totalAfterTip: number;
 };
 
 export type ManualChargeMoveItemResult = {
@@ -2382,6 +2393,52 @@ export class OrderEntryFlow {
     await this.recallPage.saveSplit();
     await this.recallPage.openSubOrder(1);
     return this.recallPage.readOrderChargeItems();
+  }
+
+  async addTipAfterCreditPaymentThenChangeServer(homeUrl: string): Promise<CreditPayAddTipServerChangeResult> {
+    if (!this.adminPage) {
+      throw new Error('POS-30756 requires AdminPage');
+    }
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.setRoundingStrategy(roundingStrategyOptions.nearest5);
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    for (let index = 0; index < 2; index += 1) {
+      await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+      await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+      await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    }
+    await this.orderDishesPage.settleByCredit();
+
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.addTipAfterCreditPayment(100);
+    const statusAfterTip = await this.recallPage.readOrderStatus();
+    const paymentAmountAfterTip = await this.recallPage.readPaymentRecordAmount(1);
+    const totalAfterTip = await this.recallPage.readOrderTotal();
+    const serverNameBefore = await this.recallPage.readServerName();
+
+    await this.recallPage.changeServer();
+    const serverNameAfter = await this.recallPage.readServerName();
+    const statusAfterServerChange = await this.recallPage.readOrderStatus();
+    const paymentAmountAfterServerChange = await this.recallPage.readPaymentRecordAmount(1);
+    const totalAfterServerChange = await this.recallPage.readOrderTotal();
+
+    await this.homePage.clickAdmin();
+    await this.adminPage.setRoundingStrategy(roundingStrategyOptions.noRounding);
+
+    return {
+      paymentAmountAfterServerChange,
+      paymentAmountAfterTip,
+      serverNameAfter,
+      serverNameBefore,
+      statusAfterServerChange,
+      statusAfterTip,
+      totalAfterServerChange,
+      totalAfterTip,
+    };
   }
 
   private async createTaxExemptOrderWithChargeAndReadTotal(options: { taxableCharge: boolean }): Promise<number> {

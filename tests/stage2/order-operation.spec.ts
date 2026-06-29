@@ -934,6 +934,7 @@ test.describe('stage2 order operation migration', () => {
 
     const result = await orderEntryFlow.addTipAfterCreditPaymentThenChangeServer(environment.posHomeUrl);
 
+    expect(result.serverNameAfter).not.toBe(result.serverNameBefore);
     expect(result.statusAfterTip).toBe(result.statusAfterServerChange);
     expect(result.totalAfterTip).toBeCloseTo(result.paymentAmountAfterTip, 2);
     expect(result.totalAfterServerChange).toBeCloseTo(result.totalAfterTip, 2);

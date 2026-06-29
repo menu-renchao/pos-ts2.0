@@ -61,6 +61,8 @@ export class RecallPage extends PageObject {
   private readonly orderTotal: Locator;
   private readonly parentOrderCard: Locator;
   private readonly orderStatus: Locator;
+  private readonly orderServerName: Locator;
+  private readonly changeServerButton: Locator;
   private readonly orderSubtotal: Locator;
   private readonly orderTax: Locator;
   private readonly orderPriceDetail: Locator;
@@ -182,6 +184,8 @@ export class RecallPage extends PageObject {
     this.orderTotal = page.getByTestId('recall-order-total');
     this.parentOrderCard = page.getByTestId('recall-parent-order');
     this.orderStatus = page.getByTestId('recall-order-status');
+    this.orderServerName = page.getByTestId('recall-server-name');
+    this.changeServerButton = page.getByTestId('recall-change-server');
     this.orderSubtotal = page.getByTestId('recall-order-subtotal').or(page.locator('#ododttst'));
     this.orderTax = page.getByTestId('recall-order-tax');
     this.orderPriceDetail = page.getByTestId('recall-order-price-detail');
@@ -917,6 +921,20 @@ export class RecallPage extends PageObject {
         return 'Unpaid';
       }
       return liveRecentOrderText;
+    });
+  }
+
+  async readServerName(): Promise<string> {
+    return step('读取 Recall 当前服务员', async () => {
+      await expect(this.orderServerName).toBeVisible();
+      return ((await this.orderServerName.textContent()) ?? '').trim();
+    });
+  }
+
+  async changeServer(): Promise<void> {
+    await step('Recall 切换当前订单服务员', async () => {
+      await expect(this.changeServerButton).toBeVisible();
+      await this.changeServerButton.click();
     });
   }
 

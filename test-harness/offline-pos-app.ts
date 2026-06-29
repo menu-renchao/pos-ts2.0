@@ -511,6 +511,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <div data-testid="recall-order-card-id"></div>
       <div data-testid="recall-order-number"></div>
       <div data-testid="recall-order-status"></div>
+      <div data-testid="recall-server-name"></div>
+      <button data-testid="recall-change-server">Change Server</button>
       <div data-testid="recall-customer-name"></div>
       <div data-testid="recall-guest-phone"></div>
       <div data-testid="recall-guest-address"></div>
@@ -752,6 +754,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let currentKdsCategoryRequired = localStorage.getItem('currentKdsCategoryRequired') === 'true';
       let currentKdsCategoryDiscountAllowance = localStorage.getItem('currentKdsCategoryDiscountAllowance') !== 'false';
       let currentRoundingStrategy = localStorage.getItem('currentRoundingStrategy') || 'no_rounding';
+      let currentServerName = localStorage.getItem('offlineCurrentServerName') || 'Server A';
       let currentShiftScheduleEnabled = localStorage.getItem('offlineShiftScheduleEnabled') === 'true';
       let currentAutoClockOutEnabled = localStorage.getItem('offlineAutoClockOutEnabled') === 'true';
       let currentShiftPlans = readStoredJson('offlineShiftPlans', []);
@@ -1220,6 +1223,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const recallSaveEditButton = document.querySelector('[data-testid="recall-save-edit"]');
       const recallOrderTip = document.querySelector('[data-testid="recall-order-tip"]');
       const recallOrderStatus = document.querySelector('[data-testid="recall-order-status"]');
+      const recallServerName = document.querySelector('[data-testid="recall-server-name"]');
+      const recallChangeServerButton = document.querySelector('[data-testid="recall-change-server"]');
       const recallCustomerName = document.querySelector('[data-testid="recall-customer-name"]');
       const recallGuestPhone = document.querySelector('[data-testid="recall-guest-phone"]');
       const recallGuestAddress = document.querySelector('[data-testid="recall-guest-address"]');
@@ -3124,6 +3129,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           rewardDiscount: 0,
           guestPhone: currentDeliveryInfoRows[0] || '',
           guestAddress: currentDeliveryInfoRows[2] || '',
+          serverName: currentServerName,
           deliveryInfoRows: [...currentDeliveryInfoRows],
           splitOrderPrices: [],
           subOrderItems: [],
@@ -3595,6 +3601,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         recallOrderNumber.textContent = order.orderNumber || '';
         recallOrderTip.textContent = formatTip(order.tip || 0);
         recallOrderStatus.textContent = order.status || '';
+        recallServerName.textContent = order.serverName || currentServerName;
         recallCustomerName.textContent = order.customerName || '';
         recallItemCount.textContent = formatItemCount(order.items || []);
         recallGuestPhone.textContent = formatRecallPhone(order.guestPhone || '');
@@ -5249,6 +5256,15 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           renderCallerDisplay();
         }
       });
+      recallChangeServerButton.addEventListener('click', () => {
+        if (selectedRecallOrder) {
+          selectedRecallOrder.serverName = selectedRecallOrder.serverName === 'Server A' ? 'Server B' : 'Server A';
+          currentServerName = selectedRecallOrder.serverName;
+          localStorage.setItem('offlineCurrentServerName', currentServerName);
+          persistSavedOrders();
+          renderRecallOrderItems();
+        }
+      });
       recallPaymentTypeCashButton.addEventListener('click', () => {
         const order = [...savedOrders].reverse().find((candidate) => (
           candidate.paymentType === 'cash' && candidate.hasCreditFailure
@@ -5273,6 +5289,14 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           selectedRecallOrder.tip = recallTipMethod.value === 'cash'
             ? roundMoney(Number(selectedRecallOrder.tip || 0) + tipAmount)
             : tipAmount;
+          selectedRecallOrder.settlementTotal = orderTotal({
+            ...selectedRecallOrder,
+            settlementTotal: null,
+          });
+          if (selectedRecallOrder.paymentRecords?.[0]) {
+            selectedRecallOrder.paymentRecords[0].amount = selectedRecallOrder.settlementTotal;
+          }
+          persistSavedOrders();
           renderRecallOrderItems();
         }
       });

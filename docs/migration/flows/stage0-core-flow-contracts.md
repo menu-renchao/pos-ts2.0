@@ -479,9 +479,9 @@ These contracts gate the first business migration slice: `stage0/test_main_page.
 
 | source_file | source_class | source_test_pattern | target_spec | target_flow_method |
 |---|---|---|---|---|
-| stage0/test_order_page.py | TestOrderPage | `test_order_switch_group` switch menu group, save order, verify Recall item | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createTogoOrderAndReadRecall` |
+| stage0/test_order_page.py | TestOrderPage | `test_order_switch_group` switch menu group, save order, verify Recall item | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createTogoOrderAndReadOrderedAndRecall` |
 | stage0/test_order_page.py | TestOrderPage | `test_order_group_chinese` Chinese menu groups visible on order page | tests/stage0/order-page.spec.ts | `OrderEntryFlow.readChineseMenuGroups` |
-| stage0/test_order_page.py | TestOrderPage | `test_order_switch_category` switch menu category, save order, verify Recall item | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createTogoOrderAndReadRecall` |
+| stage0/test_order_page.py | TestOrderPage | `test_order_switch_category` switch menu category, save order, verify Recall item | tests/stage0/order-page.spec.ts | `OrderEntryFlow.createTogoOrderAndReadOrderedAndRecall` |
 | stage0/test_order_page.py | TestOrderPage | `test_order_edit_item_tax` send kitchen, edit order, add item, and verify tax | tests/stage0/order-page.spec.ts | `OrderEntryFlow.addItemAfterSendKitchenAndReadTaxes` |
 | stage0/test_order_page.py | TestOrderPage | `test_order_edit_customer_info` require customer name and phone before payment | tests/stage0/order-page.spec.ts | `OrderEntryFlow.requireCustomerInfoBeforePayment` |
 | stage0/test_order_page.py | TestOrderPage | `test_no_permission_void_item` manager password permits void item | tests/stage0/order-page.spec.ts | `OrderEntryFlow.voidItemWithManagerPassword` |
