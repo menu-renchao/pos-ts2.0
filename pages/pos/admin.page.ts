@@ -711,14 +711,16 @@ export class AdminPage extends PageObject {
       const liveStaffCell = this.liveInnerFrame
         .locator(`xpath=//tr[td[normalize-space()=${xpathText(staffName)}]]/td[normalize-space()=${xpathText(staffName)}]`)
         .first();
-      if (await liveStaffCell.isVisible({ timeout: 1_000 }).catch(() => false)) {
+      if (await liveStaffCell.isVisible({ timeout: 15_000 }).catch(() => false)) {
         await liveStaffCell.scrollIntoViewIfNeeded();
         await liveStaffCell.click();
         await expect(liveStaffNameInput).toHaveValue(staffName, { timeout: 10_000 });
         return;
       }
 
-      await this.page.getByTestId('admin-staff-row').filter({ hasText: staffName }).click();
+      const offlineStaffRow = this.page.getByTestId('admin-staff-row').filter({ hasText: staffName });
+      await expect(offlineStaffRow).toBeVisible({ timeout: 5_000 });
+      await offlineStaffRow.click();
       await expect(this.staffNameInput).toHaveValue(staffName);
     });
   }

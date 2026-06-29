@@ -249,6 +249,9 @@ export class PosHomePage extends PageObject {
       if (await this.isHomeReadyWithoutPasscode()) {
         return;
       }
+      if (await this.isLicenseContainerVisible()) {
+        throw new Error('License 弹层未关闭，不能输入 PIN 密码');
+      }
       await this.waitForLivePinValue(password);
       await this.waitForSubmitSettle();
       if (await this.isLicenseContainerVisible()) {
@@ -531,20 +534,79 @@ export class PosHomePage extends PageObject {
   async clickPickup(): Promise<void> {
     await step('从首页进入 Pickup 点单页', async () => {
       await this.pickupButton.click();
-      if (!(await this.orderPageRoot.isVisible().catch(() => false))) {
-        const pickupOrderButton = this.page.locator(liveHomeSelectors.pickupOrderButton);
-        if (await pickupOrderButton.isVisible({ timeout: 5_000 }).catch(() => false)) {
-          await this.page
-            .evaluate((selector) => {
-              document.querySelector<HTMLElement>(selector)?.click();
-            }, liveHomeSelectors.pickupOrderButton)
-            .catch(async () => {
-              await pickupOrderButton.click();
-            });
-        }
+      if (!(await this.isOrderEntryVisible())) {
+        await this.clickLivePickupOrderButton();
       }
-      await expect(this.orderPageRoot).toBeVisible({ timeout: 10_000 });
+      await waitUntil(() => this.isOrderEntryVisible(), {
+        description: 'Pickup 点单页可交互',
+        intervalMs: 200,
+        timeoutMs: 10_000,
+      });
     });
+  }
+
+  private async clickLivePickupOrderButton(): Promise<void> {
+    if (await this.isOrderEntryVisible()) {
+      return;
+    }
+
+    const pickupOrderButton = this.page.locator(liveHomeSelectors.pickupOrderButton);
+    if (await pickupOrderButton.isVisible({ timeout: 5_000 }).catch(() => false)) {
+      await this.page
+        .evaluate((selector) => {
+          document.querySelector<HTMLElement>(selector)?.click();
+        }, liveHomeSelectors.pickupOrderButton)
+        .catch(async () => {
+          await pickupOrderButton.click();
+        });
+      if (await waitUntil(() => this.isOrderEntryVisible(), {
+        description: 'Pickup Order 后进入点单页',
+        intervalMs: 200,
+        timeoutMs: 2_000,
+      }).then(() => true).catch(() => false)) {
+        return;
+      }
+    }
+
+    const clicked = await waitUntil(
+      async () =>
+        this.page.evaluate(() => {
+          const visible = (element: HTMLElement) => {
+            const rect = element.getBoundingClientRect();
+            const style = window.getComputedStyle(element);
+            return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
+          };
+          const orderButton = Array.from(document.querySelectorAll<HTMLElement>('div, button, span'))
+            .filter(visible)
+            .find((element) => element.textContent?.trim() === 'Order');
+          if (!orderButton) {
+            return false;
+          }
+          orderButton.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, view: window }));
+          orderButton.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window }));
+          orderButton.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, cancelable: true, view: window }));
+          orderButton.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, view: window }));
+          orderButton.click();
+          return true;
+        }),
+      {
+        description: 'Pickup 信息页 Order 按钮可点击',
+        intervalMs: 200,
+        timeoutMs: 5_000,
+      },
+    )
+      .then(() => true)
+      .catch(() => false);
+    if (!clicked) {
+      throw new Error('Pickup 信息页 Order 按钮未找到');
+    }
+  }
+
+  private async isOrderEntryVisible(): Promise<boolean> {
+    return (
+      (await this.orderPageRoot.isVisible().catch(() => false)) ||
+      (await this.page.locator('#orderDishes.ui-page-active, #openFoodBx:visible, #odSave:visible, #itemdsply:visible').first().isVisible().catch(() => false))
+    );
   }
 
   async clickRecall(): Promise<void> {
@@ -809,11 +871,7 @@ export class PosHomePage extends PageObject {
         await offlineButton.click();
         return;
       }
-      await this.page
-        .locator('#editbodybx div')
-        .filter({ hasText: new RegExp(`^\\s*${escapeRegExp(functionName)}\\s*$`) })
-        .first()
-        .click();
+      await this.clickLiveFunctionLayoutCard('#editbodybx div', functionName);
     });
   }
 
@@ -824,11 +882,7 @@ export class PosHomePage extends PageObject {
         await offlineButton.click();
         return;
       }
-      await this.page
-        .locator('#editsidebx > div, #editmoreinbx1 > div, #edithidebtbx div')
-        .filter({ hasText: new RegExp(`^\\s*${escapeRegExp(functionName)}\\s*$`) })
-        .first()
-        .click();
+      await this.clickLiveFunctionLayoutCard('#editsidebx > div, #editmoreinbx1 > div, #edithidebtbx div', functionName);
     });
   }
 
@@ -846,7 +900,7 @@ export class PosHomePage extends PageObject {
 
   async saveFunctionLayout(): Promise<void> {
     await step('保存首页功能卡布局', async () => {
-      await this.saveEditButton.click();
+      await this.clickLiveFunctionLayoutSave();
       await expect(this.saveEditButton).toBeHidden();
     });
   }
@@ -878,6 +932,54 @@ export class PosHomePage extends PageObject {
       }
       return this.readLiveAlertText(5_000);
     });
+  }
+
+  private async clickLiveFunctionLayoutCard(selector: string, functionName: string): Promise<void> {
+    const target = this.page
+      .locator(selector)
+      .filter({ hasText: new RegExp(`^\\s*${escapeRegExp(functionName)}\\s*$`) })
+      .first();
+    await expect(target).toBeVisible({ timeout: 5_000 });
+    const box = await target.boundingBox();
+    if (!box) {
+      throw new Error(`live 首页功能卡编辑区未找到 ${functionName}`);
+    }
+    await this.page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    await this.page.waitForTimeout(500);
+  }
+
+  private async clickLiveFunctionLayoutSave(): Promise<void> {
+    if (await this.page.getByTestId('edit-save').isVisible({ timeout: 500 }).catch(() => false)) {
+      await this.page.getByTestId('edit-save').click();
+      return;
+    }
+    const clicked = await this.page
+      .evaluate(() => {
+        const visible = (element: HTMLElement) => {
+          const rect = element.getBoundingClientRect();
+          const style = window.getComputedStyle(element);
+          return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
+        };
+        const target =
+          document.querySelector<HTMLElement>('#oklayoutbxTxt')?.closest<HTMLElement>('#oklayoutbx, button, div') ??
+          document.querySelector<HTMLElement>('#oklayoutbxTxt');
+        if (!target || !visible(target)) {
+          return false;
+        }
+        const jquery = (window as unknown as { $?: (target: HTMLElement) => { trigger: (eventName: string) => void } }).$;
+        jquery?.(target).trigger('tap');
+        jquery?.(target).trigger('click');
+        target.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, view: window }));
+        target.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window }));
+        target.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, cancelable: true, view: window }));
+        target.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, view: window }));
+        target.click();
+        return true;
+      })
+      .catch(() => false);
+    if (!clicked) {
+      await this.saveEditButton.click();
+    }
   }
 
   private async readLiveAlertText(timeoutMs: number): Promise<string> {
@@ -1244,7 +1346,11 @@ export class PosHomePage extends PageObject {
   }
 
   private async isLicenseContainerVisible(): Promise<boolean> {
-    return this.licenseContainer.isVisible().catch(() => false);
+    return (
+      (await this.licenseContainer.isVisible().catch(() => false)) ||
+      (await this.licenseInput.isVisible().catch(() => false)) ||
+      (await this.visibleLicenseRow.first().isVisible().catch(() => false))
+    );
   }
 
   private async waitForStableLicenseList(): Promise<void> {

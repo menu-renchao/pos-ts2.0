@@ -8,7 +8,7 @@ export default defineConfig({
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
     baseURL: process.env.POS_BASE_URL ?? 'http://192.168.0.72:22080',
-    headless: false,
+    headless: process.env.PLAYWRIGHT_HEADED !== '1',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure'

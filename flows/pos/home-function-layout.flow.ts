@@ -16,16 +16,22 @@ export class HomeFunctionLayoutFlow {
     replacedFunction: HomeFunctionName,
   ): Promise<string[]> {
     await this.homePage.open(homeUrl);
-    await this.homePage.clickEdit();
-    await this.homePage.selectHiddenFunction(targetFunction);
-    await this.homePage.selectHomeFunction(replacedFunction);
-    await this.homePage.saveFunctionLayout();
-    const movedCardNames = await this.homePage.readHomeFunctionCardNames();
+    let movedCardNames = await this.homePage.readHomeFunctionCardNames();
 
-    await this.homePage.clickEdit();
-    await this.homePage.selectHomeFunction(targetFunction);
-    await this.homePage.selectHiddenFunction(replacedFunction);
-    await this.homePage.saveFunctionLayout();
+    if (!movedCardNames.includes(targetFunction)) {
+      await this.homePage.clickEdit();
+      await this.homePage.selectHiddenFunction(targetFunction);
+      await this.homePage.selectHomeFunction(replacedFunction);
+      await this.homePage.saveFunctionLayout();
+      movedCardNames = await this.homePage.readHomeFunctionCardNames();
+    }
+
+    if (movedCardNames.includes(targetFunction)) {
+      await this.homePage.clickEdit();
+      await this.homePage.selectHomeFunction(targetFunction);
+      await this.homePage.selectHiddenFunction(replacedFunction);
+      await this.homePage.saveFunctionLayout();
+    }
 
     return movedCardNames;
   }

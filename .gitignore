@@ -10,4 +10,4 @@ test-results/
 /.tmp-*
 /tmp*
 /.trace-*
-/pos-ts2.0/tmp_trace_extract
+/pos-ts2.0/tmp*

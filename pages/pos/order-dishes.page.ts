@@ -1099,11 +1099,26 @@ export class OrderDishesPage extends PageObject {
         await this.managerPasswordInput.fill(password);
       } else {
         for (const digit of password) {
-          await this.page.locator(liveOrderDishesSelectors.managerPasswordDigitButton.replace('{digit}', digit)).click();
+          const digitButton = this.page.locator(liveOrderDishesSelectors.managerPasswordDigitButton.replace('{digit}', digit));
+          if (!(await digitButton.isVisible({ timeout: 2_000 }).catch(() => false))) {
+            throw new Error('live 权限密码弹框未展示，不能输入授权密码');
+          }
+          await digitButton.click();
         }
       }
       await this.managerPasswordSubmitButton.click();
       await this.confirmVoidDialogIfVisible();
+    });
+  }
+
+  async waitForPermissionPromptToClear(): Promise<void> {
+    await step('等待权限提示关闭', async () => {
+      const permissionMessage = this.page
+        .locator('#pwd-input-dialog:visible, .modal.in:visible, [role="dialog"]:visible, .objBx:visible, #myalert:visible, #myalerttxt:visible')
+        .filter({ hasText: livePermissionToastPattern })
+        .last();
+      await expect(permissionMessage).toBeHidden({ timeout: 5_000 }).catch(() => undefined);
+      await this.page.waitForTimeout(500);
     });
   }
 
@@ -2082,7 +2097,7 @@ export class OrderDishesPage extends PageObject {
     if (options.isPercent) {
       await this.clickLiveMobileElement(this.page.locator(liveOrderDishesSelectors.discountPercentButton));
       await this.page.waitForTimeout(discountValueText.includes('.') ? 600 : 150);
-      if (await this.captureLivePermissionToast(500)) {
+      if (await this.captureLivePermissionToast(2_500)) {
         return;
       }
       await this.waitForLiveDiscountPercentInput(options.value);
@@ -2156,6 +2171,11 @@ export class OrderDishesPage extends PageObject {
           const style = window.getComputedStyle(element);
           return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
         };
+        const firstDiscountRow = document.querySelector<HTMLElement>('#subitemlist > div:first-child');
+        if (firstDiscountRow && visible(firstDiscountRow)) {
+          const rowText = (firstDiscountRow.innerText || firstDiscountRow.textContent || '').replace(/\s+/g, ' ').trim();
+          return /\bcheck_box\b/.test(rowText) && !rowText.includes('check_box_outline_blank');
+        }
         const visibleText = Array.from(document.querySelectorAll<HTMLElement>('*'))
           .filter(visible)
           .map((element) => element.innerText || element.textContent || '')
@@ -2222,12 +2242,21 @@ export class OrderDishesPage extends PageObject {
   }
 
   private async clickLiveWholeOrderDiscountCheckbox(): Promise<void> {
-    const point = await this.page.evaluate(() => {
+    const clicked = await this.page.evaluate(() => {
       const visible = (element: HTMLElement) => {
         const rect = element.getBoundingClientRect();
         const style = window.getComputedStyle(element);
         return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
       };
+      const firstDiscountRow = document.querySelector<HTMLElement>('#subitemlist > div:first-child');
+      if (firstDiscountRow && visible(firstDiscountRow)) {
+        firstDiscountRow.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, view: window }));
+        firstDiscountRow.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window }));
+        firstDiscountRow.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, cancelable: true, view: window }));
+        firstDiscountRow.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, view: window }));
+        firstDiscountRow.click();
+        return true;
+      }
       const labels = Array.from(document.querySelectorAll<HTMLElement>('*'))
         .filter(visible)
         .filter((element) => element.textContent?.trim() === 'Whole Order');
@@ -2255,14 +2284,20 @@ export class OrderDishesPage extends PageObject {
           .filter(visible)
           .find((element) => /check_box/.test(element.textContent?.trim() ?? ''));
         const targetRect = (icon ?? row).getBoundingClientRect();
-        return {
+        const point = {
           x: icon ? targetRect.left + targetRect.width / 2 : rect.left + Math.min(32, rect.width / 6),
           y: icon ? targetRect.top + targetRect.height / 2 : rect.top + rect.height / 2,
         };
+        document.elementFromPoint(point.x, point.y)?.dispatchEvent(
+          new MouseEvent('click', { bubbles: true, cancelable: true, view: window }),
+        );
+        return true;
       }
       throw new Error('live whole order discount row not found');
     });
-    await this.page.mouse.click(point.x, point.y);
+    if (!clicked) {
+      throw new Error('live whole order discount row not found');
+    }
   }
 
   private async clickLiveMobileElement(locator: Locator): Promise<void> {

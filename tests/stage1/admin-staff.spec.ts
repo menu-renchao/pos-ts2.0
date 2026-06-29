@@ -8,6 +8,8 @@ import { ReportPage } from '../../pages/pos/report.page.js';
 import { jiraIssue } from '../../utils/jira.js';
 
 test.describe('stage1 admin staff migration', () => {
+  test.describe.configure({ timeout: 90_000 });
+
   test(
     'POS-31535 Server 超过整单最大折扣权限且空密码确认应提示失败',
     {

@@ -4,6 +4,7 @@ import type { PosHomePage } from '../../pages/pos/home.page.js';
 import type { OrderDishesPage } from '../../pages/pos/order-dishes.page.js';
 import type { RecallPage } from '../../pages/pos/recall.page.js';
 import type { ReportPage } from '../../pages/pos/report.page.js';
+import { testEnvironment } from '../../fixtures/environment.js';
 import {
   staffDiscountRoleSamples,
   staffDiscountSamples,
@@ -202,6 +203,7 @@ export class StaffPermissionFlow {
     const permissionTip = await this.orderDishesPage.readDiscountTip();
     await this.orderDishesPage.submitManagerPassword(staffDiscountRoleSamples.manager.password);
     const managerDeniedTip = await this.orderDishesPage.readDiscountTip();
+    await this.orderDishesPage.waitForPermissionPromptToClear();
     await this.orderDishesPage.applyItemDiscountPercent(staffDiscountSamples.bossAuthorizedItemDiscountPercent);
     await this.orderDishesPage.submitManagerPassword(staffDiscountRoleSamples.boss.password);
     const discountedPrice = await this.orderDishesPage.readSelectedItemPrice();
@@ -363,7 +365,7 @@ export class StaffPermissionFlow {
       ]);
 
       await this.homePage.open(homeUrl);
-      await this.homePage.applyOfflineStaffPermissionOverrides(await adminStaffClient.readStaffPermissionOverrides());
+      await this.syncOfflineStaffPermissionOverrides(adminStaffClient);
       await this.homePage.logout();
       await this.homePage.inputEmployeePassword(staffSamples.noAnalysis.password);
       await this.homePage.clickAdmin();
@@ -390,7 +392,7 @@ export class StaffPermissionFlow {
       );
 
       await this.homePage.open(homeUrl);
-      await this.homePage.applyOfflineStaffPermissionOverrides(await adminStaffClient.readStaffPermissionOverrides());
+      await this.syncOfflineStaffPermissionOverrides(adminStaffClient);
       await this.homePage.logout();
       await this.homePage.inputEmployeePassword(staffSamples.personalReportOnly.password);
       await this.homePage.clickReport();
@@ -416,8 +418,7 @@ export class StaffPermissionFlow {
         await adminStaffClient.editRoleRemoveFunctions(staffSample.role, staffSample.removedPermissions);
 
         await this.homePage.open(homeUrl);
-        await this.homePage.applyOfflineStaffPermissionOverrides(await adminStaffClient.readStaffPermissionOverrides());
-        await this.homePage.refresh();
+        await this.syncOfflineStaffPermissionOverrides(adminStaffClient);
         await this.homePage.logout();
         await this.homePage.inputEmployeePassword(staffSample.password);
         await this.homePage.clickAdmin();
@@ -433,11 +434,17 @@ export class StaffPermissionFlow {
 
         return { staffName, dineInAuthorityEnabled };
       } finally {
-        await adminStaffClient.editRoleAddFunctions(staffSample.role, staffSample.removedPermissions);
-        await adminStaffClient.editStaffAddFunctions(staffSample.id, staffSample.removedPermissions);
-        if (staffName) {
-          await adminStaffClient.deleteStaffByName(staffName);
-        }
+        await Promise.all([
+          this.runBestEffortCleanup(`恢复 ${staffSample.role} 角色权限`, () =>
+            adminStaffClient.editRoleAddFunctions(staffSample.role, staffSample.removedPermissions),
+          ),
+          this.runBestEffortCleanup(`恢复员工 ${staffSample.id} 权限`, () =>
+            adminStaffClient.editStaffAddFunctions(staffSample.id, staffSample.removedPermissions),
+          ),
+          staffName
+            ? this.runBestEffortCleanup(`删除临时员工 ${staffName}`, () => adminStaffClient.deleteStaffByName(staffName))
+            : Promise.resolve(),
+        ]);
       }
     });
   }
@@ -520,8 +527,10 @@ export class StaffPermissionFlow {
 
       await recallPage.submitManagerPassword(staffDiscountRoleSamples.manager.password);
       const managerDeniedTip = await recallPage.readDiscountTip();
+      await recallPage.waitForPermissionPromptToClear();
       await recallPage.applyWholeOrderDiscountAmount(discountAmount);
       await recallPage.submitManagerPassword(staffDiscountRoleSamples.boss.password);
+      await recallPage.waitForOrderTotal(originalTotal - discountAmount);
       const totalAfterDiscount = await recallPage.readOrderTotal();
 
       return { permissionTip, managerDeniedTip, originalTotal, totalAfterDiscount };
@@ -540,6 +549,27 @@ export class StaffPermissionFlow {
       throw new Error('AdminStaffClient is required for admin staff permission flows');
     }
     return this.adminStaffClient;
+  }
+
+  private async syncOfflineStaffPermissionOverrides(adminStaffClient: AdminStaffClient): Promise<void> {
+    if (testEnvironment.testMode !== 'offline') {
+      return;
+    }
+    await this.homePage.applyOfflineStaffPermissionOverrides(await adminStaffClient.readStaffPermissionOverrides());
+  }
+
+  private async runBestEffortCleanup(description: string, action: () => Promise<void>): Promise<void> {
+    await step(`尽力清理：${description}`, async () => {
+      const cleanup = action();
+      cleanup.catch(() => undefined);
+      const timeout = new Promise<'timeout'>((resolve) => {
+        setTimeout(() => resolve('timeout'), 8_000);
+      });
+      const result = await Promise.race([cleanup.then(() => 'done' as const), timeout]);
+      if (result === 'timeout') {
+        console.warn(`[cleanup timeout] ${description}`);
+      }
+    });
   }
 
   private async ensureDefaultRoleDiscountLimits(): Promise<void> {

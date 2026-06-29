@@ -423,8 +423,10 @@ export class RecallPage extends PageObject {
 
   async applyWholeOrderDiscountAmount(amount: number): Promise<void> {
     await step(`Recall 应用整单固定金额折扣 ${amount}`, async () => {
+      await this.ensureDiscountPanelOpen();
       if (await this.hasVisibleLiveDiscountRows()) {
         await this.ensureLiveWholeOrderDiscountSelected();
+        await this.clearLiveDiscountKeypadValue();
         for (const character of String(amount)) {
           const key =
             character === '.'
@@ -458,6 +460,17 @@ export class RecallPage extends PageObject {
         await this.managerPasswordInput.fill(password);
       }
       await this.managerPasswordSubmitButton.click();
+    });
+  }
+
+  async waitForPermissionPromptToClear(): Promise<void> {
+    await step('等待 Recall 权限提示关闭', async () => {
+      const permissionMessage = this.page
+        .locator('#pwd-input-dialog:visible, .modal.in:visible, [role="dialog"]:visible, .objBx:visible, #myalert:visible, #myalerttxt:visible')
+        .filter({ hasText: /permission|No Permission|please input password|please enter the password|Failed to login/i })
+        .last();
+      await expect(permissionMessage).toBeHidden({ timeout: 5_000 }).catch(() => undefined);
+      await this.page.waitForTimeout(500);
     });
   }
 
@@ -1442,6 +1455,19 @@ export class RecallPage extends PageObject {
     return step('读取 Recall 订单总额', async () => parseCurrency(await this.readOrderTotalText()));
   }
 
+  async waitForOrderTotal(expectedTotal: number): Promise<void> {
+    await step(`等待 Recall 订单总额变为 ${expectedTotal}`, async () => {
+      await waitUntil(
+        async () => Math.abs((await this.readOrderTotal()) - expectedTotal) < 0.005,
+        {
+          description: 'Recall 订单总额刷新',
+          intervalMs: 300,
+          timeoutMs: 10_000,
+        },
+      );
+    });
+  }
+
   async readOrderTotalText(): Promise<string> {
     return step('读取 Recall 订单总额文本', async () => {
       if (await this.page.locator(liveOrderDishesSelectors.discountPanel).isVisible({ timeout: 1_000 }).catch(() => false)) {
@@ -2004,6 +2030,26 @@ export class RecallPage extends PageObject {
     await this.clickLiveDiscountRowCheckboxByIndex(0);
   }
 
+  private async ensureDiscountPanelOpen(): Promise<void> {
+    if (
+      (await this.hasVisibleLiveDiscountRows()) ||
+      (await this.discountAmountInput.isVisible({ timeout: 500 }).catch(() => false))
+    ) {
+      return;
+    }
+    await this.discountButton.click();
+    await waitUntil(
+      async () =>
+        (await this.hasVisibleLiveDiscountRows()) ||
+        (await this.discountAmountInput.isVisible().catch(() => false)),
+      {
+        description: 'Recall 折扣面板打开',
+        intervalMs: 200,
+        timeoutMs: 10_000,
+      },
+    );
+  }
+
   private async hasVisibleLiveDiscountRows(): Promise<boolean> {
     return this.readLiveDiscountRowLastCurrencyByIndex(0)
       .then((price) => Boolean(price))
@@ -2015,6 +2061,29 @@ export class RecallPage extends PageObject {
     if (await clearSelectedButton.isVisible({ timeout: 500 }).catch(() => false)) {
       await this.clickLiveMobileElement(clearSelectedButton);
     }
+  }
+
+  private async clearLiveDiscountKeypadValue(): Promise<void> {
+    await this.page
+      .evaluate(() => {
+        const visible = (element: HTMLElement) => {
+          const rect = element.getBoundingClientRect();
+          const style = window.getComputedStyle(element);
+          return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
+        };
+        const clearButton = Array.from(document.querySelectorAll<HTMLElement>('#subitemlist div, #subitemlist span, div, span'))
+          .filter(visible)
+          .find((element) => element.textContent?.trim() === 'C');
+        if (!clearButton) {
+          return;
+        }
+        clearButton.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, view: window }));
+        clearButton.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window }));
+        clearButton.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, cancelable: true, view: window }));
+        clearButton.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, view: window }));
+        clearButton.click();
+      })
+      .catch(() => undefined);
   }
 
   private async clickLiveDiscountRowCheckboxByIndex(index: number): Promise<void> {
