@@ -1080,4 +1080,29 @@ test.describe('stage2 order operation migration', () => {
       2,
     );
   });
+
+  test('POS-32016 合单重算加收开启时 Delivery 自动小费加收应按合并后小计重算', async ({
+    environment,
+    page,
+  }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+      new DeliveryPage(page),
+      new ReportPage(page),
+    );
+
+    const result = await orderEntryFlow.combineDeliveryOrdersWithRecalculatedShareTipCharge(
+      environment.posHomeUrl,
+    );
+
+    expect(result.combinedOrderChargeItems.auto_test_perc).toBe(result.expectedChargeText);
+    expect(result.combinedChargeTotal).toBeCloseTo(result.expectedCharge, 2);
+    expect(result.feeAfterCombine).toBeCloseTo(
+      result.feeBeforeCombine + result.combinedChargeTotal,
+      2,
+    );
+  });
 });

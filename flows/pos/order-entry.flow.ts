@@ -308,6 +308,16 @@ export type MultiChargeCombineResult = {
   secondOrderChargeTotal: number;
 };
 
+export type RecalculatedShareTipChargeCombineResult = {
+  combinedChargeTotal: number;
+  combinedOrderChargeItems: Record<string, string>;
+  combinedSubtotal: number;
+  expectedCharge: number;
+  expectedChargeText: string;
+  feeAfterCombine: number;
+  feeBeforeCombine: number;
+};
+
 export type AutoChargeMoveItemResult = {
   movedOrderCharge: Record<string, string>;
   originalOrderCharge: Record<string, string>;
@@ -2533,6 +2543,81 @@ export class OrderEntryFlow {
       manualChargeBeforeCombineTotal: Number(firstOrderChargeItems.auto_test2 ?? 0)
         + Number(secondOrderChargeItems.auto_test2 ?? 0),
       secondOrderChargeTotal: chargeTotal(secondOrderChargeItems),
+    };
+  }
+
+  async combineDeliveryOrdersWithRecalculatedShareTipCharge(
+    homeUrl: string,
+  ): Promise<RecalculatedShareTipChargeCombineResult> {
+    if (!this.adminPage || !this.deliveryPage || !this.reportPage) {
+      throw new Error('POS-32016 requires AdminPage, DeliveryPage, and ReportPage');
+    }
+
+    const [firstDish, secondDish] = splitDiscountDishes;
+    if (!firstDish || !secondDish) {
+      throw new Error('POS-32016 requires two split discount dish test data records');
+    }
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.setupAutoPercentChargeAsTip('auto_test_perc', 10);
+    await this.adminPage.setAutoChargeOrderTypes('auto_test_perc', ['delivery']);
+    await this.adminPage.setChargeMinAmount('auto_test_perc', 20);
+    await this.adminPage.setCombineRecalculateCharge(true);
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickReport();
+    await this.reportPage.inputPasswordInPopup(validEmployeePassword);
+    await this.reportPage.enterTotalReport();
+    const feeBeforeCombine = await this.reportPage.readFeeAmount();
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDelivery();
+    await this.deliveryPage.createDeliveryOrder(deliveryOrderInfoSample);
+    await this.orderDishesPage.selectMenuGroup(firstDish.group);
+    await this.orderDishesPage.selectMenuCategory(firstDish.category);
+    await this.orderDishesPage.addMenuItem(firstDish.name);
+    await this.orderDishesPage.changeSelectedItemPrice(20);
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDelivery();
+    await this.deliveryPage.createDeliveryOrder(deliveryOrderInfoSample);
+    await this.orderDishesPage.selectMenuGroup(secondDish.group);
+    await this.orderDishesPage.selectMenuCategory(secondDish.category);
+    await this.orderDishesPage.addMenuItem(secondDish.name);
+    await this.orderDishesPage.changeSelectedItemPrice(10);
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickRecall();
+    await this.recallPage.openPreviousOrder();
+    await this.recallPage.combineOrder(1);
+    const combinedSubtotal = await this.recallPage.readOrderSubtotal();
+    const combinedOrderChargeItems = await this.recallPage.readOrderChargeItems();
+    const combinedChargeTotal = Object.values(combinedOrderChargeItems)
+      .reduce((sum, value) => sum + Number(value), 0);
+    const expectedCharge = Number((combinedSubtotal * 0.1).toFixed(2));
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickReport();
+    await this.reportPage.inputPasswordInPopup(validEmployeePassword);
+    await this.reportPage.enterTotalReport();
+    const feeAfterCombine = await this.reportPage.readFeeAmount();
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.deleteChargeByName('auto_test_perc');
+    await this.adminPage.setCombineRecalculateCharge(true);
+
+    return {
+      combinedChargeTotal,
+      combinedOrderChargeItems,
+      combinedSubtotal,
+      expectedCharge,
+      expectedChargeText: expectedCharge.toFixed(2),
+      feeAfterCombine,
+      feeBeforeCombine,
     };
   }
 

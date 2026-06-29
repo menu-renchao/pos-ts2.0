@@ -2992,7 +2992,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         const netSales = reportOrders
           .reduce((total, order) => total + Number(order.subtotal || 0), 0);
         const feeAmount = reportOrders
-          .filter((order) => Boolean(order.orderChargeShareTip))
+          .filter((order) => Boolean(order.orderChargeShareTip) && !Array.isArray(order.combinedOrderCharges))
           .reduce((total, order) => total + orderChargeAmount(order, order.items || []), 0);
         const combinedFeeAmount = reportOrders
           .flatMap((order) => order.combinedOrderCharges || [])
@@ -3572,6 +3572,32 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         ]);
       }
 
+      function recalculatedCombinedOrderCharges(order) {
+        const subtotal = orderItemsSubtotal(order?.items || []);
+        const charge = autoCharges.find((candidate) =>
+          chargeAppliesToOrderContext(
+            candidate,
+            order?.orderType || currentOrderType,
+            Number(order?.guestCount || currentGuestCount || 1),
+            Number(order?.deliveryDistance || currentDeliveryDistance || 0),
+            subtotal,
+          ));
+        if (!charge) {
+          return [];
+        }
+        const amount = charge.rateType === 'amount'
+          ? Number(charge.amount || 0)
+          : roundMoney(subtotal * Number(charge.rate || 0));
+        return aggregateChargeSnapshots([
+          {
+            amount,
+            label: charge.name || 'Charge',
+            shareTip: Boolean(charge.shareTip),
+            taxed: Boolean(charge.taxed),
+          },
+        ]);
+      }
+
       function combinedOrderTaxAmount(order) {
         const taxRate = Number((order?.items || []).find((item) => item.taxRate !== undefined)?.taxRate ?? 0.0825);
         const subtotal = Array.isArray(order?.combinedOrderCharges)
@@ -3591,11 +3617,13 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         const sourceCharges = currentCombineRecalculateCharge ? [] : snapshotOrderCharges(sourceOrder);
         targetOrder.items = [...targetOrder.items, ...sourceOrder.items];
         targetOrder.subtotal = Number((Number(targetOrder.subtotal || 0) + Number(sourceOrder.subtotal || 0)).toFixed(2));
-        targetOrder.combinedOrderCharges = aggregateChargeSnapshots([
-          ...(targetOrder.combinedOrderCharges || []),
-          ...targetCharges,
-          ...sourceCharges,
-        ]);
+        targetOrder.combinedOrderCharges = currentCombineRecalculateCharge
+          ? recalculatedCombinedOrderCharges(targetOrder)
+          : aggregateChargeSnapshots([
+              ...(targetOrder.combinedOrderCharges || []),
+              ...targetCharges,
+              ...sourceCharges,
+            ]);
         if (targetOrder.combinedOrderCharges.length) {
           targetOrder.orderChargeRate = 0;
           targetOrder.orderChargeFixedAmount = null;
@@ -3607,6 +3635,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           targetOrder.rewardDiscount = calculateRewardDiscount(targetOrder);
         }
         savedOrders = savedOrders.filter((order) => order !== sourceOrder);
+        persistSavedOrders();
         selectRecallOrder(targetOrder);
       }
 
@@ -5323,6 +5352,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           selectedItem.price = Number(itemPriceInput.value || '0');
           selectedItem.unitPrice = Number(itemPriceInput.value || '0') / Number(selectedItem.quantity || 1);
           currentOrderPriceEdited = true;
+          applyAutoChargeIfNeeded();
           renderOrderAmounts();
         }
       });
@@ -5959,6 +5989,14 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         currentOrderPriceEdited = false;
         currentSplitPartTip = null;
         currentOrderStatus = '';
+        currentOrderType = 'delivery';
+        currentOrderChargeRate = 0;
+        currentOrderChargeFixedAmount = null;
+        currentOrderChargeLabel = '';
+        currentOrderChargeTaxed = false;
+        currentOrderChargeTriggerMode = '';
+        currentOrderChargeShareTip = false;
+        currentExtraOrderCharges = [];
         currentCustomerName = deliveryNameInput.value || null;
         currentComboOptionCount = 0;
         currentDeliveryDistance = 0;
