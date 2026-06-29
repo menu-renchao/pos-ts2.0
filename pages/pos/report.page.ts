@@ -17,6 +17,7 @@ export class ReportPage extends PageObject {
   private readonly liveOrderTypeLabels: Locator;
   private readonly liveOrderTypeSelect: Locator;
   private readonly liveOverviewKeyMetrics: Locator;
+  private readonly feeAmount: Locator;
   private readonly overviewNetSales: Locator;
   private readonly orderTypeSelect: Locator;
   private readonly reportEndTime: Locator;
@@ -44,6 +45,7 @@ export class ReportPage extends PageObject {
     this.liveOrderTypeLabels = this.liveFrame.locator('label[for*="AllOrderType"]');
     this.liveOrderTypeSelect = this.liveFrame.locator("div[class*='dbPos_topicFilter']").first().locator('ul.tag-list');
     this.liveOverviewKeyMetrics = this.liveFrame.locator('div[class*="dbPos_topicWrapBx1"]');
+    this.feeAmount = page.getByTestId('report-fee-amount');
     this.overviewNetSales = page.getByTestId('report-overview-net-sales');
     this.orderTypeSelect = page.getByTestId('report-order-type');
     this.reportEndTime = page.getByTestId('report-end-time');
@@ -61,8 +63,16 @@ export class ReportPage extends PageObject {
 
   async inputPasswordInPopup(password: string): Promise<void> {
     await step('在报表密码弹层输入员工密码', async () => {
+      const offlinePasswordInput = this.page.getByTestId('report-password');
+      if (await offlinePasswordInput.isVisible({ timeout: 1_000 }).catch(() => false)) {
+        await offlinePasswordInput.fill(password);
+        await this.page.getByTestId('report-password-save').click();
+        await expect(this.reportRoot).toBeVisible({ timeout: 5_000 });
+        return;
+      }
+
       const visiblePasswordInput = this.page
-        .locator('[data-testid="report-password"]:visible, #pwipt:visible, #iptpwtx:visible input:visible, input:visible')
+        .locator('[data-testid="report-password"]:visible, #pwipt:visible, #iptpwtx:visible input:visible')
         .first();
       const livePasscodePrompt = this.page
         .locator('#iptpwtx:visible, #pwd-input-title:visible, #ckin_pw-input-title:visible')
@@ -183,6 +193,22 @@ export class ReportPage extends PageObject {
       }
       await expect(this.overviewNetSales).toBeVisible();
       return parseCurrency((await this.overviewNetSales.textContent()) ?? '0');
+    });
+  }
+
+  async readFeeAmount(): Promise<number> {
+    return step('读取 Report Fee Amount', async () => {
+      if (await this.liveFrameRoot.isVisible().catch(() => false)) {
+        await expect(this.liveOverviewKeyMetrics).toBeVisible({ timeout: 60_000 });
+        const keyMetricsText = (await this.liveOverviewKeyMetrics.innerText()).replace(/\r/g, '');
+        const feeMatch = keyMetricsText.match(/Fee Amount\s*\n?\s*([-$,\d.]+)/i);
+        if (!feeMatch?.[1]) {
+          throw new Error(`Cloud Report Overview 未读取到 Fee Amount: ${keyMetricsText}`);
+        }
+        return parseCurrency(feeMatch[1]);
+      }
+      await expect(this.feeAmount).toBeVisible();
+      return parseCurrency((await this.feeAmount.textContent()) ?? '0');
     });
   }
 

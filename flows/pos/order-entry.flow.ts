@@ -307,6 +307,12 @@ export type RecallDiscountClearAllResult = {
   itemPriceAfterClear: number;
 };
 
+export type ChargeAsTipReportFeesResult = {
+  feeAfterOrder: number;
+  feeAfterSplit: number;
+  feeBefore: number;
+};
+
 export type ManualChargeMoveItemResult = {
   movedItemPrice: number;
   sourceOrderCharge: Record<string, string>;
@@ -2465,6 +2471,59 @@ export class OrderEntryFlow {
     return {
       itemOriginalPrice: prices.originalPrice,
       itemPriceAfterClear: prices.currentPrice,
+    };
+  }
+
+  async createAutoChargeAsTipOrderSplitByAmountAndReadReportFees(homeUrl: string): Promise<ChargeAsTipReportFeesResult> {
+    if (!this.adminPage || !this.reportPage) {
+      throw new Error('POS-31081 requires AdminPage and ReportPage');
+    }
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.setupAutoFixedChargeAsTip('other_charge', 10);
+    await this.homePage.open(homeUrl);
+
+    await this.homePage.clickReport();
+    await this.reportPage.inputPasswordInPopup(validEmployeePassword);
+    await this.reportPage.enterTotalReport();
+    const feeBefore = await this.reportPage.readFeeAmount();
+    await this.homePage.open(homeUrl);
+
+    await this.homePage.clickDineIn();
+    for (let index = 0; index < 2; index += 1) {
+      await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+      await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+      await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    }
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.clickReport();
+    await this.reportPage.inputPasswordInPopup(validEmployeePassword);
+    await this.reportPage.enterTotalReport();
+    const feeAfterOrder = await this.reportPage.readFeeAmount();
+    await this.homePage.open(homeUrl);
+
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.openSplitOrder();
+    await this.recallPage.splitByAmounts([5]);
+    await this.recallPage.saveSplit();
+    await this.homePage.open(homeUrl);
+
+    await this.homePage.clickReport();
+    await this.reportPage.inputPasswordInPopup(validEmployeePassword);
+    await this.reportPage.enterTotalReport();
+    const feeAfterSplit = await this.reportPage.readFeeAmount();
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.deleteChargeByName('other_charge');
+
+    return {
+      feeAfterOrder,
+      feeAfterSplit,
+      feeBefore,
     };
   }
 

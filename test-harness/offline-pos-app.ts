@@ -159,6 +159,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <button data-testid="admin-charge-rename">Rename Charge</button>
       <button data-testid="admin-manual-fixed-charge-setup">Setup Manual Fixed Charge</button>
       <button data-testid="admin-auto-fixed-charge-setup">Setup Auto Fixed Charge</button>
+      <button data-testid="admin-auto-fixed-charge-as-tip-setup">Setup Auto Fixed Charge As Tip</button>
       <button data-testid="admin-auto-percent-charge-setup">Setup Auto Percent Charge</button>
       <input data-testid="admin-charge-rate-type-name" />
       <select data-testid="admin-charge-rate-type">
@@ -658,6 +659,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         <option value="CUSTOM_D">CUSTOM_D</option>
       </select>
       <div data-testid="report-overview-net-sales">$0.00</div>
+      <div data-testid="report-fee-amount">$0.00</div>
       <section data-testid="report-right-iframe" hidden>
         <div data-testid="report-start-time"></div>
         <div data-testid="report-end-time"></div>
@@ -789,6 +791,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let currentOrderChargeLabel = '';
       let currentOrderChargeTaxed = false;
       let currentOrderChargeTriggerMode = '';
+      let currentOrderChargeShareTip = false;
       let manualCharges = readStoredJson('offlineManualCharges', [
         {
           amount: 10,
@@ -934,6 +937,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const adminChargeRenameButton = document.querySelector('[data-testid="admin-charge-rename"]');
       const adminManualFixedChargeSetupButton = document.querySelector('[data-testid="admin-manual-fixed-charge-setup"]');
       const adminAutoFixedChargeSetupButton = document.querySelector('[data-testid="admin-auto-fixed-charge-setup"]');
+      const adminAutoFixedChargeAsTipSetupButton = document.querySelector('[data-testid="admin-auto-fixed-charge-as-tip-setup"]');
       const adminAutoPercentChargeSetupButton = document.querySelector('[data-testid="admin-auto-percent-charge-setup"]');
       const adminChargeRateTypeNameInput = document.querySelector('[data-testid="admin-charge-rate-type-name"]');
       const adminChargeRateTypeSelect = document.querySelector('[data-testid="admin-charge-rate-type"]');
@@ -1343,6 +1347,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const reportStaffReportButton = document.querySelector('[data-testid="report-staff-report"]');
       const reportOrderTypeSelect = document.querySelector('[data-testid="report-order-type"]');
       const reportOverviewNetSales = document.querySelector('[data-testid="report-overview-net-sales"]');
+      const reportFeeAmount = document.querySelector('[data-testid="report-fee-amount"]');
       const reportRightIframe = document.querySelector('[data-testid="report-right-iframe"]');
       const reportStartTime = document.querySelector('[data-testid="report-start-time"]');
       const reportEndTime = document.querySelector('[data-testid="report-end-time"]');
@@ -2541,6 +2546,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         currentOrderChargeFixedAmount = charge.rateType === 'amount' ? Number(charge.amount || 0) : null;
         currentOrderChargeLabel = charge.name;
         currentOrderChargeTaxed = Boolean(charge.taxed);
+        currentOrderChargeShareTip = Boolean(charge.shareTip);
         currentOrderChargeTriggerMode = 'manual';
       }
 
@@ -2570,6 +2576,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           currentOrderChargeFixedAmount = null;
           currentOrderChargeLabel = '';
           currentOrderChargeTaxed = false;
+          currentOrderChargeShareTip = false;
           currentOrderChargeTriggerMode = '';
           return;
         }
@@ -2577,6 +2584,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         currentOrderChargeFixedAmount = charge.rateType === 'amount' ? Number(charge.amount || 0) : null;
         currentOrderChargeLabel = charge.name;
         currentOrderChargeTaxed = Boolean(charge.taxed);
+        currentOrderChargeShareTip = Boolean(charge.shareTip);
       }
 
       function applyAutoChargeIfNeeded() {
@@ -2591,6 +2599,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         currentOrderChargeFixedAmount = charge.rateType === 'amount' ? Number(charge.amount || 0) : null;
         currentOrderChargeLabel = charge.name;
         currentOrderChargeTaxed = Boolean(charge.taxed);
+        currentOrderChargeShareTip = Boolean(charge.shareTip);
         currentOrderChargeTriggerMode = 'auto';
       }
 
@@ -2607,6 +2616,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
             currentOrderChargeFixedAmount = charge.rateType === 'amount' ? Number(charge.amount || 0) : null;
             currentOrderChargeLabel = charge.name;
             currentOrderChargeTaxed = Boolean(charge.taxed);
+            currentOrderChargeShareTip = Boolean(charge.shareTip);
             currentOrderChargeTriggerMode = 'manual';
             renderPresetChargeDialog();
             renderOrderAmounts();
@@ -2884,7 +2894,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         const netSales = savedOrders
           .filter((order) => selectedType === 'ALL' || reportOrderType(order) === selectedType)
           .reduce((total, order) => total + Number(order.subtotal || 0), 0);
+        const feeAmount = savedOrders
+          .filter((order) => Boolean(order.orderChargeShareTip))
+          .reduce((total, order) => total + orderChargeAmount(order, order.items || []), 0);
         reportOverviewNetSales.textContent = '$' + roundMoney(netSales).toFixed(2);
+        reportFeeAmount.textContent = '$' + roundMoney(feeAmount).toFixed(2);
       }
 
       function localIsoDate(offsetDays) {
@@ -2994,6 +3008,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         currentOrderChargeLabel = '';
         currentOrderChargeTaxed = false;
         currentOrderChargeTriggerMode = '';
+        currentOrderChargeShareTip = false;
         currentWholeOrderDiscountRate = 0;
         currentOrderTaxVoided = false;
         currentPaidAmount = 0;
@@ -3146,6 +3161,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           orderChargeLabel: currentOrderChargeLabel,
           orderChargeTaxed: currentOrderChargeTaxed,
           orderChargeTriggerMode: currentOrderChargeTriggerMode,
+          orderChargeShareTip: currentOrderChargeShareTip,
           taxText: orderTax.textContent || '',
           inventoryDeductedQuantity: 0,
           paymentRecords: currentPaymentRecords.map((record) => ({ ...record })),
@@ -3185,6 +3201,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         selectedRecallOrder.orderChargeLabel = currentOrderChargeLabel;
         selectedRecallOrder.orderChargeTaxed = currentOrderChargeTaxed;
         selectedRecallOrder.orderChargeTriggerMode = currentOrderChargeTriggerMode;
+        selectedRecallOrder.orderChargeShareTip = currentOrderChargeShareTip;
         selectedRecallOrder.taxText = orderTax.textContent || '';
       }
 
@@ -3230,6 +3247,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           order.orderChargeFixedAmount = null;
           order.orderChargeLabel = '';
           order.orderChargeTaxed = false;
+          order.orderChargeShareTip = false;
           order.orderChargeTriggerMode = '';
           return;
         }
@@ -3237,6 +3255,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         order.orderChargeFixedAmount = charge.rateType === 'amount' ? Number(charge.amount || 0) : null;
         order.orderChargeLabel = charge.name;
         order.orderChargeTaxed = Boolean(charge.taxed);
+        order.orderChargeShareTip = Boolean(charge.shareTip);
         order.orderChargeTriggerMode = 'auto';
       }
 
@@ -4245,6 +4264,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         currentOrderChargeLabel = 'Charge(20%)';
         currentOrderChargeTaxed = false;
         currentOrderChargeTriggerMode = 'order';
+        currentOrderChargeShareTip = false;
         renderOrderAmounts();
       });
       orderCharge10Button.addEventListener('click', () => {
@@ -4253,6 +4273,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         currentOrderChargeLabel = 'Charge(10%)';
         currentOrderChargeTaxed = false;
         currentOrderChargeTriggerMode = 'order';
+        currentOrderChargeShareTip = false;
         renderOrderAmounts();
       });
       orderCharge10TaxableButton.addEventListener('click', () => {
@@ -4261,6 +4282,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         currentOrderChargeLabel = 'Charge(10%)';
         currentOrderChargeTaxed = true;
         currentOrderChargeTriggerMode = 'order';
+        currentOrderChargeShareTip = false;
         renderOrderAmounts();
       });
       orderCharge5Button.addEventListener('click', () => {
@@ -4269,6 +4291,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         currentOrderChargeLabel = 'Charge(5%)';
         currentOrderChargeTaxed = false;
         currentOrderChargeTriggerMode = 'order';
+        currentOrderChargeShareTip = false;
         renderOrderAmounts();
       });
       orderChargeZeroButton.addEventListener('click', () => {
@@ -4277,6 +4300,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         currentOrderChargeLabel = '';
         currentOrderChargeTaxed = false;
         currentOrderChargeTriggerMode = '';
+        currentOrderChargeShareTip = false;
         renderOrderAmounts();
       });
       orderChargeOpenButton.addEventListener('click', () => {
@@ -4314,6 +4338,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
             orderTypes: ['dine-in', 'delivery', 'pickup', 'togo'],
             rate: 0,
             rateType: 'amount',
+            shareTip: false,
             taxed: false,
           },
         ];
@@ -4332,6 +4357,26 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
             orderTypes: ['dine-in', 'delivery', 'pickup', 'togo'],
             rate: 0,
             rateType: 'amount',
+            shareTip: false,
+            taxed: false,
+          },
+        ];
+        localStorage.setItem('offlineAutoCharges', JSON.stringify(autoCharges));
+      });
+      adminAutoFixedChargeAsTipSetupButton.addEventListener('click', () => {
+        const chargeName = adminChargeOldNameInput.value || 'other_charge';
+        const amount = Number(adminChargeAmountInput.value || 10);
+        autoCharges = [
+          {
+            amount,
+            minAmount: 0,
+            minGuest: 0,
+            minMile: 0,
+            name: chargeName,
+            orderTypes: ['dine-in', 'delivery', 'pickup', 'togo'],
+            rate: 0,
+            rateType: 'amount',
+            shareTip: true,
             taxed: false,
           },
         ];
@@ -4350,6 +4395,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
             orderTypes: ['dine-in', 'delivery', 'pickup', 'togo'],
             rate: percent / 100,
             rateType: 'percent',
+            shareTip: false,
             taxed: false,
           },
         ];
@@ -5418,6 +5464,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
             : selectedRecallOrder.orderChargeFixedAmount ?? null;
           currentOrderChargeLabel = currentOrderChargeRate || currentOrderChargeFixedAmount !== null ? selectedRecallOrder.orderChargeLabel || 'Charge' : '';
           currentOrderChargeTriggerMode = currentOrderChargeLabel ? selectedRecallOrder.orderChargeTriggerMode || '' : '';
+          currentOrderChargeShareTip = Boolean(selectedRecallOrder.orderChargeShareTip);
           currentOrderType = selectedRecallOrder.orderType || currentOrderType;
           syncCurrentChargeFromAutoConfig();
           if (currentOrderChargeTriggerMode !== 'auto') {

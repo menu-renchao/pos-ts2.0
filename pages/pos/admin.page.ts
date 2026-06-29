@@ -146,6 +146,7 @@ export class AdminPage extends PageObject {
   private readonly chargeRenameButton: Locator;
   private readonly manualFixedChargeSetupButton: Locator;
   private readonly autoFixedChargeSetupButton: Locator;
+  private readonly autoFixedChargeAsTipSetupButton: Locator;
   private readonly autoPercentChargeSetupButton: Locator;
   private readonly chargeRateTypeNameInput: Locator;
   private readonly chargeRateTypeSelect: Locator;
@@ -318,6 +319,7 @@ export class AdminPage extends PageObject {
     this.chargeRenameButton = page.getByTestId('admin-charge-rename');
     this.manualFixedChargeSetupButton = page.getByTestId('admin-manual-fixed-charge-setup');
     this.autoFixedChargeSetupButton = page.getByTestId('admin-auto-fixed-charge-setup');
+    this.autoFixedChargeAsTipSetupButton = page.getByTestId('admin-auto-fixed-charge-as-tip-setup');
     this.autoPercentChargeSetupButton = page.getByTestId('admin-auto-percent-charge-setup');
     this.chargeRateTypeNameInput = page.getByTestId('admin-charge-rate-type-name');
     this.chargeRateTypeSelect = page.getByTestId('admin-charge-rate-type');
@@ -938,6 +940,15 @@ export class AdminPage extends PageObject {
       await this.chargeOldNameInput.fill(chargeName);
       await this.chargeAmountInput.fill(String(amount));
       await this.autoFixedChargeSetupButton.click();
+    });
+  }
+
+  async setupAutoFixedChargeAsTip(chargeName: string, amount: number): Promise<void> {
+    await step(`配置自动固定加收 ${chargeName} 为 ${amount} 且计入小费`, async () => {
+      await expect(this.adminRoot).toBeVisible();
+      await this.chargeOldNameInput.fill(chargeName);
+      await this.chargeAmountInput.fill(String(amount));
+      await this.autoFixedChargeAsTipSetupButton.click();
     });
   }
 

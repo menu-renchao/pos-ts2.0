@@ -6,6 +6,7 @@ import { DeliveryPage } from '../../pages/pos/delivery.page.js';
 import { PosHomePage } from '../../pages/pos/home.page.js';
 import { OrderDishesPage } from '../../pages/pos/order-dishes.page.js';
 import { RecallPage } from '../../pages/pos/recall.page.js';
+import { ReportPage } from '../../pages/pos/report.page.js';
 import { jiraIssue } from '../../utils/jira.js';
 
 test.describe('stage2 order operation migration', () => {
@@ -951,5 +952,26 @@ test.describe('stage2 order operation migration', () => {
     const result = await orderEntryFlow.clearRecalledItemDiscountsAndReadPrices(environment.posHomeUrl);
 
     expect(result.itemPriceAfterClear).toBeCloseTo(result.itemOriginalPrice, 2);
+  });
+
+  test('POS-31081 自动加收算小费时金额分单后报表 Fee Amount 应保持加收小费', async ({
+    environment,
+    page,
+  }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+      undefined,
+      new ReportPage(page),
+    );
+
+    const result = await orderEntryFlow.createAutoChargeAsTipOrderSplitByAmountAndReadReportFees(
+      environment.posHomeUrl,
+    );
+
+    expect(result.feeAfterOrder).toBeCloseTo(result.feeBefore + 10, 2);
+    expect(result.feeAfterSplit).toBeCloseTo(result.feeAfterOrder, 2);
   });
 });
