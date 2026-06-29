@@ -1035,4 +1035,22 @@ test.describe('stage2 order operation migration', () => {
     expect(result.combinedChargeTotal).toBe(result.chargeBeforeCombine);
     expect(result.feeAfterCombine).toBeCloseTo(result.feeBeforeCombine, 2);
   });
+
+  test('POS-32006 合单重算加收关闭时合并后满足人数也不应自动补加收', async ({
+    environment,
+    page,
+  }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.combineOrdersMeetingAutoChargeGuestCountWithoutRecalculatingCharge(
+      environment.posHomeUrl,
+    );
+
+    expect(result.combinedOrderChargeItems).toEqual({});
+  });
 });

@@ -296,6 +296,10 @@ export type ManualShareTipChargeCombineResult = {
   feeBeforeCombine: number;
 };
 
+export type AutoChargeMinGuestCombineResult = {
+  combinedOrderChargeItems: Record<string, string>;
+};
+
 export type AutoChargeMoveItemResult = {
   movedOrderCharge: Record<string, string>;
   originalOrderCharge: Record<string, string>;
@@ -2405,6 +2409,55 @@ export class OrderEntryFlow {
       combinedOrderChargeItems,
       feeAfterCombine,
       feeBeforeCombine,
+    };
+  }
+
+  async combineOrdersMeetingAutoChargeGuestCountWithoutRecalculatingCharge(
+    homeUrl: string,
+  ): Promise<AutoChargeMinGuestCombineResult> {
+    if (!this.adminPage) {
+      throw new Error('POS-32006 requires AdminPage');
+    }
+
+    const [firstDish, secondDish] = splitDiscountDishes;
+    if (!firstDish || !secondDish) {
+      throw new Error('POS-32006 requires two split discount dish test data records');
+    }
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.setupAutoPercentChargeAsTip('auto_test_perc', 10);
+    await this.adminPage.setAutoChargeMinGuest('auto_test_perc', 6);
+    await this.adminPage.setCombineRecalculateCharge(false);
+    await this.homePage.open(homeUrl);
+
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.setGuestCount(3);
+    await this.orderDishesPage.selectMenuGroup(firstDish.group);
+    await this.orderDishesPage.selectMenuCategory(firstDish.category);
+    await this.orderDishesPage.addMenuItem(firstDish.name);
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.setGuestCount(4);
+    await this.orderDishesPage.selectMenuGroup(secondDish.group);
+    await this.orderDishesPage.selectMenuCategory(secondDish.category);
+    await this.orderDishesPage.addMenuItem(secondDish.name);
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickRecall();
+    await this.recallPage.openPreviousOrder();
+    await this.recallPage.combineOrder(1);
+    const combinedOrderChargeItems = await this.recallPage.readOrderChargeItems();
+
+    await this.homePage.clickAdmin();
+    await this.adminPage.deleteChargeByName('auto_test_perc');
+    await this.adminPage.setCombineRecalculateCharge(true);
+
+    return {
+      combinedOrderChargeItems,
     };
   }
 

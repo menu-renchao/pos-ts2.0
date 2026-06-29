@@ -166,6 +166,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <button data-testid="admin-auto-fixed-charge-setup">Setup Auto Fixed Charge</button>
       <button data-testid="admin-auto-fixed-charge-as-tip-setup">Setup Auto Fixed Charge As Tip</button>
       <button data-testid="admin-auto-percent-charge-setup">Setup Auto Percent Charge</button>
+      <button data-testid="admin-auto-percent-charge-as-tip-setup">Setup Auto Percent Charge As Tip</button>
       <input data-testid="admin-charge-rate-type-name" />
       <select data-testid="admin-charge-rate-type">
         <option value="amount">amount</option>
@@ -949,6 +950,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const adminAutoFixedChargeSetupButton = document.querySelector('[data-testid="admin-auto-fixed-charge-setup"]');
       const adminAutoFixedChargeAsTipSetupButton = document.querySelector('[data-testid="admin-auto-fixed-charge-as-tip-setup"]');
       const adminAutoPercentChargeSetupButton = document.querySelector('[data-testid="admin-auto-percent-charge-setup"]');
+      const adminAutoPercentChargeAsTipSetupButton = document.querySelector('[data-testid="admin-auto-percent-charge-as-tip-setup"]');
       const adminChargeRateTypeNameInput = document.querySelector('[data-testid="admin-charge-rate-type-name"]');
       const adminChargeRateTypeSelect = document.querySelector('[data-testid="admin-charge-rate-type"]');
       const adminChargeRateTypeSaveButton = document.querySelector('[data-testid="admin-charge-rate-type-save"]');
@@ -4468,6 +4470,25 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
             rate: percent / 100,
             rateType: 'percent',
             shareTip: false,
+            taxed: false,
+          },
+        ];
+        localStorage.setItem('offlineAutoCharges', JSON.stringify(autoCharges));
+      });
+      adminAutoPercentChargeAsTipSetupButton.addEventListener('click', () => {
+        const chargeName = adminChargeOldNameInput.value || 'auto_test_perc';
+        const percent = Number(adminChargeAmountInput.value || 10);
+        autoCharges = [
+          {
+            amount: percent,
+            minAmount: 0,
+            minGuest: 0,
+            minMile: 0,
+            name: chargeName,
+            orderTypes: ['dine-in', 'delivery', 'pickup', 'togo'],
+            rate: percent / 100,
+            rateType: 'percent',
+            shareTip: true,
             taxed: false,
           },
         ];
