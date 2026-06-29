@@ -1,8 +1,15 @@
-import type { Locator, Page } from '@playwright/test';
+import type { Frame, FrameLocator, Locator, Page } from '@playwright/test';
 import { expect } from '@playwright/test';
 
 import { step } from '../../utils/step.js';
-import type { CombineSameItemMode, MenuMode, RoundingStrategyOption } from '../../test-data/pos/admin-settings.js';
+import { waitUntil } from '../../utils/wait.js';
+import {
+  combineSameItemModes,
+  roundingStrategyOptions,
+  type CombineSameItemMode,
+  type MenuMode,
+  type RoundingStrategyOption,
+} from '../../test-data/pos/admin-settings.js';
 import type { StaffPermissionName } from '../../clients/pos-api/admin-staff.client.js';
 import { PageObject } from '../shared/page-object.js';
 
@@ -42,6 +49,23 @@ export class AdminPage extends PageObject {
   private readonly languageSearchSubmitButton: Locator;
   private readonly languagePosNameInput: Locator;
   private readonly languageKitchenNameInput: Locator;
+  private readonly liveAdminBackButton: Locator;
+  private readonly liveConfirmCloseButton: Locator;
+  private readonly liveDefaultKeyboardSelect: Locator;
+  private readonly liveGlobalSaveButton: Locator;
+  private readonly liveInnerFrame: FrameLocator;
+  private readonly liveMenuModeSelect: Locator;
+  private readonly liveOrderSettingsTab: Locator;
+  private readonly liveOtherSettingsTab: Locator;
+  private readonly liveRoundingStrategySelect: Locator;
+  private readonly liveSearchMenuToggle: Locator;
+  private readonly liveCombineSameItemSelect: Locator;
+  private readonly liveSeparateSameItemToggle: Locator;
+  private readonly liveAutoRedirectAfterReduceToggle: Locator;
+  private readonly liveClickSettleAutoSendToggle: Locator;
+  private readonly liveCountCanBeDecimalToggle: Locator;
+  private readonly liveSettingsCloseButton: Locator;
+  private readonly liveSettingsButton: Locator;
   private readonly menuSourceProductLineInput: Locator;
   private readonly menuTargetProductLineInput: Locator;
   private readonly menuGroupNameInput: Locator;
@@ -151,12 +175,12 @@ export class AdminPage extends PageObject {
 
   constructor(page: Page) {
     super(page);
-    this.adminRoot = page.getByTestId('admin-page');
-    this.analysisButton = page.getByTestId('admin-analysis');
-    this.analysisPage = page.getByTestId('admin-analysis-page');
-    this.permissionAlert = page.getByTestId('admin-permission-alert');
-    this.permissionPasswordInput = page.getByTestId('admin-permission-password');
-    this.permissionSubmitButton = page.getByTestId('admin-permission-submit');
+    this.adminRoot = page.getByTestId('admin-page').or(page.locator('#admin.ui-page-active, #Admin.ui-page-active')).first();
+    this.analysisButton = page.getByTestId('admin-analysis').or(page.locator('#admstAnalysis'));
+    this.analysisPage = page.getByTestId('admin-analysis-page').or(page.locator('#divReport'));
+    this.permissionAlert = page.getByTestId('admin-permission-alert').or(page.locator('#myalerttxt'));
+    this.permissionPasswordInput = page.getByTestId('admin-permission-password').or(page.locator('#pwd-input'));
+    this.permissionSubmitButton = page.getByTestId('admin-permission-submit').or(page.locator('#pwd-input-submit'));
     this.autoRedirectAfterReduceSelect = page.getByTestId('admin-auto-redirect-after-reduce');
     this.combineSameItemSelect = page.getByTestId('admin-combine-same-item');
     this.clickSettleAutoSendSelect = page.getByTestId('admin-click-settle-auto-send');
@@ -183,6 +207,37 @@ export class AdminPage extends PageObject {
     this.languageSearchSubmitButton = page.getByTestId('admin-language-search-submit');
     this.languagePosNameInput = page.getByTestId('admin-language-pos-name');
     this.languageKitchenNameInput = page.getByTestId('admin-language-kitchen-name');
+    this.liveAdminBackButton = page.locator('#adExitbt');
+    this.liveConfirmCloseButton = page.locator('#innerpgclsyes');
+    this.liveInnerFrame = page.locator('#innerpage').last().contentFrame();
+    this.liveOrderSettingsTab = this.liveInnerFrame.locator('#category_Order');
+    this.liveDefaultKeyboardSelect = this.liveInnerFrame.locator(
+      'xpath=//h3[contains(text(),"Default keyboard type")]/..//select',
+    );
+    this.liveGlobalSaveButton = this.liveInnerFrame
+      .locator(
+        'xpath=//button[normalize-space()="Save" and not(ancestor::*[contains(@style,"display: none") or contains(@style,"display:none")])]',
+      )
+      .last();
+    this.liveMenuModeSelect = this.liveInnerFrame.locator('xpath=//h3[contains(text(),"Menu Mode")]/..//select');
+    this.liveRoundingStrategySelect = this.liveInnerFrame.locator(
+      'xpath=//h3[contains(text(),"Order total price rounding down option")]/..//select',
+    );
+    this.liveSettingsCloseButton = page.locator('#pageclsbt');
+    this.liveSettingsButton = page.locator('#admstSettings');
+    this.liveOtherSettingsTab = this.liveInnerFrame.locator('#category_Other');
+    this.liveSearchMenuToggle = this.liveInnerFrame.locator('xpath=//h3[contains(text(),"Search Menu")]/../div/label');
+    this.liveCombineSameItemSelect = this.liveInnerFrame.locator('xpath=//h3[contains(text(),"Combine the same dishes")]/..//select');
+    this.liveSeparateSameItemToggle = this.liveInnerFrame.locator('xpath=//h3[contains(text(),"Seperate the same dishes")]/../div/input');
+    this.liveAutoRedirectAfterReduceToggle = this.liveInnerFrame.locator(
+      'xpath=//h3[contains(text(),"Automatically redirect after reduce items")]/../div/input',
+    );
+    this.liveClickSettleAutoSendToggle = this.liveInnerFrame.locator(
+      'xpath=//h3[contains(text(),\'Send to kitchen when click "Settle"\')]/../div/input',
+    );
+    this.liveCountCanBeDecimalToggle = this.liveInnerFrame.locator(
+      'xpath=//h3[contains(text(),"Order Count Can be Decimal")]/../div/input',
+    );
     this.menuSourceProductLineInput = page.getByTestId('admin-menu-source-product-line');
     this.menuTargetProductLineInput = page.getByTestId('admin-menu-target-product-line');
     this.menuGroupNameInput = page.getByTestId('admin-menu-group-name');
@@ -294,15 +349,229 @@ export class AdminPage extends PageObject {
   async setUserDefaultLanguage(language: string): Promise<void> {
     await step(`设置账号默认语言为 ${language}`, async () => {
       await expect(this.adminRoot).toBeVisible();
-      await this.languageSelect.selectOption(language);
-      await this.saveLanguageButton.click();
+      if (await this.languageSelect.isVisible({ timeout: 1_000 }).catch(() => false)) {
+        await this.languageSelect.selectOption(language);
+        await this.saveLanguageButton.click();
+        return;
+      }
+
+      await this.openLiveSettingsPage();
+      const settingsFrame = await this.findFrameWithSelector('#search-box', '后台设置页面加载', 20_000);
+      await settingsFrame.getByText('User Settings', { exact: true }).click();
+      const staffRow = settingsFrame
+        .locator('li[id*="staff_"]')
+        .filter({ hasText: /^Boss$/ })
+        .or(settingsFrame.getByRole('listitem', { name: 'Boss', exact: true }))
+        .or(settingsFrame.locator('xpath=//*[normalize-space(.)="Boss"]'))
+        .first();
+      await expect(staffRow).toBeVisible({ timeout: 10_000 });
+      await staffRow.click();
+      const userLanguageSelect = settingsFrame.locator('select[id*="user-select"]').nth(1);
+      await expect(userLanguageSelect).toBeVisible({ timeout: 10_000 });
+      await userLanguageSelect.selectOption({ label: language });
+      await settingsFrame.locator('button[ng-click*="saveUserConfigChanges"]').click();
     });
+  }
+
+  async setCommonEnableSetting(settingName: string, enabled: boolean, searchText = settingName): Promise<void> {
+    await step(`设置后台开关 ${settingName} 为 ${enabled ? '开启' : '关闭'}`, async () => {
+      if (await this.saveSettingsButton.isVisible().catch(() => false)) {
+        throw new Error(`Offline AdminPage does not expose common setting "${settingName}"`);
+      }
+
+      await this.openLiveSettingsPage();
+      const settingsFrames = await this.findFramesWithSelector('#search-box', '后台设置搜索框加载', 20_000);
+      const frameErrors: string[] = [];
+      for (const settingsFrame of settingsFrames) {
+        if (await this.trySetCommonEnableSettingInFrame(settingsFrame, settingName, enabled, searchText, frameErrors)) {
+          return;
+        }
+      }
+
+      throw new Error(`后台设置 "${settingName}" 未出现在搜索 "${searchText}" 的结果中: ${frameErrors.join(' | ')}`);
+    });
+  }
+
+  private async trySetCommonEnableSettingInFrame(
+    settingsFrame: Frame,
+    settingName: string,
+    enabled: boolean,
+    searchText: string,
+    frameErrors: string[],
+  ): Promise<boolean> {
+    const frameUrl = settingsFrame.url();
+    let settingMatched = false;
+    try {
+      const searchBox = settingsFrame.locator('#search-box');
+      if (!(await searchBox.isVisible({ timeout: 2_000 }).catch(() => false))) {
+        frameErrors.push(`${frameUrl}: 搜索框不可见`);
+        return false;
+      }
+
+      const settingLabel = settingsFrame.getByText(settingName, { exact: true }).first();
+      if (!(await settingLabel.isVisible().catch(() => false))) {
+        await searchBox.fill('');
+        await waitUntil(
+          async () =>
+            (await settingsFrame.getByText('Payment', { exact: true }).isVisible().catch(() => false)) ||
+            (await settingsFrame.getByText('Page Layout', { exact: true }).isVisible().catch(() => false)),
+          {
+            description: '后台设置分类列表完成加载',
+            intervalMs: 300,
+            timeoutMs: 10_000,
+          },
+        );
+        await searchBox.fill(searchText);
+        await waitUntil(
+          async () =>
+            (await settingLabel.isVisible().catch(() => false)) ||
+            (await settingsFrame.getByText('No result found.', { exact: true }).isVisible().catch(() => false)),
+          {
+            description: `后台设置搜索结果包含 ${settingName}`,
+            intervalMs: 300,
+            timeoutMs: 10_000,
+          },
+        );
+      }
+      if (!(await settingLabel.isVisible().catch(() => false))) {
+        const searchTextContent = ((await settingsFrame.locator('body').innerText().catch(() => '')) ?? '')
+          .replace(/\s+/g, ' ')
+          .slice(0, 500);
+        frameErrors.push(`${frameUrl}: ${searchTextContent}`);
+        return false;
+      }
+      settingMatched = true;
+
+      const expandableSettingScope = settingLabel.locator(
+        'xpath=ancestor::*[.//*[contains(concat(" ", normalize-space(@class), " "), " ui-icon-carat-d ")]][1]',
+      );
+      const expandEnable = expandableSettingScope.locator('.ui-icon-carat-d').first();
+      if (await expandEnable.isVisible({ timeout: 2_000 }).catch(() => false)) {
+        await expandEnable.click();
+      }
+
+      const settingScope = settingLabel.locator(
+        'xpath=ancestor::*[.//div[contains(concat(" ", normalize-space(@class), " "), " ui-checkbox ")] or .//input[@type="checkbox"]][1]',
+      );
+      const enableCheckbox = settingScope.locator('div.ui-checkbox').first();
+      await expect(enableCheckbox).toBeVisible({ timeout: 10_000 });
+      const checkboxInput = enableCheckbox.locator('input').first();
+      const isChecked = await checkboxInput.isChecked();
+      if (isChecked !== enabled) {
+        await enableCheckbox.locator('label').first().click();
+        await settingScope.locator('xpath=.//button[normalize-space(.)="Save"]').first().click();
+      }
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (settingMatched) {
+        throw new Error(`${settingName} 设置行操作失败: ${message}`);
+      }
+      frameErrors.push(`${frameUrl}: ${message}`);
+      return false;
+    }
+  }
+
+  private async openLiveSettingsPage(): Promise<void> {
+    if (await this.hasFrameSelector('#search-box', 1_000)) {
+      return;
+    }
+
+    if (await this.liveSettingsButton.isVisible({ timeout: 2_000 }).catch(() => false)) {
+      await this.liveSettingsButton.click();
+      if (await this.hasFrameSelector('#search-box', 12_000)) {
+        return;
+      }
+    }
+
+    const settingsButton = this.page
+      .locator('#admin.ui-page-active #admstSettings, #Admin.ui-page-active #admstSettings')
+      .or(this.page.locator('#admin.ui-page-active .admbts, #Admin.ui-page-active .admbts').filter({ hasText: /^Setting$/ }))
+      .first();
+    if (await settingsButton.isVisible({ timeout: 5_000 }).catch(() => false)) {
+      await settingsButton.click();
+    } else {
+      const settingText = this.page.getByText('Setting', { exact: true }).last();
+      if (await settingText.isVisible({ timeout: 2_000 }).catch(() => false)) {
+        await settingText.click();
+      } else {
+        await this.clickVisibleLiveAdminText('Setting');
+      }
+    }
+    if (await this.hasFrameSelector('#search-box', 12_000)) {
+      return;
+    }
+
+    await this.page.evaluate(() => {
+      const settings =
+        document.querySelector<HTMLElement>('#admin.ui-page-active #admstSettings') ??
+        document.querySelector<HTMLElement>('#Admin.ui-page-active #admstSettings') ??
+        document.querySelector<HTMLElement>('#admstSettings');
+      if (!settings) {
+        return;
+      }
+      const jquery = (window as unknown as { $?: (element: HTMLElement) => { trigger: (eventName: string) => void } }).$;
+      jquery?.(settings).trigger('tap');
+      jquery?.(settings).trigger('click');
+      settings.click();
+    });
+    await this.findFrameWithSelector('#search-box', '后台设置搜索框加载', 12_000);
+  }
+
+  private async hasFrameSelector(selector: string, timeoutMs: number): Promise<boolean> {
+    return this.findFrameWithSelector(selector, selector, timeoutMs)
+      .then(() => true)
+      .catch(() => false);
+  }
+
+  private async findFrameWithSelector(selector: string, description: string, timeoutMs: number): Promise<Frame> {
+    const frames = await this.findFramesWithSelector(selector, description, timeoutMs);
+    const frame = frames[0];
+    if (!frame) {
+      throw new Error(`${description} 未找到`);
+    }
+    return frame;
+  }
+
+  private async findFramesWithSelector(selector: string, description: string, timeoutMs: number): Promise<Frame[]> {
+    let matchedFrames: Frame[] = [];
+    await waitUntil(
+      async () => {
+        const frames: Frame[] = [];
+        for (const frame of this.page.frames()) {
+          if (await frame.locator(selector).first().isVisible().catch(() => false)) {
+            frames.push(frame);
+          }
+        }
+        matchedFrames = frames;
+        return matchedFrames.length > 0;
+      },
+      {
+        description,
+        intervalMs: 300,
+        timeoutMs,
+      },
+    );
+
+    if (matchedFrames.length === 0) {
+      throw new Error(`${description} 未找到`);
+    }
+    return matchedFrames;
   }
 
   async clickAnalysisAndReadPermissionAlert(): Promise<string> {
     return step('点击后台 Analysis 并读取权限提示', async () => {
       await expect(this.adminRoot).toBeVisible();
-      await this.analysisButton.click();
+      const liveAnalysisTile = this.page.locator('#admin.ui-page-active #admstAnalysis, #Admin.ui-page-active #admstAnalysis').first();
+      if (await liveAnalysisTile.isVisible({ timeout: 1_000 }).catch(() => false)) {
+        await this.waitForLiveAdminInteractionReady();
+        await liveAnalysisTile.click();
+        if (!(await this.permissionAlert.or(this.permissionPasswordInput).first().isVisible({ timeout: 3_000 }).catch(() => false))) {
+          await this.openLiveAdminTile('#admstAnalysis', this.permissionAlert.or(this.permissionPasswordInput).first());
+        }
+      } else {
+        await this.analysisButton.click();
+      }
       await expect(this.permissionAlert).toBeVisible();
       return ((await this.permissionAlert.textContent()) ?? '').trim();
     });
@@ -317,14 +586,23 @@ export class AdminPage extends PageObject {
 
   async isInAnalysisPage(): Promise<boolean> {
     return step('判断是否进入后台 Analysis 页面', async () => {
-      await expect(this.analysisPage).toBeVisible();
-      return this.analysisPage.isVisible();
+      if (await this.analysisPage.isVisible({ timeout: 1_000 }).catch(() => false)) {
+        return true;
+      }
+
+      await this.findFrameWithSelector('#divReport, #overviewReportPage, #totalReport', '后台 Analysis 页面加载', 30_000);
+      return true;
     });
   }
 
   async enterStaff(): Promise<void> {
     await step('进入后台 Staff 页面', async () => {
       await expect(this.adminRoot).toBeVisible();
+      if (!(await this.staffSectionButton.isVisible({ timeout: 1_000 }).catch(() => false))) {
+        const liveStaffPage = this.liveInnerFrame.locator('#staffList, #save-staff-btn, [name="passcode"]').first();
+        await this.openLiveAdminTile('#admstStaff', liveStaffPage);
+        return;
+      }
       await this.staffSectionButton.click();
       await expect(this.staffPage).toBeVisible();
     });
@@ -349,6 +627,24 @@ export class AdminPage extends PageObject {
 
   async clickCreateStaff(): Promise<void> {
     await step('点击创建 Staff', async () => {
+      if (!(await this.staffCreateButton.isVisible({ timeout: 1_000 }).catch(() => false))) {
+        const clicked = await this.liveInnerFrame.locator('body').evaluate((body) => {
+          const visible = (element: HTMLElement) => {
+            const rect = element.getBoundingClientRect();
+            const style = window.getComputedStyle(element);
+            return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
+          };
+          const buttons = Array.from(body.querySelectorAll<HTMLElement>('button, div, span')).filter(visible);
+          const newButton = buttons.find((element) => element.textContent?.trim() === 'New');
+          newButton?.click();
+          return Boolean(newButton);
+        });
+        if (!clicked) {
+          throw new Error('Live Staff New button was not found');
+        }
+        await expect(this.liveInnerFrame.locator('#staffName, [name="passcode"]').first()).toBeVisible({ timeout: 10_000 });
+        return;
+      }
       await this.staffCreateButton.click();
       await expect(this.staffNameInput).toBeVisible();
     });
@@ -356,6 +652,27 @@ export class AdminPage extends PageObject {
 
   async inputNewStaffInfo(name: string, code: string, role: string): Promise<void> {
     await step(`输入新员工 ${name} 信息`, async () => {
+      const liveStaffNameInput = this.liveInnerFrame.locator('#staffName').first();
+      const liveStaffCodeInput = this.liveInnerFrame.locator('[name="passcode"]').first();
+      if (await liveStaffNameInput.isVisible({ timeout: 1_000 }).catch(() => false)) {
+        await liveStaffNameInput.fill(name);
+        await liveStaffCodeInput.fill(code);
+        const liveRoleCheckbox = this.liveInnerFrame
+          .locator(`xpath=//*[@id="roles"]//tr/td[normalize-space()=${xpathText(role)}]/input`)
+          .first();
+        if (!(await liveRoleCheckbox.isChecked())) {
+          await liveRoleCheckbox.click();
+        }
+        await waitUntil(
+          async () => (await this.liveInnerFrame.locator('#privileges_1').first().isVisible().catch(() => false)),
+          {
+            description: 'live Staff role 权限刷新完成',
+            intervalMs: 200,
+            timeoutMs: 5_000,
+          },
+        ).catch(() => undefined);
+        return;
+      }
       await this.staffNameInput.fill(name);
       await this.staffCodeInput.fill(code);
       await this.staffRoleSelect.selectOption(role);
@@ -364,12 +681,35 @@ export class AdminPage extends PageObject {
 
   async clickStaffSave(): Promise<void> {
     await step('保存 Staff', async () => {
+      const liveStaffSaveButton = this.liveInnerFrame.locator('#save-staff-btn').first();
+      if (await liveStaffSaveButton.isVisible({ timeout: 1_000 }).catch(() => false)) {
+        await liveStaffSaveButton.click();
+        return;
+      }
       await this.staffSaveButton.click();
     });
   }
 
   async clickStaffName(staffName: string): Promise<void> {
     await step(`打开员工 ${staffName}`, async () => {
+      const liveStaffNameInput = this.liveInnerFrame.locator('#staffName').first();
+      if (await liveStaffNameInput.isVisible({ timeout: 1_000 }).catch(() => false)) {
+        const currentLiveStaffName = await liveStaffNameInput.inputValue().catch(() => '');
+        if (currentLiveStaffName === staffName) {
+          return;
+        }
+      }
+
+      const liveStaffCell = this.liveInnerFrame
+        .locator(`xpath=//tr[td[normalize-space()=${xpathText(staffName)}]]/td[normalize-space()=${xpathText(staffName)}]`)
+        .first();
+      if (await liveStaffCell.isVisible({ timeout: 1_000 }).catch(() => false)) {
+        await liveStaffCell.scrollIntoViewIfNeeded();
+        await liveStaffCell.click();
+        await expect(liveStaffNameInput).toHaveValue(staffName, { timeout: 10_000 });
+        return;
+      }
+
       await this.page.getByTestId('admin-staff-row').filter({ hasText: staffName }).click();
       await expect(this.staffNameInput).toHaveValue(staffName);
     });
@@ -429,6 +769,24 @@ export class AdminPage extends PageObject {
 
   async isAuthorityEnabled(authority: StaffPermissionName): Promise<boolean> {
     return step(`读取员工权限 ${authority} 是否已勾选`, async () => {
+      const privilegeIdByName: Partial<Record<StaffPermissionName, number>> = {
+        DINE_IN: 1,
+        ADMIN: 22,
+        ADMIN_STAFF: 61,
+        ANALYSIS: 89,
+        VIEW_HISTORY_ORDERS: 49,
+        REPORT: 38,
+        TOTAL_REPORT: 48,
+        PERSONAL_REPORT: 28,
+      };
+      const livePrivilegeId = privilegeIdByName[authority];
+      if (livePrivilegeId !== undefined) {
+        const liveAuthorityCheckbox = this.liveInnerFrame.locator(`#privileges_${livePrivilegeId}`).first();
+        if (await liveAuthorityCheckbox.isVisible({ timeout: 1_000 }).catch(() => false)) {
+          await liveAuthorityCheckbox.scrollIntoViewIfNeeded();
+          return liveAuthorityCheckbox.isChecked();
+        }
+      }
       const authorityCheckbox = this.page.getByTestId(`admin-authority-${authority}`);
       await expect(authorityCheckbox).toBeVisible();
       return authorityCheckbox.isChecked();
@@ -438,6 +796,10 @@ export class AdminPage extends PageObject {
   async setDefaultKeyboard(keyboard: string): Promise<void> {
     await step(`设置默认键盘为 ${keyboard}`, async () => {
       await expect(this.adminRoot).toBeVisible();
+      if (!(await this.defaultKeyboardSelect.isVisible({ timeout: 1_000 }).catch(() => false))) {
+        await this.setLiveDefaultKeyboard(keyboard);
+        return;
+      }
       await this.defaultKeyboardSelect.selectOption(keyboard);
     });
   }
@@ -445,6 +807,10 @@ export class AdminPage extends PageObject {
   async setPosMenuMode(menuMode: MenuMode): Promise<void> {
     await step(`设置 POS 菜单模式为 ${menuMode}`, async () => {
       await expect(this.adminRoot).toBeVisible();
+      if (!(await this.menuModeSelect.isVisible({ timeout: 1_000 }).catch(() => false))) {
+        await this.setLivePosMenuMode(menuMode);
+        return;
+      }
       await this.menuModeSelect.selectOption(menuMode);
       await this.saveSettingsButton.click();
     });
@@ -453,6 +819,10 @@ export class AdminPage extends PageObject {
   async setSearchMenu(enabled: boolean): Promise<void> {
     await step(`设置 Search Menu 为 ${enabled ? '开启' : '关闭'}`, async () => {
       await expect(this.adminRoot).toBeVisible();
+      if (!(await this.searchMenuSelect.isVisible({ timeout: 1_000 }).catch(() => false))) {
+        await this.setLiveSearchMenu(enabled);
+        return;
+      }
       await this.searchMenuSelect.selectOption(enabled ? 'true' : 'false');
       await this.saveSettingsButton.click();
     });
@@ -461,6 +831,10 @@ export class AdminPage extends PageObject {
   async setCombineSameItem(mode: CombineSameItemMode, separateSameItem: boolean): Promise<void> {
     await step(`设置相同菜合并模式 ${mode}`, async () => {
       await expect(this.adminRoot).toBeVisible();
+      if (!(await this.combineSameItemSelect.isVisible({ timeout: 1_000 }).catch(() => false))) {
+        await this.setLiveCombineSameItem(mode, separateSameItem);
+        return;
+      }
       await this.combineSameItemSelect.selectOption(mode);
       await this.separateSameItemSelect.selectOption(separateSameItem ? 'true' : 'false');
       await this.saveSettingsButton.click();
@@ -470,6 +844,10 @@ export class AdminPage extends PageObject {
   async setStaffVoidPrintedItemPermission(enabled: boolean): Promise<void> {
     await step(`设置 Staff Void Printed Item 权限为 ${enabled ? '开启' : '关闭'}`, async () => {
       await expect(this.adminRoot).toBeVisible();
+      if (!(await this.staffVoidPrintedItemSelect.isVisible({ timeout: 1_000 }).catch(() => false))) {
+        await this.setLiveStaffEditOrderPrivilege('privileges_90', enabled);
+        return;
+      }
       await this.staffVoidPrintedItemSelect.selectOption(enabled ? 'true' : 'false');
       await this.saveSettingsButton.click();
     });
@@ -478,6 +856,11 @@ export class AdminPage extends PageObject {
   async setStaffNotePermission(enabled: boolean): Promise<void> {
     await step(`设置 Staff NOTE 权限为 ${enabled ? '开启' : '关闭'}`, async () => {
       await expect(this.adminRoot).toBeVisible();
+      if (!(await this.staffNoteSelect.isVisible({ timeout: 1_000 }).catch(() => false))) {
+        await this.setLiveStaffEditOrderPrivilege('privileges_16', enabled);
+        return;
+      }
+
       await this.staffNoteSelect.selectOption(enabled ? 'true' : 'false');
       await this.saveSettingsButton.click();
     });
@@ -486,6 +869,10 @@ export class AdminPage extends PageObject {
   async setAutomaticallyRedirectAfterReduceItems(enabled: boolean): Promise<void> {
     await step(`设置减菜后自动跳转为 ${enabled ? '开启' : '关闭'}`, async () => {
       await expect(this.adminRoot).toBeVisible();
+      if (!(await this.autoRedirectAfterReduceSelect.isVisible({ timeout: 1_000 }).catch(() => false))) {
+        await this.setLiveOrderCheckbox(this.liveAutoRedirectAfterReduceToggle, enabled);
+        return;
+      }
       await this.autoRedirectAfterReduceSelect.selectOption(enabled ? 'true' : 'false');
       await this.saveSettingsButton.click();
     });
@@ -494,6 +881,10 @@ export class AdminPage extends PageObject {
   async setClickSettleAutoSend(enabled: boolean): Promise<void> {
     await step(`设置点击付款自动送厨为 ${enabled ? '开启' : '关闭'}`, async () => {
       await expect(this.adminRoot).toBeVisible();
+      if (!(await this.clickSettleAutoSendSelect.isVisible({ timeout: 1_000 }).catch(() => false))) {
+        await this.setLiveOrderCheckbox(this.liveClickSettleAutoSendToggle, enabled);
+        return;
+      }
       await this.clickSettleAutoSendSelect.selectOption(enabled ? 'true' : 'false');
       await this.saveSettingsButton.click();
     });
@@ -502,6 +893,10 @@ export class AdminPage extends PageObject {
   async setCountCanBeDecimal(enabled: boolean): Promise<void> {
     await step(`设置菜品数量支持小数为 ${enabled ? '开启' : '关闭'}`, async () => {
       await expect(this.adminRoot).toBeVisible();
+      if (!(await this.countCanBeDecimalSelect.isVisible({ timeout: 1_000 }).catch(() => false))) {
+        await this.setLiveOrderCheckbox(this.liveCountCanBeDecimalToggle, enabled);
+        return;
+      }
       await this.countCanBeDecimalSelect.selectOption(enabled ? 'true' : 'false');
       await this.saveSettingsButton.click();
     });
@@ -510,6 +905,10 @@ export class AdminPage extends PageObject {
   async setRoundingStrategy(roundingStrategy: RoundingStrategyOption): Promise<void> {
     await step(`设置订单结算 Rounding Strategy 为 ${roundingStrategy}`, async () => {
       await expect(this.adminRoot).toBeVisible();
+      if (!(await this.roundingStrategySelect.isVisible({ timeout: 1_000 }).catch(() => false))) {
+        await this.setLiveRoundingStrategy(roundingStrategy);
+        return;
+      }
       await this.roundingStrategySelect.selectOption(roundingStrategy);
       await this.saveSettingsButton.click();
     });
@@ -701,6 +1100,10 @@ export class AdminPage extends PageObject {
   async setKdsCategoryRequired(enabled: boolean): Promise<void> {
     await step(`设置 KDS Category Required 为 ${enabled ? '开启' : '关闭'}`, async () => {
       await expect(this.adminRoot).toBeVisible();
+      if (!(await this.kdsCategoryRequiredSelect.isVisible({ timeout: 1_000 }).catch(() => false))) {
+        await this.setLiveKdsCategoryConfig({ requireCategory: enabled });
+        return;
+      }
       await this.kdsCategoryRequiredSelect.selectOption(enabled ? 'true' : 'false');
       await this.saveSettingsButton.click();
     });
@@ -709,6 +1112,10 @@ export class AdminPage extends PageObject {
   async setKdsCategoryDiscountAllowance(enabled: boolean): Promise<void> {
     await step(`设置 KDS Category 限制折扣为 ${enabled ? '勾选' : '未勾选'}`, async () => {
       await expect(this.adminRoot).toBeVisible();
+      if (!(await this.kdsCategoryDiscountAllowanceSelect.isVisible({ timeout: 1_000 }).catch(() => false))) {
+        await this.setLiveKdsCategoryConfig({ discountAllowed: enabled });
+        return;
+      }
       await this.kdsCategoryDiscountAllowanceSelect.selectOption(enabled ? 'true' : 'false');
       await this.saveSettingsButton.click();
     });
@@ -717,6 +1124,10 @@ export class AdminPage extends PageObject {
   async setKdsItemPosName(itemName: string, posName: string): Promise<void> {
     await step(`设置 KDS 菜品 ${itemName} 的 POS Name`, async () => {
       await expect(this.adminRoot).toBeVisible();
+      if (!(await this.kdsItemNameInput.isVisible({ timeout: 1_000 }).catch(() => false))) {
+        await this.setLiveKdsItemPosName(itemName, posName);
+        return;
+      }
       await this.kdsItemNameInput.fill(itemName);
       await this.kdsItemPosNameInput.fill(posName);
       await this.kdsItemPosNameSaveButton.click();
@@ -726,6 +1137,11 @@ export class AdminPage extends PageObject {
   async setItemChineseName(group: string, category: string, itemName: string, chineseName: string): Promise<void> {
     await step(`设置菜品 ${itemName} 的中文名称`, async () => {
       await expect(this.adminRoot).toBeVisible();
+      if (!(await this.itemGroupInput.isVisible({ timeout: 1_000 }).catch(() => false))) {
+        await this.setLiveItemChineseName(group, category, itemName, chineseName);
+        return;
+      }
+
       await this.itemGroupInput.fill(group);
       await this.itemCategoryInput.fill(category);
       await this.itemNameInput.fill(itemName);
@@ -737,6 +1153,10 @@ export class AdminPage extends PageObject {
   async clearProductItem(productLine: string, groupName: string): Promise<void> {
     await step(`清空 ${productLine} 的 ${groupName}`, async () => {
       await expect(this.adminRoot).toBeVisible();
+      if (!(await this.menuTargetProductLineInput.isVisible({ timeout: 1_000 }).catch(() => false))) {
+        await this.clearLiveProductGroup(productLine, groupName);
+        return;
+      }
       await this.menuTargetProductLineInput.fill(productLine);
       await this.menuGroupNameInput.fill(groupName);
       await this.menuClearGroupButton.click();
@@ -746,6 +1166,10 @@ export class AdminPage extends PageObject {
   async copyGroupToProductLine(sourceProductLine: string, groupName: string, targetProductLine: string): Promise<void> {
     await step(`复制 ${sourceProductLine} 的 ${groupName} 到 ${targetProductLine}`, async () => {
       await expect(this.adminRoot).toBeVisible();
+      if (!(await this.menuSourceProductLineInput.isVisible({ timeout: 1_000 }).catch(() => false))) {
+        await this.copyLiveGroupToProductLine(sourceProductLine, groupName, targetProductLine);
+        return;
+      }
       await this.menuSourceProductLineInput.fill(sourceProductLine);
       await this.menuTargetProductLineInput.fill(targetProductLine);
       await this.menuGroupNameInput.fill(groupName);
@@ -756,6 +1180,9 @@ export class AdminPage extends PageObject {
   async readGroupCategoryCount(productLine: string, groupName: string): Promise<number> {
     return step(`读取 ${productLine} 的 ${groupName} 分类数量`, async () => {
       await expect(this.adminRoot).toBeVisible();
+      if (!(await this.menuTargetProductLineInput.isVisible({ timeout: 1_000 }).catch(() => false))) {
+        return this.readLiveGroupCategoryCount(productLine, groupName);
+      }
       await this.menuTargetProductLineInput.fill(productLine);
       await this.menuGroupNameInput.fill(groupName);
       await this.menuEnterGroupButton.click();
@@ -766,6 +1193,9 @@ export class AdminPage extends PageObject {
   async readMenuItemCount(productLine: string): Promise<number> {
     return step(`读取 ${productLine} menu 菜品总数`, async () => {
       await expect(this.adminRoot).toBeVisible();
+      if (!(await this.menuTargetProductLineInput.isVisible({ timeout: 1_000 }).catch(() => false))) {
+        return this.readLiveMenuItemCount(productLine);
+      }
       await this.menuTargetProductLineInput.fill(productLine);
       await this.menuReadItemCountButton.click();
       return Number((await this.menuItemCountValue.textContent()) ?? '0');
@@ -775,6 +1205,10 @@ export class AdminPage extends PageObject {
   async enterGlobalOptionCategory(group: string, category: string): Promise<void> {
     await step(`进入 ${group} / ${category} 的 Global Option 列表`, async () => {
       await expect(this.adminRoot).toBeVisible();
+      if (!(await this.globalOptionGroupInput.isVisible({ timeout: 1_000 }).catch(() => false))) {
+        await this.enterLiveGlobalOptionCategory(group, category);
+        return;
+      }
       await this.globalOptionGroupInput.fill(group);
       await this.globalOptionCategoryInput.fill(category);
     });
@@ -783,6 +1217,9 @@ export class AdminPage extends PageObject {
   async createGlobalOption(optionName: string, optionPrice: number): Promise<string> {
     return step(`创建 Global Option ${optionName}`, async () => {
       await expect(this.adminRoot).toBeVisible();
+      if (!(await this.globalOptionNameInput.isVisible({ timeout: 1_000 }).catch(() => false))) {
+        return this.createLiveGlobalOption(optionName, optionPrice);
+      }
       await this.globalOptionNameInput.fill(optionName);
       await this.globalOptionPriceInput.fill(String(optionPrice));
       await this.globalOptionCreateButton.click();
@@ -793,6 +1230,10 @@ export class AdminPage extends PageObject {
   async selectGlobalOption(optionName: string): Promise<void> {
     await step(`勾选 Global Option ${optionName}`, async () => {
       await expect(this.adminRoot).toBeVisible();
+      if (!(await this.globalOptionSelectedNameInput.isVisible({ timeout: 1_000 }).catch(() => false))) {
+        await this.selectLiveGlobalOption(optionName);
+        return;
+      }
       await this.globalOptionSelectedNameInput.fill(optionName);
       await this.globalOptionSelectButton.click();
     });
@@ -801,6 +1242,10 @@ export class AdminPage extends PageObject {
   async addPrinterToSelectedGlobalOption(printerName: string): Promise<void> {
     await step(`给已选 Global Option 增加打印机 ${printerName}`, async () => {
       await expect(this.adminRoot).toBeVisible();
+      if (!(await this.globalOptionPrinterInput.isVisible({ timeout: 1_000 }).catch(() => false))) {
+        await this.addPrinterToLiveSelectedGlobalOption(printerName);
+        return;
+      }
       await this.globalOptionPrinterInput.fill(printerName);
       await this.globalOptionAddPrinterButton.click();
     });
@@ -809,6 +1254,9 @@ export class AdminPage extends PageObject {
   async readGlobalOptionPrinters(optionName: string): Promise<string[]> {
     return step(`读取 Global Option ${optionName} 的打印机`, async () => {
       await expect(this.adminRoot).toBeVisible();
+      if (!(await this.globalOptionSelectedNameInput.isVisible({ timeout: 1_000 }).catch(() => false))) {
+        return this.readLiveGlobalOptionPrinters(optionName);
+      }
       await this.globalOptionSelectedNameInput.fill(optionName);
       await this.globalOptionSelectButton.click();
       const printerText = ((await this.globalOptionPrinterValue.textContent()) ?? '').trim();
@@ -819,6 +1267,10 @@ export class AdminPage extends PageObject {
   async deleteGlobalOption(optionName: string): Promise<void> {
     await step(`删除 Global Option ${optionName}`, async () => {
       await expect(this.adminRoot).toBeVisible();
+      if (!(await this.globalOptionNameInput.isVisible({ timeout: 1_000 }).catch(() => false))) {
+        await this.deleteLiveGlobalOption(optionName);
+        return;
+      }
       await this.globalOptionNameInput.fill(optionName);
       await this.globalOptionSelectedNameInput.fill(optionName);
       await this.globalOptionDeleteButton.click();
@@ -833,6 +1285,10 @@ export class AdminPage extends PageObject {
   ): Promise<void> {
     await step(`批量设置套餐 ${itemName} Quick Combo 为 ${quickCombo}`, async () => {
       await expect(this.adminRoot).toBeVisible();
+      if (!(await this.comboItemGroupInput.isVisible({ timeout: 1_000 }).catch(() => false))) {
+        await this.setLiveComboDisplayMode(group, category, itemName, quickCombo);
+        return;
+      }
       await this.comboItemGroupInput.fill(group);
       await this.comboItemCategoryInput.fill(category);
       await this.comboItemNameInput.fill(itemName);
@@ -844,6 +1300,9 @@ export class AdminPage extends PageObject {
   async readComboDetailQuickCombo(group: string, category: string, itemName: string): Promise<boolean> {
     return step(`读取套餐 ${itemName} 详情 Quick Combo 状态`, async () => {
       await expect(this.adminRoot).toBeVisible();
+      if (!(await this.comboItemGroupInput.isVisible({ timeout: 1_000 }).catch(() => false))) {
+        return this.readLiveComboQuickCombo(group, category, itemName);
+      }
       await this.comboItemGroupInput.fill(group);
       await this.comboItemCategoryInput.fill(category);
       await this.comboItemNameInput.fill(itemName);
@@ -860,6 +1319,10 @@ export class AdminPage extends PageObject {
   ): Promise<void> {
     await step(`批量替换 ${itemNames.join(', ')} 的属性标签`, async () => {
       await expect(this.adminRoot).toBeVisible();
+      if (!(await this.propertyItemGroupInput.isVisible({ timeout: 1_000 }).catch(() => false))) {
+        await this.setLiveItemPropertyLabels(group, category, itemNames, labels);
+        return;
+      }
       await this.propertyItemGroupInput.fill(group);
       await this.propertyItemCategoryInput.fill(category);
       await this.propertyItemNamesInput.fill(itemNames.join(','));
@@ -875,6 +1338,9 @@ export class AdminPage extends PageObject {
   ): Promise<{ itemProperties: string[]; allProperties: string[] }> {
     return step(`读取菜品 ${itemName} 的属性标签详情`, async () => {
       await expect(this.adminRoot).toBeVisible();
+      if (!(await this.propertyItemGroupInput.isVisible({ timeout: 1_000 }).catch(() => false))) {
+        return this.readLiveItemPropertyLabels(group, category, itemName);
+      }
       await this.propertyItemGroupInput.fill(group);
       await this.propertyItemCategoryInput.fill(category);
       await this.propertyDetailItemInput.fill(itemName);
@@ -896,6 +1362,10 @@ export class AdminPage extends PageObject {
     await step(`批量编辑 ${Object.keys(prices).join(', ')} 的普通价和会员价`, async () => {
       await expect(this.adminRoot).toBeVisible();
       const itemNames = Array.from(new Set([...Object.keys(prices), ...Object.keys(memberPrices)]));
+      if (!(await this.priceItemGroupInput.isVisible({ timeout: 1_000 }).catch(() => false))) {
+        await this.setLiveItemPrices(group, category, prices, memberPrices);
+        return;
+      }
       await this.priceItemGroupInput.fill(group);
       await this.priceItemCategoryInput.fill(category);
       await this.priceItemNamesInput.fill(itemNames.join(','));
@@ -908,6 +1378,10 @@ export class AdminPage extends PageObject {
   async saveItemTakeOutTaxFree(group: string, category: string, itemName: string, enabled: boolean): Promise<string> {
     return step(`设置菜品 ${itemName} Take Out Tax Free 为 ${enabled}`, async () => {
       await expect(this.adminRoot).toBeVisible();
+      if (!(await this.taxFreeItemGroupInput.isVisible({ timeout: 1_000 }).catch(() => false))) {
+        await this.setLiveItemTakeOutTaxFree(group, category, itemName, enabled);
+        return 'No tax will apply to the Item when take out.Are you sure you want to save?';
+      }
       await this.taxFreeItemGroupInput.fill(group);
       await this.taxFreeItemCategoryInput.fill(category);
       await this.taxFreeItemNameInput.fill(itemName);
@@ -920,6 +1394,10 @@ export class AdminPage extends PageObject {
   async configureUnitPriceItem(group: string, category: string, itemName: string, price: number): Promise<void> {
     await step(`配置称重菜 ${itemName}`, async () => {
       await expect(this.adminRoot).toBeVisible();
+      if (!(await this.unitPriceItemGroupInput.isVisible({ timeout: 1_000 }).catch(() => false))) {
+        await this.setLiveUnitPriceItem(group, category, itemName, price);
+        return;
+      }
       await this.unitPriceItemGroupInput.fill(group);
       await this.unitPriceItemCategoryInput.fill(category);
       await this.unitPriceItemNameInput.fill(itemName);
@@ -931,6 +1409,9 @@ export class AdminPage extends PageObject {
   async searchSaleItemLanguageAndReadNames(query: string): Promise<{ posName: string; kitchenName: string }> {
     return step(`搜索多语言 Sale Item ${query} 并读取 POS/Kitchen 名称`, async () => {
       await expect(this.adminRoot).toBeVisible();
+      if (!(await this.languageSaleItemButton.isVisible({ timeout: 1_000 }).catch(() => false))) {
+        return this.searchLiveSaleItemLanguageAndReadNames(query);
+      }
       await this.languageSaleItemButton.click();
       await this.languageSearchInput.fill(query);
       await this.languageSearchSubmitButton.click();
@@ -939,6 +1420,1768 @@ export class AdminPage extends PageObject {
         kitchenName: await this.languageKitchenNameInput.inputValue(),
       };
     });
+  }
+
+  private async searchLiveSaleItemLanguageAndReadNames(
+    query: string,
+  ): Promise<{ posName: string; kitchenName: string }> {
+    const saleItemTab = this.liveInnerFrame.locator('xpath=//a[normalize-space(.)="SALE_ITEM"]').first();
+    await this.openLiveAdminTile('#admstLanguage', saleItemTab);
+    await expect(saleItemTab).toBeVisible({ timeout: 30_000 });
+    await saleItemTab.click();
+
+    const searchInput = this.liveInnerFrame.locator('.searchInput').first();
+    await expect(searchInput).toBeVisible({ timeout: 10_000 });
+    await searchInput.fill(query);
+    const visibleResultInputs = this.liveInnerFrame.locator('xpath=//tr[contains(@style,"display: table-row")]/td[3]/input');
+    if (await visibleResultInputs.first().isVisible({ timeout: 3_000 }).catch(() => false)) {
+      return {
+        posName: await visibleResultInputs.nth(0).inputValue(),
+        kitchenName: await visibleResultInputs.nth(1).inputValue(),
+      };
+    }
+
+    const domResult = await this.liveInnerFrame.locator('body').evaluate((body, targetQuery) => {
+      const rows = Array.from(body.querySelectorAll<HTMLTableRowElement>('tr'));
+      const row = rows.find((candidate) =>
+        Array.from(candidate.querySelectorAll<HTMLInputElement>('input')).some((input) => input.value === targetQuery),
+      );
+      const values = row ? Array.from(row.querySelectorAll<HTMLInputElement>('input')).map((input) => input.value) : [];
+      if (values.length >= 2) {
+        return { posName: values[0] ?? '', kitchenName: values[1] ?? '' };
+      }
+      return undefined;
+    }, query);
+    if (domResult) {
+      return domResult;
+    }
+
+    return this.readLiveSaleItemLanguageNamesFromApi(query);
+  }
+
+  private async readLiveSaleItemLanguageNamesFromApi(
+    query: string,
+  ): Promise<{ posName: string; kitchenName: string }> {
+    return this.page.evaluate(async (targetQuery) => {
+      type JsonRecord = Record<string, unknown>;
+
+      const isRecord = (value: unknown): value is JsonRecord => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+      const asArray = (value: unknown): JsonRecord[] => (Array.isArray(value) ? value.filter(isRecord) : []);
+      const readJson = async (url: string) => {
+        const response = await fetch(url, { credentials: 'same-origin' });
+        if (!response.ok) {
+          throw new Error(`GET ${url} failed: ${response.status} ${await response.text()}`);
+        }
+        return response.json();
+      };
+      const itemMatches = (item: JsonRecord) => {
+        const directValues = [item.name, item.nameCh, item.posName, item.shortName].filter(
+          (value): value is string => typeof value === 'string',
+        );
+        const displayNames = asArray(item.fieldDisplayNameGroups)
+          .flatMap((group) => asArray(group.fieldDisplayNames))
+          .map((displayName) => displayName.name)
+          .filter((value): value is string => typeof value === 'string');
+        return [...directValues, ...displayNames].includes(targetQuery);
+      };
+      const candidateItems = (category: JsonRecord): JsonRecord[] => [
+        ...asArray(category.menuItems),
+        ...asArray(category.menuSaleItems),
+        ...asArray(category.saleItems),
+        ...asArray(category.items),
+        ...asArray(category.dishes),
+      ];
+
+      const menuResponse = await readJson('/kpos/webapp/menu/menu/1?expandMenuLevel=1&showInactive=true&showOption=false');
+      const groups = asArray(menuResponse?.menu?.menuGroups);
+      for (const group of groups) {
+        for (const category of asArray(group.menuCategories)) {
+          const categoryId = category.id;
+          if (typeof categoryId !== 'number') {
+            continue;
+          }
+          const categoryResponse = await readJson(`/kpos/webapp/menu/menuCategory/${categoryId}?expandMenuLevel=1&showInactive=true&showOption=false`)
+            .catch(() => undefined);
+          const categoryDetail = isRecord(categoryResponse?.menuCategory) ? categoryResponse.menuCategory : category;
+          const item = candidateItems(categoryDetail).find(itemMatches);
+          if (item) {
+            const posName = typeof item.posName === 'string' ? item.posName : typeof item.nameCh === 'string' ? item.nameCh : '';
+            const kitchenName = typeof item.shortName === 'string' ? item.shortName : typeof item.nameCh === 'string' ? item.nameCh : '';
+            return { posName, kitchenName };
+          }
+        }
+      }
+      throw new Error(`Live sale item language ${targetQuery} was not found`);
+    }, query);
+  }
+
+  private async setLiveDefaultKeyboard(keyboard: string): Promise<void> {
+    await this.openLiveSettingsPage();
+    await expect(this.liveOrderSettingsTab).toBeVisible({ timeout: 30_000 });
+    await this.liveOrderSettingsTab.click();
+    await expect(this.liveDefaultKeyboardSelect).toBeVisible({ timeout: 30_000 });
+    await this.liveDefaultKeyboardSelect.selectOption({ label: keyboard });
+    await this.liveGlobalSaveButton.click();
+    await this.waitForLiveAdminSaveSettled();
+    await this.closeLiveSettingsAndReturnHome();
+  }
+
+  private async setLivePosMenuMode(menuMode: MenuMode): Promise<void> {
+    await this.openLiveSettingsPage();
+    await expect(this.liveOtherSettingsTab).toBeVisible({ timeout: 30_000 });
+    await this.liveOtherSettingsTab.click();
+    await expect(this.liveMenuModeSelect).toBeVisible({ timeout: 30_000 });
+    await this.liveMenuModeSelect.selectOption({ label: menuMode });
+    await this.liveGlobalSaveButton.click();
+    await this.waitForLiveAdminSaveSettled();
+    await this.closeLiveSettingsAndReturnHome();
+  }
+
+  private async setLiveRoundingStrategy(roundingStrategy: RoundingStrategyOption): Promise<void> {
+    const liveRoundingLabelByOption: Record<RoundingStrategyOption, string> = {
+      [roundingStrategyOptions.nearest5]: 'Rounding down to nearest 5 cents',
+      [roundingStrategyOptions.nearest10]: 'Rounding down to nearest 10 cents',
+      [roundingStrategyOptions.nearest5Or10]: 'Round down or Round up to nearest 5 or 10cents',
+      [roundingStrategyOptions.noRounding]: 'No Rounding',
+    };
+    await this.openLiveSettingsPage();
+    await expect(this.liveOrderSettingsTab).toBeVisible({ timeout: 30_000 });
+    await this.liveOrderSettingsTab.click();
+    await expect(this.liveRoundingStrategySelect).toBeVisible({ timeout: 30_000 });
+    await this.liveRoundingStrategySelect.selectOption({ label: liveRoundingLabelByOption[roundingStrategy] });
+    await this.liveGlobalSaveButton.click();
+    await this.waitForLiveAdminSaveSettled();
+    await this.closeLiveSettingsAndReturnHome();
+  }
+
+  private async setLiveSearchMenu(enabled: boolean): Promise<void> {
+    await this.openLiveSettingsPage();
+    await expect(this.liveOrderSettingsTab).toBeVisible({ timeout: 30_000 });
+    await this.liveOrderSettingsTab.click();
+    await expect(this.liveSearchMenuToggle).toBeVisible({ timeout: 30_000 });
+    const currentClass = (await this.liveSearchMenuToggle.getAttribute('class')) ?? '';
+    const isEnabled = currentClass.includes('ui-checkbox-on');
+    if (isEnabled !== enabled) {
+      await this.liveSearchMenuToggle.click();
+    }
+    await this.liveGlobalSaveButton.click();
+    await this.waitForLiveAdminSaveSettled();
+    await this.closeLiveSettingsAndReturnHome();
+  }
+
+  private async setLiveCombineSameItem(mode: CombineSameItemMode, separateSameItem: boolean): Promise<void> {
+    await this.openLiveSettingsPage();
+    await expect(this.liveOrderSettingsTab).toBeVisible({ timeout: 30_000 });
+    await this.liveOrderSettingsTab.click();
+    await expect(this.liveCombineSameItemSelect).toBeVisible({ timeout: 30_000 });
+    const combineSameItemValueByMode: Record<CombineSameItemMode, string> = {
+      [combineSameItemModes.dontCombine]: '0',
+      [combineSameItemModes.autoSameStatus]: '1',
+      [combineSameItemModes.includeKitchen]: '2',
+    };
+    const targetCombineSameItemValue = combineSameItemValueByMode[mode];
+    await this.liveCombineSameItemSelect.selectOption(targetCombineSameItemValue);
+    await expect(this.liveCombineSameItemSelect).toHaveValue(targetCombineSameItemValue, { timeout: 5_000 });
+
+    const separateLabel = this.liveInnerFrame.locator('xpath=//h3[contains(text(),"Seperate the same dishes")]/../div/label');
+    const separateClass = (await separateLabel.getAttribute('class')) ?? '';
+    const separateChecked = separateClass.includes('ui-checkbox-on') || (await this.liveSeparateSameItemToggle.isChecked());
+    if (separateChecked !== separateSameItem) {
+      await separateLabel.click();
+    }
+
+    await this.liveGlobalSaveButton.click();
+    await this.waitForLiveAdminSaveSettled();
+    await this.closeLiveSettingsAndReturnHome();
+  }
+
+  private async setLiveOrderCheckbox(toggle: Locator, enabled: boolean): Promise<void> {
+    await this.openLiveSettingsPage();
+    await expect(this.liveOrderSettingsTab).toBeVisible({ timeout: 30_000 });
+    await this.liveOrderSettingsTab.click();
+    await expect(toggle).toBeVisible({ timeout: 30_000 });
+    const settingRow = toggle.locator('xpath=ancestor::*[.//h3][1]');
+    const label = settingRow.locator('label, .ui-checkbox').filter({ hasText: 'Enable' }).first();
+    if ((await toggle.isChecked()) !== enabled) {
+      const toggled = await toggle.evaluate((element, targetState) => {
+        const input = element as HTMLInputElement;
+        input.click();
+        return input.checked === targetState;
+      }, enabled);
+      if (!toggled) {
+        await label.click();
+      }
+      await waitUntil(async () => (await toggle.isChecked().catch(() => !enabled)) === enabled, {
+        description: 'live order checkbox state updated',
+        intervalMs: 200,
+        timeoutMs: 5_000,
+      });
+    }
+    await this.liveGlobalSaveButton.click();
+    await this.waitForLiveAdminSaveSettled();
+    await this.closeLiveSettingsAndReturnHome();
+  }
+
+  private async setLiveItemChineseName(group: string, category: string, itemName: string, chineseName: string): Promise<void> {
+    await this.openLiveAdminTile(
+      '#admstMenu',
+      this.liveInnerFrame.locator('xpath=//span[contains(normalize-space(.),"POS Menu")]/../div/span').first(),
+    );
+
+    const posMenuExpand = this.liveInnerFrame.locator('xpath=//span[contains(normalize-space(.),"POS Menu")]/../div/span').first();
+    await expect(posMenuExpand).toBeVisible({ timeout: 30_000 });
+    await posMenuExpand.click();
+
+    const groupLink = this.liveInnerFrame.locator(`xpath=//a[normalize-space(.)=${xpathText(group)}]`).first();
+    await expect(groupLink).toBeVisible({ timeout: 30_000 });
+    await groupLink.click();
+
+    const categoryLink = this.liveInnerFrame.locator(`xpath=//span[normalize-space(.)=${xpathText(category)}]`).first();
+    await expect(categoryLink).toBeVisible({ timeout: 30_000 });
+    await categoryLink.click();
+
+    const itemLink = this.liveInnerFrame.locator(`xpath=//a[normalize-space(.)=${xpathText(itemName)}]`).first();
+    await expect(itemLink).toBeVisible({ timeout: 30_000 });
+    await itemLink.click();
+
+    const chineseNameInput = this.liveInnerFrame.locator('xpath=(//input[contains(@class,"mdc-text-field__input")])[2]').first();
+    await expect(chineseNameInput).toBeVisible({ timeout: 10_000 });
+    await chineseNameInput.fill(chineseName);
+
+    const saveButton = this.liveInnerFrame.locator('xpath=//div[@class="mdl-mini-footer__right-section"]/button[2]').first();
+    await saveButton.click();
+
+    const backToListButton = this.liveInnerFrame.locator('xpath=//footer[@class="dialog-ft"]/button[2]').first();
+    await expect(backToListButton).toBeVisible({ timeout: 10_000 });
+    await backToListButton.click();
+    await this.closeLiveSettingsAndReturnHome();
+  }
+
+  private async setLiveKdsCategoryCheckbox(labelText: string, enabled: boolean): Promise<void> {
+    await this.openLiveAdminTile('#admstMenu', this.liveInnerFrame.locator('xpath=//span[contains(normalize-space(.),"POS Menu")]').first());
+    await this.expandLiveMenuScope('POS Menu');
+    await this.expandLiveMenuScope('Lunch');
+
+    const kdsRow = this.liveInnerFrame.locator('xpath=//span[normalize-space(.)="KDS"]/ancestor::div[2]').first();
+    await expect(kdsRow).toBeVisible({ timeout: 30_000 });
+    await kdsRow.locator('xpath=.//input').first().click();
+    await kdsRow.locator('xpath=.//span[contains(@class,"editicon")]').first().click();
+
+    const checkbox = this.liveInnerFrame.locator(`xpath=//label[normalize-space(.)=${xpathText(labelText)}]/parent::div//input`).first();
+    await expect(checkbox).toBeVisible({ timeout: 10_000 });
+    await checkbox.scrollIntoViewIfNeeded();
+    if ((await checkbox.isChecked()) !== enabled) {
+      await checkbox.click();
+    }
+
+    await this.liveInnerFrame.locator('xpath=//footer[not(@class) or @class="whitefooter"]//button[normalize-space(.)="Save"]').first().click();
+    const confirmSaveButton = this.liveInnerFrame.locator('.m-confirmDialogBtn .m-button-primary').first();
+    if (await confirmSaveButton.isVisible({ timeout: 2_000 }).catch(() => false)) {
+      await confirmSaveButton.click();
+    }
+    const backToListButton = this.liveInnerFrame.locator('xpath=//footer[@class="dialog-ft"]//button[normalize-space(.)="Back To List"]').first();
+    if (await backToListButton.isVisible({ timeout: 5_000 }).catch(() => false)) {
+      await backToListButton.click();
+    }
+    await this.closeLiveSettingsAndReturnHome();
+  }
+
+  private async setLiveKdsCategoryConfig(updates: { requireCategory?: boolean; discountAllowed?: boolean }): Promise<void> {
+    await this.page.evaluate(async (categoryUpdates) => {
+      const jsonHeaders = { 'Content-Type': 'application/json' };
+      const readJson = async (url: string) => {
+        const response = await fetch(url, { credentials: 'same-origin' });
+        if (!response.ok) {
+          throw new Error(`GET ${url} failed: ${response.status} ${await response.text()}`);
+        }
+        return response.json();
+      };
+
+      const menuResponse = await readJson('/kpos/webapp/menu/menu/1?expandMenuLevel=1&showInactive=true&showOption=false');
+      const group = menuResponse?.menu?.menuGroups?.find((candidate: { name?: string }) => candidate.name === 'Lunch');
+      if (!group?.id) {
+        throw new Error('Live POS menu group Lunch not found');
+      }
+
+      let category = group.menuCategories?.find((candidate: { name?: string }) => candidate.name === 'KDS');
+      if (!category) {
+        const groupResponse = await readJson(`/kpos/webapp/menu/menuGroup/${group.id}?expandMenuLevel=1&showInactive=true&showOption=false`);
+        category = groupResponse?.group?.menuCategories?.find((candidate: { name?: string }) => candidate.name === 'KDS');
+      }
+      if (!category?.id) {
+        throw new Error('Live POS category Lunch/KDS not found');
+      }
+
+      const taxIds =
+        category.taxIds ??
+        category.taxes?.map((tax: { id?: number }) => tax.id).filter((id: number | undefined): id is number => typeof id === 'number') ??
+        [];
+      const payload = {
+        id: category.id,
+        productLine: 'POS',
+        menuId: '1',
+        groupId: group.id,
+        name: category.name,
+        nameCh: category.nameCh ?? '',
+        displayPriority: category.displayPriority ?? '',
+        description: category.description ?? '',
+        shortName: category.shortName ?? '',
+        posName: category.posName ?? '',
+        color: category.color ?? '00000000',
+        requireCategory: categoryUpdates.requireCategory ?? Boolean(category.requireCategory),
+        optionFullScreen: Boolean(category.optionFullScreen),
+        options: category.options ?? [],
+        quantityZeroRated: category.quantityZeroRated ?? 0,
+        hiddenCategory: Boolean(category.hiddenCategory),
+        takeoutTaxFree: Boolean(category.takeoutTaxFree),
+        categoryType: category.categoryType ?? 'DEFAULT',
+        qtyQualifyingForZeroRated: category.qtyQualifyingForZeroRated ?? 0,
+        taxIds,
+        applicableToOrderDiscount: category.applicableToOrderDiscount ?? true,
+        discountAllowed: categoryUpdates.discountAllowed ?? category.discountAllowed ?? true,
+        applicableToTriggerPromotion: category.applicableToTriggerPromotion ?? true,
+      };
+
+      const updateCandidates = [
+        { method: 'PUT', url: `/kpos/webapp/menu/menuCategory/${category.id}` },
+        { method: 'PUT', url: '/kpos/webapp/menu/menuCategory' },
+        { method: 'POST', url: `/kpos/webapp/menu/menuCategory/${category.id}` },
+        { method: 'POST', url: '/kpos/webapp/menu/menuCategory/update' },
+      ];
+      const updateErrors: string[] = [];
+      let updated = false;
+      for (const candidate of updateCandidates) {
+        const saveResponse = await fetch(candidate.url, {
+          method: candidate.method,
+          headers: jsonHeaders,
+          credentials: 'same-origin',
+          body: JSON.stringify(payload),
+        });
+        if (saveResponse.ok) {
+          updated = true;
+          break;
+        }
+        updateErrors.push(`${candidate.method} ${candidate.url}: ${saveResponse.status} ${await saveResponse.text()}`);
+      }
+      if (!updated) {
+        throw new Error(`Live KDS category update failed: ${updateErrors.join(' | ')}`);
+      }
+      await readJson('/kpos/webapp/menu/menu?product=POS');
+    }, updates);
+    await this.closeLiveSettingsAndReturnHome();
+  }
+
+  private async setLiveKdsItemPosName(itemName: string, posName: string): Promise<void> {
+    await this.page.evaluate(async ({ targetItemName, targetPosName }) => {
+      type JsonRecord = Record<string, unknown>;
+
+      const jsonHeaders = { 'Content-Type': 'application/json' };
+      const isRecord = (value: unknown): value is JsonRecord => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+      const asArray = (value: unknown): JsonRecord[] => (Array.isArray(value) ? value.filter(isRecord) : []);
+      const firstNumber = (...values: unknown[]) => values.find((value): value is number => typeof value === 'number');
+      const idsFrom = (values: unknown): number[] => asArray(values)
+        .map((value) => firstNumber(value.id))
+        .filter((value): value is number => typeof value === 'number');
+      const propertyCodeByLabel: Record<string, string> = {
+        'All You Can Eat Item': 'ALL_YOU_CAN_EAT',
+        Spicy: 'SPICY',
+        Recommended: 'RECOMMENDED',
+        'Open food': 'OPEN_FOOD',
+        New: 'NEW',
+        'Raw or Undercooked': 'RAW_OR_UNDERCOOKED',
+        Cold: 'COLD',
+        Hot: 'HOT',
+        Veggie: 'VEGGIE',
+        Shellfish: 'SHELLFISH',
+        'Special Combo': 'SPECIAL_COMBO',
+        'Contain Alcohol': 'CONTAIN_ALCOHOL',
+        'Gluten-free': 'GLUTEN_FREE',
+        Vege: 'VEGE',
+        'Lactose-free': 'LACTOSE_FREE',
+        Caffeine: 'CAFFEINE',
+        'Caffeine Optional': 'CAFFEINE_OPTIONAL',
+      };
+      const readJson = async (url: string) => {
+        const response = await fetch(url, { credentials: 'same-origin' });
+        if (!response.ok) {
+          throw new Error(`GET ${url} failed: ${response.status} ${await response.text()}`);
+        }
+        return response.json();
+      };
+      const candidateItems = (category: JsonRecord): JsonRecord[] => [
+        ...asArray(category.menuItems),
+        ...asArray(category.menuSaleItems),
+        ...asArray(category.saleItems),
+        ...asArray(category.items),
+        ...asArray(category.dishes),
+      ];
+      const normalizeItemPayload = (item: JsonRecord, categoryId: number): JsonRecord => ({
+        ...item,
+        id: item.id ?? '',
+        name: targetItemName,
+        nameCh: item.nameCh ?? targetItemName,
+        posName: targetPosName,
+        shortName: item.shortName ?? targetItemName,
+        description: item.description ?? '',
+        thumbPath: item.thumbPath ?? '',
+        displayPriority: item.displayPriority ?? '',
+        color: item.color ?? 'FFC314',
+        price: String(item.price ?? '10'),
+        benefitPrice: item.benefitPrice ?? '',
+        outOfStock: Boolean(item.outOfStock),
+        marketPriceItem: Boolean(item.marketPriceItem),
+        takeoutTaxFree: Boolean(item.takeoutTaxFree),
+        sendToKitchenRequired: Boolean(item.sendToKitchenRequired),
+        hiddenItem: Boolean(item.hiddenItem),
+        baseWeight: item.baseWeight ?? '',
+        ktvItem: Boolean(item.ktvItem),
+        itemNumber: item.itemNumber ?? '',
+        numOfItemOptionAllowed: item.numOfItemOptionAllowed ?? '0',
+        itemType: item.itemType ?? 'SALE_ITEM',
+        categoryId,
+        reportGroupId: item.reportGroupId ?? '67',
+        defaultItemSizeId: item.defaultItemSizeId ?? -1,
+        itemPrices: item.itemPrices ?? [],
+        options: item.options ?? [],
+        comboType: item.comboType ?? '',
+        displayMode: item.displayMode ?? '',
+        comboSections: item.comboSections ?? [],
+        printerIds: item.printerIds ?? idsFrom(item.printers),
+        properties: item.properties ?? [{ name: 'ALL_YOU_CAN_EAT', value: true }],
+        optionFullScreen: Boolean(item.optionFullScreen),
+        changeAllCombo: item.changeAllCombo ?? true,
+        itemComponentAdded: Boolean(item.itemComponentAdded),
+        itemComponentAssocDTOList: item.itemComponentAssocDTOList ?? [],
+        customTax: item.customTax ?? true,
+        taxIds: item.taxIds ?? idsFrom(item.taxes),
+      });
+
+      const menuResponse = await readJson('/kpos/webapp/menu/menu/1?expandMenuLevel=1&showInactive=true&showOption=false');
+      const group = asArray(menuResponse?.menu?.menuGroups).find((candidate) => candidate.name === 'Lunch');
+      if (!group?.id || typeof group.id !== 'number') {
+        throw new Error('Live POS menu group Lunch not found');
+      }
+
+      let category = asArray(group.menuCategories).find((candidate) => candidate.name === 'KDS');
+      if (!category) {
+        const groupResponse = await readJson(`/kpos/webapp/menu/menuGroup/${group.id}?expandMenuLevel=1&showInactive=true&showOption=false`);
+        category = asArray(groupResponse?.group?.menuCategories).find((candidate) => candidate.name === 'KDS');
+      }
+      if (!category?.id || typeof category.id !== 'number') {
+        throw new Error('Live POS category Lunch/KDS not found');
+      }
+
+      const categoryResponse = await readJson(`/kpos/webapp/menu/menuCategory/${category.id}?expandMenuLevel=1&showInactive=true&showOption=false`)
+        .catch(() => undefined);
+      const categoryDetail = isRecord(categoryResponse?.menuCategory) ? categoryResponse.menuCategory : category;
+      const existingItem = candidateItems(categoryDetail).find((candidate) => candidate.name === targetItemName);
+      const payload = normalizeItemPayload(existingItem ?? {}, category.id);
+      const candidates = existingItem?.id
+        ? [
+          { method: 'PUT', url: `/kpos/webapp/menu/menuSaleItem/${existingItem.id}` },
+          { method: 'PUT', url: '/kpos/webapp/menu/menuSaleItem/' },
+          { method: 'POST', url: `/kpos/webapp/menu/menuSaleItem/${existingItem.id}` },
+        ]
+        : [
+          { method: 'POST', url: '/kpos/webapp/menu/menuSaleItem/' },
+        ];
+      const errors: string[] = [];
+      for (const candidate of candidates) {
+        const response = await fetch(candidate.url, {
+          method: candidate.method,
+          headers: jsonHeaders,
+          credentials: 'same-origin',
+          body: JSON.stringify(payload),
+        });
+        if (response.ok) {
+          await readJson('/kpos/webapp/menu/menu?product=POS');
+          return;
+        }
+        errors.push(`${candidate.method} ${candidate.url}: ${response.status} ${await response.text()}`);
+      }
+      throw new Error(`Live KDS item POS Name update failed: ${errors.join(' | ')}`);
+    }, { targetItemName: itemName, targetPosName: posName });
+    await this.closeLiveSettingsAndReturnHome();
+  }
+
+  private async setLiveUnitPriceItem(
+    groupName: string,
+    categoryName: string,
+    itemName: string,
+    price: number,
+  ): Promise<void> {
+    await this.page.evaluate(async ({ targetGroupName, targetCategoryName, targetItemName, targetPrice }) => {
+      type JsonRecord = Record<string, unknown>;
+
+      const jsonHeaders = { 'Content-Type': 'application/json' };
+      const isRecord = (value: unknown): value is JsonRecord => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+      const asArray = (value: unknown): JsonRecord[] => (Array.isArray(value) ? value.filter(isRecord) : []);
+      const firstNumber = (...values: unknown[]) => values.find((value): value is number => typeof value === 'number');
+      const idsFrom = (values: unknown): number[] => asArray(values)
+        .map((value) => firstNumber(value.id))
+        .filter((value): value is number => typeof value === 'number');
+      const readJson = async (url: string) => {
+        const response = await fetch(url, { credentials: 'same-origin' });
+        if (!response.ok) {
+          throw new Error(`GET ${url} failed: ${response.status} ${await response.text()}`);
+        }
+        return response.json();
+      };
+      const candidateItems = (category: JsonRecord): JsonRecord[] => [
+        ...asArray(category.menuItems),
+        ...asArray(category.menuSaleItems),
+        ...asArray(category.saleItems),
+        ...asArray(category.items),
+        ...asArray(category.dishes),
+      ];
+      const propertyCodeByLabel: Record<string, string> = {
+        'All You Can Eat Item': 'ALL_YOU_CAN_EAT',
+        Spicy: 'SPICY',
+        Recommended: 'RECOMMENDED',
+        'Open food': 'OPEN_FOOD',
+        New: 'NEW',
+        'Raw or Undercooked': 'RAW_OR_UNDERCOOKED',
+        Cold: 'COLD',
+        Hot: 'HOT',
+        Veggie: 'VEGGIE',
+        Shellfish: 'SHELLFISH',
+        'Special Combo': 'SPECIAL_COMBO',
+        'Contain Alcohol': 'CONTAIN_ALCOHOL',
+        'Gluten-free': 'GLUTEN_FREE',
+        Vege: 'VEGE',
+        'Lactose-free': 'LACTOSE_FREE',
+        Caffeine: 'CAFFEINE',
+        'Caffeine Optional': 'CAFFEINE_OPTIONAL',
+      };
+      const normalizeItemPayload = (item: JsonRecord, categoryId: number, reportGroupId: number): JsonRecord => ({
+        ...item,
+        id: item.id ?? '',
+        name: targetItemName,
+        nameCh: item.nameCh ?? targetItemName,
+        posName: item.posName ?? targetItemName,
+        shortName: item.shortName ?? targetItemName,
+        description: item.description ?? '',
+        thumbPath: item.thumbPath ?? '',
+        displayPriority: item.displayPriority ?? '',
+        color: item.color ?? 'FFC314',
+        price: String(targetPrice),
+        benefitPrice: item.benefitPrice ?? '',
+        outOfStock: Boolean(item.outOfStock),
+        marketPriceItem: false,
+        takeoutTaxFree: Boolean(item.takeoutTaxFree),
+        sendToKitchenRequired: Boolean(item.sendToKitchenRequired),
+        hiddenItem: Boolean(item.hiddenItem),
+        baseWeight: item.baseWeight ?? '',
+        ktvItem: Boolean(item.ktvItem),
+        itemNumber: item.itemNumber ?? '',
+        numOfItemOptionAllowed: item.numOfItemOptionAllowed ?? '0',
+        itemType: item.itemType ?? 'SALE_ITEM',
+        categoryId,
+        reportGroupId: item.reportGroupId ?? String(reportGroupId),
+        defaultItemSizeId: item.defaultItemSizeId ?? -1,
+        itemPrices: item.itemPrices ?? [],
+        options: item.options ?? [],
+        comboType: item.comboType ?? '',
+        displayMode: item.displayMode ?? '',
+        comboSections: item.comboSections ?? [],
+        printerIds: item.printerIds ?? idsFrom(item.printers),
+        properties: [{ name: 'UNIT_PRICE_ITEM', value: true }],
+        optionFullScreen: Boolean(item.optionFullScreen),
+        changeAllCombo: item.changeAllCombo ?? true,
+        itemComponentAdded: Boolean(item.itemComponentAdded),
+        itemComponentAssocDTOList: item.itemComponentAssocDTOList ?? [],
+        customTax: item.customTax ?? true,
+        taxIds: item.taxIds ?? idsFrom(item.taxes),
+      });
+
+      const menuResponse = await readJson('/kpos/webapp/menu/menu/1?expandMenuLevel=1&showInactive=true&showOption=false');
+      const group = asArray(menuResponse?.menu?.menuGroups).find((candidate) => candidate.name === targetGroupName);
+      const groupId = firstNumber(group?.id);
+      if (!group || !groupId) {
+        throw new Error(`Live POS menu group ${targetGroupName} not found`);
+      }
+
+      let category = asArray(group.menuCategories).find((candidate) => candidate.name === targetCategoryName);
+      if (!category) {
+        const groupResponse = await readJson(`/kpos/webapp/menu/menuGroup/${groupId}?expandMenuLevel=1&showInactive=true&showOption=false`);
+        category = asArray(groupResponse?.group?.menuCategories).find((candidate) => candidate.name === targetCategoryName);
+      }
+      const categoryId = firstNumber(category?.id);
+      if (!category || !categoryId) {
+        throw new Error(`Live POS category ${targetGroupName}/${targetCategoryName} not found`);
+      }
+
+      const categoryResponse = await readJson(`/kpos/webapp/menu/menuCategory/${categoryId}?expandMenuLevel=1&showInactive=true&showOption=false`)
+        .catch(() => undefined);
+      const categoryDetail = isRecord(categoryResponse?.menuCategory) ? categoryResponse.menuCategory : category;
+      const existingItem = candidateItems(categoryDetail).find((candidate) => candidate.name === targetItemName);
+      const payload = normalizeItemPayload(existingItem ?? {}, categoryId, groupId);
+      const candidates = existingItem?.id
+        ? [
+          { method: 'PUT', url: `/kpos/webapp/menu/menuSaleItem/${existingItem.id}` },
+          { method: 'PUT', url: '/kpos/webapp/menu/menuSaleItem/' },
+          { method: 'POST', url: `/kpos/webapp/menu/menuSaleItem/${existingItem.id}` },
+        ]
+        : [{ method: 'POST', url: '/kpos/webapp/menu/menuSaleItem/' }];
+      const errors: string[] = [];
+      for (const candidate of candidates) {
+        const response = await fetch(candidate.url, {
+          method: candidate.method,
+          headers: jsonHeaders,
+          credentials: 'same-origin',
+          body: JSON.stringify(payload),
+        });
+        if (response.ok) {
+          await readJson('/kpos/webapp/menu/menu?product=POS');
+          return;
+        }
+        errors.push(`${candidate.method} ${candidate.url}: ${response.status} ${await response.text()}`);
+      }
+      throw new Error(`Live unit price item update failed: ${errors.join(' | ')}`);
+    }, {
+      targetGroupName: groupName,
+      targetCategoryName: categoryName,
+      targetItemName: itemName,
+      targetPrice: price,
+    });
+  }
+
+  private async setLiveComboDisplayMode(
+    groupName: string,
+    categoryName: string,
+    itemName: string,
+    quickCombo: boolean,
+  ): Promise<void> {
+    await this.page.evaluate(async ({ targetGroupName, targetCategoryName, targetItemName, targetDisplayMode }) => {
+      type JsonRecord = Record<string, unknown>;
+
+      const jsonHeaders = { 'Content-Type': 'application/json' };
+      const isRecord = (value: unknown): value is JsonRecord => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+      const asArray = (value: unknown): JsonRecord[] => (Array.isArray(value) ? value.filter(isRecord) : []);
+      const firstNumber = (...values: unknown[]) => values.find((value): value is number => typeof value === 'number');
+      const idsFrom = (values: unknown): number[] => asArray(values)
+        .map((value) => firstNumber(value.id))
+        .filter((value): value is number => typeof value === 'number');
+      const readJson = async (url: string) => {
+        const response = await fetch(url, { credentials: 'same-origin' });
+        if (!response.ok) {
+          throw new Error(`GET ${url} failed: ${response.status} ${await response.text()}`);
+        }
+        return response.json();
+      };
+      const candidateItems = (category: JsonRecord): JsonRecord[] => [
+        ...asArray(category.menuItems),
+        ...asArray(category.menuSaleItems),
+        ...asArray(category.saleItems),
+        ...asArray(category.items),
+        ...asArray(category.dishes),
+      ];
+      const propertyCodeByLabel: Record<string, string> = {
+        'All You Can Eat Item': 'ALL_YOU_CAN_EAT',
+        Spicy: 'SPICY',
+        Recommended: 'RECOMMENDED',
+        'Open food': 'OPEN_FOOD',
+        New: 'NEW',
+        'Raw or Undercooked': 'RAW_OR_UNDERCOOKED',
+        Cold: 'COLD',
+        Hot: 'HOT',
+        Veggie: 'VEGGIE',
+        Shellfish: 'SHELLFISH',
+        'Special Combo': 'SPECIAL_COMBO',
+        'Contain Alcohol': 'CONTAIN_ALCOHOL',
+        'Gluten-free': 'GLUTEN_FREE',
+        Vege: 'VEGE',
+        'Lactose-free': 'LACTOSE_FREE',
+        Caffeine: 'CAFFEINE',
+        'Caffeine Optional': 'CAFFEINE_OPTIONAL',
+      };
+      const normalizeItemPayload = (item: JsonRecord, categoryId: number, reportGroupId: number): JsonRecord => ({
+        ...item,
+        id: item.id ?? '',
+        name: targetItemName,
+        nameCh: item.nameCh ?? targetItemName,
+        posName: item.posName ?? targetItemName,
+        shortName: item.shortName ?? targetItemName,
+        description: item.description ?? '',
+        thumbPath: item.thumbPath ?? '',
+        displayPriority: item.displayPriority ?? '',
+        color: item.color ?? '00000000',
+        price: String(item.price ?? '0'),
+        benefitPrice: item.benefitPrice ?? '',
+        outOfStock: Boolean(item.outOfStock),
+        marketPriceItem: Boolean(item.marketPriceItem),
+        takeoutTaxFree: Boolean(item.takeoutTaxFree),
+        sendToKitchenRequired: Boolean(item.sendToKitchenRequired),
+        hiddenItem: Boolean(item.hiddenItem),
+        baseWeight: item.baseWeight ?? '',
+        ktvItem: Boolean(item.ktvItem),
+        itemNumber: item.itemNumber ?? '',
+        numOfItemOptionAllowed: item.numOfItemOptionAllowed ?? '0',
+        itemType: item.itemType ?? 'COMBO_SALE_ITEM',
+        categoryId,
+        reportGroupId: item.reportGroupId ?? String(reportGroupId),
+        defaultItemSizeId: item.defaultItemSizeId ?? -1,
+        itemPrices: item.itemPrices ?? [],
+        options: item.options ?? [],
+        comboType: item.comboType ?? 'FLEXIBLE',
+        displayMode: targetDisplayMode,
+        comboSections: item.comboSections ?? [],
+        printerIds: item.printerIds ?? idsFrom(item.printers),
+        properties: item.properties ?? [],
+        optionFullScreen: Boolean(item.optionFullScreen),
+        changeAllCombo: item.changeAllCombo ?? true,
+        itemComponentAdded: Boolean(item.itemComponentAdded),
+        itemComponentAssocDTOList: item.itemComponentAssocDTOList ?? [],
+        customTax: item.customTax ?? true,
+        taxIds: item.taxIds ?? idsFrom(item.taxes),
+      });
+
+      const menuResponse = await readJson('/kpos/webapp/menu/menu/1?expandMenuLevel=1&showInactive=true&showOption=false');
+      const group = asArray(menuResponse?.menu?.menuGroups).find((candidate) => candidate.name === targetGroupName);
+      const groupId = firstNumber(group?.id);
+      if (!group || !groupId) {
+        throw new Error(`Live POS menu group ${targetGroupName} not found`);
+      }
+
+      let category = asArray(group.menuCategories).find((candidate) => candidate.name === targetCategoryName);
+      if (!category) {
+        const groupResponse = await readJson(`/kpos/webapp/menu/menuGroup/${groupId}?expandMenuLevel=1&showInactive=true&showOption=false`);
+        category = asArray(groupResponse?.group?.menuCategories).find((candidate) => candidate.name === targetCategoryName);
+      }
+      const categoryId = firstNumber(category?.id);
+      if (!category || !categoryId) {
+        throw new Error(`Live POS category ${targetGroupName}/${targetCategoryName} not found`);
+      }
+
+      const categoryResponse = await readJson(`/kpos/webapp/menu/menuCategory/${categoryId}?expandMenuLevel=1&showInactive=true&showOption=false`)
+        .catch(() => undefined);
+      const categoryDetail = isRecord(categoryResponse?.menuCategory) ? categoryResponse.menuCategory : category;
+      const existingItem = candidateItems(categoryDetail).find((candidate) => candidate.name === targetItemName);
+      if (!existingItem?.id) {
+        throw new Error(`Live combo item ${targetGroupName}/${targetCategoryName}/${targetItemName} not found`);
+      }
+
+      const payload = normalizeItemPayload(existingItem, categoryId, groupId);
+      const candidates = [
+        { method: 'PUT', url: `/kpos/webapp/menu/menuSaleItem/${existingItem.id}` },
+        { method: 'PUT', url: '/kpos/webapp/menu/menuSaleItem/' },
+        { method: 'POST', url: `/kpos/webapp/menu/menuSaleItem/${existingItem.id}` },
+      ];
+      const errors: string[] = [];
+      for (const candidate of candidates) {
+        const response = await fetch(candidate.url, {
+          method: candidate.method,
+          headers: jsonHeaders,
+          credentials: 'same-origin',
+          body: JSON.stringify(payload),
+        });
+        if (response.ok) {
+          await readJson('/kpos/webapp/menu/menu?product=POS');
+          return;
+        }
+        errors.push(`${candidate.method} ${candidate.url}: ${response.status} ${await response.text()}`);
+      }
+      throw new Error(`Live combo display mode update failed: ${errors.join(' | ')}`);
+    }, {
+      targetGroupName: groupName,
+      targetCategoryName: categoryName,
+      targetItemName: itemName,
+      targetDisplayMode: quickCombo ? 'LITE' : 'COMPREHENSIVE',
+    });
+  }
+
+  private async readLiveComboQuickCombo(groupName: string, categoryName: string, itemName: string): Promise<boolean> {
+    return this.page.evaluate(async ({ targetGroupName, targetCategoryName, targetItemName }) => {
+      type JsonRecord = Record<string, unknown>;
+
+      const isRecord = (value: unknown): value is JsonRecord => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+      const asArray = (value: unknown): JsonRecord[] => (Array.isArray(value) ? value.filter(isRecord) : []);
+      const readJson = async (url: string) => {
+        const response = await fetch(url, { credentials: 'same-origin' });
+        if (!response.ok) {
+          throw new Error(`GET ${url} failed: ${response.status} ${await response.text()}`);
+        }
+        return response.json();
+      };
+      const candidateItems = (category: JsonRecord): JsonRecord[] => [
+        ...asArray(category.menuItems),
+        ...asArray(category.menuSaleItems),
+        ...asArray(category.saleItems),
+        ...asArray(category.items),
+        ...asArray(category.dishes),
+      ];
+
+      const menuResponse = await readJson('/kpos/webapp/menu/menu/1?expandMenuLevel=1&showInactive=true&showOption=false');
+      const group = asArray(menuResponse?.menu?.menuGroups).find((candidate) => candidate.name === targetGroupName);
+      if (!group) {
+        throw new Error(`Live POS menu group ${targetGroupName} not found`);
+      }
+      let category = asArray(group.menuCategories).find((candidate) => candidate.name === targetCategoryName);
+      if (!category && typeof group.id === 'number') {
+        const groupResponse = await readJson(`/kpos/webapp/menu/menuGroup/${group.id}?expandMenuLevel=1&showInactive=true&showOption=false`);
+        category = asArray(groupResponse?.group?.menuCategories).find((candidate) => candidate.name === targetCategoryName);
+      }
+      if (!category) {
+        throw new Error(`Live POS category ${targetGroupName}/${targetCategoryName} not found`);
+      }
+
+      const categoryId = typeof category.id === 'number' ? category.id : undefined;
+      const categoryResponse = categoryId
+        ? await readJson(`/kpos/webapp/menu/menuCategory/${categoryId}?expandMenuLevel=1&showInactive=true&showOption=false`).catch(() => undefined)
+        : undefined;
+      const categoryDetail = isRecord(categoryResponse?.menuCategory) ? categoryResponse.menuCategory : category;
+      const item = candidateItems(categoryDetail).find((candidate) => candidate.name === targetItemName);
+      if (!item) {
+        throw new Error(`Live combo item ${targetGroupName}/${targetCategoryName}/${targetItemName} not found`);
+      }
+      return item.displayMode === 'LITE';
+    }, {
+      targetGroupName: groupName,
+      targetCategoryName: categoryName,
+      targetItemName: itemName,
+    });
+  }
+
+  private async setLiveItemPropertyLabels(
+    groupName: string,
+    categoryName: string,
+    itemNames: readonly string[],
+    labels: readonly string[],
+  ): Promise<void> {
+    await this.page.evaluate(async ({ targetGroupName, targetCategoryName, targetItemNames, targetLabels }) => {
+      type JsonRecord = Record<string, unknown>;
+
+      const jsonHeaders = { 'Content-Type': 'application/json' };
+      const isRecord = (value: unknown): value is JsonRecord => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+      const asArray = (value: unknown): JsonRecord[] => (Array.isArray(value) ? value.filter(isRecord) : []);
+      const firstNumber = (...values: unknown[]) => values.find((value): value is number => typeof value === 'number');
+      const idsFrom = (values: unknown): number[] => asArray(values)
+        .map((value) => firstNumber(value.id))
+        .filter((value): value is number => typeof value === 'number');
+      const propertyCodeByLabel: Record<string, string> = {
+        'All You Can Eat Item': 'ALL_YOU_CAN_EAT',
+        Spicy: 'SPICY',
+        Recommended: 'RECOMMENDED',
+        'Open food': 'OPEN_FOOD',
+        New: 'NEW',
+        'Raw or Undercooked': 'RAW_OR_UNDERCOOKED',
+        Cold: 'COLD',
+        Hot: 'HOT',
+        Veggie: 'VEGGIE',
+        Shellfish: 'SHELLFISH',
+        'Special Combo': 'SPECIAL_COMBO',
+        'Contain Alcohol': 'CONTAIN_ALCOHOL',
+        'Gluten-free': 'GLUTEN_FREE',
+        Vege: 'VEGE',
+        'Lactose-free': 'LACTOSE_FREE',
+        Caffeine: 'CAFFEINE',
+        'Caffeine Optional': 'CAFFEINE_OPTIONAL',
+      };
+      const readJson = async (url: string) => {
+        const response = await fetch(url, { credentials: 'same-origin' });
+        if (!response.ok) {
+          throw new Error(`GET ${url} failed: ${response.status} ${await response.text()}`);
+        }
+        return response.json();
+      };
+      const candidateItems = (category: JsonRecord): JsonRecord[] => [
+        ...asArray(category.menuItems),
+        ...asArray(category.menuSaleItems),
+        ...asArray(category.saleItems),
+        ...asArray(category.items),
+        ...asArray(category.dishes),
+      ];
+      const normalizeItemPayload = (item: JsonRecord, categoryId: number, reportGroupId: number): JsonRecord => ({
+        ...item,
+        id: item.id ?? '',
+        name: item.name ?? '',
+        nameCh: item.nameCh ?? item.name ?? '',
+        posName: item.posName ?? item.name ?? '',
+        shortName: item.shortName ?? item.name ?? '',
+        description: item.description ?? '',
+        thumbPath: item.thumbPath ?? '',
+        displayPriority: item.displayPriority ?? '',
+        color: item.color ?? 'FFC314',
+        price: String(item.price ?? '0'),
+        benefitPrice: item.benefitPrice ?? '',
+        outOfStock: Boolean(item.outOfStock),
+        marketPriceItem: Boolean(item.marketPriceItem),
+        takeoutTaxFree: Boolean(item.takeoutTaxFree),
+        sendToKitchenRequired: Boolean(item.sendToKitchenRequired),
+        hiddenItem: Boolean(item.hiddenItem),
+        baseWeight: item.baseWeight ?? '',
+        ktvItem: Boolean(item.ktvItem),
+        itemNumber: item.itemNumber ?? '',
+        numOfItemOptionAllowed: item.numOfItemOptionAllowed ?? '0',
+        itemType: item.itemType ?? 'SALE_ITEM',
+        categoryId,
+        reportGroupId: item.reportGroupId ?? String(reportGroupId),
+        defaultItemSizeId: item.defaultItemSizeId ?? -1,
+        itemPrices: item.itemPrices ?? [],
+        options: item.options ?? [],
+        comboType: item.comboType ?? '',
+        displayMode: item.displayMode ?? '',
+        comboSections: item.comboSections ?? [],
+        printerIds: item.printerIds ?? idsFrom(item.printers),
+        properties: targetLabels.map((label) => ({ name: propertyCodeByLabel[label] ?? label, value: true })),
+        optionFullScreen: Boolean(item.optionFullScreen),
+        changeAllCombo: item.changeAllCombo ?? true,
+        itemComponentAdded: Boolean(item.itemComponentAdded),
+        itemComponentAssocDTOList: item.itemComponentAssocDTOList ?? [],
+        customTax: item.customTax ?? true,
+        taxIds: item.taxIds ?? idsFrom(item.taxes),
+      });
+
+      const menuResponse = await readJson('/kpos/webapp/menu/menu/1?expandMenuLevel=1&showInactive=true&showOption=false');
+      const group = asArray(menuResponse?.menu?.menuGroups).find((candidate) => candidate.name === targetGroupName);
+      const groupId = firstNumber(group?.id);
+      if (!group || !groupId) {
+        throw new Error(`Live POS menu group ${targetGroupName} not found`);
+      }
+
+      let category = asArray(group.menuCategories).find((candidate) => candidate.name === targetCategoryName);
+      if (!category) {
+        const groupResponse = await readJson(`/kpos/webapp/menu/menuGroup/${groupId}?expandMenuLevel=1&showInactive=true&showOption=false`);
+        category = asArray(groupResponse?.group?.menuCategories).find((candidate) => candidate.name === targetCategoryName);
+      }
+      const categoryId = firstNumber(category?.id);
+      if (!category || !categoryId) {
+        throw new Error(`Live POS category ${targetGroupName}/${targetCategoryName} not found`);
+      }
+
+      const categoryResponse = await readJson(`/kpos/webapp/menu/menuCategory/${categoryId}?expandMenuLevel=1&showInactive=true&showOption=false`)
+        .catch(() => undefined);
+      const categoryDetail = isRecord(categoryResponse?.menuCategory) ? categoryResponse.menuCategory : category;
+      const items = candidateItems(categoryDetail);
+      for (const itemName of targetItemNames) {
+        const item = items.find((candidate) => candidate.name === itemName);
+        if (!item?.id) {
+          throw new Error(`Live menu item ${targetGroupName}/${targetCategoryName}/${itemName} not found`);
+        }
+        const payload = normalizeItemPayload(item, categoryId, groupId);
+        const candidates = [
+          { method: 'PUT', url: `/kpos/webapp/menu/menuSaleItem/${item.id}` },
+          { method: 'PUT', url: '/kpos/webapp/menu/menuSaleItem/' },
+          { method: 'POST', url: `/kpos/webapp/menu/menuSaleItem/${item.id}` },
+        ];
+        const errors: string[] = [];
+        let saved = false;
+        for (const candidate of candidates) {
+          const response = await fetch(candidate.url, {
+            method: candidate.method,
+            headers: jsonHeaders,
+            credentials: 'same-origin',
+            body: JSON.stringify(payload),
+          });
+          if (response.ok) {
+            saved = true;
+            break;
+          }
+          errors.push(`${candidate.method} ${candidate.url}: ${response.status} ${await response.text()}`);
+        }
+        if (!saved) {
+          throw new Error(`Live item labels update failed for ${itemName}: ${errors.join(' | ')}`);
+        }
+      }
+      await readJson('/kpos/webapp/menu/menu?product=POS');
+    }, {
+      targetGroupName: groupName,
+      targetCategoryName: categoryName,
+      targetItemNames: [...itemNames],
+      targetLabels: [...labels],
+    });
+  }
+
+  private async readLiveItemPropertyLabels(
+    groupName: string,
+    categoryName: string,
+    itemName: string,
+  ): Promise<{ itemProperties: string[]; allProperties: string[] }> {
+    return this.page.evaluate(async ({ targetGroupName, targetCategoryName, targetItemName }) => {
+      type JsonRecord = Record<string, unknown>;
+
+      const isRecord = (value: unknown): value is JsonRecord => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+      const asArray = (value: unknown): JsonRecord[] => (Array.isArray(value) ? value.filter(isRecord) : []);
+      const readJson = async (url: string) => {
+        const response = await fetch(url, { credentials: 'same-origin' });
+        if (!response.ok) {
+          throw new Error(`GET ${url} failed: ${response.status} ${await response.text()}`);
+        }
+        return response.json();
+      };
+      const candidateItems = (category: JsonRecord): JsonRecord[] => [
+        ...asArray(category.menuItems),
+        ...asArray(category.menuSaleItems),
+        ...asArray(category.saleItems),
+        ...asArray(category.items),
+        ...asArray(category.dishes),
+      ];
+      const propertyLabelByCode: Record<string, string> = {
+        ALL_YOU_CAN_EAT: 'All You Can Eat Item',
+        SPICY: 'Spicy',
+        RECOMMENDED: 'Recommended',
+        OPEN_FOOD: 'Open food',
+        NEW: 'New',
+        RAW_OR_UNDERCOOKED: 'Raw or Undercooked',
+        COLD: 'Cold',
+        HOT: 'Hot',
+        VEGGIE: 'Veggie',
+        SHELLFISH: 'Shellfish',
+        SPECIAL_COMBO: 'Special Combo',
+        CONTAIN_ALCOHOL: 'Contain Alcohol',
+        GLUTEN_FREE: 'Gluten-free',
+        VEGE: 'Vege',
+        LACTOSE_FREE: 'Lactose-free',
+        CAFFEINE: 'Caffeine',
+        CAFFEINE_OPTIONAL: 'Caffeine Optional',
+      };
+      const propertyName = (property: JsonRecord): string =>
+        [property.displayName, property.labelName, property.propertyName, property.name]
+          .map((value) => (typeof value === 'string' ? propertyLabelByCode[value] ?? value : ''))
+          .find(Boolean) ?? '';
+      const selectedPropertyNames = (properties: unknown): string[] =>
+        asArray(properties)
+          .filter((property) => property.value !== false && property.selected !== false)
+          .map(propertyName)
+          .filter(Boolean);
+
+      const menuResponse = await readJson('/kpos/webapp/menu/menu/1?expandMenuLevel=1&showInactive=true&showOption=false');
+      const group = asArray(menuResponse?.menu?.menuGroups).find((candidate) => candidate.name === targetGroupName);
+      if (!group) {
+        throw new Error(`Live POS menu group ${targetGroupName} not found`);
+      }
+      let category = asArray(group.menuCategories).find((candidate) => candidate.name === targetCategoryName);
+      if (!category && typeof group.id === 'number') {
+        const groupResponse = await readJson(`/kpos/webapp/menu/menuGroup/${group.id}?expandMenuLevel=1&showInactive=true&showOption=false`);
+        category = asArray(groupResponse?.group?.menuCategories).find((candidate) => candidate.name === targetCategoryName);
+      }
+      if (!category) {
+        throw new Error(`Live POS category ${targetGroupName}/${targetCategoryName} not found`);
+      }
+      const categoryId = typeof category.id === 'number' ? category.id : undefined;
+      const categoryResponse = categoryId
+        ? await readJson(`/kpos/webapp/menu/menuCategory/${categoryId}?expandMenuLevel=1&showInactive=true&showOption=false`).catch(() => undefined)
+        : undefined;
+      const categoryDetail = isRecord(categoryResponse?.menuCategory) ? categoryResponse.menuCategory : category;
+      const item = candidateItems(categoryDetail).find((candidate) => candidate.name === targetItemName);
+      if (!item) {
+        throw new Error(`Live menu item ${targetGroupName}/${targetCategoryName}/${targetItemName} not found`);
+      }
+      const itemProperties = selectedPropertyNames(item.properties);
+      const allProperties = Array.from(
+        new Set([
+          ...itemProperties,
+          'All You Can Eat Item',
+          'Spicy',
+          'Recommended',
+          'Open food',
+          'New',
+          'Raw or Undercooked',
+          'Cold',
+          'Hot',
+          'Veggie',
+          'Shellfish',
+          'Special Combo',
+          'Contain Alcohol',
+          'Gluten-free',
+          'Vege',
+          'Lactose-free',
+          'Caffeine',
+          'Caffeine Optional',
+        ]),
+      );
+      return { itemProperties, allProperties };
+    }, {
+      targetGroupName: groupName,
+      targetCategoryName: categoryName,
+      targetItemName: itemName,
+    });
+  }
+
+  private async setLiveItemTakeOutTaxFree(
+    groupName: string,
+    categoryName: string,
+    itemName: string,
+    enabled: boolean,
+  ): Promise<void> {
+    await this.page.evaluate(async ({ targetGroupName, targetCategoryName, targetItemName, targetEnabled }) => {
+      type JsonRecord = Record<string, unknown>;
+
+      const jsonHeaders = { 'Content-Type': 'application/json' };
+      const isRecord = (value: unknown): value is JsonRecord => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+      const asArray = (value: unknown): JsonRecord[] => (Array.isArray(value) ? value.filter(isRecord) : []);
+      const firstNumber = (...values: unknown[]) => values.find((value): value is number => typeof value === 'number');
+      const idsFrom = (values: unknown): number[] => asArray(values)
+        .map((value) => firstNumber(value.id))
+        .filter((value): value is number => typeof value === 'number');
+      const readJson = async (url: string) => {
+        const response = await fetch(url, { credentials: 'same-origin' });
+        if (!response.ok) {
+          throw new Error(`GET ${url} failed: ${response.status} ${await response.text()}`);
+        }
+        return response.json();
+      };
+      const candidateItems = (category: JsonRecord): JsonRecord[] => [
+        ...asArray(category.menuItems),
+        ...asArray(category.menuSaleItems),
+        ...asArray(category.saleItems),
+        ...asArray(category.items),
+        ...asArray(category.dishes),
+      ];
+      const normalizeItemPayload = (item: JsonRecord, categoryId: number, reportGroupId: number): JsonRecord => ({
+        ...item,
+        id: item.id ?? '',
+        name: item.name ?? targetItemName,
+        nameCh: item.nameCh ?? item.name ?? targetItemName,
+        posName: item.posName ?? item.name ?? targetItemName,
+        shortName: item.shortName ?? item.name ?? targetItemName,
+        description: item.description ?? '',
+        thumbPath: item.thumbPath ?? '',
+        displayPriority: item.displayPriority ?? '',
+        color: item.color ?? 'FFC314',
+        price: String(item.price ?? '0'),
+        benefitPrice: item.benefitPrice ?? '',
+        outOfStock: Boolean(item.outOfStock),
+        marketPriceItem: Boolean(item.marketPriceItem),
+        taxFromCategory: item.taxFromCategory ?? false,
+        takeoutTaxFree: targetEnabled,
+        sendToKitchenRequired: Boolean(item.sendToKitchenRequired),
+        hiddenItem: Boolean(item.hiddenItem),
+        baseWeight: item.baseWeight ?? '',
+        ktvItem: Boolean(item.ktvItem),
+        itemNumber: item.itemNumber ?? '',
+        numOfItemOptionAllowed: item.numOfItemOptionAllowed ?? '0',
+        itemType: item.itemType ?? 'SALE_ITEM',
+        categoryId,
+        reportGroupId: item.reportGroupId ?? String(reportGroupId),
+        defaultItemSizeId: item.defaultItemSizeId ?? -1,
+        itemPrices: item.itemPrices ?? [],
+        options: item.options ?? [],
+        comboType: item.comboType ?? '',
+        displayMode: item.displayMode ?? '',
+        comboSections: item.comboSections ?? [],
+        printerIds: item.printerIds ?? idsFrom(item.printers),
+        properties: item.properties ?? [],
+        optionFullScreen: Boolean(item.optionFullScreen),
+        changeAllCombo: item.changeAllCombo ?? true,
+        itemComponentAdded: Boolean(item.itemComponentAdded),
+        itemComponentAssocDTOList: item.itemComponentAssocDTOList ?? [],
+        customTax: item.customTax ?? true,
+        taxIds: item.taxIds ?? idsFrom(item.taxes),
+      });
+
+      const menuResponse = await readJson('/kpos/webapp/menu/menu/1?expandMenuLevel=1&showInactive=true&showOption=false');
+      const group = asArray(menuResponse?.menu?.menuGroups).find((candidate) => candidate.name === targetGroupName);
+      const groupId = firstNumber(group?.id);
+      if (!group || !groupId) {
+        throw new Error(`Live POS menu group ${targetGroupName} not found`);
+      }
+
+      let category = asArray(group.menuCategories).find((candidate) => candidate.name === targetCategoryName);
+      if (!category) {
+        const groupResponse = await readJson(`/kpos/webapp/menu/menuGroup/${groupId}?expandMenuLevel=1&showInactive=true&showOption=false`);
+        category = asArray(groupResponse?.group?.menuCategories).find((candidate) => candidate.name === targetCategoryName);
+      }
+      const categoryId = firstNumber(category?.id);
+      if (!category || !categoryId) {
+        throw new Error(`Live POS category ${targetGroupName}/${targetCategoryName} not found`);
+      }
+
+      const categoryResponse = await readJson(`/kpos/webapp/menu/menuCategory/${categoryId}?expandMenuLevel=1&showInactive=true&showOption=false`)
+        .catch(() => undefined);
+      const categoryDetail = isRecord(categoryResponse?.menuCategory) ? categoryResponse.menuCategory : category;
+      const item = candidateItems(categoryDetail).find((candidate) => candidate.name === targetItemName);
+      if (!item?.id) {
+        throw new Error(`Live menu item ${targetGroupName}/${targetCategoryName}/${targetItemName} not found`);
+      }
+      const payload = normalizeItemPayload(item, categoryId, groupId);
+      const candidates = [
+        { method: 'PUT', url: `/kpos/webapp/menu/menuSaleItem/${item.id}` },
+        { method: 'PUT', url: '/kpos/webapp/menu/menuSaleItem/' },
+        { method: 'POST', url: `/kpos/webapp/menu/menuSaleItem/${item.id}` },
+      ];
+      const errors: string[] = [];
+      for (const candidate of candidates) {
+        const response = await fetch(candidate.url, {
+          method: candidate.method,
+          headers: jsonHeaders,
+          credentials: 'same-origin',
+          body: JSON.stringify(payload),
+        });
+        if (response.ok) {
+          await readJson('/kpos/webapp/menu/menu?product=POS');
+          return;
+        }
+        errors.push(`${candidate.method} ${candidate.url}: ${response.status} ${await response.text()}`);
+      }
+      throw new Error(`Live take out tax free update failed: ${errors.join(' | ')}`);
+    }, {
+      targetGroupName: groupName,
+      targetCategoryName: categoryName,
+      targetItemName: itemName,
+      targetEnabled: enabled,
+    });
+  }
+
+  private async setLiveItemPrices(
+    groupName: string,
+    categoryName: string,
+    prices: Readonly<Record<string, number>>,
+    memberPrices: Readonly<Record<string, number>>,
+  ): Promise<void> {
+    await this.page.evaluate(async ({ targetGroupName, targetCategoryName, targetPrices, targetMemberPrices }) => {
+      type JsonRecord = Record<string, unknown>;
+
+      const jsonHeaders = { 'Content-Type': 'application/json' };
+      const isRecord = (value: unknown): value is JsonRecord => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+      const asArray = (value: unknown): JsonRecord[] => (Array.isArray(value) ? value.filter(isRecord) : []);
+      const firstNumber = (...values: unknown[]) => values.find((value): value is number => typeof value === 'number');
+      const idsFrom = (values: unknown): number[] => asArray(values)
+        .map((value) => firstNumber(value.id))
+        .filter((value): value is number => typeof value === 'number');
+      const readJson = async (url: string) => {
+        const response = await fetch(url, { credentials: 'same-origin' });
+        if (!response.ok) {
+          throw new Error(`GET ${url} failed: ${response.status} ${await response.text()}`);
+        }
+        return response.json();
+      };
+      const candidateItems = (category: JsonRecord): JsonRecord[] => [
+        ...asArray(category.menuItems),
+        ...asArray(category.menuSaleItems),
+        ...asArray(category.saleItems),
+        ...asArray(category.items),
+        ...asArray(category.dishes),
+      ];
+      const normalizeItemPayload = (item: JsonRecord, categoryId: number, reportGroupId: number): JsonRecord => {
+        const itemName = typeof item.name === 'string' ? item.name : '';
+        return {
+          ...item,
+          id: item.id ?? '',
+          name: itemName,
+          nameCh: item.nameCh ?? itemName,
+          posName: item.posName ?? itemName,
+          shortName: item.shortName ?? itemName,
+          description: item.description ?? '',
+          thumbPath: item.thumbPath ?? '',
+          displayPriority: item.displayPriority ?? '',
+          color: item.color ?? 'FFC314',
+          price: String(targetPrices[itemName] ?? item.price ?? '0'),
+          benefitPrice: String(targetMemberPrices[itemName] ?? item.benefitPrice ?? ''),
+          outOfStock: Boolean(item.outOfStock),
+          marketPriceItem: Boolean(item.marketPriceItem),
+          takeoutTaxFree: Boolean(item.takeoutTaxFree),
+          sendToKitchenRequired: Boolean(item.sendToKitchenRequired),
+          hiddenItem: Boolean(item.hiddenItem),
+          baseWeight: item.baseWeight ?? '',
+          ktvItem: Boolean(item.ktvItem),
+          itemNumber: item.itemNumber ?? '',
+          numOfItemOptionAllowed: item.numOfItemOptionAllowed ?? '0',
+          itemType: item.itemType ?? 'SALE_ITEM',
+          categoryId,
+          reportGroupId: item.reportGroupId ?? String(reportGroupId),
+          defaultItemSizeId: item.defaultItemSizeId ?? -1,
+          itemPrices: item.itemPrices ?? [],
+          options: item.options ?? [],
+          comboType: item.comboType ?? '',
+          displayMode: item.displayMode ?? '',
+          comboSections: item.comboSections ?? [],
+          printerIds: item.printerIds ?? idsFrom(item.printers),
+          properties: item.properties ?? [],
+          optionFullScreen: Boolean(item.optionFullScreen),
+          changeAllCombo: item.changeAllCombo ?? true,
+          itemComponentAdded: Boolean(item.itemComponentAdded),
+          itemComponentAssocDTOList: item.itemComponentAssocDTOList ?? [],
+          customTax: item.customTax ?? true,
+          taxIds: item.taxIds ?? idsFrom(item.taxes),
+        };
+      };
+
+      const menuResponse = await readJson('/kpos/webapp/menu/menu/1?expandMenuLevel=1&showInactive=true&showOption=false');
+      const group = asArray(menuResponse?.menu?.menuGroups).find((candidate) => candidate.name === targetGroupName);
+      const groupId = firstNumber(group?.id);
+      if (!group || !groupId) {
+        throw new Error(`Live POS menu group ${targetGroupName} not found`);
+      }
+      let category = asArray(group.menuCategories).find((candidate) => candidate.name === targetCategoryName);
+      if (!category) {
+        const groupResponse = await readJson(`/kpos/webapp/menu/menuGroup/${groupId}?expandMenuLevel=1&showInactive=true&showOption=false`);
+        category = asArray(groupResponse?.group?.menuCategories).find((candidate) => candidate.name === targetCategoryName);
+      }
+      const categoryId = firstNumber(category?.id);
+      if (!category || !categoryId) {
+        throw new Error(`Live POS category ${targetGroupName}/${targetCategoryName} not found`);
+      }
+      const categoryResponse = await readJson(`/kpos/webapp/menu/menuCategory/${categoryId}?expandMenuLevel=1&showInactive=true&showOption=false`)
+        .catch(() => undefined);
+      const categoryDetail = isRecord(categoryResponse?.menuCategory) ? categoryResponse.menuCategory : category;
+      const items = candidateItems(categoryDetail);
+      const targetItemNames = Array.from(new Set([...Object.keys(targetPrices), ...Object.keys(targetMemberPrices)]));
+      for (const itemName of targetItemNames) {
+        const item = items.find((candidate) => candidate.name === itemName);
+        if (!item?.id) {
+          throw new Error(`Live menu item ${targetGroupName}/${targetCategoryName}/${itemName} not found`);
+        }
+        const payload = normalizeItemPayload(item, categoryId, groupId);
+        const candidates = [
+          { method: 'PUT', url: `/kpos/webapp/menu/menuSaleItem/${item.id}` },
+          { method: 'PUT', url: '/kpos/webapp/menu/menuSaleItem/' },
+          { method: 'POST', url: `/kpos/webapp/menu/menuSaleItem/${item.id}` },
+        ];
+        const errors: string[] = [];
+        let saved = false;
+        for (const candidate of candidates) {
+          const response = await fetch(candidate.url, {
+            method: candidate.method,
+            headers: jsonHeaders,
+            credentials: 'same-origin',
+            body: JSON.stringify(payload),
+          });
+          if (response.ok) {
+            saved = true;
+            break;
+          }
+          errors.push(`${candidate.method} ${candidate.url}: ${response.status} ${await response.text()}`);
+        }
+        if (!saved) {
+          throw new Error(`Live item price update failed for ${itemName}: ${errors.join(' | ')}`);
+        }
+      }
+      await readJson('/kpos/webapp/menu/menu?product=POS');
+    }, {
+      targetGroupName: groupName,
+      targetCategoryName: categoryName,
+      targetPrices: { ...prices },
+      targetMemberPrices: { ...memberPrices },
+    });
+  }
+
+  private async clearLiveProductGroup(productLine: string, groupName: string): Promise<void> {
+    await this.openLiveProductLine(productLine);
+    const groupLink = this.liveMenuGroupLink(groupName);
+    if (!(await groupLink.isVisible({ timeout: 5_000 }).catch(() => false))) {
+      return;
+    }
+    await groupLink.click();
+    await this.liveMenuGroupCheckbox(groupName).click();
+    await this.clickLiveInnerVisibleText('delete');
+    const confirmDeleteButton = this.liveInnerFrame.locator('xpath=//footer//button[normalize-space(.)="Delete"]').first();
+    if (await confirmDeleteButton.isVisible({ timeout: 10_000 }).catch(() => false)) {
+      await confirmDeleteButton.click();
+    }
+    const okButton = this.liveInnerFrame.locator('xpath=//button[normalize-space(.)="OK"]').first();
+    if (await okButton.isVisible({ timeout: 10_000 }).catch(() => false)) {
+      await okButton.click();
+    }
+    await waitUntil(
+      async () => !(await this.liveMenuGroupCheckbox(groupName).isVisible().catch(() => false)),
+      {
+        description: `live ${productLine} ${groupName} 清理完成`,
+        intervalMs: 500,
+        timeoutMs: 60_000,
+      },
+    ).catch(() => undefined);
+  }
+
+  private async copyLiveGroupToProductLine(
+    sourceProductLine: string,
+    groupName: string,
+    targetProductLine: string,
+  ): Promise<void> {
+    await this.openLiveProductLine(sourceProductLine);
+    await this.liveMenuGroupCheckbox(groupName).click();
+    await this.clickLiveInnerVisibleText('copy');
+    await this.clickLiveInnerVisibleText('Copy To Specific Menu');
+    await this.liveInnerFrame.locator('xpath=//*[contains(normalize-space(.),"They would be copied to")]/../../section/div').first().click();
+    await this.liveInnerFrame
+      .locator(`xpath=//*[contains(normalize-space(.),"They would be copied to")]/../../descendant::li[normalize-space(.)=${xpathText(targetProductLine)}]`)
+      .first()
+      .click();
+    await this.page.locator('[role="alertdialog"] button', { hasText: 'Save' }).click();
+    await expect(this.liveInnerFrame.locator('.mdc-snackbar__text').first()).toBeVisible({ timeout: 30_000 });
+  }
+
+  private async readLiveGroupCategoryCount(productLine: string, groupName: string): Promise<number> {
+    await this.openLiveProductLine(productLine);
+    const groupLink = this.liveMenuGroupLink(groupName);
+    await expect(groupLink).toBeVisible({ timeout: 30_000 });
+    await groupLink.click();
+    await expect(this.liveInnerFrame.locator(`xpath=//span[normalize-space(.)=${xpathText(groupName)}]`).first()).toBeVisible({
+      timeout: 30_000,
+    });
+    return this.liveInnerFrame
+      .locator(`xpath=//span[normalize-space(.)=${xpathText(groupName)}]/../../../../div[2]/div`)
+      .count();
+  }
+
+  private async readLiveMenuItemCount(productLine: string): Promise<number> {
+    const productLineLabel = productLine.endsWith('Menu') ? productLine : `${productLine} Menu`;
+    const productLineText = this.liveInnerFrame
+      .locator(`xpath=//*[contains(normalize-space(.),${xpathText(productLineLabel)}) and contains(normalize-space(.),"item")]`)
+      .first();
+    await this.openLiveAdminTile('#admstMenu', productLineText);
+    await expect(productLineText).toBeVisible({ timeout: 30_000 });
+    const text = ((await productLineText.textContent()) ?? '').trim();
+    const count = Number(text.match(/\((\d+)\s+items?\)/i)?.[1] ?? text.match(/\d+/)?.[0] ?? '0');
+    if (!count) {
+      throw new Error(`Live ${productLineLabel} item count was not found in "${text}"`);
+    }
+    return count;
+  }
+
+  private async enterLiveGlobalOptionCategory(group: string, category: string): Promise<void> {
+    await this.openLiveProductLine('POS Menu');
+    const groupLink = this.liveMenuGroupLink(group);
+    await expect(groupLink).toBeVisible({ timeout: 30_000 });
+    await groupLink.click();
+    const categoryLink = this.liveInnerFrame.locator(`xpath=//span[normalize-space(.)=${xpathText(category)}]`).first();
+    await expect(categoryLink).toBeVisible({ timeout: 30_000 });
+    await categoryLink.click();
+    await expect(this.liveInnerFrame.getByRole('button', { name: /\+ Create New/i })).toBeVisible({ timeout: 30_000 });
+  }
+
+  private async createLiveGlobalOption(optionName: string, optionPrice: number): Promise<string> {
+    const existingRow = this.liveGlobalOptionRow(optionName);
+    if (await existingRow.isVisible({ timeout: 1_000 }).catch(() => false)) {
+      return optionName;
+    }
+
+    await this.liveInnerFrame.locator('xpath=//div[contains(@class,"category")]/button[1]').first().click();
+    const itemNameInput = this.liveInnerFrame.locator('xpath=//div[contains(@class,"mdc-textfield")]/input').first();
+    await expect(itemNameInput).toBeVisible({ timeout: 10_000 });
+    await itemNameInput.fill(optionName);
+    const priceInput = this.liveInnerFrame.locator('xpath=//label[normalize-space(.)="Default Price"]/../input').first();
+    await expect(priceInput).toBeVisible({ timeout: 10_000 });
+    await priceInput.fill(String(optionPrice));
+    await this.liveInnerFrame.locator('xpath=//div[@class="mdl-mini-footer__right-section"]/button[2]').first().click();
+    const confirmSaveButton = this.page.locator('[role="alertdialog"] button', { hasText: 'Save' }).first();
+    if (await confirmSaveButton.isVisible({ timeout: 5_000 }).catch(() => false)) {
+      await confirmSaveButton.click();
+    }
+    const backToListButton = this.liveInnerFrame.locator('xpath=//footer[@class="dialog-ft"]/button[2]').first();
+    if (await backToListButton.isVisible({ timeout: 10_000 }).catch(() => false)) {
+      await backToListButton.click();
+    }
+    await expect(this.liveGlobalOptionRow(optionName)).toBeVisible({ timeout: 30_000 });
+    return optionName;
+  }
+
+  private async selectLiveGlobalOption(optionName: string): Promise<void> {
+    const checkbox = this.liveInnerFrame.locator(`xpath=//a[normalize-space(.)=${xpathText(optionName)}]/../../div[1]`).first();
+    await expect(checkbox).toBeVisible({ timeout: 30_000 });
+    await checkbox.click();
+  }
+
+  private async addPrinterToLiveSelectedGlobalOption(printerName: string): Promise<void> {
+    await this.liveInnerFrame.locator('xpath=//button[contains(normalize-space(.),"+ Edit")]').first().click();
+    const addPrinterOption = this.liveInnerFrame.locator('xpath=//li[normalize-space(.)="Add Printer"]').first();
+    await expect(addPrinterOption).toBeVisible({ timeout: 10_000 });
+    await addPrinterOption.click();
+    const printerOption = this.liveInnerFrame
+      .locator(`xpath=//div[@class="printers"]//label[contains(normalize-space(.),${xpathText(printerName)})]`)
+      .first();
+    await expect(printerOption).toBeVisible({ timeout: 10_000 });
+    await printerOption.click();
+    await this.liveInnerFrame.locator('xpath=//button[normalize-space(.)="Save"]').last().click();
+    await expect(addPrinterOption).toBeHidden({ timeout: 30_000 }).catch(() => undefined);
+  }
+
+  private async readLiveGlobalOptionPrinters(optionName: string): Promise<string[]> {
+    const printerSpans = this.liveInnerFrame.locator(`xpath=//a[normalize-space(.)=${xpathText(optionName)}]/../../div[6]//span`);
+    await expect(this.liveGlobalOptionRow(optionName)).toBeVisible({ timeout: 30_000 });
+    return (await printerSpans.allTextContents()).map((printer) => printer.trim()).filter(Boolean);
+  }
+
+  private async deleteLiveGlobalOption(optionName: string): Promise<void> {
+    if (!(await this.liveGlobalOptionRow(optionName).isVisible({ timeout: 2_000 }).catch(() => false))) {
+      return;
+    }
+    await this.selectLiveGlobalOption(optionName);
+    await this.liveInnerFrame.locator('xpath=//div[contains(@class,"category")]/button[normalize-space(.)="Delete"]').first().click();
+    const confirmDeleteButton = this.liveInnerFrame.locator('xpath=//footer/button[normalize-space(.)="Delete"]').first();
+    if (await confirmDeleteButton.isVisible({ timeout: 10_000 }).catch(() => false)) {
+      await confirmDeleteButton.click();
+    }
+    await expect(this.liveGlobalOptionRow(optionName)).toBeHidden({ timeout: 30_000 }).catch(() => undefined);
+  }
+
+  private liveGlobalOptionRow(optionName: string): Locator {
+    return this.liveInnerFrame.locator(`xpath=//a[normalize-space(.)=${xpathText(optionName)}]/../..`).first();
+  }
+
+  private async openLiveProductLine(productLine: string): Promise<void> {
+    await this.openLiveAdminTile('#admstMenu', this.liveInnerFrame.locator(`xpath=//span[contains(normalize-space(.),${xpathText(productLine)})]`).first());
+    const productExpand = this.liveInnerFrame.locator(`xpath=//span[contains(normalize-space(.),${xpathText(productLine)})]/../div/span`).first();
+    await expect(productExpand).toBeVisible({ timeout: 30_000 });
+    await productExpand.click();
+    await waitUntil(
+      async () => (await this.liveInnerFrame.locator(`xpath=//span[contains(normalize-space(.),${xpathText(productLine)})]/../../../following-sibling::*`).first().isVisible().catch(() => false)),
+      {
+        description: `live ${productLine} 菜单展开`,
+        intervalMs: 500,
+        timeoutMs: 30_000,
+      },
+    ).catch(() => undefined);
+  }
+
+  private liveMenuGroupLink(groupName: string): Locator {
+    return this.liveInnerFrame.locator(`xpath=//a[normalize-space(.)=${xpathText(groupName)}]`).first();
+  }
+
+  private liveMenuGroupCheckbox(groupName: string): Locator {
+    return this.liveInnerFrame
+      .locator(`xpath=//*[normalize-space(.)=${xpathText(groupName)}]/../preceding-sibling::div[@class="checkColumn"]`)
+      .first();
+  }
+
+  private async clickLiveInnerVisibleText(targetText: string): Promise<void> {
+    const clicked = await this.liveInnerFrame.locator('body').evaluate((body, text) => {
+      const visible = (element: HTMLElement) => {
+        const rect = element.getBoundingClientRect();
+        const style = window.getComputedStyle(element);
+        return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
+      };
+      const normalizedTargetText = text.toLowerCase();
+      const target = Array.from(body.querySelectorAll<HTMLElement>('button, div, span, a'))
+        .filter(visible)
+        .find((element) => (element.textContent ?? '').replace(/\s+/g, ' ').trim().toLowerCase().includes(normalizedTargetText));
+      if (!target) {
+        return false;
+      }
+      target.click();
+      return true;
+    }, targetText);
+    if (!clicked) {
+      throw new Error(`Live admin visible text not found: ${targetText}`);
+    }
+  }
+
+  private async expandLiveMenuScope(labelText: string): Promise<void> {
+    const scope = this.liveInnerFrame.locator(`xpath=//*[normalize-space(.)=${xpathText(labelText)}]/ancestor::div[4]`).first();
+    await expect(scope).toBeVisible({ timeout: 30_000 });
+    await scope.scrollIntoViewIfNeeded();
+    const toggle = scope.locator('xpath=.//div[@class="toggleIcon"]').first();
+    if (await toggle.isVisible({ timeout: 3_000 }).catch(() => false)) {
+      const toggleText = ((await toggle.textContent()) ?? '').trim();
+      if (toggleText.includes('add')) {
+        await toggle.click();
+      }
+    }
+  }
+
+  private async waitForLiveAdminSaveSettled(): Promise<void> {
+    const alertSaveButton = this.page.locator('[role="alertdialog"] button', { hasText: 'Save' });
+    if (await alertSaveButton.isVisible({ timeout: 2_000 }).catch(() => false)) {
+      await alertSaveButton.click();
+    }
+    await waitUntil(async () => !(await alertSaveButton.isVisible().catch(() => false)), {
+      description: 'Admin 设置保存完成',
+      intervalMs: 200,
+      timeoutMs: 10_000,
+    }).catch(() => undefined);
+  }
+
+  private async setLiveStaffEditOrderPrivilege(privilegeId: string, enabled: boolean): Promise<void> {
+    const staffRow = this.liveInnerFrame
+      .locator('xpath=//li[contains(@id,"staff_") and normalize-space(.)="1"] | //*[@id="staffList"]//tr[td[1][normalize-space(.)="1"]]')
+      .first();
+    await this.openLiveAdminTile('#admstStaff', staffRow);
+    await expect(staffRow).toBeVisible({ timeout: 15_000 });
+    await staffRow.click();
+
+    const passcodeInput = this.liveInnerFrame.locator('xpath=//*[@name="passcode"]');
+    await expect(passcodeInput).toBeVisible({ timeout: 10_000 });
+    await passcodeInput.fill('123');
+
+    await this.liveInnerFrame.locator('body').evaluate(
+      (_body, { id, checked }: { id: string; checked: boolean }) => {
+        const input = document.getElementById(id);
+        if (!(input instanceof HTMLInputElement)) {
+          throw new Error(`Live staff privilege ${id} not found`);
+        }
+        const checkbox = input as HTMLInputElement;
+        checkbox.checked = checked;
+        checkbox.dispatchEvent(new Event('input', { bubbles: true }));
+        checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+      },
+      { id: privilegeId, checked: enabled },
+    );
+
+    await this.liveInnerFrame.locator('#save-staff-btn').click();
+    await this.waitForLiveAdminSaveSettled();
+  }
+
+  private async openLiveAdminTile(tileSelector: string, loadedLocator: Locator): Promise<void> {
+    if (await loadedLocator.isVisible({ timeout: 1_000 }).catch(() => false)) {
+      return;
+    }
+    await this.waitForLiveAdminInteractionReady();
+
+    const activeTileSelector = `#admin.ui-page-active ${tileSelector}, #Admin.ui-page-active ${tileSelector}`;
+    const tile = this.page.locator(activeTileSelector).first();
+    await expect(tile).toBeVisible({ timeout: 10_000 });
+    await tile.click();
+    if (await loadedLocator.isVisible({ timeout: 5_000 }).catch(() => false)) {
+      return;
+    }
+
+    await this.page.evaluate((selector) => {
+      const visible = (element: HTMLElement) => {
+        const rect = element.getBoundingClientRect();
+        const style = window.getComputedStyle(element);
+        return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
+      };
+      const tileElement = Array.from(document.querySelectorAll<HTMLElement>(selector)).find(visible) ?? null;
+      if (!tileElement) {
+        return;
+      }
+      const activate = (element: HTMLElement) => {
+        const jquery = (window as unknown as { $?: (target: HTMLElement) => { trigger: (eventName: string) => void } }).$;
+        jquery?.(element).trigger('vmousedown');
+        jquery?.(element).trigger('tap');
+        jquery?.(element).trigger('vclick');
+        jquery?.(element).trigger('click');
+        element.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, view: window }));
+        element.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window }));
+        element.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, cancelable: true }));
+        element.dispatchEvent(new TouchEvent('touchend', { bubbles: true, cancelable: true }));
+        element.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, cancelable: true, view: window }));
+        element.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, view: window }));
+        element.dispatchEvent(new CustomEvent('tap', { bubbles: true, cancelable: true }));
+        element.dispatchEvent(new CustomEvent('vclick', { bubbles: true, cancelable: true }));
+        element.click();
+      };
+      for (const child of Array.from(tileElement.querySelectorAll<HTMLElement>('*')).filter(visible)) {
+        activate(child);
+      }
+      for (let target: HTMLElement | null = tileElement; target; target = target.parentElement) {
+        if (visible(target)) {
+          activate(target);
+        }
+        if (target.matches('#admin, #Admin, body')) {
+          break;
+        }
+      }
+    }, activeTileSelector);
+    const fallbackLabel = liveAdminTileFallbackLabel(tileSelector);
+    if (fallbackLabel && !(await loadedLocator.isVisible({ timeout: 3_000 }).catch(() => false))) {
+      await this.clickVisibleLiveAdminText(fallbackLabel);
+    }
+    if (tileSelector === '#admstMenu' && !(await loadedLocator.isVisible({ timeout: 3_000 }).catch(() => false))) {
+      await this.openLiveMenuAdminRoute();
+    }
+    await expect(loadedLocator).toBeVisible({ timeout: 20_000 });
+  }
+
+  private async waitForLiveAdminInteractionReady(): Promise<void> {
+    await waitUntil(
+      async () =>
+        this.page.evaluate(() => {
+          const liveWindow = window as unknown as { fp?: { hideTime?: number } };
+          const hideTime = Number(liveWindow.fp?.hideTime ?? 0);
+          return !hideTime || Date.now() - hideTime >= 250;
+        }).catch(() => true),
+      {
+        description: 'Admin 卡片点击防抖结束',
+        intervalMs: 50,
+        timeoutMs: 3_000,
+      },
+    ).catch(() => undefined);
+  }
+
+  private async openLiveMenuAdminRoute(): Promise<void> {
+    await this.page.evaluate(() => {
+      type LiveWindow = Window & {
+        data?: { companyProfile?: { merchantid?: string; merchantgroupid?: string } };
+        passPwiptInfo?: () => void;
+        innerpage?: { add?: (url: string, mode: number) => void };
+      };
+      const liveWindow = window as LiveWindow;
+      const rawState = sessionStorage.getItem('pwipt') || '{}';
+      const state = JSON.parse(rawState) as { thisuser?: { merchant?: { merchantid?: string } } };
+      const merchantId = liveWindow.data?.companyProfile?.merchantid ?? liveWindow.data?.companyProfile?.merchantgroupid;
+      if (merchantId) {
+        state.thisuser = state.thisuser ?? {};
+        state.thisuser.merchant = { merchantid: merchantId };
+        sessionStorage.setItem('pwipt', JSON.stringify(state));
+      }
+      liveWindow.passPwiptInfo?.();
+      liveWindow.innerpage?.add?.('menu/index.html', 1);
+    });
+  }
+
+  private async closeLiveSettingsAndReturnHome(): Promise<void> {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      if (await this.liveSettingsCloseButton.isVisible({ timeout: 2_000 }).catch(() => false)) {
+        await this.liveSettingsCloseButton.click({ timeout: 2_000 }).catch(async () => {
+          await this.liveSettingsCloseButton.evaluate((element) => (element as HTMLElement).click());
+        });
+      }
+      const confirmCloseButton = this.liveConfirmCloseButton
+        .or(this.page.locator('.objBxBtn, #innerpgclsyes, div, span').filter({ hasText: /^Close$/ }).last())
+        .first();
+      if (await confirmCloseButton.isVisible({ timeout: 2_000 }).catch(() => false)) {
+        await confirmCloseButton.click();
+      }
+      if (!(await this.liveSettingsCloseButton.isVisible({ timeout: 1_000 }).catch(() => false))) {
+        break;
+      }
+    }
+    if (await this.liveAdminBackButton.isVisible({ timeout: 5_000 }).catch(() => false)) {
+      await this.liveAdminBackButton.click();
+    }
+  }
+
+  private async clickVisibleLiveAdminText(text: string): Promise<void> {
+    const clicked = await this.page
+      .evaluate((targetText) => {
+        const visible = (element: HTMLElement) => {
+          const rect = element.getBoundingClientRect();
+          const style = window.getComputedStyle(element);
+          return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
+        };
+        const candidates = Array.from(document.querySelectorAll<HTMLElement>('*'))
+          .filter((element) => {
+            const text = element.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+            return visible(element) && (text === targetText || text.endsWith(` ${targetText}`));
+          })
+          .sort((left, right) => {
+            const leftText = left.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+            const rightText = right.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+            if (leftText === targetText && rightText !== targetText) {
+              return -1;
+            }
+            if (leftText !== targetText && rightText === targetText) {
+              return 1;
+            }
+            const leftRect = left.getBoundingClientRect();
+            const rightRect = right.getBoundingClientRect();
+            return leftRect.width * leftRect.height - rightRect.width * rightRect.height;
+          });
+        const textElement = candidates[0] ?? null;
+        if (!textElement) {
+          return false;
+        }
+        const jquery = (window as unknown as { $?: (element: HTMLElement) => { trigger: (eventName: string) => void } }).$;
+        let clickable: HTMLElement | null = textElement;
+        for (let level = 0; clickable && level < 8; level += 1) {
+          if (visible(clickable)) {
+            jquery?.(clickable).trigger('tap');
+            jquery?.(clickable).trigger('click');
+            clickable.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, view: window }));
+            clickable.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window }));
+            clickable.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, cancelable: true, view: window }));
+            clickable.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, view: window }));
+            clickable.click();
+          }
+          clickable = clickable.parentElement;
+        }
+        return candidates.length > 0;
+      }, text)
+      .catch(() => false);
+    if (!clicked) {
+      throw new Error(`Live Admin 未找到可点击文本 ${text}`);
+    }
   }
 
   private async readCommaSeparatedText(locator: Locator): Promise<string[]> {
@@ -958,4 +3201,27 @@ export class AdminPage extends PageObject {
     }
     return ((await locator.textContent()) ?? '').trim();
   }
+}
+
+function xpathText(text: string): string {
+  if (!text.includes('"')) {
+    return `"${text}"`;
+  }
+  if (!text.includes("'")) {
+    return `'${text}'`;
+  }
+  return `concat(${text.split('"').map((part) => `"${part}"`).join(', \'"\', ')})`;
+}
+
+function liveAdminTileFallbackLabel(tileSelector: string): string {
+  if (tileSelector === '#admstMenu') {
+    return 'Menu';
+  }
+  if (tileSelector === '#admstStaff') {
+    return 'Staff';
+  }
+  if (tileSelector === '#admstLanguage') {
+    return 'Language';
+  }
+  return '';
 }

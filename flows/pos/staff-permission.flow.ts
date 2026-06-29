@@ -99,6 +99,7 @@ export class StaffPermissionFlow {
   ) {}
 
   async rejectWholeOrderDiscountAboveServerLimitWithoutPassword(homeUrl: string): Promise<WholeOrderDiscountPermissionResult> {
+    await this.ensureDefaultRoleDiscountLimits();
     await this.homePage.open(homeUrl);
     await this.homePage.logout();
     await this.homePage.inputEmployeePassword(staffDiscountRoleSamples.server.password);
@@ -115,6 +116,7 @@ export class StaffPermissionFlow {
   }
 
   async applyWholeOrderDiscountAboveServerLimitWithManagerPassword(homeUrl: string): Promise<AuthorizedWholeOrderDiscountResult> {
+    await this.ensureDefaultRoleDiscountLimits();
     await this.homePage.open(homeUrl);
     await this.homePage.logout();
     await this.homePage.inputEmployeePassword(staffDiscountRoleSamples.server.password);
@@ -133,6 +135,7 @@ export class StaffPermissionFlow {
   async applyWholeOrderDiscountAboveManagerLimitWithBossPassword(
     homeUrl: string,
   ): Promise<BossAuthorizedWholeOrderDiscountResult> {
+    await this.ensureDefaultRoleDiscountLimits();
     await this.homePage.open(homeUrl);
     await this.homePage.logout();
     await this.homePage.inputEmployeePassword(staffDiscountRoleSamples.server.password);
@@ -152,6 +155,7 @@ export class StaffPermissionFlow {
   }
 
   async applyItemDiscountAboveServerLimitWithManagerPassword(homeUrl: string): Promise<AuthorizedItemDiscountResult> {
+    await this.ensureDefaultRoleDiscountLimits();
     await this.homePage.open(homeUrl);
     await this.homePage.logout();
     await this.homePage.inputEmployeePassword(staffDiscountRoleSamples.server.password);
@@ -178,6 +182,7 @@ export class StaffPermissionFlow {
   async applyItemDiscountAboveManagerLimitWithBossPassword(
     homeUrl: string,
   ): Promise<BossAuthorizedItemDiscountResult> {
+    await this.ensureDefaultRoleDiscountLimits();
     await this.homePage.open(homeUrl);
     await this.homePage.logout();
     await this.homePage.inputEmployeePassword(staffDiscountRoleSamples.server.password);
@@ -208,7 +213,9 @@ export class StaffPermissionFlow {
     homeUrl: string,
   ): Promise<MultiDiscountPermissionResult> {
     return step('整单折扣授权后再次提交单菜折扣仍校验累计权限', async () => {
+      await this.ensureDefaultRoleDiscountLimits();
       await this.homePage.open(homeUrl);
+      await this.homePage.logout();
       await this.homePage.inputEmployeePassword(staffDiscountRoleSamples.server.password);
       await this.homePage.clickTogo();
       await this.orderDishesPage.openFoodWithoutTax(
@@ -224,8 +231,7 @@ export class StaffPermissionFlow {
       const wholeOrderPermissionTip = await this.orderDishesPage.readDiscountTip();
 
       await this.orderDishesPage.submitManagerPassword(staffDiscountRoleSamples.boss.password);
-      await this.orderDishesPage.selectOrderLineItem(1);
-      await this.orderDishesPage.applyItemDiscountPercent(staffDiscountSamples.multiDiscountItemPercent);
+      await this.orderDishesPage.applySelectedItemsDiscountPercent(staffDiscountSamples.multiDiscountItemPercent);
       const itemPermissionTip = await this.orderDishesPage.readDiscountTip();
 
       return { wholeOrderPermissionTip, itemPermissionTip };
@@ -235,10 +241,12 @@ export class StaffPermissionFlow {
   async requirePermissionForMultiItemAmountDiscount(
     homeUrl: string,
   ): Promise<MultiItemAmountDiscountPermissionResult> {
-    return step('多个单菜固定金额折扣超过 Server 权限时提示授权', async () => {
-      await this.homePage.open(homeUrl);
-      await this.homePage.inputEmployeePassword(staffDiscountRoleSamples.server.password);
-      await this.homePage.clickDineIn();
+      return step('多个单菜固定金额折扣超过 Server 权限时提示授权', async () => {
+        await this.ensureDefaultRoleDiscountLimits();
+        await this.homePage.open(homeUrl);
+        await this.homePage.logout();
+        await this.homePage.inputEmployeePassword(staffDiscountRoleSamples.server.password);
+        await this.homePage.clickDineIn();
       await this.orderDishesPage.openFoodWithoutTax(
         staffDiscountSamples.itemDiscountFirstFoodName,
         staffDiscountSamples.multiDiscountFirstFoodPrice,
@@ -405,6 +413,7 @@ export class StaffPermissionFlow {
       try {
         await adminStaffClient.editStaffRemoveFunctions(staffSample.id, staffSample.removedPermissions);
         await adminStaffClient.editStaffAddFunctions(staffSample.id, staffSample.addedPermissions);
+        await adminStaffClient.editRoleRemoveFunctions(staffSample.role, staffSample.removedPermissions);
 
         await this.homePage.open(homeUrl);
         await this.homePage.applyOfflineStaffPermissionOverrides(await adminStaffClient.readStaffPermissionOverrides());
@@ -415,14 +424,17 @@ export class StaffPermissionFlow {
         await adminPage.enterStaff();
         await adminPage.clickCreateStaff();
 
-        staffName = staffSample.name;
-        await adminPage.inputNewStaffInfo(staffName, staffSample.code, staffSample.role);
+        const liveStaffSuffix = Date.now().toString().slice(-6);
+        staffName = `pos${liveStaffSuffix}`;
+        await adminPage.inputNewStaffInfo(staffName, liveStaffSuffix.slice(-4), staffSample.role);
         await adminPage.clickStaffSave();
         await adminPage.clickStaffName(staffName);
         const dineInAuthorityEnabled = await adminPage.isAuthorityEnabled(staffSample.restrictedAuthority);
 
         return { staffName, dineInAuthorityEnabled };
       } finally {
+        await adminStaffClient.editRoleAddFunctions(staffSample.role, staffSample.removedPermissions);
+        await adminStaffClient.editStaffAddFunctions(staffSample.id, staffSample.removedPermissions);
         if (staffName) {
           await adminStaffClient.deleteStaffByName(staffName);
         }
@@ -434,6 +446,7 @@ export class StaffPermissionFlow {
     homeUrl: string,
   ): Promise<WholeOrderDiscountPermissionResult> {
     const recallPage = this.requireRecallPage();
+    await this.ensureDefaultRoleDiscountLimits();
     await this.homePage.open(homeUrl);
     await this.homePage.logout();
     await this.homePage.inputEmployeePassword(staffDiscountRoleSamples.server.password);
@@ -459,6 +472,7 @@ export class StaffPermissionFlow {
     homeUrl: string,
   ): Promise<CanceledRecallWholeOrderDiscountResult> {
     const recallPage = this.requireRecallPage();
+    await this.ensureDefaultRoleDiscountLimits();
     await this.homePage.open(homeUrl);
     await this.homePage.logout();
     await this.homePage.inputEmployeePassword(staffDiscountRoleSamples.server.password);
@@ -486,7 +500,9 @@ export class StaffPermissionFlow {
   ): Promise<BossAuthorizedRecallWholeOrderDiscountResult> {
     return step('Recall 固定金额整单折扣 Manager 拒绝后由 Boss 授权', async () => {
       const recallPage = this.requireRecallPage();
+      await this.ensureDefaultRoleDiscountLimits();
       await this.homePage.open(homeUrl);
+      await this.homePage.logout();
       await this.homePage.inputEmployeePassword(staffDiscountRoleSamples.server.password);
       await this.homePage.clickPickup();
       await this.orderDishesPage.openFoodWithoutTax(
@@ -524,6 +540,24 @@ export class StaffPermissionFlow {
       throw new Error('AdminStaffClient is required for admin staff permission flows');
     }
     return this.adminStaffClient;
+  }
+
+  private async ensureDefaultRoleDiscountLimits(): Promise<void> {
+    if (!this.adminStaffClient) {
+      return;
+    }
+    await this.adminStaffClient.editRoleMaxDiscount(
+      staffDiscountRoleSamples.server.role,
+      staffDiscountRoleSamples.server.maxWholeOrderDiscountPercent,
+    );
+    await this.adminStaffClient.editRoleMaxDiscount(
+      staffDiscountRoleSamples.manager.role,
+      staffDiscountRoleSamples.manager.maxWholeOrderDiscountPercent,
+    );
+    await this.adminStaffClient.editRoleMaxDiscount(
+      staffDiscountRoleSamples.boss.role,
+      staffDiscountRoleSamples.boss.maxWholeOrderDiscountPercent,
+    );
   }
 
   private requireAdminPage(): AdminPage {

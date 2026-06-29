@@ -1,30 +1,28 @@
 import type { PosHomePage } from '../../pages/pos/home.page.js';
 import type { AdminPage } from '../../pages/pos/admin.page.js';
+import type { MenuClient } from '../../clients/pos-api/menu.client.js';
 import type { DeliveryPage } from '../../pages/pos/delivery.page.js';
 import type { OrderDishesPage } from '../../pages/pos/order-dishes.page.js';
 import type { RecalledItemOption, RecalledOrderItem, RecallPage, RecallPrintState } from '../../pages/pos/recall.page.js';
 import type { ReportPage } from '../../pages/pos/report.page.js';
 import type { DishSample, OptionOrderSample } from '../../test-data/pos/domain-types.js';
+import { testEnvironment } from '../../fixtures/environment.js';
 import { combineSameItemModes, menuModes } from '../../test-data/pos/admin-settings.js';
 import {
   categoryOptionDish,
   chineseInitialSearchDish,
-  comboMaxModifyDish,
-  comboNoOptionThenOptionDish,
   discountableDish,
-  editableComboDish,
   groupSwitchDish,
   categorySwitchDish,
   menuModeSearchItems,
   numberedNameConflictDish,
-  posNameDisplayDish,
-  posNameDisplayValue,
-  requiredKdsDish,
   splitDiscountDishes,
 } from '../../test-data/pos/dishes.js';
+import { orderPageDataFor } from '../../test-data/pos/order-page-data.js';
 import { deliveryOrderInfoSample } from '../../test-data/pos/delivery.js';
 import { languageOptions } from '../../test-data/pos/languages.js';
 import { staffSamples, validEmployeePassword } from '../../test-data/pos/permissions.js';
+import { waitUntil } from '../../utils/wait.js';
 
 export type OrderTaxEditResult = {
   beforeEditTax: number;
@@ -488,6 +486,10 @@ export class OrderEntryFlow {
     private readonly reportPage?: ReportPage,
   ) {}
 
+  private get orderPageData() {
+    return orderPageDataFor(testEnvironment.testMode);
+  }
+
   async createTogoOrderAndReadRecall(homeUrl: string, dish: DishSample): Promise<RecalledOrderItem[]> {
     const result = await this.createTogoOrderAndReadOrderedAndRecall(homeUrl, dish);
     return result.recalledItems;
@@ -495,6 +497,7 @@ export class OrderEntryFlow {
 
   async createTogoOrderAndReadOrderedAndRecall(homeUrl: string, dish: DishSample): Promise<TogoOrderRecallResult> {
     await this.homePage.open(homeUrl);
+    await this.homePage.switchLanguage(languageOptions.default);
     await this.homePage.clickTogo();
     await this.orderDishesPage.selectMenuGroup(dish.group);
     if (dish.category) {
@@ -503,7 +506,7 @@ export class OrderEntryFlow {
     await this.orderDishesPage.addMenuItem(dish.name);
     const orderedItem = await this.orderDishesPage.readSelectedOrderItem();
     await this.orderDishesPage.saveOrder();
-    await this.homePage.clickRecall();
+    await this.homePage.clickRecallFromHome();
     await this.recallPage.openRecentOrder();
     const recalledItems = await this.recallPage.readAllOrderItems();
     return { orderedItem, recalledItems };
@@ -517,10 +520,19 @@ export class OrderEntryFlow {
   }
 
   async addItemAfterSendKitchenAndReadTaxes(homeUrl: string): Promise<OrderTaxEditResult> {
-    await this.openOrderAndAddDish(homeUrl, groupSwitchDish);
+    const { groupSwitchDish, categorySwitchDish } = this.orderPageData;
+    await this.openDineInOrderAndAddDish(homeUrl, groupSwitchDish);
+    await this.orderDishesPage.selectMenuGroup(categorySwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(categorySwitchDish.category);
     await this.orderDishesPage.addMenuItem(categorySwitchDish.name);
     const beforeEditTax = await this.orderDishesPage.readTax();
-    await this.orderDishesPage.sendAllToKitchen();
+    await this.orderDishesPage.saveOrder();
+    await this.homePage.waitForHomeActionsReady();
+    await this.homePage.clickRecallFromHome();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.clickEdit();
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
     await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
     const afterEditTax = await this.orderDishesPage.readTax();
     await this.orderDishesPage.saveOrder();
@@ -528,29 +540,51 @@ export class OrderEntryFlow {
   }
 
   async requireCustomerInfoBeforePayment(homeUrl: string): Promise<CustomerInfoRequirementResult> {
-    await this.openOrderAndAddDish(homeUrl, groupSwitchDish);
-    await this.orderDishesPage.clickSettle();
-    const popupVisibleBeforeInput = await this.orderDishesPage.isCustomerInfoPopupVisible();
-    await this.orderDishesPage.submitCustomerInfo();
-    const popupVisibleAfterEmptySubmit = await this.orderDishesPage.isCustomerInfoPopupVisible();
-    await this.orderDishesPage.submitCustomerInfo('Test Customer', '1234567890');
-    const popupVisibleAfterValidSubmit = await this.orderDishesPage.isCustomerInfoPopupVisible();
-    return { popupVisibleBeforeInput, popupVisibleAfterEmptySubmit, popupVisibleAfterValidSubmit };
+    await this.setCustomerInfoRequirementSettings(homeUrl, true);
+    try {
+      await this.openDineInOrderAndAddDish(homeUrl, this.orderPageData.groupSwitchDish);
+      await this.orderDishesPage.clickSettle();
+      const popupVisibleBeforeInput = await this.orderDishesPage.isCustomerInfoPopupVisible();
+      await this.orderDishesPage.submitCustomerInfo();
+      const popupVisibleAfterEmptySubmit = await this.orderDishesPage.isCustomerInfoPopupVisible();
+      await this.orderDishesPage.submitCustomerInfo('Test Customer', '1234567890');
+      await this.orderDishesPage.waitForCustomerInfoPopupHidden();
+      const popupVisibleAfterValidSubmit = await this.orderDishesPage.isCustomerInfoPopupVisible();
+      return { popupVisibleBeforeInput, popupVisibleAfterEmptySubmit, popupVisibleAfterValidSubmit };
+    } finally {
+      await this.setCustomerInfoRequirementSettings(homeUrl, false);
+    }
   }
 
   async voidItemWithManagerPassword(homeUrl: string, managerPassword: string): Promise<string> {
-    await this.openOrderAndAddDish(homeUrl, groupSwitchDish);
+    const { groupSwitchDish, noVoidItemStaffPassword } = this.orderPageData;
+    await this.homePage.open(homeUrl);
+    await this.homePage.logout();
+    await this.homePage.inputEmployeePassword(noVoidItemStaffPassword);
+    await this.homePage.switchLanguage(languageOptions.default);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    if (groupSwitchDish.category) {
+      await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    }
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
     await this.orderDishesPage.sendAllToKitchen();
+    await this.orderDishesPage.saveOrder();
+    await this.homePage.waitForHomeActionsReady();
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.clickEdit();
     await this.orderDishesPage.voidSelectedItem();
     await this.orderDishesPage.submitManagerPassword(managerPassword);
-    await this.orderDishesPage.saveOrder();
+    await this.orderDishesPage.saveOrderWithManagerAuthorization(managerPassword);
+    await this.homePage.waitForHomeActionsReady();
     await this.homePage.clickRecall();
     await this.recallPage.openRecentOrder();
     return this.recallPage.readFirstOrderItemState();
   }
 
   async applyItemDiscountAndReadPrice(homeUrl: string, discountRate: number): Promise<ItemDiscountResult> {
-    await this.openOrderAndAddDish(homeUrl, discountableDish);
+    await this.openOrderAndAddDish(homeUrl, this.orderPageData.discountableDish);
     const originalPrice = await this.orderDishesPage.readSelectedItemPrice();
     await this.orderDishesPage.applyItemDiscount();
     const discountedPrice = await this.orderDishesPage.readSelectedItemPrice();
@@ -561,7 +595,7 @@ export class OrderEntryFlow {
   }
 
   async addModifyNoteAndReadRecallOption(homeUrl: string): Promise<RecalledItemOption> {
-    await this.openOrderAndAddDish(homeUrl, discountableDish);
+    await this.openOrderAndAddDish(homeUrl, this.orderPageData.discountableDish);
     await this.orderDishesPage.addModifyNote('This is a test note', 1.23);
     await this.orderDishesPage.saveOrder();
     await this.homePage.clickRecall();
@@ -570,7 +604,7 @@ export class OrderEntryFlow {
   }
 
   async splitTipEvenlyAndCombine(homeUrl: string): Promise<SplitTipResult> {
-    await this.openDineInOrderAndAddDish(homeUrl, groupSwitchDish);
+    await this.openDineInOrderAndAddDish(homeUrl, this.orderPageData.groupSwitchDish);
     await this.orderDishesPage.addTip(200);
     await this.orderDishesPage.splitEvenly(2);
     await this.orderDishesPage.saveOrder();
@@ -597,11 +631,12 @@ export class OrderEntryFlow {
     await this.homePage.open(homeUrl);
     await this.createPickupOrder();
     await this.createPickupOrder();
-    await this.homePage.clickRecall();
+    await this.homePage.clickRecallFromHome();
     await this.recallPage.openPreviousOrder();
     await this.recallPage.clickEdit();
     await this.recallPage.editGuestName('ren');
     await this.recallPage.saveEdit();
+    await this.homePage.clickRecallFromHome();
     await this.recallPage.openRecentOrder();
     const latestOrderCustomerName = await this.recallPage.readCustomerName();
     await this.recallPage.openPreviousOrder();
@@ -632,7 +667,7 @@ export class OrderEntryFlow {
   }
 
   async splitOrderEvenlyAndReadSummary(homeUrl: string, count: number): Promise<EvenSplitSummary> {
-    await this.openOrderAndAddDish(homeUrl, groupSwitchDish);
+    await this.openOrderAndAddDish(homeUrl, this.orderPageData.groupSwitchDish);
     await this.orderDishesPage.saveOrder();
     await this.homePage.clickRecall();
     await this.recallPage.openRecentOrder();
@@ -675,7 +710,7 @@ export class OrderEntryFlow {
   }
 
   async splitOrderByAmountAndReadSummary(homeUrl: string, amounts: readonly number[]): Promise<ItemSplitSummary> {
-    await this.openOrderAndAddDish(homeUrl, groupSwitchDish);
+    await this.openOrderAndAddDish(homeUrl, this.orderPageData.groupSwitchDish);
     await this.orderDishesPage.saveOrder();
     await this.homePage.clickRecall();
     await this.recallPage.openRecentOrder();
@@ -704,6 +739,7 @@ export class OrderEntryFlow {
   async splitOrderByDragPayFirstSubOrderAndReadStatuses(
     homeUrl: string,
   ): Promise<DragSplitPaymentStatusResult> {
+    const { groupSwitchDish } = this.orderPageData;
     await this.homePage.open(homeUrl);
     await this.homePage.clickDineIn();
     await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
@@ -781,9 +817,9 @@ export class OrderEntryFlow {
     await this.orderDishesPage.addMenuItem(categorySwitchDish.name);
 
     await this.orderDishesPage.selectSeat(2);
-    await this.orderDishesPage.selectMenuGroup(posNameDisplayDish.group);
-    await this.orderDishesPage.selectMenuCategory(posNameDisplayDish.category);
-    await this.orderDishesPage.addMenuItem(posNameDisplayDish.name);
+    await this.orderDishesPage.selectMenuGroup(this.orderPageData.posNameDisplayDish.group);
+    await this.orderDishesPage.selectMenuCategory(this.orderPageData.posNameDisplayDish.category);
+    await this.orderDishesPage.addMenuItem(this.orderPageData.posNameDisplayDish.name);
 
     await this.orderDishesPage.addTip(500);
     await this.orderDishesPage.saveOrder();
@@ -2505,6 +2541,7 @@ export class OrderEntryFlow {
     await this.recallPage.openRecentOrder();
     await this.recallPage.openSplitOrder();
     await this.recallPage.splitByDrag();
+    await this.recallPage.saveSplit();
     await this.recallPage.openSubOrder(1);
     await this.recallPage.clickEdit();
     return this.orderDishesPage.openDiscountAndReadWholeOrderPrice();
@@ -2525,13 +2562,14 @@ export class OrderEntryFlow {
     await this.reportPage.inputPasswordInPopup(validEmployeePassword);
     await this.reportPage.selectOrderType(orderType);
     const netSalesBefore = await this.reportPage.readOverviewNetSales();
+    await this.homePage.open(homeUrl);
 
     await this.homePage.clickCustomDelivery();
     await this.deliveryPage.createDeliveryOrder(deliveryOrderInfoSample);
     await this.orderDishesPage.selectMenuGroup(dish.group);
     await this.orderDishesPage.selectMenuCategory(dish.category);
     await this.orderDishesPage.addMenuItem(dish.name);
-    const orderSubtotal = await this.orderDishesPage.readSubtotal();
+    const orderSubtotal = await this.orderDishesPage.readNetSalesSubtotal();
     await this.orderDishesPage.saveOrder();
 
     await this.homePage.clickReport();
@@ -2554,19 +2592,25 @@ export class OrderEntryFlow {
     await this.homePage.open(homeUrl);
     await this.homePage.clickAdmin();
     await this.adminPage.setDefaultKeyboard('support multi language');
-    await this.homePage.refresh();
+    await this.homePage.open(homeUrl);
     await this.homePage.clickTogo();
     return this.orderDishesPage.createOpenFoodWithKeyboard('Chinese Simpl. Pinyin', '中文');
   }
 
   async applySpecialPriceHalfDiscountAndReadRecallSubtotal(homeUrl: string): Promise<number> {
+    const { groupSwitchDish } = this.orderPageData;
     await this.homePage.open(homeUrl);
+    await this.homePage.switchLanguage(languageOptions.default);
     await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    if (groupSwitchDish.category) {
+      await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    }
     await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
     await this.orderDishesPage.changeSelectedItemPrice(5.85);
     await this.orderDishesPage.applyHalfDiscount();
     await this.orderDishesPage.saveOrder();
-    await this.homePage.clickRecall();
+    await this.homePage.clickRecallFromHome();
     await this.recallPage.openRecentOrder();
     return this.recallPage.readOrderSubtotal();
   }
@@ -2594,7 +2638,9 @@ export class OrderEntryFlow {
 
   async reduceComboOptionsAndReadCounts(homeUrl: string): Promise<ComboOptionCountResult> {
     await this.homePage.open(homeUrl);
+    await this.homePage.switchLanguage(languageOptions.default);
     await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuCategory('hn_cate');
     await this.orderDishesPage.addComboWithOptions(4);
     const beforeCount = await this.orderDishesPage.readComboOptionCount();
     await this.orderDishesPage.reduceComboOption();
@@ -2610,8 +2656,8 @@ export class OrderEntryFlow {
     }
     await this.homePage.open(homeUrl);
     await this.homePage.clickAdmin();
-    await this.adminPage.setPosMenuMode(menuModes.pos);
-    await this.homePage.refresh();
+    await this.adminPage.setSearchMenu(true);
+    await this.homePage.open(homeUrl);
     await this.homePage.clickDineIn();
     await this.orderDishesPage.searchMenuItem(menuModeSearchItems.pos);
     const posSearchResult = await this.orderDishesPage.readSearchResult();
@@ -2620,7 +2666,7 @@ export class OrderEntryFlow {
 
     await this.homePage.clickAdmin();
     await this.adminPage.setPosMenuMode(menuModes.emenu);
-    await this.homePage.refresh();
+    await this.homePage.open(homeUrl);
     await this.homePage.clickDineIn();
     await this.orderDishesPage.searchMenuItem(menuModeSearchItems.emenu);
     const eMenuSearchResult = await this.orderDishesPage.readSearchResult();
@@ -2629,13 +2675,13 @@ export class OrderEntryFlow {
 
     await this.homePage.clickAdmin();
     await this.adminPage.setPosMenuMode(menuModes.pos);
-    await this.homePage.refresh();
+    await this.homePage.open(homeUrl);
     return { posSearchResult, eMenuSearchResult };
   }
 
   async addGlobalOptionAndReadModifyArea(homeUrl: string): Promise<GlobalOptionAddResult> {
-    await this.openDineInOrderAndAddDish(homeUrl, groupSwitchDish);
-    await this.orderDishesPage.openGlobalOptionModify();
+    await this.openDineInOrderAndAddDish(homeUrl, this.orderPageData.groupSwitchDish);
+    await this.orderDishesPage.openGlobalOptionModify('none');
     await this.orderDishesPage.addGlobalOptionListItem();
     const modifyAreaVisibleAfterAdd = await this.orderDishesPage.isGlobalOptionModifyAreaVisible();
     return { modifyAreaVisibleAfterAdd };
@@ -2645,8 +2691,9 @@ export class OrderEntryFlow {
     homeUrl: string,
     counts: readonly [number, number],
   ): Promise<GlobalOptionCountResult> {
-    await this.openDineInOrderAndAddDish(homeUrl, groupSwitchDish);
+    await this.openDineInOrderAndAddDish(homeUrl, this.orderPageData.groupSwitchDish);
     await this.orderDishesPage.openGlobalOptionModify();
+    await this.orderDishesPage.selectPricedGlobalOption();
     await this.orderDishesPage.setGlobalOptionListCount(counts[0]);
     const modifyAreaVisibleAfterFirstCount = await this.orderDishesPage.isGlobalOptionModifyAreaVisible();
     await this.orderDishesPage.setGlobalOptionListCount(counts[1]);
@@ -2656,8 +2703,9 @@ export class OrderEntryFlow {
   }
 
   async reduceGlobalOptionToZeroAndReadModifyArea(homeUrl: string): Promise<GlobalOptionReduceResult> {
-    await this.openDineInOrderAndAddDish(homeUrl, groupSwitchDish);
+    await this.openDineInOrderAndAddDish(homeUrl, this.orderPageData.groupSwitchDish);
     await this.orderDishesPage.openGlobalOptionModify();
+    await this.orderDishesPage.selectPricedGlobalOption();
     await this.orderDishesPage.setGlobalOptionListCount(2);
     const modifyAreaVisibleAfterInitialCount = await this.orderDishesPage.isGlobalOptionModifyAreaVisible();
     await this.orderDishesPage.reduceGlobalOptionListItem();
@@ -2674,9 +2722,9 @@ export class OrderEntryFlow {
     await this.homePage.open(homeUrl);
     await this.homePage.clickDineIn();
     await this.orderDishesPage.fillGuestName(guestName);
-    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
-    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
-    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.selectMenuGroup(this.orderPageData.groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(this.orderPageData.groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(this.orderPageData.groupSwitchDish.name);
     await this.orderDishesPage.saveOrder();
     await this.homePage.clickRecall();
     await this.recallPage.openRecentOrder();
@@ -2693,15 +2741,20 @@ export class OrderEntryFlow {
     await this.homePage.open(homeUrl);
     await this.homePage.clickAdmin();
     await this.adminPage.setSearchMenu(false);
-    await this.homePage.refresh();
+    await this.homePage.open(homeUrl);
     await this.homePage.clickDineIn();
     const searchClassWhenDisabled = await this.orderDishesPage.readSearchClass();
     await this.orderDishesPage.exitOrderPage();
 
     await this.homePage.clickAdmin();
     await this.adminPage.setSearchMenu(true);
-    await this.homePage.refresh();
+    await this.homePage.open(homeUrl);
     await this.homePage.clickDineIn();
+    await waitUntil(async () => (await this.orderDishesPage.readSearchClass()) === 'iptgrp', {
+      description: 'Search Menu 开启后搜索框展示',
+      intervalMs: 300,
+      timeoutMs: 10_000,
+    });
     const searchClassWhenEnabled = await this.orderDishesPage.readSearchClass();
     await this.orderDishesPage.searchMenuItem(menuModeSearchItems.pos);
     const searchResult = await this.orderDishesPage.readSearchResult();
@@ -2712,11 +2765,12 @@ export class OrderEntryFlow {
   async searchDishWithSameNameAndNumberAndReadResult(homeUrl: string): Promise<NumberedNameSearchResult> {
     await this.homePage.open(homeUrl);
     await this.homePage.clickTogo();
-    await this.orderDishesPage.searchMenuItem(numberedNameConflictDish.name);
+    const dish = this.orderPageData.numberedNameConflictDish;
+    await this.orderDishesPage.searchMenuItem(dish.name);
     const searchResultText = await this.orderDishesPage.readSearchResult();
     const searchResultCount = await this.orderDishesPage.readSearchResultCount();
     return {
-      searchKeyword: numberedNameConflictDish.name,
+      searchKeyword: dish.name,
       searchResultText,
       searchResultCount,
     };
@@ -2726,28 +2780,30 @@ export class OrderEntryFlow {
     if (!this.adminPage) {
       throw new Error('AdminPage is required for item Chinese name setup');
     }
+    const dish = this.orderPageData.chineseInitialSearchDish;
     await this.homePage.open(homeUrl);
     await this.homePage.clickAdmin();
     await this.adminPage.setItemChineseName(
-      chineseInitialSearchDish.group,
-      chineseInitialSearchDish.category,
-      chineseInitialSearchDish.name,
-      chineseInitialSearchDish.chineseName,
+      dish.group,
+      dish.category,
+      dish.name,
+      dish.chineseName,
     );
-    await this.homePage.refresh();
+    await this.homePage.open(homeUrl);
     await this.homePage.switchLanguage(languageOptions.chinese);
     await this.homePage.clickDineIn();
-    await this.orderDishesPage.searchMenuItem(chineseInitialSearchDish.searchKeyword);
+    await this.orderDishesPage.searchMenuItem(dish.searchKeyword);
     const searchResultText = await this.orderDishesPage.readSearchResult();
     await this.orderDishesPage.exitOrderPage();
     await this.homePage.switchLanguage(languageOptions.default);
     return {
-      searchKeyword: chineseInitialSearchDish.searchKeyword,
+      searchKeyword: dish.searchKeyword,
       searchResultText,
     };
   }
 
   async createOrderWithIntegerItemCountAndReadRecall(homeUrl: string): Promise<ItemCountRecallResult> {
+    const { groupSwitchDish, categorySwitchDish } = this.orderPageData;
     await this.homePage.open(homeUrl);
     await this.homePage.clickTogo();
     await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
@@ -2766,6 +2822,7 @@ export class OrderEntryFlow {
   }
 
   async addLargeTipBeforeSaveAndReadRecall(homeUrl: string): Promise<LargeTipResult> {
+    const { groupSwitchDish } = this.orderPageData;
     await this.homePage.open(homeUrl);
     await this.homePage.clickTogo();
     await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
@@ -2783,6 +2840,7 @@ export class OrderEntryFlow {
   }
 
   async addLargeTipAfterCreditPaymentAndReadRecall(homeUrl: string): Promise<LargeTipResult> {
+    const { groupSwitchDish } = this.orderPageData;
     await this.homePage.open(homeUrl);
     await this.homePage.clickTogo();
     await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
@@ -2808,7 +2866,7 @@ export class OrderEntryFlow {
     const permissionToast = await this.orderDishesPage.voidSelectedItemAndReadToast();
     await this.orderDishesPage.submitManagerPassword(validEmployeePassword);
     await this.orderDishesPage.saveOrder();
-    await this.homePage.clickRecall();
+    await this.homePage.clickRecallFromHome();
     await this.recallPage.openRecentOrder();
     await this.recallPage.clickEdit();
     const itemLineCountAfterDelete = await this.orderDishesPage.readOrderLineCount();
@@ -2824,7 +2882,7 @@ export class OrderEntryFlow {
     const permissionToast = await this.orderDishesPage.changeSelectedItemQuantityAndReadToast(0);
     await this.orderDishesPage.submitManagerPassword(validEmployeePassword);
     await this.orderDishesPage.saveOrder();
-    await this.homePage.clickRecall();
+    await this.homePage.clickRecallFromHome();
     await this.recallPage.openRecentOrder();
     await this.recallPage.clickEdit();
     const itemLineCountAfterDelete = await this.orderDishesPage.readOrderLineCount();
@@ -2838,10 +2896,11 @@ export class OrderEntryFlow {
     await this.homePage.open(homeUrl);
     await this.homePage.clickAdmin();
     await this.adminPage.setStaffNotePermission(false);
-    await this.homePage.refresh();
+    await this.homePage.open(homeUrl);
     await this.homePage.logout();
     await this.homePage.inputEmployeePassword(staffSamples.noNote.password);
     await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuCategory('hn_cate');
     await this.orderDishesPage.addComboWithOptions(4);
     await this.orderDishesPage.openFirstComboSubItem();
     const permissionToast = await this.orderDishesPage.clickComboSubItemEditNoteAndReadToast();
@@ -2851,7 +2910,7 @@ export class OrderEntryFlow {
     await this.orderDishesPage.exitOrderPage();
     await this.homePage.clickAdmin();
     await this.adminPage.setStaffNotePermission(true);
-    await this.homePage.refresh();
+    await this.homePage.open(homeUrl);
     return { permissionToast, noteText };
   }
 
@@ -2864,15 +2923,15 @@ export class OrderEntryFlow {
     await this.adminPage.setKdsCategoryRequired(true);
     await this.homePage.refresh();
     await this.homePage.clickDineIn();
-    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
-    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
-    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
-    await this.orderDishesPage.saveOrder();
+    await this.orderDishesPage.selectMenuGroup(this.orderPageData.groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(this.orderPageData.groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(this.orderPageData.groupSwitchDish.name);
+    await this.orderDishesPage.saveOrderAllowingValidationFailure();
     const categoryAfterRejectedSave = await this.orderDishesPage.readCurrentCategoryName();
     const urlAfterRejectedSave = await this.orderDishesPage.readCurrentUrl();
-    await this.orderDishesPage.selectMenuGroup(requiredKdsDish.group);
-    await this.orderDishesPage.selectMenuCategory(requiredKdsDish.category);
-    await this.orderDishesPage.addMenuItem(requiredKdsDish.name);
+    await this.orderDishesPage.selectMenuGroup(this.orderPageData.requiredKdsDish.group);
+    await this.orderDishesPage.selectMenuCategory(this.orderPageData.requiredKdsDish.category);
+    await this.orderDishesPage.addMenuItem(this.orderPageData.requiredKdsDish.name);
     await this.orderDishesPage.saveOrder();
     const urlAfterCompletedSave = await this.orderDishesPage.readCurrentUrl();
     await this.homePage.clickAdmin();
@@ -2890,9 +2949,9 @@ export class OrderEntryFlow {
     await this.adminPage.setKdsCategoryDiscountAllowance(false);
     await this.homePage.refresh();
     await this.homePage.clickDineIn();
-    await this.orderDishesPage.selectMenuGroup(requiredKdsDish.group);
-    await this.orderDishesPage.selectMenuCategory(requiredKdsDish.category);
-    await this.orderDishesPage.addMenuItem(requiredKdsDish.name);
+    await this.orderDishesPage.selectMenuGroup(this.orderPageData.requiredKdsDish.group);
+    await this.orderDishesPage.selectMenuCategory(this.orderPageData.requiredKdsDish.category);
+    await this.orderDishesPage.addMenuItem(this.orderPageData.requiredKdsDish.name);
     await this.orderDishesPage.applyOrderCharge('20%');
     const chargeLabel = await this.orderDishesPage.readChargeLabel();
     const chargePrice = await this.orderDishesPage.readChargePrice();
@@ -2907,6 +2966,7 @@ export class OrderEntryFlow {
     if (!this.adminPage) {
       throw new Error('AdminPage is required for item POS Name setup');
     }
+    const { posNameDisplayDish, posNameDisplayValue } = this.orderPageData;
     await this.homePage.open(homeUrl);
     await this.homePage.clickAdmin();
     await this.adminPage.setKdsItemPosName(posNameDisplayDish.name, posNameDisplayValue);
@@ -2925,11 +2985,12 @@ export class OrderEntryFlow {
   }
 
   async editQuickComboSubItemPriceAndReadSubtotal(homeUrl: string): Promise<ComboSubItemEditPriceResult> {
+    const { editableComboDish } = this.orderPageData;
     await this.homePage.open(homeUrl);
     await this.homePage.clickDineIn();
     await this.orderDishesPage.selectMenuGroup(editableComboDish.group);
     await this.orderDishesPage.selectMenuCategory(editableComboDish.category);
-    await this.orderDishesPage.addQuickCombo(editableComboDish.name);
+    await this.orderDishesPage.addQuickCombo(editableComboDish.name, editableComboDish.sections);
     const subtotalBeforeEdit = await this.orderDishesPage.readSubtotalText();
     await this.orderDishesPage.selectOrderedComboSubItem(editableComboDish.name, editableComboDish.editableSubItem);
     await this.orderDishesPage.editSelectedComboSubItemPrice(editableComboDish.editPriceInput);
@@ -2944,11 +3005,12 @@ export class OrderEntryFlow {
   }
 
   async modifySavedComboSubItemsAndReadRecall(homeUrl: string): Promise<ComboSubItemModificationResult> {
+    const { comboMaxModifyDish } = this.orderPageData;
     await this.homePage.open(homeUrl);
     await this.homePage.clickDineIn();
     await this.orderDishesPage.selectMenuGroup(comboMaxModifyDish.group);
     await this.orderDishesPage.selectMenuCategory(comboMaxModifyDish.category);
-    await this.orderDishesPage.addMenuItem(comboMaxModifyDish.name);
+    await this.orderDishesPage.addQuickCombo(comboMaxModifyDish.name, comboMaxModifyDish.initialSections);
     await this.orderDishesPage.saveOrder();
     await this.homePage.clickRecall();
     await this.recallPage.openRecentOrder();
@@ -2958,38 +3020,66 @@ export class OrderEntryFlow {
     await this.homePage.clickRecall();
     await this.recallPage.openRecentOrder();
     return {
-      recalledSubItems: await this.recallPage.readComboSubItemNames(),
+      recalledSubItems: await this.recallPage.readComboSubItemNames(comboMaxModifyDish.replacementSubItems.length),
     };
   }
 
-  async orderComboSubItemThenReadNormalItemOptions(homeUrl: string): Promise<boolean> {
-    await this.homePage.open(homeUrl);
-    await this.homePage.clickDineIn();
-    await this.orderDishesPage.selectMenuGroup(comboNoOptionThenOptionDish.group);
-    await this.orderDishesPage.selectMenuCategory(comboNoOptionThenOptionDish.category);
-    await this.orderDishesPage.addMenuItem(comboNoOptionThenOptionDish.comboName);
-    await this.orderDishesPage.selectOrderedComboSubItem(
-      comboNoOptionThenOptionDish.comboName,
-      comboNoOptionThenOptionDish.noOptionSubItem,
-    );
-    await this.orderDishesPage.addMenuItem(comboNoOptionThenOptionDish.optionDishName);
-    return this.orderDishesPage.isOrderItemOptionListVisible();
+  async orderComboSubItemThenReadNormalItemOptions(homeUrl: string, menuClient?: MenuClient): Promise<boolean> {
+    const staticComboDish = this.orderPageData.comboNoOptionThenOptionDish;
+    let createdDishIds: readonly number[] = [];
+    const comboDish =
+      testEnvironment.testMode === 'live'
+        ? await this.createLiveComboNoOptionThenOptionFixture(menuClient, staticComboDish.group, staticComboDish.category).then(
+            (fixture) => {
+              createdDishIds = fixture.createdDishIds;
+              return fixture;
+            },
+          )
+        : staticComboDish;
+    try {
+      await this.homePage.open(homeUrl);
+      await this.homePage.clickDineIn();
+      await this.orderDishesPage.selectMenuGroup(comboDish.group);
+      await this.orderDishesPage.selectMenuCategory(comboDish.category);
+      await this.orderDishesPage.addMenuItem(comboDish.comboName);
+      await this.orderDishesPage.selectOrderedComboSubItem(
+        comboDish.comboName,
+        comboDish.noOptionSubItem,
+      );
+      await this.orderDishesPage.addMenuItem(comboDish.optionDishName);
+      return this.orderDishesPage.isOrderItemOptionListVisible();
+    } finally {
+      if (testEnvironment.testMode === 'live') {
+        await menuClient?.deleteDishesByIds(createdDishIds).catch(() => undefined);
+      }
+    }
+  }
+
+  private async createLiveComboNoOptionThenOptionFixture(
+    menuClient: MenuClient | undefined,
+    groupName: string,
+    categoryName: string,
+  ) {
+    if (!menuClient) {
+      throw new Error('live POS-43823 需要 MenuClient 创建动态菜单数据');
+    }
+    return menuClient.createComboNoOptionThenOptionFixture(groupName, categoryName);
   }
 
   async createThreeSameItemsWithoutAutoCombine(homeUrl: string): Promise<SameItemCombineResult> {
     await this.configureSameItemCombine(homeUrl, combineSameItemModes.dontCombine);
-    await this.homePage.refresh();
+    await this.homePage.open(homeUrl);
     await this.homePage.clickDineIn();
     await this.addSameDishTimes(3);
     const itemLineCount = await this.orderDishesPage.readOrderLineCount();
     await this.orderDishesPage.saveOrder();
-    await this.restoreSameItemSettings();
+    await this.restoreSameItemSettings(homeUrl);
     return { itemLineCount };
   }
 
   async addSameItemAfterKitchenWithSameStatusCombine(homeUrl: string): Promise<SameItemCombineResult> {
     await this.configureSameItemCombine(homeUrl, combineSameItemModes.autoSameStatus);
-    await this.homePage.refresh();
+    await this.homePage.open(homeUrl);
     await this.homePage.clickDineIn();
     await this.addSameDishTimes(1);
     await this.orderDishesPage.sendAllToKitchen();
@@ -2999,13 +3089,13 @@ export class OrderEntryFlow {
     await this.addSameDishTimes(1);
     const itemLineCount = await this.orderDishesPage.readOrderLineCount();
     await this.orderDishesPage.saveOrder();
-    await this.restoreSameItemSettings();
+    await this.restoreSameItemSettings(homeUrl);
     return { itemLineCount };
   }
 
   async addSameItemAfterKitchenWithIncludeKitchenCombine(homeUrl: string): Promise<SameItemCombineResult> {
     await this.configureSameItemCombine(homeUrl, combineSameItemModes.includeKitchen);
-    await this.homePage.refresh();
+    await this.homePage.open(homeUrl);
     await this.homePage.clickDineIn();
     await this.addSameDishTimes(1);
     await this.orderDishesPage.sendAllToKitchen();
@@ -3013,12 +3103,20 @@ export class OrderEntryFlow {
     await this.recallPage.openRecentOrder();
     await this.recallPage.clickEdit();
     await this.addSameDishTimes(1);
+    await waitUntil(
+      async () => (await this.orderDishesPage.readFirstItemName()).includes('(1In Kitchen)'),
+      {
+        description: 'include-kitchen combined item marker appears',
+        intervalMs: 200,
+        timeoutMs: 8_000,
+      },
+    );
     const itemLineCount = await this.orderDishesPage.readOrderLineCount();
     const firstItemQuantity = await this.orderDishesPage.readFirstItemQuantity();
     const firstItemName = await this.orderDishesPage.readFirstItemName();
     const firstItemColor = await this.orderDishesPage.readFirstItemColor();
     await this.orderDishesPage.saveOrder();
-    await this.restoreSameItemSettings();
+    await this.restoreSameItemSettings(homeUrl);
     return { itemLineCount, firstItemQuantity, firstItemName, firstItemColor };
   }
 
@@ -3026,10 +3124,11 @@ export class OrderEntryFlow {
     if (!this.adminPage) {
       throw new Error('AdminPage is required for auto redirect setup');
     }
+    const { groupSwitchDish, categorySwitchDish } = this.orderPageData;
     await this.homePage.open(homeUrl);
     await this.homePage.clickAdmin();
     await this.adminPage.setAutomaticallyRedirectAfterReduceItems(false);
-    await this.homePage.refresh();
+    await this.homePage.open(homeUrl);
     await this.homePage.clickDineIn();
     await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
     await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
@@ -3037,12 +3136,13 @@ export class OrderEntryFlow {
     await this.orderDishesPage.selectMenuGroup(categorySwitchDish.group);
     await this.orderDishesPage.selectMenuCategory(categorySwitchDish.category);
     await this.orderDishesPage.addMenuItem(categorySwitchDish.name);
+    await this.orderDishesPage.selectOrderLineItem(2);
     await this.orderDishesPage.reduceSelectedItemQuantity();
     const orderItemOptionListVisible = await this.orderDishesPage.isOrderItemOptionListVisible();
     const originalCategoryItemStillVisible = await this.orderDishesPage.isMenuItemVisible(categorySwitchDish.name);
+    await this.homePage.open(homeUrl);
     await this.homePage.clickAdmin();
     await this.adminPage.setAutomaticallyRedirectAfterReduceItems(true);
-    await this.homePage.refresh();
     return { orderItemOptionListVisible, originalCategoryItemStillVisible };
   }
 
@@ -3053,8 +3153,9 @@ export class OrderEntryFlow {
     await this.homePage.open(homeUrl);
     await this.homePage.clickAdmin();
     await this.adminPage.setCountCanBeDecimal(true);
-    await this.homePage.refresh();
+    await this.homePage.open(homeUrl);
     await this.homePage.clickTogo();
+    const { groupSwitchDish } = this.orderPageData;
     await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
     await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
     await this.orderDishesPage.changeSelectedItemQuantity(1.25);
@@ -3067,6 +3168,7 @@ export class OrderEntryFlow {
   async splitDecimalQuantityOrderByDrag(homeUrl: string): Promise<DecimalDragSplitResult> {
     await this.enableDecimalCount(homeUrl);
     await this.homePage.clickTogo();
+    const { groupSwitchDish, categorySwitchDish } = this.orderPageData;
     await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
     await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
     await this.orderDishesPage.changeSelectedItemQuantity(2.55);
@@ -3080,7 +3182,8 @@ export class OrderEntryFlow {
     await this.recallPage.openRecentOrder();
     await this.recallPage.openSplitOrder();
     await this.recallPage.splitByDrag();
-    await this.recallPage.openSubOrder(2);
+    await this.recallPage.saveSplit();
+    await this.recallPage.openSubOrder(testEnvironment.testMode === 'live' ? 1 : 2);
     const subOrderItems = await this.recallPage.readAllOrderItems();
     const firstSubOrderTotal = await this.recallPage.readOrderTotal();
     return {
@@ -3093,6 +3196,7 @@ export class OrderEntryFlow {
   async combineDecimalQuantityOrders(homeUrl: string): Promise<DecimalCombineResult> {
     await this.enableDecimalCount(homeUrl);
     await this.homePage.clickTogo();
+    const { groupSwitchDish, categorySwitchDish } = this.orderPageData;
     await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
     await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
     await this.orderDishesPage.changeSelectedItemQuantity(2.55);
@@ -3108,9 +3212,14 @@ export class OrderEntryFlow {
     await this.orderDishesPage.saveOrder();
 
     await this.homePage.clickRecall();
-    await this.recallPage.openRecentOrder();
     await this.recallPage.cancelAllCondition();
-    await this.recallPage.combineOrder(2);
+    if (testEnvironment.testMode === 'live') {
+      await this.recallPage.openOrderByIndex(2);
+      await this.recallPage.combineOrder(1);
+    } else {
+      await this.recallPage.openRecentOrder();
+      await this.recallPage.combineOrder(2);
+    }
     const combinedItems = await this.recallPage.readAllOrderItems();
     const combinedTotal = await this.recallPage.readOrderTotal();
     return {
@@ -3152,8 +3261,9 @@ export class OrderEntryFlow {
     await this.homePage.open(homeUrl);
     await this.homePage.clickAdmin();
     await this.adminPage.setCountCanBeDecimal(false);
-    await this.homePage.refresh();
+    await this.homePage.open(homeUrl);
     await this.homePage.clickTogo();
+    const { groupSwitchDish } = this.orderPageData;
     await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
     await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
     await this.orderDishesPage.changeSelectedItemQuantity(2.55);
@@ -3165,15 +3275,16 @@ export class OrderEntryFlow {
     await this.enableDecimalCount(homeUrl);
     await this.homePage.clickAdmin();
     await this.adminPage?.setCombineSameItem(combineSameItemModes.autoSameStatus, false);
-    await this.homePage.refresh();
+    await this.homePage.open(homeUrl);
     await this.homePage.clickTogo();
+    const { groupSwitchDish } = this.orderPageData;
     await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
     await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
     await this.orderDishesPage.changeSelectedItemPrice(7.95);
     const itemUnitPrice = await this.orderDishesPage.readSelectedItemPrice();
     await this.orderDishesPage.changeSelectedItemQuantity(2.3);
-    await this.orderDishesPage.openGlobalOptionModify();
-    const optionPrice = await this.orderDishesPage.addPricedGlobalOptionListItem();
+    await this.orderDishesPage.openGlobalOptionModify('none');
+    const optionPrice = await this.orderDishesPage.addPricedGlobalOptionListItem(2);
     const firstDishQuantity = await this.orderDishesPage.readOrderLineQuantity(1);
     const secondDishQuantity = await this.orderDishesPage.readOrderLineQuantity(2);
     const secondDishPrice = await this.orderDishesPage.readOrderLinePrice(2);
@@ -3182,7 +3293,7 @@ export class OrderEntryFlow {
     await this.homePage.clickRecall();
     await this.recallPage.openRecentOrder();
     const recallTotal = await this.recallPage.readOrderTotal();
-    await this.restoreSameItemSettings();
+    await this.restoreSameItemSettings(homeUrl);
     return {
       firstDishQuantity,
       secondDishQuantity,
@@ -3201,9 +3312,12 @@ export class OrderEntryFlow {
     await this.homePage.open(homeUrl);
     await this.homePage.clickCustomDelivery();
     await this.deliveryPage.createDeliveryOrder(deliveryOrderInfoSample);
-    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
-    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
-    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    const kitchenDish = this.orderPageData.categorySwitchDish;
+    if (testEnvironment.testMode !== 'live') {
+      await this.orderDishesPage.selectMenuGroup(kitchenDish.group);
+    }
+    await this.orderDishesPage.selectMenuCategory(kitchenDish.category);
+    await this.orderDishesPage.addMenuItem(kitchenDish.name);
     await this.orderDishesPage.saveOrder();
     await this.homePage.clickRecall();
     await this.recallPage.openRecentOrder();
@@ -3212,18 +3326,36 @@ export class OrderEntryFlow {
 
   private async openOrderAndAddDish(homeUrl: string, dish: DishSample): Promise<void> {
     await this.homePage.open(homeUrl);
+    await this.homePage.switchLanguage(languageOptions.default);
     await this.homePage.clickTogo();
     await this.orderDishesPage.selectMenuGroup(dish.group);
-    await this.orderDishesPage.selectMenuCategory(dish.category);
+    if (dish.category) {
+      await this.orderDishesPage.selectMenuCategory(dish.category);
+    }
     await this.orderDishesPage.addMenuItem(dish.name);
   }
 
   private async openDineInOrderAndAddDish(homeUrl: string, dish: DishSample): Promise<void> {
     await this.homePage.open(homeUrl);
+    await this.homePage.switchLanguage(languageOptions.default);
     await this.homePage.clickDineIn();
     await this.orderDishesPage.selectMenuGroup(dish.group);
-    await this.orderDishesPage.selectMenuCategory(dish.category);
+    if (dish.category) {
+      await this.orderDishesPage.selectMenuCategory(dish.category);
+    }
     await this.orderDishesPage.addMenuItem(dish.name);
+  }
+
+  private async setCustomerInfoRequirementSettings(homeUrl: string, enabled: boolean): Promise<void> {
+    if (!this.adminPage) {
+      throw new Error('POS-42889 requires AdminPage');
+    }
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.setCommonEnableSetting('Confirm customer details before payment', enabled, 'payment');
+    await this.adminPage.setCommonEnableSetting('Customer Name required', enabled, 'payment');
+    await this.adminPage.setCommonEnableSetting('Customer Phone required', enabled, 'payment');
   }
 
   private async enableDecimalCount(homeUrl: string): Promise<void> {
@@ -3233,10 +3365,11 @@ export class OrderEntryFlow {
     await this.homePage.open(homeUrl);
     await this.homePage.clickAdmin();
     await this.adminPage.setCountCanBeDecimal(true);
-    await this.homePage.refresh();
+    await this.homePage.open(homeUrl);
   }
 
   private decimalSpecialPriceDish(dish: DecimalSpecialPriceDishKey): DishSample | OptionOrderSample {
+    const { groupSwitchDish, categorySwitchDish, categoryOptionDish } = this.orderPageData;
     const dishes: Record<DecimalSpecialPriceDishKey, DishSample | OptionOrderSample> = {
       groupSwitchDish,
       categorySwitchDish,
@@ -3252,10 +3385,11 @@ export class OrderEntryFlow {
     await this.homePage.open(homeUrl);
     await this.homePage.clickAdmin();
     await this.adminPage.setStaffVoidPrintedItemPermission(false);
-    await this.homePage.refresh();
+    await this.homePage.open(homeUrl);
     await this.homePage.logout();
     await this.homePage.inputEmployeePassword(staffSamples.noVoidPrintedItem.password);
     await this.homePage.clickDineIn();
+    const { groupSwitchDish, categorySwitchDish } = this.orderPageData;
     await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
     await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
     await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
@@ -3273,16 +3407,17 @@ export class OrderEntryFlow {
     await this.adminPage.setCombineSameItem(mode, false);
   }
 
-  private async restoreSameItemSettings(): Promise<void> {
+  private async restoreSameItemSettings(homeUrl: string): Promise<void> {
     if (!this.adminPage) {
       return;
     }
+    await this.homePage.open(homeUrl);
     await this.homePage.clickAdmin();
     await this.adminPage.setCombineSameItem(combineSameItemModes.dontCombine, true);
-    await this.homePage.refresh();
   }
 
   private async addSameDishTimes(times: number): Promise<void> {
+    const { groupSwitchDish } = this.orderPageData;
     await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
     await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
     for (let index = 0; index < times; index += 1) {
@@ -3291,15 +3426,23 @@ export class OrderEntryFlow {
   }
 
   private async openOrderAndAddTwoDishes(homeUrl: string, isDineIn: boolean): Promise<void> {
+    const { groupSwitchDish, categorySwitchDish } = this.orderPageData;
     await this.homePage.open(homeUrl);
     if (isDineIn) {
-      await this.homePage.clickDineIn();
+      if (testEnvironment.testMode === 'live') {
+        await this.homePage.clickDineInWithTable(2);
+      } else {
+        await this.homePage.clickDineIn();
+      }
     } else {
       await this.homePage.clickTogo();
     }
     await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
     await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
     await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    if (isDineIn && testEnvironment.testMode === 'live') {
+      await this.orderDishesPage.addLine();
+    }
     await this.orderDishesPage.selectMenuGroup(categorySwitchDish.group);
     await this.orderDishesPage.selectMenuCategory(categorySwitchDish.category);
     await this.orderDishesPage.addMenuItem(categorySwitchDish.name);
@@ -3309,8 +3452,11 @@ export class OrderEntryFlow {
   }
 
   private async createPickupOrder(): Promise<void> {
+    const { groupSwitchDish } = this.orderPageData;
     await this.homePage.clickPickup();
-    await this.orderDishesPage.startPickupOrder();
+    if (testEnvironment.testMode === 'offline') {
+      await this.orderDishesPage.startPickupOrder();
+    }
     await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
     await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
     await this.orderDishesPage.addMenuItem(groupSwitchDish.name);

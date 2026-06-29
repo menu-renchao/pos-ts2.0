@@ -1,5 +1,11 @@
 import { test as base } from '@playwright/test';
-import { createStubClients, type StubClientSet } from './client-fixtures.js';
+import {
+  createAdminStaffClient,
+  createMenuClient,
+  createPosDbClient,
+  createStubClients,
+  type StubClientSet,
+} from './client-fixtures.js';
 import { testEnvironment, type TestEnvironment } from './environment.js';
 import { createOfflinePosHarness, type OfflinePosHarness } from './offline-pos-harness.js';
 
@@ -26,16 +32,16 @@ export const test = base.extend<PosTestFixtures>({
     await use(createStubClients().adminSettingsClient);
   },
   adminStaffClient: async ({}, use) => {
-    await use(createStubClients().adminStaffClient);
+    await use(createAdminStaffClient(testEnvironment.posHomeUrl, testEnvironment.clientMode));
   },
   menuClient: async ({}, use) => {
-    await use(createStubClients().menuClient);
+    await use(createMenuClient(testEnvironment.posHomeUrl, testEnvironment.clientMode));
   },
   orderClient: async ({}, use) => {
     await use(createStubClients().orderClient);
   },
   posDbClient: async ({}, use) => {
-    await use(createStubClients().posDbClient);
+    await use(createPosDbClient(testEnvironment.testMode));
   },
   restaurantClient: async ({}, use) => {
     await use(createStubClients().restaurantClient);

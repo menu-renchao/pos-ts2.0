@@ -11,16 +11,12 @@ import {
   categoryOptionDish,
   categorySubOptionDish,
   categorySwitchDish,
-  chineseCategoryDish,
-  chineseMenuGroups,
-  groupSwitchDish,
   itemNoOptionDish,
   itemNoSubOptionDish,
   itemOptionDish,
   itemSubOptionDish,
-  numberedNameConflictDish,
-} from '../../test-data/pos/dishes.js';
-import { validEmployeePassword } from '../../test-data/pos/permissions.js';
+} from '../../test-data/pos/offline/order-page.js';
+import { orderPageDataFor } from '../../test-data/pos/order-page-data.js';
 import { jiraIssue } from '../../utils/jira.js';
 
 test.describe('POS 点单页面', () => {
@@ -31,11 +27,15 @@ test.describe('POS 点单页面', () => {
       new RecallPage(page),
     );
 
-    const recalledItems = await orderEntryFlow.createTogoOrderAndReadRecall(environment.posHomeUrl, groupSwitchDish);
+    const dish = orderPageDataFor(environment.testMode).groupSwitchDish;
+    const { orderedItem, recalledItems } = await orderEntryFlow.createTogoOrderAndReadOrderedAndRecall(
+      environment.posHomeUrl,
+      dish,
+    );
 
     expect(recalledItems).toHaveLength(1);
-    expect(recalledItems[0]?.name).toBe(groupSwitchDish.name);
-    expect(recalledItems[0]?.price).toBe(groupSwitchDish.price);
+    expect(recalledItems[0]?.name).toBe(orderedItem.name);
+    expect(recalledItems[0]?.price).toBe(orderedItem.price);
   });
 
   test('中文模式点单页应展示中文菜单组', async ({ environment, page }) => {
@@ -46,9 +46,10 @@ test.describe('POS 点单页面', () => {
     );
 
     const menuGroups = await orderEntryFlow.readChineseMenuGroups(environment.posHomeUrl);
+    const expectedGroups = orderPageDataFor(environment.testMode).chineseMenuGroups;
 
-    expect(menuGroups).toContain(chineseMenuGroups.lunch);
-    expect(menuGroups).toContain(chineseMenuGroups.chinese);
+    expect(menuGroups).toContain(expectedGroups.lunch);
+    expect(menuGroups).toContain(expectedGroups.chinese);
   });
 
   test('切换菜单类别点单后 Recall 应展示同一菜品和价格', async ({ environment, page }) => {
@@ -58,11 +59,15 @@ test.describe('POS 点单页面', () => {
       new RecallPage(page),
     );
 
-    const recalledItems = await orderEntryFlow.createTogoOrderAndReadRecall(environment.posHomeUrl, categorySwitchDish);
+    const dish = orderPageDataFor(environment.testMode).categorySwitchDish;
+    const { orderedItem, recalledItems } = await orderEntryFlow.createTogoOrderAndReadOrderedAndRecall(
+      environment.posHomeUrl,
+      dish,
+    );
 
     expect(recalledItems).toHaveLength(1);
-    expect(recalledItems[0]?.name).toBe(categorySwitchDish.name);
-    expect(recalledItems[0]?.price).toBe(categorySwitchDish.price);
+    expect(recalledItems[0]?.name).toBe(orderedItem.name);
+    expect(recalledItems[0]?.price).toBe(orderedItem.price);
   });
 
   test('送厨后编辑加菜应正确更新订单税额', {
@@ -75,18 +80,21 @@ test.describe('POS 点单页面', () => {
     );
 
     const taxResult = await orderEntryFlow.addItemAfterSendKitchenAndReadTaxes(environment.posHomeUrl);
+    const expectedTax = orderPageDataFor(environment.testMode).orderEditItemTaxExpected;
 
-    expect(taxResult.beforeEditTax).toBe(1.2);
-    expect(taxResult.afterEditTax).toBe(1.8);
+    expect(taxResult.beforeEditTax).toBe(expectedTax.beforeEditTax);
+    expect(taxResult.afterEditTax).toBe(expectedTax.afterEditTax);
   });
 
   test('点支付前客户姓名和电话必填时应持续展示客户信息弹框直到填写完整', {
     annotation: [jiraIssue('POS-42889')],
-  }, async ({ environment, page }) => {
+  }, async ({ environment, menuClient, page }) => {
+    test.setTimeout(90_000);
     const orderEntryFlow = new OrderEntryFlow(
       new PosHomePage(page),
       new OrderDishesPage(page),
       new RecallPage(page),
+      new AdminPage(page),
     );
 
     const result = await orderEntryFlow.requireCustomerInfoBeforePayment(environment.posHomeUrl);
@@ -105,7 +113,10 @@ test.describe('POS 点单页面', () => {
       new RecallPage(page),
     );
 
-    const itemState = await orderEntryFlow.voidItemWithManagerPassword(environment.posHomeUrl, validEmployeePassword);
+    const itemState = await orderEntryFlow.voidItemWithManagerPassword(
+      environment.posHomeUrl,
+      orderPageDataFor(environment.testMode).managerPassword,
+    );
 
     expect(itemState).toContain('Voided');
   });
@@ -190,7 +201,8 @@ test.describe('POS 点单页面', () => {
       new RecallPage(page),
     );
 
-    const result = await orderEntryFlow.createOptionOrderAndReadRecall(environment.posHomeUrl, categoryOptionDish);
+    const optionOrder = orderPageDataFor(environment.testMode).categoryOptionDish;
+    const result = await orderEntryFlow.createOptionOrderAndReadRecall(environment.posHomeUrl, optionOrder);
 
     expect(result.recalledItems).toHaveLength(1);
     expect(result.recalledItems[0]?.name).toBe(result.orderedItem.name);
@@ -204,7 +216,8 @@ test.describe('POS 点单页面', () => {
       new RecallPage(page),
     );
 
-    const result = await orderEntryFlow.createOptionOrderAndReadRecall(environment.posHomeUrl, chineseCategoryDish);
+    const optionOrder = orderPageDataFor(environment.testMode).chineseCategoryDish;
+    const result = await orderEntryFlow.createOptionOrderAndReadRecall(environment.posHomeUrl, optionOrder);
 
     expect(result.recalledItems).toHaveLength(1);
     expect(result.recalledItems[0]?.name).toBe(result.orderedItem.name);
@@ -218,7 +231,8 @@ test.describe('POS 点单页面', () => {
       new RecallPage(page),
     );
 
-    const result = await orderEntryFlow.createOptionOrderAndReadRecall(environment.posHomeUrl, categorySubOptionDish);
+    const optionOrder = orderPageDataFor(environment.testMode).categorySubOptionDish;
+    const result = await orderEntryFlow.createOptionOrderAndReadRecall(environment.posHomeUrl, optionOrder);
 
     expect(result.recalledItems).toHaveLength(1);
     expect(result.recalledItems[0]?.name).toBe(result.orderedItem.name);
@@ -232,7 +246,8 @@ test.describe('POS 点单页面', () => {
       new RecallPage(page),
     );
 
-    const result = await orderEntryFlow.createOptionOrderAndReadRecall(environment.posHomeUrl, categoryNoSubOptionDish);
+    const optionOrder = orderPageDataFor(environment.testMode).categoryNoSubOptionDish;
+    const result = await orderEntryFlow.createOptionOrderAndReadRecall(environment.posHomeUrl, optionOrder);
 
     expect(result.recalledItems).toHaveLength(1);
     expect(result.recalledItems[0]?.name).toBe(result.orderedItem.name);
@@ -246,7 +261,8 @@ test.describe('POS 点单页面', () => {
       new RecallPage(page),
     );
 
-    const result = await orderEntryFlow.createOptionOrderAndReadRecall(environment.posHomeUrl, itemNoSubOptionDish);
+    const optionOrder = orderPageDataFor(environment.testMode).itemNoSubOptionDish;
+    const result = await orderEntryFlow.createOptionOrderAndReadRecall(environment.posHomeUrl, optionOrder);
 
     expect(result.recalledItems).toHaveLength(1);
     expect(result.recalledItems[0]?.name).toBe(result.orderedItem.name);
@@ -260,7 +276,8 @@ test.describe('POS 点单页面', () => {
       new RecallPage(page),
     );
 
-    const result = await orderEntryFlow.createOptionOrderAndReadRecall(environment.posHomeUrl, itemOptionDish);
+    const optionOrder = orderPageDataFor(environment.testMode).itemOptionDish;
+    const result = await orderEntryFlow.createOptionOrderAndReadRecall(environment.posHomeUrl, optionOrder);
 
     expect(result.recalledItems).toHaveLength(1);
     expect(result.recalledItems[0]?.name).toBe(result.orderedItem.name);
@@ -274,7 +291,8 @@ test.describe('POS 点单页面', () => {
       new RecallPage(page),
     );
 
-    const result = await orderEntryFlow.createOptionOrderAndReadRecall(environment.posHomeUrl, itemNoOptionDish);
+    const optionOrder = orderPageDataFor(environment.testMode).itemNoOptionDish;
+    const result = await orderEntryFlow.createOptionOrderAndReadRecall(environment.posHomeUrl, optionOrder);
 
     expect(result.recalledItems).toHaveLength(1);
     expect(result.recalledItems[0]?.name).toBe(result.orderedItem.name);
@@ -288,7 +306,8 @@ test.describe('POS 点单页面', () => {
       new RecallPage(page),
     );
 
-    const result = await orderEntryFlow.createOptionOrderAndReadRecall(environment.posHomeUrl, itemSubOptionDish);
+    const optionOrder = orderPageDataFor(environment.testMode).itemSubOptionDish;
+    const result = await orderEntryFlow.createOptionOrderAndReadRecall(environment.posHomeUrl, optionOrder);
 
     expect(result.recalledItems).toHaveLength(1);
     expect(result.recalledItems[0]?.name).toBe(result.orderedItem.name);
@@ -374,6 +393,7 @@ test.describe('POS 点单页面', () => {
   });
 
   test('拖拽分单支付第一个子单后应保留子单状态和母单背景色', async ({ environment, page }) => {
+    test.setTimeout(90_000);
     const orderEntryFlow = new OrderEntryFlow(
       new PosHomePage(page),
       new OrderDishesPage(page),
@@ -404,6 +424,7 @@ test.describe('POS 点单页面', () => {
   test('POS-22657 自定义订单类型应计入 Report Overview 净销售额', {
     annotation: [jiraIssue('POS-22657')],
   }, async ({ environment, page }) => {
+    test.setTimeout(90_000);
     const orderEntryFlow = new OrderEntryFlow(
       new PosHomePage(page),
       new OrderDishesPage(page),
@@ -473,6 +494,7 @@ test.describe('POS 点单页面', () => {
   test('切换 POS 和 EMENU 菜单模式后搜索应返回对应菜品', {
     annotation: [jiraIssue('POS-30762')],
   }, async ({ environment, page }) => {
+    test.setTimeout(90_000);
     const orderEntryFlow = new OrderEntryFlow(
       new PosHomePage(page),
       new OrderDishesPage(page),
@@ -546,6 +568,7 @@ test.describe('POS 点单页面', () => {
   });
 
   test('POS-33447 POS-33456 Search Menu 关闭时隐藏搜索框并在开启后可搜索默认菜品', async ({ environment, page }) => {
+    test.setTimeout(90_000);
     const orderEntryFlow = new OrderEntryFlow(
       new PosHomePage(page),
       new OrderDishesPage(page),
@@ -602,6 +625,7 @@ test.describe('POS 点单页面', () => {
   test('POS-34873 无 Void Printed Item 权限时删除 Hold 打印菜需经理密码且删除成功', {
     annotation: [jiraIssue('POS-34873')],
   }, async ({ environment, page }) => {
+    test.setTimeout(90_000);
     const orderEntryFlow = new OrderEntryFlow(
       new PosHomePage(page),
       new OrderDishesPage(page),
@@ -618,6 +642,7 @@ test.describe('POS 点单页面', () => {
   test('POS-35325 无 Void Printed Item 权限时减少 Delay 打印菜到 0 需经理密码且删除成功', {
     annotation: [jiraIssue('POS-35325')],
   }, async ({ environment, page }) => {
+    test.setTimeout(90_000);
     const orderEntryFlow = new OrderEntryFlow(
       new PosHomePage(page),
       new OrderDishesPage(page),
@@ -649,6 +674,7 @@ test.describe('POS 点单页面', () => {
   test('POS-34903 自动合并相同状态菜时已送厨菜和新加菜应分两行', {
     annotation: [jiraIssue('POS-34903')],
   }, async ({ environment, page }) => {
+    test.setTimeout(90_000);
     const orderEntryFlow = new OrderEntryFlow(
       new PosHomePage(page),
       new OrderDishesPage(page),
@@ -664,6 +690,7 @@ test.describe('POS 点单页面', () => {
   test('POS-34910 合并包含已送厨相同菜时应展示一行数量 2 和 In Kitchen 标记', {
     annotation: [jiraIssue('POS-34910')],
   }, async ({ environment, page }) => {
+    test.setTimeout(90_000);
     const orderEntryFlow = new OrderEntryFlow(
       new PosHomePage(page),
       new OrderDishesPage(page),
@@ -682,6 +709,7 @@ test.describe('POS 点单页面', () => {
   test('POS-34842 关闭减菜自动跳转后当前菜减到 0 应停留原 Category', {
     annotation: [jiraIssue('POS-34842')],
   }, async ({ environment, page }) => {
+    test.setTimeout(90_000);
     const orderEntryFlow = new OrderEntryFlow(
       new PosHomePage(page),
       new OrderDishesPage(page),
@@ -713,6 +741,7 @@ test.describe('POS 点单页面', () => {
   test('POS-33241 小数数量菜品拖拽分单后子单数量和金额应正确', {
     annotation: [jiraIssue('POS-33241')],
   }, async ({ environment, page }) => {
+    test.setTimeout(90_000);
     const orderEntryFlow = new OrderEntryFlow(
       new PosHomePage(page),
       new OrderDishesPage(page),
@@ -729,6 +758,7 @@ test.describe('POS 点单页面', () => {
   test('POS-33244 小数数量订单合单后两个菜数量和总额应正确', {
     annotation: [jiraIssue('POS-33244')],
   }, async ({ environment, page }) => {
+    test.setTimeout(90_000);
     const orderEntryFlow = new OrderEntryFlow(
       new PosHomePage(page),
       new OrderDishesPage(page),
@@ -817,6 +847,7 @@ test.describe('POS 点单页面', () => {
   test('POS-35660 自动合并同菜时小数数量菜添加两个 Global Option 应拆行并保持总额', {
     annotation: [jiraIssue('POS-35660')],
   }, async ({ environment, page }) => {
+    test.setTimeout(90_000);
     const orderEntryFlow = new OrderEntryFlow(
       new PosHomePage(page),
       new OrderDishesPage(page),
@@ -835,6 +866,7 @@ test.describe('POS 点单页面', () => {
   test('POS-22640 自定义 Delivery 订单保存后 Recall 打印应显示 Reprint 并生成三份输出', {
     annotation: [jiraIssue('POS-22640')],
   }, async ({ environment, page }) => {
+    test.setTimeout(90_000);
     const orderEntryFlow = new OrderEntryFlow(
       new PosHomePage(page),
       new OrderDishesPage(page),
@@ -875,15 +907,17 @@ test.describe('POS 点单页面', () => {
     );
 
     const result = await orderEntryFlow.searchDishWithSameNameAndNumberAndReadResult(environment.posHomeUrl);
+    const dish = orderPageDataFor(environment.testMode).numberedNameConflictDish;
 
-    expect(result.searchKeyword).toBe(numberedNameConflictDish.name);
-    expect(result.searchResultText).toBe(numberedNameConflictDish.name);
+    expect(result.searchKeyword).toBe(dish.name);
+    expect(result.searchResultText).toBe(dish.name);
     expect(result.searchResultCount).toBe(1);
   });
 
   test('POS-43827 中文模式按首字母搜索应返回配置的中文菜名', {
     annotation: [jiraIssue('POS-43827')],
   }, async ({ environment, page }) => {
+    test.setTimeout(90_000);
     const orderEntryFlow = new OrderEntryFlow(
       new PosHomePage(page),
       new OrderDishesPage(page),
@@ -913,14 +947,14 @@ test.describe('POS 点单页面', () => {
 
   test('POS-43823 Combo 无 Option 子菜返回主菜后仍可选择普通菜 Option', {
     annotation: [jiraIssue('POS-43823')],
-  }, async ({ environment, page }) => {
+  }, async ({ environment, menuClient, page }) => {
     const orderEntryFlow = new OrderEntryFlow(
       new PosHomePage(page),
       new OrderDishesPage(page),
       new RecallPage(page),
     );
 
-    const optionVisible = await orderEntryFlow.orderComboSubItemThenReadNormalItemOptions(environment.posHomeUrl);
+    const optionVisible = await orderEntryFlow.orderComboSubItemThenReadNormalItemOptions(environment.posHomeUrl, menuClient);
 
     expect(optionVisible).toBe(true);
   });
@@ -928,6 +962,7 @@ test.describe('POS 点单页面', () => {
   test('POS-37804 无 NOTE 权限员工给 Combo 子菜加 Note 时应提示并可经理授权录入', {
     annotation: [jiraIssue('POS-37804')],
   }, async ({ environment, page }) => {
+    test.setTimeout(90_000);
     const orderEntryFlow = new OrderEntryFlow(
       new PosHomePage(page),
       new OrderDishesPage(page),

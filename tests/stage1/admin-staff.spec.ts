@@ -13,8 +13,8 @@ test.describe('stage1 admin staff migration', () => {
     {
       annotation: jiraIssue('POS-31535'),
     },
-    async ({ environment, page }) => {
-      const flow = new StaffPermissionFlow(new PosHomePage(page), new OrderDishesPage(page));
+    async ({ adminStaffClient, environment, page }) => {
+      const flow = new StaffPermissionFlow(new PosHomePage(page), new OrderDishesPage(page), undefined, adminStaffClient);
 
       const result = await flow.rejectWholeOrderDiscountAboveServerLimitWithoutPassword(environment.posHomeUrl);
 
@@ -28,8 +28,8 @@ test.describe('stage1 admin staff migration', () => {
     {
       annotation: jiraIssue('POS-31537'),
     },
-    async ({ environment, page }) => {
-      const flow = new StaffPermissionFlow(new PosHomePage(page), new OrderDishesPage(page));
+    async ({ adminStaffClient, environment, page }) => {
+      const flow = new StaffPermissionFlow(new PosHomePage(page), new OrderDishesPage(page), undefined, adminStaffClient);
 
       const result = await flow.applyWholeOrderDiscountAboveServerLimitWithManagerPassword(environment.posHomeUrl);
 
@@ -43,8 +43,8 @@ test.describe('stage1 admin staff migration', () => {
     {
       annotation: jiraIssue('POS-31539'),
     },
-    async ({ environment, page }) => {
-      const flow = new StaffPermissionFlow(new PosHomePage(page), new OrderDishesPage(page));
+    async ({ adminStaffClient, environment, page }) => {
+      const flow = new StaffPermissionFlow(new PosHomePage(page), new OrderDishesPage(page), undefined, adminStaffClient);
 
       const result = await flow.applyWholeOrderDiscountAboveManagerLimitWithBossPassword(environment.posHomeUrl);
 
@@ -59,8 +59,8 @@ test.describe('stage1 admin staff migration', () => {
     {
       annotation: jiraIssue('POS-31542'),
     },
-    async ({ environment, page }) => {
-      const flow = new StaffPermissionFlow(new PosHomePage(page), new OrderDishesPage(page));
+    async ({ adminStaffClient, environment, page }) => {
+      const flow = new StaffPermissionFlow(new PosHomePage(page), new OrderDishesPage(page), undefined, adminStaffClient);
 
       const result = await flow.applyItemDiscountAboveServerLimitWithManagerPassword(environment.posHomeUrl);
 
@@ -74,8 +74,8 @@ test.describe('stage1 admin staff migration', () => {
     {
       annotation: jiraIssue('POS-31544'),
     },
-    async ({ environment, page }) => {
-      const flow = new StaffPermissionFlow(new PosHomePage(page), new OrderDishesPage(page));
+    async ({ adminStaffClient, environment, page }) => {
+      const flow = new StaffPermissionFlow(new PosHomePage(page), new OrderDishesPage(page), undefined, adminStaffClient);
 
       const result = await flow.applyItemDiscountAboveManagerLimitWithBossPassword(environment.posHomeUrl);
 
@@ -90,8 +90,8 @@ test.describe('stage1 admin staff migration', () => {
     {
       annotation: jiraIssue('POS-31549'),
     },
-    async ({ environment, page }) => {
-      const flow = new StaffPermissionFlow(new PosHomePage(page), new OrderDishesPage(page), new RecallPage(page));
+    async ({ adminStaffClient, environment, page }) => {
+      const flow = new StaffPermissionFlow(new PosHomePage(page), new OrderDishesPage(page), new RecallPage(page), adminStaffClient);
 
       const result = await flow.rejectRecallWholeOrderAmountDiscountAboveServerLimitWithoutPassword(
         environment.posHomeUrl,
@@ -107,8 +107,8 @@ test.describe('stage1 admin staff migration', () => {
     {
       annotation: jiraIssue('POS-31552'),
     },
-    async ({ environment, page }) => {
-      const flow = new StaffPermissionFlow(new PosHomePage(page), new OrderDishesPage(page), new RecallPage(page));
+    async ({ adminStaffClient, environment, page }) => {
+      const flow = new StaffPermissionFlow(new PosHomePage(page), new OrderDishesPage(page), new RecallPage(page), adminStaffClient);
 
       const result = await flow.cancelRecallWholeOrderAmountDiscountAboveServerLimit(environment.posHomeUrl);
 
@@ -122,8 +122,8 @@ test.describe('stage1 admin staff migration', () => {
     {
       annotation: jiraIssue('POS-31553'),
     },
-    async ({ environment, page }) => {
-      const flow = new StaffPermissionFlow(new PosHomePage(page), new OrderDishesPage(page), new RecallPage(page));
+    async ({ adminStaffClient, environment, page }) => {
+      const flow = new StaffPermissionFlow(new PosHomePage(page), new OrderDishesPage(page), new RecallPage(page), adminStaffClient);
 
       const result = await flow.applyRecallWholeOrderAmountDiscountAboveManagerLimitWithBossPassword(
         environment.posHomeUrl,
@@ -140,8 +140,8 @@ test.describe('stage1 admin staff migration', () => {
     {
       annotation: jiraIssue('POS-31563'),
     },
-    async ({ environment, page }) => {
-      const flow = new StaffPermissionFlow(new PosHomePage(page), new OrderDishesPage(page));
+    async ({ adminStaffClient, environment, page }) => {
+      const flow = new StaffPermissionFlow(new PosHomePage(page), new OrderDishesPage(page), undefined, adminStaffClient);
 
       const result = await flow.requirePermissionForItemDiscountAfterBossAuthorizedWholeOrderDiscount(
         environment.posHomeUrl,
@@ -157,8 +157,8 @@ test.describe('stage1 admin staff migration', () => {
     {
       annotation: jiraIssue('POS-31569'),
     },
-    async ({ environment, page }) => {
-      const flow = new StaffPermissionFlow(new PosHomePage(page), new OrderDishesPage(page));
+    async ({ adminStaffClient, environment, page }) => {
+      const flow = new StaffPermissionFlow(new PosHomePage(page), new OrderDishesPage(page), undefined, adminStaffClient);
 
       const result = await flow.requirePermissionForMultiItemAmountDiscount(environment.posHomeUrl);
 

@@ -16,9 +16,9 @@ export class SupportPage extends PageObject {
 
   constructor(page: Page) {
     super(page);
-    this.patchVersion = page.getByTestId('support-patch-version');
-    this.supportRoot = page.getByTestId('support-page');
-    this.version = page.getByTestId('support-version');
+    this.patchVersion = page.getByTestId('support-patch-version').or(page.locator('xpath=//span[text()="Patch No."]/../p'));
+    this.supportRoot = page.getByTestId('support-page').or(page.locator('xpath=//span[text()="Version:"]'));
+    this.version = page.getByTestId('support-version').or(page.locator('xpath=//span[text()="Version:"]/../p'));
   }
 
   async readSupportInfo(): Promise<SupportInfo> {

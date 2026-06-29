@@ -93,6 +93,8 @@ export class AdminMenuFlow {
       unitPriceDish.name,
       unitPriceDish.price,
     );
+    await this.homePage.open(homeUrl);
+    await this.homePage.switchLanguage(languageOptions.default);
     await this.homePage.clickDineIn();
     await this.orderDishesPage.selectMenuGroup(unitPriceDish.group ?? '');
     await this.orderDishesPage.selectMenuCategory(unitPriceDish.category);
@@ -115,6 +117,8 @@ export class AdminMenuFlow {
       chineseName,
     );
 
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
     return this.adminPage.searchSaleItemLanguageAndReadNames(chineseName);
   }
 
@@ -221,7 +225,12 @@ export class AdminMenuFlow {
     await this.homePage.clickDineIn();
     await this.orderDishesPage.selectMenuGroup(weightQuickComboDish.group);
     await this.orderDishesPage.selectMenuCategory(weightQuickComboDish.category);
-    await this.orderDishesPage.addMenuItem(weightQuickComboDish.name);
+    await this.orderDishesPage.addWeightedQuickCombo(weightQuickComboDish.name, weightQuickComboDish.weight, [
+      {
+        name: 'rcs2',
+        items: [{ name: weightQuickComboDish.subItemName, quantity: 1 }],
+      },
+    ]);
     await this.orderDishesPage.saveOrder();
 
     await this.homePage.clickRecall();

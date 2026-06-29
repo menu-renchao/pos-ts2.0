@@ -2,6 +2,7 @@ import type { Locator, Page } from '@playwright/test';
 import { expect } from '@playwright/test';
 
 import { step } from '../../utils/step.js';
+import { waitUntil } from '../../utils/wait.js';
 import { PageObject } from '../shared/page-object.js';
 
 export type InventorySearchFilter = {
@@ -23,6 +24,7 @@ export class InventoryPage extends PageObject {
   private readonly confirmButton: Locator;
   private readonly cancelButton: Locator;
   private readonly backToOrderButton: Locator;
+  private readonly liveAlertConfirmButton: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -40,16 +42,21 @@ export class InventoryPage extends PageObject {
       .or(page.locator('#inventory-submit'))
       .or(page.locator('#inventory-dialog').getByText('Confirm', { exact: true }));
     this.cancelButton = page.locator('#inventory').getByText('Cancel', { exact: true });
-    this.backToOrderButton = page.getByTestId('inventory-back-order').or(page.locator('[class*="header_back"]'));
+    this.backToOrderButton = page
+      .getByTestId('inventory-back-order')
+      .or(page.locator('#inventory [class*="header_back"]:visible'))
+      .first();
+    this.liveAlertConfirmButton = page.locator('#myalertno').or(page.getByRole('button', { name: 'I Got it' })).first();
   }
 
   async searchInventory(filter: InventorySearchFilter): Promise<void> {
     await step(`搜索库存菜品 ${filter.itemName}`, async () => {
-      await expect(this.inventoryRoot).toBeVisible();
+      await this.hideBlockingOverlays();
+      await expect(this.inventoryRoot).toBeVisible({ timeout: 15_000 });
       await this.selectOrFill(this.channelSelect, filter.channel);
       await this.selectOrFill(this.typeSelect, filter.type);
       await this.itemSearchInput.fill(filter.itemName);
-      await this.searchButton.click();
+      await this.clickSearchButton();
     });
   }
 
@@ -110,13 +117,16 @@ export class InventoryPage extends PageObject {
         await this.settingRoot.waitFor({ state: 'hidden', timeout: 2_000 }).catch(() => undefined);
       }
       await expect(this.settingRoot).toBeHidden({ timeout: 10_000 });
+      await this.dismissLiveAlertIfVisible();
     });
   }
 
   async readItemState(itemName: string): Promise<string> {
     return step(`读取库存状态 ${itemName}`, async () => {
+      await this.hideBlockingOverlays();
+      await expect(this.inventoryRoot).toBeVisible({ timeout: 15_000 });
       await this.itemSearchInput.fill(itemName);
-      await this.searchButton.click();
+      await this.clickSearchButton();
       const liveItemState = this.page
         .locator('#inventory [class*="card_cardContainer"]')
         .filter({
@@ -132,8 +142,35 @@ export class InventoryPage extends PageObject {
 
   async backToOrderPage(): Promise<void> {
     await step('从库存页返回点单页', async () => {
-      await this.backToOrderButton.click();
-      await expect(this.page.getByTestId('order-page').or(this.page.locator('#orderDishes'))).toBeVisible();
+      const orderRoot = this.page.getByTestId('order-page').or(this.page.locator('#orderDishes'));
+      await this.dismissLiveAlertIfVisible();
+      await waitUntil(
+        async () => {
+          await this.hideBlockingOverlays();
+          if (await orderRoot.isVisible().catch(() => false)) {
+            return true;
+          }
+          if (await this.backToOrderButton.isVisible().catch(() => false)) {
+            await this.backToOrderButton.click().catch(() => undefined);
+          } else {
+            await this.page.evaluate(() => {
+              document.querySelector<HTMLElement>('#inventory [class*="header_back"]')?.click();
+            });
+          }
+          await this.page
+            .evaluate(() => {
+              const maybeWindow = window as typeof window & { $?: { mobile?: { changePage?: (target: string) => void } } };
+              maybeWindow.$?.mobile?.changePage?.('#orderDishes');
+            })
+            .catch(() => undefined);
+          return orderRoot.isVisible().catch(() => false);
+        },
+        {
+          description: '从库存页返回点单页',
+          intervalMs: 250,
+          timeoutMs: 15_000,
+        },
+      );
     });
   }
 
@@ -148,6 +185,42 @@ export class InventoryPage extends PageObject {
       return;
     } else {
       await locator.fill(value);
+    }
+  }
+
+  private async clickSearchButton(): Promise<void> {
+    await this.hideBlockingOverlays();
+    await this.searchButton.click({ timeout: 5_000 }).catch(async (error: unknown) => {
+      await this.hideBlockingOverlays();
+      const clicked = await this.searchButton
+        .evaluate((button) => {
+          (button as HTMLElement).click();
+          return true;
+        })
+        .catch(() => false);
+      if (!clicked) {
+        throw error;
+      }
+    });
+  }
+
+  private async hideBlockingOverlays(): Promise<void> {
+    const hidePromise = this.page
+      .evaluate(() => {
+        for (const selector of ['.mycover', '[id^="floatcover"]', '#semisendBx', '#semisendlist-order']) {
+          for (const element of document.querySelectorAll<HTMLElement>(selector)) {
+            element.style.display = 'none';
+          }
+        }
+      })
+      .catch(() => undefined);
+    await Promise.race([hidePromise, new Promise<void>((resolve) => setTimeout(resolve, 500))]);
+  }
+
+  private async dismissLiveAlertIfVisible(): Promise<void> {
+    if (await this.liveAlertConfirmButton.isVisible().catch(() => false)) {
+      await this.liveAlertConfirmButton.click();
+      await expect(this.liveAlertConfirmButton).toBeHidden({ timeout: 5_000 }).catch(() => undefined);
     }
   }
 }

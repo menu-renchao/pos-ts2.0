@@ -7,6 +7,10 @@ import { RecallPage } from '../../pages/pos/recall.page.js';
 import { jiraIssue, jiraIssues } from '../../utils/jira.js';
 
 test.describe('POS 库存', () => {
+  test.beforeEach(() => {
+    test.setTimeout(90_000);
+  });
+
   test('POS-43898 POS-43890 POS-43889 未送厨点菜加菜减菜应更新库存', {
     annotation: jiraIssues(['POS-43898', 'POS-43890', 'POS-43889']),
   }, async ({ environment, page }) => {

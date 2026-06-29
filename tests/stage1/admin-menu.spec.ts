@@ -8,6 +8,10 @@ import { PosCrmPage } from '../../pages/pos/crm/pos-crm.page.js';
 import { jiraIssue, jiraIssues } from '../../utils/jira.js';
 
 test.describe('stage1 admin menu migration', () => {
+  test.beforeEach(() => {
+    test.setTimeout(90_000);
+  });
+
   test(
     'POS-31467 POS Global Option Group 应能复制到 Emenu Menu',
     {

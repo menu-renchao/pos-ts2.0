@@ -12,6 +12,8 @@ This repository is a maintainable Playwright + TypeScript UI automation project 
 ## Automation Rules
 
 - Use Playwright Test as the default runner.
+- When debugging live-mode POS tests and the business flow or selector ownership is unclear, first read the migrated Python regression logic under `pos-regression-test/` and align the TypeScript flow/page object with that proven behavior before changing selectors or retry timing.
+- Do not solve live-mode failures by repeatedly increasing waits, broadening selectors, or guessing DOM paths. If the Python logic shows a concrete operation sequence, migrate that sequence into the appropriate `flows/` and `pages/` boundary.
 - Prefer `data-testid` locators first for stable elements. Only fall back to other locator strategies such as `getByRole`, `getByLabel`, or `getByText` when no reliable `data-testid` is available.
 - Prefer semantic locators such as `getByRole`, `getByLabel`, and `getByText`.
 - Automation does not need to cover Chinese UI business copy. Do not require multilingual locators or Chinese/English fallback selectors for application controls unless the product explicitly exposes both variants as stable DOM contracts. This does not change the requirement that test titles, report steps, and `@step(...)` descriptions use Chinese.

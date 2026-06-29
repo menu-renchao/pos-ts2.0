@@ -1,3 +1,4 @@
+import type { PosDbClient } from '../../clients/db/pos-db.client.js';
 import type { AdminPage } from '../../pages/pos/admin.page.js';
 import type { PosHomePage } from '../../pages/pos/home.page.js';
 import type { OrderDishesPage } from '../../pages/pos/order-dishes.page.js';
@@ -29,6 +30,11 @@ export type MultiPaymentRefundRecordResult = {
   secondPaymentAmount: number;
   firstRefundAmount: number;
   secondRefundAmount: number;
+};
+
+export type PartialCashTipUnpaidAmountResult = {
+  unpaidAmount: number;
+  expectedUnpaidAmount: number;
 };
 
 export class SettlementFlow {
@@ -107,7 +113,7 @@ export class SettlementFlow {
     };
   }
 
-  async addTipAfterPartialCashPaymentAndReadUnpaidAmount(homeUrl: string): Promise<number> {
+  async addTipAfterPartialCashPaymentAndReadUnpaidAmount(homeUrl: string): Promise<PartialCashTipUnpaidAmountResult> {
     await this.homePage.open(homeUrl);
     await this.homePage.clickDineIn();
     await this.orderDishesPage.selectMenuGroup('Lunch');
@@ -116,10 +122,14 @@ export class SettlementFlow {
     await this.orderDishesPage.changeSelectedItemPrice(10);
     await this.orderDishesPage.voidSelectedItemTax();
     await this.orderDishesPage.clickSettle();
+    const total = await this.orderDishesPage.readSettlementTotal();
     await this.orderDishesPage.modifySettlementPaymentAmount(500);
-    await this.orderDishesPage.settleByCash();
+    await this.orderDishesPage.settleCurrentAmountByCash();
     await this.orderDishesPage.addSettlementTip(200);
-    return this.orderDishesPage.readSettlementUnpaidAmount();
+    return {
+      unpaidAmount: await this.orderDishesPage.readSettlementUnpaidAmount(),
+      expectedUnpaidAmount: total - 5 + 2,
+    };
   }
 
   async refundEvenPayCreditAndCashPaymentsAndReadRecords(homeUrl: string): Promise<MultiPaymentRefundRecordResult> {
@@ -183,6 +193,7 @@ export class SettlementFlow {
 
   async paySavedCreditFailureOrderByCashAndReadRecallCashFilter(
     homeUrl: string,
+    posDbClient: PosDbClient,
   ): Promise<CashPaymentRecallFilterResult> {
     await this.homePage.open(homeUrl);
     await this.homePage.clickDineIn();
@@ -193,7 +204,8 @@ export class SettlementFlow {
     await this.homePage.clickRecall();
     await this.recallPage.openRecentOrder();
     const savedOrderNumber = await this.recallPage.readOrderNumber();
-    await this.recallPage.markCurrentOrderCreditCardFailure();
+    const orderId = await posDbClient.readOrderIdByOrderNumber(savedOrderNumber);
+    await posDbClient.addCreditCardPaymentFailureRecord(orderId);
     await this.recallPage.clickSettle();
     await this.recallPage.payCurrentOrderByCash();
     const filteredOrderNumber = await this.recallPage.filterCashPaymentTypeAndReadOrderNumber();

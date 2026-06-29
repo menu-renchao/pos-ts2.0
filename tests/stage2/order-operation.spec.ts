@@ -920,4 +920,23 @@ test.describe('stage2 order operation migration', () => {
     expect(result.subOrderChargeBeforeMove).toHaveProperty('auto_test_fixed');
     expect(result.movedOrderCharge).toEqual(result.subOrderChargeBeforeMove);
   });
+
+  test('POS-30756 信用卡付款后追加小费并切换服务员后状态和金额应保持一致', async ({
+    environment,
+    page,
+  }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.addTipAfterCreditPaymentThenChangeServer(environment.posHomeUrl);
+
+    expect(result.statusAfterTip).toBe(result.statusAfterServerChange);
+    expect(result.totalAfterTip).toBeCloseTo(result.paymentAmountAfterTip, 2);
+    expect(result.totalAfterServerChange).toBeCloseTo(result.totalAfterTip, 2);
+    expect(result.paymentAmountAfterServerChange).toBeCloseTo(result.paymentAmountAfterTip, 2);
+  });
 });

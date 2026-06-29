@@ -82,6 +82,23 @@ export class PosCrmPage extends PageObject {
 
   async openRedeem(): Promise<void> {
     await step('打开 CRM Redeem 面板', async () => {
+      if (!(await this.redeemButton.isVisible({ timeout: 1_000 }).catch(() => false))) {
+        await this.page.locator('#odinfooutbx').click({ timeout: 5_000 }).catch(() => undefined);
+        await this.page.locator('#linkloyalty').click();
+        await this.findVisibleLiveLocator(
+          () => [
+            this.page.locator('#loyaltyFilterPhone'),
+            this.page.getByText('Member Search', { exact: true }),
+            ...this.page.frames().flatMap((frame) => [
+              frame.locator('#loyaltyFilterPhone'),
+              frame.getByText('Member Search', { exact: true }),
+            ]),
+          ],
+          'live CRM Redeem 面板',
+          15_000,
+        );
+        return;
+      }
       await this.redeemButton.click();
       await expect(this.redeemPanel).toBeVisible();
     });
@@ -129,10 +146,102 @@ export class PosCrmPage extends PageObject {
 
   async selectMemberByPhone(phone: string): Promise<void> {
     await step(`选择 CRM 会员 ${phone}`, async () => {
+      if (!(await this.redeemMemberSearchInput.isVisible({ timeout: 1_000 }).catch(() => false))) {
+        const livePhoneInput = await this.findVisibleLiveLocator(
+          () => [this.page.locator('#loyaltyFilterPhone'), ...this.page.frames().map((frame) => frame.locator('#loyaltyFilterPhone'))],
+          'live CRM 旧版电话输入框',
+          1_000,
+        ).catch(() => undefined);
+        if (livePhoneInput && await livePhoneInput.isVisible({ timeout: 1_000 }).catch(() => false)) {
+          await livePhoneInput.fill(phone);
+          await (await this.findVisibleLiveLocator(
+            () => [this.page.locator('#loyaltySearchBtn'), ...this.page.frames().map((frame) => frame.locator('#loyaltySearchBtn'))],
+            'live CRM 旧版搜索按钮',
+          )).click();
+          const liveMember = await this.findVisibleLiveLocator(
+            () => [
+              this.page.locator('#loyaltyresultbx > div > div').first(),
+              ...this.page.frames().map((frame) => frame.locator('#loyaltyresultbx > div > div').first()),
+            ],
+            'live CRM 旧版会员结果',
+            20_000,
+          );
+          await expect(liveMember).toBeVisible({ timeout: 20_000 });
+          await liveMember.click();
+          await (await this.findVisibleLiveLocator(
+            () => [this.page.locator('#applyLoyaltyBtn'), ...this.page.frames().map((frame) => frame.locator('#applyLoyaltyBtn'))],
+            'live CRM 旧版 Apply',
+          )).click();
+        } else {
+          const phoneTab = await this.findVisibleLiveLocator(
+            () => [this.page.getByText('Phone', { exact: true }), ...this.page.frames().map((frame) => frame.getByText('Phone', { exact: true }))],
+            'live CRM Phone tab',
+          );
+          await phoneTab.click();
+          const phoneInput = await this.findVisibleLiveLocator(
+            () => [
+              this.page.getByPlaceholder('Phone'),
+              ...this.page.frames().map((frame) => frame.getByPlaceholder('Phone')),
+              this.page.locator('input:visible').first(),
+              ...this.page.frames().map((frame) => frame.locator('input:visible').first()),
+            ],
+            'live CRM 新版电话输入框',
+            10_000,
+          );
+          await expect(phoneInput).toBeVisible({ timeout: 10_000 });
+          await phoneInput.fill(phone);
+          await (await this.findVisibleLiveLocator(
+            () => [this.page.getByText('Search', { exact: true }), ...this.page.frames().map((frame) => frame.getByText('Search', { exact: true }))],
+            'live CRM 新版搜索按钮',
+          )).click();
+          const result = await this.findVisibleLiveLocator(
+            () => [
+              this.page.locator('xpath=//*[contains(normalize-space(.),"Pts") or contains(normalize-space(.),"points")]/ancestor::div[1]').first(),
+              ...this.page.frames().map((frame) =>
+                frame.locator('xpath=//*[contains(normalize-space(.),"Pts") or contains(normalize-space(.),"points")]/ancestor::div[1]').first(),
+              ),
+            ],
+            'live CRM 新版会员结果',
+            20_000,
+          );
+          await expect(result).toBeVisible({ timeout: 20_000 });
+          await result.click();
+          const applyButton = await this.findVisibleLiveLocator(
+            () => [
+              this.page.locator('#applyLoyaltyBtn'),
+              this.page.getByText('Apply', { exact: true }),
+              ...this.page.frames().flatMap((frame) => [frame.locator('#applyLoyaltyBtn'), frame.getByText('Apply', { exact: true })]),
+            ],
+            'live CRM Apply',
+            5_000,
+          ).catch(() => undefined);
+          if (applyButton && await applyButton.isVisible({ timeout: 5_000 }).catch(() => false)) {
+            await applyButton.click();
+          }
+        }
+        await expect(this.page.locator('#headerPointBalance, #switchLoyaltyMember').first()).toBeVisible({ timeout: 15_000 });
+        return;
+      }
       await this.redeemMemberSearchInput.fill(phone);
       await this.memberOption.click();
       await expect(this.memberName).toBeVisible();
     });
+  }
+
+  private async findVisibleLiveLocator(
+    candidates: () => Locator[],
+    description: string,
+    timeoutMs = 10_000,
+  ): Promise<Locator> {
+    const startedAt = Date.now();
+    while (Date.now() - startedAt <= timeoutMs) {
+      for (const locator of candidates()) {
+        if (await locator.first().isVisible({ timeout: 200 }).catch(() => false)) {
+          return locator.first();
+        }
+      }
+    }
+    throw new Error(`${description} 未找到`);
   }
 
   async openAddNewLoyaltyFromRedeem(): Promise<void> {

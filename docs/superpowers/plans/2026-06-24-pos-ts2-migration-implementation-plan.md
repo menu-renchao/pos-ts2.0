@@ -29,6 +29,21 @@ Do not migrate `stage5`, `__pycache__`, pytest cache files, debug outputs, or so
 
 These preconditions must be completed before starting or resuming business-case migration. They are intentionally separate from scaffold work because they define how completeness is measured.
 
+### Live And Offline Data Isolation
+
+This section is required guidance for follow-up session `019ef862-cf7a-73f0-a996-9ece17f63bc4` and any later live-mode repair work.
+
+- Live-mode data and offline-harness data must be managed as separate concerns. Do not mix live-only samples, selectors, API setup, or cleanup state into offline fixtures, offline harness state, or reusable offline `test-data` constants.
+- Offline data exists only to support first-round migration execution and deterministic stub behavior. It is not business truth for live validation and should remain disposable so it can be removed after migration succeeds.
+- Live data that must be unique or environment-dependent must be generated at runtime in live flows or live-specific helpers, and cleaned up through live API clients in `finally` blocks when possible. Do not encode live temporary values such as created staff names, order numbers, customer names, or one-run passcodes as stable offline samples.
+- Stable shared domain constants may remain in `test-data/` only when they are valid in both modes, such as permission names, role names, enum values, Jira-traceable scenario metadata, and source business expectations. Dynamic live records must not be added there.
+- If a flow supports both modes, branch the data source at the flow/client boundary. The offline branch should consume deterministic stub data; the live branch should call live APIs or generate live-safe values. Avoid `if live then use this offline sample and patch it` patterns.
+- Offline permission overrides, localStorage shims, stub routes, and harness-only selectors must stay inside offline fixtures/harness utilities. Live flows must not rely on those values as the source of truth.
+- Live selectors must reflect the real live DOM contract or the migrated Python page logic. Do not make offline selectors broader to cover live, and do not add live fallback selectors into offline harness markup just to make a test pass.
+- When a bug is live-only, first read the corresponding Python regression logic under `pos-regression-test/` and copy the real business sequence into TypeScript page/flow boundaries. Only update offline behavior if the same business contract is genuinely shared.
+- When deleting offline mode after migration, removing `test-harness/`, offline fixture data, and stub clients should not require changing live client setup, live flow data generation, or live selector definitions.
+- Before handing off live-mode fixes, explicitly state whether each changed datum is `offline-only`, `live-only`, or shared domain metadata.
+
 ### Coverage Matrix
 
 - Maintain: `docs/migration/source-to-target-map.md`

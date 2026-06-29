@@ -1,0 +1,18 @@
+export const liveHomeSelectors = {
+  dineInButton: '#dineinbt',
+  dineInWithoutTableButton: '#tbdinein59',
+  deliveryButton: '#deliverybt',
+  emptyTable: '.tbclasss:not(.ORDERED)',
+  emptyTableCreateOrderTarget: '.tbclasss:not(.ORDERED) > div:last-child',
+  guestNumberDialog: '#choose-guest-num-dialog',
+  tableLoading: 'div[id^="myarea"].ui-page-active #unblockloading',
+  tablePageRoot: 'div[id^="myarea"].ui-page-active',
+  languageButton: '#loginPage.ui-page-active #mlanBtbx, #orderDishes.ui-page-active #orderLanBt',
+  languageOptionEnglish: '#SqlBtBox #lan_en',
+  languageOptionChinese: '#SqlBtBox #lan_zh-cn',
+  logoutButton: '//div[@id="unsave" and not (@style="display: none;")]',
+  pickupButton: '#pickupbt',
+  pickupOrderButton: '#dlvpOdbx',
+  reportButton: '#reportbt',
+  reportPasswordPanel: '#numpanel',
+} as const;

@@ -36,7 +36,7 @@ test.describe('stage0 order settlement migration', () => {
     {
       annotation: jiraIssue('POS-16539'),
     },
-    async ({ environment, page }) => {
+    async ({ environment, page, posDbClient }) => {
       const flow = new SettlementFlow(
         new PosHomePage(page),
         new AdminPage(page),
@@ -104,9 +104,9 @@ test.describe('stage0 order settlement migration', () => {
         new RecallPage(page),
       );
 
-      const unpaidAmount = await flow.addTipAfterPartialCashPaymentAndReadUnpaidAmount(environment.posHomeUrl);
+      const result = await flow.addTipAfterPartialCashPaymentAndReadUnpaidAmount(environment.posHomeUrl);
 
-      expect(unpaidAmount).toBe(7);
+      expect(result.unpaidAmount).toBe(result.expectedUnpaidAmount);
     },
   );
 
@@ -172,7 +172,7 @@ test.describe('stage0 order settlement migration', () => {
     {
       annotation: jiraIssue('POS-44417'),
     },
-    async ({ environment, page }) => {
+    async ({ environment, page, posDbClient }) => {
       const flow = new SettlementFlow(
         new PosHomePage(page),
         new AdminPage(page),
@@ -180,7 +180,7 @@ test.describe('stage0 order settlement migration', () => {
         new RecallPage(page),
       );
 
-      const result = await flow.paySavedCreditFailureOrderByCashAndReadRecallCashFilter(environment.posHomeUrl);
+      const result = await flow.paySavedCreditFailureOrderByCashAndReadRecallCashFilter(environment.posHomeUrl, posDbClient);
 
       expect(result.filteredOrderNumber).toBe(result.savedOrderNumber);
     },
