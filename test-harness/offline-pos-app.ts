@@ -140,6 +140,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         <option value="true">true</option>
         <option value="false">false</option>
       </select>
+      <select data-testid="admin-combine-recalculate-charge">
+        <option value="true">true</option>
+        <option value="false">false</option>
+      </select>
       <select data-testid="admin-kds-category-required">
         <option value="true">true</option>
         <option value="false">false</option>
@@ -758,6 +762,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let currentAutoRedirectAfterReduce = localStorage.getItem('currentAutoRedirectAfterReduce') !== 'false';
       let currentClickSettleAutoSend = localStorage.getItem('currentClickSettleAutoSend') === 'true';
       let currentCountCanBeDecimal = localStorage.getItem('currentCountCanBeDecimal') !== 'false';
+      let currentCombineRecalculateCharge = localStorage.getItem('currentCombineRecalculateCharge') === 'true';
       let currentKdsCategoryRequired = localStorage.getItem('currentKdsCategoryRequired') === 'true';
       let currentKdsCategoryDiscountAllowance = localStorage.getItem('currentKdsCategoryDiscountAllowance') !== 'false';
       let currentRoundingStrategy = localStorage.getItem('currentRoundingStrategy') || 'no_rounding';
@@ -931,6 +936,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const clickSettleAutoSendSelect = document.querySelector('[data-testid="admin-click-settle-auto-send"]');
       const combineSameItemSelect = document.querySelector('[data-testid="admin-combine-same-item"]');
       const countCanBeDecimalSelect = document.querySelector('[data-testid="admin-count-can-be-decimal"]');
+      const combineRecalculateChargeSelect = document.querySelector('[data-testid="admin-combine-recalculate-charge"]');
       const kdsCategoryRequiredSelect = document.querySelector('[data-testid="admin-kds-category-required"]');
       const kdsCategoryDiscountAllowanceSelect = document.querySelector('[data-testid="admin-kds-category-discount-allowance"]');
       const roundingStrategySelect = document.querySelector('[data-testid="admin-rounding-strategy"]');
@@ -3443,15 +3449,27 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         return {
           amount,
           label: order.orderChargeLabel || 'Charge',
+          taxed: Boolean(order.orderChargeTaxed),
         };
+      }
+
+      function combinedOrderTaxAmount(order) {
+        const taxRate = Number((order?.items || []).find((item) => item.taxRate !== undefined)?.taxRate ?? 0.0825);
+        const subtotal = Array.isArray(order?.combinedOrderCharges)
+          ? orderItemsSubtotal(order?.items || [])
+          : Number(order?.subtotal ?? orderItemsSubtotal(order?.items || []));
+        const taxedChargeAmount = (order?.combinedOrderCharges || [])
+          .filter((charge) => Boolean(charge.taxed))
+          .reduce((sum, charge) => sum + Number(charge.amount || 0), 0);
+        return roundMoney((subtotal + taxedChargeAmount) * taxRate);
       }
 
       function mergeCrmOrders(targetOrder, sourceOrder) {
         if (!targetOrder || !sourceOrder) {
           return;
         }
-        const targetCharge = snapshotOrderCharge(targetOrder);
-        const sourceCharge = snapshotOrderCharge(sourceOrder);
+        const targetCharge = currentCombineRecalculateCharge ? null : snapshotOrderCharge(targetOrder);
+        const sourceCharge = currentCombineRecalculateCharge ? null : snapshotOrderCharge(sourceOrder);
         targetOrder.items = [...targetOrder.items, ...sourceOrder.items];
         targetOrder.subtotal = Number((Number(targetOrder.subtotal || 0) + Number(sourceOrder.subtotal || 0)).toFixed(2));
         targetOrder.combinedOrderCharges = [
@@ -3465,6 +3483,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           targetOrder.orderChargeLabel = '';
           targetOrder.orderChargeTriggerMode = '';
         }
+        targetOrder.taxText = combinedOrderTaxAmount(targetOrder).toFixed(2);
         if (targetOrder.crmDiscountRate) {
           targetOrder.rewardDiscount = calculateRewardDiscount(targetOrder);
         }
@@ -3665,7 +3684,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         recallItemCount.textContent = formatItemCount(order.items || []);
         recallGuestPhone.textContent = formatRecallPhone(order.guestPhone || '');
         recallGuestAddress.textContent = order.guestAddress || '';
-        recallOrderSubtotal.textContent = String(order.subtotal ?? orderTotal(order));
+        recallOrderSubtotal.textContent = String(
+          Array.isArray(order.combinedOrderCharges)
+            ? orderItemsSubtotal(order.items || [])
+            : order.subtotal ?? orderTotal(order),
+        );
         recallOrderTax.textContent = order.taxText ?? '';
         recallOrderReward.textContent = formatRewardDiscount(order.rewardDiscount || 0, order.crmDiscountRate);
         recallOrderTotal.textContent =
@@ -4088,6 +4111,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         currentAutoRedirectAfterReduce = autoRedirectAfterReduceSelect.value !== 'false';
         currentClickSettleAutoSend = clickSettleAutoSendSelect.value === 'true';
         currentCountCanBeDecimal = countCanBeDecimalSelect.value === 'true';
+        currentCombineRecalculateCharge = combineRecalculateChargeSelect.value === 'true';
         currentKdsCategoryRequired = kdsCategoryRequiredSelect.value === 'true';
         currentKdsCategoryDiscountAllowance = kdsCategoryDiscountAllowanceSelect.value !== 'false';
         currentRoundingStrategy = roundingStrategySelect.value;
@@ -4100,6 +4124,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         localStorage.setItem('currentAutoRedirectAfterReduce', String(currentAutoRedirectAfterReduce));
         localStorage.setItem('currentClickSettleAutoSend', String(currentClickSettleAutoSend));
         localStorage.setItem('currentCountCanBeDecimal', String(currentCountCanBeDecimal));
+        localStorage.setItem('currentCombineRecalculateCharge', String(currentCombineRecalculateCharge));
         localStorage.setItem('currentKdsCategoryRequired', String(currentKdsCategoryRequired));
         localStorage.setItem('currentKdsCategoryDiscountAllowance', String(currentKdsCategoryDiscountAllowance));
         localStorage.setItem('currentRoundingStrategy', currentRoundingStrategy);
@@ -5823,6 +5848,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       autoRedirectAfterReduceSelect.value = String(currentAutoRedirectAfterReduce);
       clickSettleAutoSendSelect.value = String(currentClickSettleAutoSend);
       countCanBeDecimalSelect.value = String(currentCountCanBeDecimal);
+      combineRecalculateChargeSelect.value = String(currentCombineRecalculateCharge);
       kdsCategoryRequiredSelect.value = String(currentKdsCategoryRequired);
       kdsCategoryDiscountAllowanceSelect.value = String(currentKdsCategoryDiscountAllowance);
       clockText.textContent = localStorage.getItem('offlineClockText') || '';

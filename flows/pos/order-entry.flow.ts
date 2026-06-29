@@ -281,6 +281,13 @@ export type ManualChargeCombineResult = {
   combinedOrderChargeTotal: string;
 };
 
+export type TaxedAutoChargeCombineResult = {
+  combinedOrderChargeItems: Record<string, string>;
+  combinedSubtotal: number;
+  combinedTax: number;
+  expectedCombinedTax: number;
+};
+
 export type AutoChargeMoveItemResult = {
   movedOrderCharge: Record<string, string>;
   originalOrderCharge: Record<string, string>;
@@ -2266,6 +2273,61 @@ export class OrderEntryFlow {
     return {
       combinedOrderChargeItems,
       combinedOrderChargeTotal,
+    };
+  }
+
+  async combineTaxedAutoChargeOrderWithoutRecalculatingCharge(
+    homeUrl: string,
+  ): Promise<TaxedAutoChargeCombineResult> {
+    if (!this.adminPage) {
+      throw new Error('POS-32002 requires AdminPage');
+    }
+
+    const [firstDish, secondDish] = splitDiscountDishes;
+    if (!firstDish || !secondDish) {
+      throw new Error('POS-32002 requires two split discount dish test data records');
+    }
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.setupAutoFixedCharge('auto_test_fixed', 10);
+    await this.adminPage.setAutoChargeTaxed('auto_test_fixed', true);
+    await this.adminPage.setAutoChargeOrderTypes('auto_test_fixed', ['dine-in']);
+    await this.adminPage.setCombineRecalculateCharge(false);
+    await this.homePage.open(homeUrl);
+
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(firstDish.group);
+    await this.orderDishesPage.selectMenuCategory(firstDish.category);
+    await this.orderDishesPage.addMenuItem(firstDish.name);
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickTogo();
+    await this.orderDishesPage.selectMenuGroup(secondDish.group);
+    await this.orderDishesPage.selectMenuCategory(secondDish.category);
+    await this.orderDishesPage.addMenuItem(secondDish.name);
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.combineOrder(2);
+    const combinedOrderChargeItems = await this.recallPage.readOrderChargeItems();
+    const combinedSubtotal = await this.recallPage.readOrderSubtotal();
+    const combinedTax = Number(await this.recallPage.readOrderTaxText());
+    const combinedCharge = Number(combinedOrderChargeItems.auto_test_fixed ?? 0);
+    const expectedCombinedTax = Number(((combinedSubtotal + combinedCharge) * 0.0825).toFixed(2));
+
+    await this.homePage.clickAdmin();
+    await this.adminPage.deleteChargeByName('auto_test_fixed');
+    await this.adminPage.setCombineRecalculateCharge(true);
+
+    return {
+      combinedOrderChargeItems,
+      combinedSubtotal,
+      combinedTax,
+      expectedCombinedTax,
     };
   }
 

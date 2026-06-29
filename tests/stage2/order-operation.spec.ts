@@ -994,4 +994,23 @@ test.describe('stage2 order operation migration', () => {
 
     expect(result.unpaidAfterRefund).toBeCloseTo(result.unpaidBeforeRefund, 2);
   });
+
+  test('POS-32002 合单重算加收关闭时含计税自动加收订单合并后应保留旧加收并重算税', async ({
+    environment,
+    page,
+  }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.combineTaxedAutoChargeOrderWithoutRecalculatingCharge(
+      environment.posHomeUrl,
+    );
+
+    expect(result.combinedOrderChargeItems.auto_test_fixed).toBe('10.00');
+    expect(result.combinedTax).toBeCloseTo(result.expectedCombinedTax, 2);
+  });
 });

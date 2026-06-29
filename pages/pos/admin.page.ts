@@ -24,6 +24,7 @@ export class AdminPage extends PageObject {
   private readonly permissionPasswordInput: Locator;
   private readonly permissionSubmitButton: Locator;
   private readonly autoRedirectAfterReduceSelect: Locator;
+  private readonly combineRecalculateChargeSelect: Locator;
   private readonly combineSameItemSelect: Locator;
   private readonly clickSettleAutoSendSelect: Locator;
   private readonly countCanBeDecimalSelect: Locator;
@@ -183,6 +184,7 @@ export class AdminPage extends PageObject {
     this.permissionPasswordInput = page.getByTestId('admin-permission-password').or(page.locator('#pwd-input'));
     this.permissionSubmitButton = page.getByTestId('admin-permission-submit').or(page.locator('#pwd-input-submit'));
     this.autoRedirectAfterReduceSelect = page.getByTestId('admin-auto-redirect-after-reduce');
+    this.combineRecalculateChargeSelect = page.getByTestId('admin-combine-recalculate-charge');
     this.combineSameItemSelect = page.getByTestId('admin-combine-same-item');
     this.clickSettleAutoSendSelect = page.getByTestId('admin-click-settle-auto-send');
     this.countCanBeDecimalSelect = page.getByTestId('admin-count-can-be-decimal');
@@ -949,6 +951,17 @@ export class AdminPage extends PageObject {
       await this.chargeOldNameInput.fill(chargeName);
       await this.chargeAmountInput.fill(String(amount));
       await this.autoFixedChargeAsTipSetupButton.click();
+    });
+  }
+
+  async setCombineRecalculateCharge(enabled: boolean): Promise<void> {
+    await step(`设置合单重新计算加收为 ${enabled ? '开启' : '关闭'}`, async () => {
+      if (await this.combineRecalculateChargeSelect.isVisible({ timeout: 1_000 }).catch(() => false)) {
+        await this.combineRecalculateChargeSelect.selectOption(String(enabled));
+        await this.saveSettingsButton.click();
+        return;
+      }
+      await this.setCommonEnableSetting('Recalculate charge when combine orders', enabled, 'Recalculate charge');
     });
   }
 
