@@ -1013,4 +1013,26 @@ test.describe('stage2 order operation migration', () => {
     expect(result.combinedOrderChargeItems.auto_test_fixed).toBe('10.00');
     expect(result.combinedTax).toBeCloseTo(result.expectedCombinedTax, 2);
   });
+
+  test('POS-32004 合单重算加收关闭时手动小费加收合并后应保留且 Report Fee 不变', async ({
+    environment,
+    page,
+  }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+      undefined,
+      new ReportPage(page),
+    );
+
+    const result = await orderEntryFlow.combineManualShareTipChargeOrderWithoutChangingReportFee(
+      environment.posHomeUrl,
+    );
+
+    expect(result.combinedOrderChargeItems.manu_test_perc).toBe(result.chargeBeforeCombine);
+    expect(result.combinedChargeTotal).toBe(result.chargeBeforeCombine);
+    expect(result.feeAfterCombine).toBeCloseTo(result.feeBeforeCombine, 2);
+  });
 });

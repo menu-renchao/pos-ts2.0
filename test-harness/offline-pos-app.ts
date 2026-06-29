@@ -162,6 +162,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <input data-testid="admin-charge-new-name" />
       <button data-testid="admin-charge-rename">Rename Charge</button>
       <button data-testid="admin-manual-fixed-charge-setup">Setup Manual Fixed Charge</button>
+      <button data-testid="admin-manual-percent-charge-as-tip-setup">Setup Manual Percent Charge As Tip</button>
       <button data-testid="admin-auto-fixed-charge-setup">Setup Auto Fixed Charge</button>
       <button data-testid="admin-auto-fixed-charge-as-tip-setup">Setup Auto Fixed Charge As Tip</button>
       <button data-testid="admin-auto-percent-charge-setup">Setup Auto Percent Charge</button>
@@ -944,6 +945,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const adminChargeNewNameInput = document.querySelector('[data-testid="admin-charge-new-name"]');
       const adminChargeRenameButton = document.querySelector('[data-testid="admin-charge-rename"]');
       const adminManualFixedChargeSetupButton = document.querySelector('[data-testid="admin-manual-fixed-charge-setup"]');
+      const adminManualPercentChargeAsTipSetupButton = document.querySelector('[data-testid="admin-manual-percent-charge-as-tip-setup"]');
       const adminAutoFixedChargeSetupButton = document.querySelector('[data-testid="admin-auto-fixed-charge-setup"]');
       const adminAutoFixedChargeAsTipSetupButton = document.querySelector('[data-testid="admin-auto-fixed-charge-as-tip-setup"]');
       const adminAutoPercentChargeSetupButton = document.querySelector('[data-testid="admin-auto-percent-charge-setup"]');
@@ -2907,6 +2909,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         const feeAmount = reportOrders
           .filter((order) => Boolean(order.orderChargeShareTip))
           .reduce((total, order) => total + orderChargeAmount(order, order.items || []), 0);
+        const combinedFeeAmount = reportOrders
+          .flatMap((order) => order.combinedOrderCharges || [])
+          .filter((charge) => Boolean(charge.shareTip))
+          .reduce((total, charge) => total + Number(charge.amount || 0), 0);
         const unpaidAmount = reportOrders.reduce((total, order) => {
           if (['Paid', 'Void'].includes(order.status || '')) {
             return total;
@@ -2917,7 +2923,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           return total + Math.max(0, orderTotal(order) - paidAmount);
         }, 0);
         reportOverviewNetSales.textContent = '$' + roundMoney(netSales).toFixed(2);
-        reportFeeAmount.textContent = '$' + roundMoney(feeAmount).toFixed(2);
+        reportFeeAmount.textContent = '$' + roundMoney(feeAmount + combinedFeeAmount).toFixed(2);
         reportHomepageUnpaid.textContent = '$' + roundMoney(unpaidAmount).toFixed(2);
       }
 
@@ -3449,6 +3455,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         return {
           amount,
           label: order.orderChargeLabel || 'Charge',
+          shareTip: Boolean(order.orderChargeShareTip),
           taxed: Boolean(order.orderChargeTaxed),
         };
       }
@@ -4384,6 +4391,26 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
             rate: 0,
             rateType: 'amount',
             shareTip: false,
+            taxed: false,
+          },
+        ];
+        localStorage.setItem('offlineManualCharges', JSON.stringify(manualCharges));
+      });
+      adminManualPercentChargeAsTipSetupButton.addEventListener('click', () => {
+        const chargeName = adminChargeOldNameInput.value || 'manu_test_perc';
+        const percent = Number(adminChargeAmountInput.value || 10);
+        manualCharges = [
+          ...manualCharges.filter((charge) => charge.name !== chargeName),
+          {
+            amount: percent,
+            minAmount: 0,
+            minGuest: 0,
+            minMile: 0,
+            name: chargeName,
+            orderTypes: ['dine-in', 'delivery', 'pickup', 'togo'],
+            rate: percent / 100,
+            rateType: 'percent',
+            shareTip: true,
             taxed: false,
           },
         ];

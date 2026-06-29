@@ -288,6 +288,14 @@ export type TaxedAutoChargeCombineResult = {
   expectedCombinedTax: number;
 };
 
+export type ManualShareTipChargeCombineResult = {
+  chargeBeforeCombine: string;
+  combinedChargeTotal: string;
+  combinedOrderChargeItems: Record<string, string>;
+  feeAfterCombine: number;
+  feeBeforeCombine: number;
+};
+
 export type AutoChargeMoveItemResult = {
   movedOrderCharge: Record<string, string>;
   originalOrderCharge: Record<string, string>;
@@ -2328,6 +2336,75 @@ export class OrderEntryFlow {
       combinedSubtotal,
       combinedTax,
       expectedCombinedTax,
+    };
+  }
+
+  async combineManualShareTipChargeOrderWithoutChangingReportFee(
+    homeUrl: string,
+  ): Promise<ManualShareTipChargeCombineResult> {
+    if (!this.adminPage || !this.reportPage) {
+      throw new Error('POS-32004 requires AdminPage and ReportPage');
+    }
+
+    const [firstDish, secondDish] = splitDiscountDishes;
+    if (!firstDish || !secondDish) {
+      throw new Error('POS-32004 requires two split discount dish test data records');
+    }
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.setupManualPercentChargeAsTip('manu_test_perc', 10);
+    await this.adminPage.setCombineRecalculateCharge(false);
+    await this.homePage.open(homeUrl);
+
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(firstDish.group);
+    await this.orderDishesPage.selectMenuCategory(firstDish.category);
+    await this.orderDishesPage.addMenuItem(firstDish.name);
+    await this.orderDishesPage.applyPresetCharge('manu_test_perc');
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickTogo();
+    await this.orderDishesPage.selectMenuGroup(secondDish.group);
+    await this.orderDishesPage.selectMenuCategory(secondDish.category);
+    await this.orderDishesPage.addMenuItem(secondDish.name);
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickReport();
+    await this.reportPage.inputPasswordInPopup(validEmployeePassword);
+    await this.reportPage.enterTotalReport();
+    const feeBeforeCombine = await this.reportPage.readFeeAmount();
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickRecall();
+    await this.recallPage.openPreviousOrder();
+    const chargeItemsBeforeCombine = await this.recallPage.readOrderChargeItems();
+    const chargeBeforeCombine = chargeItemsBeforeCombine.manu_test_perc ?? '0.00';
+    await this.recallPage.combineOrder(1);
+    const combinedOrderChargeItems = await this.recallPage.readOrderChargeItems();
+    const combinedChargeTotal = Object.values(combinedOrderChargeItems)
+      .reduce((sum, value) => sum + Number(value), 0)
+      .toFixed(2);
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickReport();
+    await this.reportPage.inputPasswordInPopup(validEmployeePassword);
+    await this.reportPage.enterTotalReport();
+    const feeAfterCombine = await this.reportPage.readFeeAmount();
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.deleteChargeByName('manu_test_perc');
+    await this.adminPage.setCombineRecalculateCharge(true);
+
+    return {
+      chargeBeforeCombine,
+      combinedChargeTotal,
+      combinedOrderChargeItems,
+      feeAfterCombine,
+      feeBeforeCombine,
     };
   }
 
