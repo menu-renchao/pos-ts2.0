@@ -940,4 +940,16 @@ test.describe('stage2 order operation migration', () => {
     expect(result.totalAfterServerChange).toBeCloseTo(result.totalAfterTip, 2);
     expect(result.paymentAmountAfterServerChange).toBeCloseTo(result.paymentAmountAfterTip, 2);
   });
+
+  test('POS-31301 Recall 清空单菜折扣后折扣行金额应恢复原菜价', async ({ environment, page }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.clearRecalledItemDiscountsAndReadPrices(environment.posHomeUrl);
+
+    expect(result.itemPriceAfterClear).toBeCloseTo(result.itemOriginalPrice, 2);
+  });
 });

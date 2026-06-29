@@ -34,6 +34,11 @@ export type RecallPrintState = {
 
 export type RecallTipMethod = 'credit' | 'cash';
 
+export type RecallDiscountRowPrices = {
+  currentPrice: number;
+  originalPrice: number;
+};
+
 export class RecallPage extends PageObject {
   private lastOpenedLiveOrderIndex = 0;
 
@@ -45,6 +50,9 @@ export class RecallPage extends PageObject {
   private readonly discountAmountInput: Locator;
   private readonly discountAmountSubmitButton: Locator;
   private readonly discountButton: Locator;
+  private readonly discountClearAllButton: Locator;
+  private readonly discountDoneButton: Locator;
+  private readonly discountRows: Locator;
   private readonly discountTip: Locator;
   private readonly discountWholeOrderPrice: Locator;
   private readonly addSubOrderButton: Locator;
@@ -168,6 +176,9 @@ export class RecallPage extends PageObject {
     this.discountAmountInput = page.getByTestId('recall-order-discount-amount');
     this.discountAmountSubmitButton = page.getByTestId('recall-order-discount-submit');
     this.discountButton = page.getByTestId('recall-order-discount').or(page.locator('#odDiscount'));
+    this.discountClearAllButton = page.getByTestId('recall-discount-clear-all').or(page.locator(liveOrderDishesSelectors.discountClearAllButton));
+    this.discountDoneButton = page.getByTestId('recall-discount-ok').or(page.locator(liveOrderDishesSelectors.discountDoneButton));
+    this.discountRows = page.getByTestId('recall-discount-row').or(page.locator(liveOrderDishesSelectors.discountRows));
     this.discountTip = page.getByTestId('recall-discount-tip').or(page.locator('#myalerttxt'));
     this.discountWholeOrderPrice = page.getByTestId('recall-order-discount-whole-order-price').or(page.locator(liveOrderDishesSelectors.discountRows).first());
     this.addSubOrderButton = page.getByTestId('split-add-suborder');
@@ -377,6 +388,34 @@ export class RecallPage extends PageObject {
       }
       await expect(this.discountWholeOrderPrice).toBeVisible({ timeout: 5_000 });
       return ((await this.discountWholeOrderPrice.textContent()) ?? '').trim();
+    });
+  }
+
+  async clearAllDiscountsAndConfirm(): Promise<void> {
+    await step('Recall 折扣界面清空所有折扣并确认', async () => {
+      await expect(this.discountClearAllButton).toBeVisible({ timeout: 5_000 });
+      await this.discountClearAllButton.click();
+      await expect(this.discountDoneButton).toBeVisible({ timeout: 5_000 });
+      await this.discountDoneButton.click();
+      await expect(this.discountDoneButton).toBeHidden({ timeout: 5_000 }).catch(() => undefined);
+    });
+  }
+
+  async readDiscountItemPrices(index: number): Promise<RecallDiscountRowPrices> {
+    return step(`读取 Recall 折扣界面第 ${index} 个菜品折扣行金额`, async () => {
+      const row = this.discountRows.nth(index - 1);
+      if (await row.isVisible({ timeout: 1_000 }).catch(() => false)) {
+        const originalPrice = await row.getAttribute('data-original-price');
+        const currentPrice = await row.getAttribute('data-current-price');
+        if (originalPrice !== null && currentPrice !== null) {
+          return {
+            currentPrice: parseCurrency(currentPrice),
+            originalPrice: parseCurrency(originalPrice),
+          };
+        }
+      }
+
+      return this.readLiveDiscountRowPricesByIndex(index - 1);
     });
   }
 
@@ -1881,6 +1920,56 @@ export class RecallPage extends PageObject {
       const prices = (row.textContent ?? '').match(/\$?\d+(?:,\d{3})*(?:\.\d{2})?/g) ?? [];
       return prices.at(-1) ?? row.textContent?.trim() ?? '';
     }, index);
+  }
+
+  private async readLiveDiscountRowPricesByIndex(index: number): Promise<RecallDiscountRowPrices> {
+    return this.page.evaluate((targetIndex) => {
+      const visible = (element: HTMLElement) => {
+        const rect = element.getBoundingClientRect();
+        const style = window.getComputedStyle(element);
+        return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
+      };
+      const panel = document.querySelector<HTMLElement>('#subitemlist') ?? document.body;
+      const iconElements = Array.from(panel.querySelectorAll<HTMLElement>('span, div'))
+        .filter(visible)
+        .filter((element) => /check_box/.test(element.textContent?.trim() ?? ''));
+      const rowByTop = new Map<number, { row: HTMLElement; top: number }>();
+      for (const icon of iconElements) {
+        let current: HTMLElement | null = icon;
+        let row: HTMLElement | null = null;
+        for (let depth = 0; current && depth < 8; depth += 1) {
+          const text = current.textContent ?? '';
+          const rect = current.getBoundingClientRect();
+          const prices = text.match(/\$?\d+(?:,\d{3})*(?:\.\d{2})?/g) ?? [];
+          if (prices.length >= 2 && rect.width > 300 && rect.height >= 32 && rect.height <= 140) {
+            row = current;
+            break;
+          }
+          current = current.parentElement;
+        }
+        if (!row) {
+          continue;
+        }
+        const rect = row.getBoundingClientRect();
+        const key = Math.round(rect.top);
+        const existing = rowByTop.get(key);
+        if (!existing || rect.width * rect.height < existing.row.getBoundingClientRect().width * existing.row.getBoundingClientRect().height) {
+          rowByTop.set(key, { row, top: rect.top });
+        }
+      }
+
+      const row = [...rowByTop.values()].sort((left, right) => left.top - right.top)[targetIndex]?.row;
+      if (!row) {
+        throw new Error(`live discount row ${targetIndex} not found`);
+      }
+      const prices = (row.textContent ?? '').match(/\$?\d+(?:,\d{3})*(?:\.\d{2})?/g) ?? [];
+      const originalPrice = prices[0] ?? prices.at(-1) ?? '0';
+      const currentPrice = prices.at(-1) ?? originalPrice;
+      return { currentPrice, originalPrice };
+    }, index).then((prices) => ({
+      currentPrice: parseCurrency(prices.currentPrice),
+      originalPrice: parseCurrency(prices.originalPrice),
+    }));
   }
 
   private async ensureLiveWholeOrderDiscountSelected(): Promise<void> {

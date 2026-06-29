@@ -302,6 +302,11 @@ export type CreditPayAddTipServerChangeResult = {
   totalAfterTip: number;
 };
 
+export type RecallDiscountClearAllResult = {
+  itemOriginalPrice: number;
+  itemPriceAfterClear: number;
+};
+
 export type ManualChargeMoveItemResult = {
   movedItemPrice: number;
   sourceOrderCharge: Record<string, string>;
@@ -2438,6 +2443,28 @@ export class OrderEntryFlow {
       statusAfterTip,
       totalAfterServerChange,
       totalAfterTip,
+    };
+  }
+
+  async clearRecalledItemDiscountsAndReadPrices(homeUrl: string): Promise<RecallDiscountClearAllResult> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.applyItemDiscountPercent(10);
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.openDiscountAndReadWholeOrderPrice();
+    await this.recallPage.clearAllDiscountsAndConfirm();
+    await this.recallPage.openDiscountAndReadWholeOrderPrice();
+    const prices = await this.recallPage.readDiscountItemPrices(1);
+
+    return {
+      itemOriginalPrice: prices.originalPrice,
+      itemPriceAfterClear: prices.currentPrice,
     };
   }
 

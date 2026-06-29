@@ -530,8 +530,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <button data-testid="recall-crm-redeem-discount">10% Off</button>
       <button data-testid="recall-order-discount">Recall Order Discount</button>
       <div data-testid="recall-order-discount-whole-order-price"></div>
+      <div data-testid="recall-discount-rows"></div>
       <input data-testid="recall-order-discount-amount" />
       <button data-testid="recall-order-discount-submit">Apply Recall Amount Discount</button>
+      <button data-testid="recall-discount-clear-all">Clear All Recall Discounts</button>
+      <button data-testid="recall-discount-ok" hidden>OK Recall Discount</button>
       <div data-testid="recall-discount-tip"></div>
       <section data-testid="recall-manager-password-popup" hidden>
         <input data-testid="recall-manager-password" type="password" />
@@ -1250,8 +1253,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const recallCrmRedeemDiscountButton = document.querySelector('[data-testid="recall-crm-redeem-discount"]');
       const recallOrderDiscountButton = document.querySelector('[data-testid="recall-order-discount"]');
       const recallOrderDiscountWholeOrderPrice = document.querySelector('[data-testid="recall-order-discount-whole-order-price"]');
+      const recallDiscountRows = document.querySelector('[data-testid="recall-discount-rows"]');
       const recallOrderDiscountAmountInput = document.querySelector('[data-testid="recall-order-discount-amount"]');
       const recallOrderDiscountSubmitButton = document.querySelector('[data-testid="recall-order-discount-submit"]');
+      const recallDiscountClearAllButton = document.querySelector('[data-testid="recall-discount-clear-all"]');
+      const recallDiscountOkButton = document.querySelector('[data-testid="recall-discount-ok"]');
       const recallDiscountTip = document.querySelector('[data-testid="recall-discount-tip"]');
       const recallManagerPasswordPopup = document.querySelector('[data-testid="recall-manager-password-popup"]');
       const recallManagerPasswordInput = document.querySelector('[data-testid="recall-manager-password"]');
@@ -3589,6 +3595,20 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         });
       }
 
+      function renderRecallDiscountRows(order) {
+        recallDiscountRows.innerHTML = '';
+        (order.items || []).forEach((item) => {
+          const originalPrice = Number(item.originalPrice ?? item.price ?? 0);
+          const currentPrice = Number(item.price ?? originalPrice);
+          const row = document.createElement('div');
+          row.dataset.testid = 'recall-discount-row';
+          row.dataset.originalPrice = originalPrice.toFixed(2);
+          row.dataset.currentPrice = currentPrice.toFixed(2);
+          row.textContent = item.name + ' ' + originalPrice.toFixed(2) + ' ' + currentPrice.toFixed(2);
+          recallDiscountRows.appendChild(row);
+        });
+      }
+
       function renderRecallOrderItems() {
         const order = selectedRecallOrder || {
           items: latestSavedOrderItems,
@@ -3625,6 +3645,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         renderSubOrders(order);
         renderPaymentRecords(order);
         renderRecallItemRows(order.items || []);
+        renderRecallDiscountRows(order);
         if (order.itemOption) {
           const option = document.createElement('div');
           option.dataset.testid = 'recall-item-option';
@@ -5176,6 +5197,31 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       });
       recallOrderDiscountButton.addEventListener('click', () => {
         recallOrderDiscountWholeOrderPrice.textContent = Number(selectedRecallOrder?.subtotal || 0).toFixed(2);
+        if (selectedRecallOrder) {
+          renderRecallDiscountRows(selectedRecallOrder);
+        }
+        recallDiscountOkButton.hidden = false;
+      });
+      recallDiscountClearAllButton.addEventListener('click', () => {
+        if (!selectedRecallOrder) {
+          return;
+        }
+        selectedRecallOrder.items = (selectedRecallOrder.items || []).map((item) => {
+          const originalPrice = Number(item.originalPrice ?? item.price ?? 0);
+          return {
+            ...item,
+            price: originalPrice,
+            itemDiscountPercent: 0,
+            itemDiscountAmount: 0,
+          };
+        });
+        selectedRecallOrder.subtotal = orderItemsSubtotal(selectedRecallOrder.items);
+        persistSavedOrders();
+        renderRecallOrderItems();
+        recallDiscountOkButton.hidden = false;
+      });
+      recallDiscountOkButton.addEventListener('click', () => {
+        recallDiscountOkButton.hidden = true;
       });
       recallOrderDiscountSubmitButton.addEventListener('click', () => {
         if (!selectedRecallOrder) {
