@@ -155,6 +155,7 @@ export class RecallPage extends PageObject {
   private readonly liveReprintButton: Locator;
   private readonly subOrderButton: Locator;
   private readonly cashPaymentTypeFilterButton: Locator;
+  private readonly unpaidFilterButton: Locator;
   private readonly callOffButton: Locator;
   private readonly callOrderButton: Locator;
   private readonly paymentTypeOrderNumber: Locator;
@@ -297,6 +298,7 @@ export class RecallPage extends PageObject {
     this.liveReprintButton = page.locator('#reprintR');
     this.subOrderButton = page.getByTestId('recall-sub-order');
     this.cashPaymentTypeFilterButton = page.getByTestId('recall-payment-type-cash');
+    this.unpaidFilterButton = page.getByTestId('recall-unpaid-filter');
     this.callOffButton = page.getByTestId('recall-call-off');
     this.callOrderButton = page.getByTestId('recall-call-order');
     this.paymentTypeOrderNumber = page.getByTestId('recall-payment-type-order-number');
@@ -1185,6 +1187,16 @@ export class RecallPage extends PageObject {
     });
   }
 
+  async openUnpaidOrders(): Promise<void> {
+    await step('Recall 打开 Unpaid 订单筛选', async () => {
+      if (await this.unpaidFilterButton.isVisible({ timeout: 1_000 }).catch(() => false)) {
+        await this.unpaidFilterButton.click();
+        return;
+      }
+      await this.clickVisibleLiveText('Unpaid');
+    });
+  }
+
   async voidPaidOrder(): Promise<void> {
     await step('Recall Void 已支付订单', async () => {
       if (!(await this.voidPaidOrderButton.isVisible({ timeout: 1_000 }).catch(() => false))) {
@@ -1310,6 +1322,16 @@ export class RecallPage extends PageObject {
 
   async refundPaymentRecord(index: number): Promise<void> {
     await step(`Recall 退款第 ${index} 条付款记录`, async () => {
+      await this.paymentRecordRefundButton(index).click();
+    });
+  }
+
+  async refundPaymentRecordAmount(index: number, amountInCents: number): Promise<void> {
+    await step(`Recall 退款第 ${index} 条付款记录 ${amountInCents} 分`, async () => {
+      const refundAmountInput = this.paymentRecords.nth(index - 1).getByTestId('recall-payment-record-refund-amount');
+      if (await refundAmountInput.isVisible({ timeout: 1_000 }).catch(() => false)) {
+        await refundAmountInput.fill(String(amountInCents));
+      }
       await this.paymentRecordRefundButton(index).click();
     });
   }

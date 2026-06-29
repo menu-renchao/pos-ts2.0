@@ -974,4 +974,24 @@ test.describe('stage2 order operation migration', () => {
     expect(result.feeAfterOrder).toBeCloseTo(result.feeBefore + 10, 2);
     expect(result.feeAfterSplit).toBeCloseTo(result.feeAfterOrder, 2);
   });
+
+  test('POS-30566 信用卡部分退款后 Report 首页 Unpaid 应保持不变', async ({
+    environment,
+    page,
+  }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      undefined,
+      undefined,
+      new ReportPage(page),
+    );
+
+    const result = await orderEntryFlow.refundCreditPaymentAndReadReportHomepageUnpaid(
+      environment.posHomeUrl,
+    );
+
+    expect(result.unpaidAfterRefund).toBeCloseTo(result.unpaidBeforeRefund, 2);
+  });
 });

@@ -313,6 +313,11 @@ export type ChargeAsTipReportFeesResult = {
   feeBefore: number;
 };
 
+export type ReportHomepageUnpaidRefundResult = {
+  unpaidAfterRefund: number;
+  unpaidBeforeRefund: number;
+};
+
 export type ManualChargeMoveItemResult = {
   movedItemPrice: number;
   sourceOrderCharge: Record<string, string>;
@@ -2524,6 +2529,48 @@ export class OrderEntryFlow {
       feeAfterOrder,
       feeAfterSplit,
       feeBefore,
+    };
+  }
+
+  async refundCreditPaymentAndReadReportHomepageUnpaid(homeUrl: string): Promise<ReportHomepageUnpaidRefundResult> {
+    if (!this.reportPage) {
+      throw new Error('POS-30566 requires ReportPage');
+    }
+
+    const [sourceDish] = splitDiscountDishes;
+    if (!sourceDish) {
+      throw new Error('POS-30566 requires split discount dish test data');
+    }
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickReport();
+    await this.reportPage.inputPasswordInPopup(validEmployeePassword);
+    await this.reportPage.enterTotalReport();
+    const unpaidBeforeRefund = await this.reportPage.readHomepageUnpaid();
+    await this.homePage.open(homeUrl);
+
+    await this.homePage.clickDineIn();
+    for (let index = 0; index < 2; index += 1) {
+      await this.orderDishesPage.selectMenuGroup(sourceDish.group);
+      await this.orderDishesPage.selectMenuCategory(sourceDish.category);
+      await this.orderDishesPage.addMenuItem(sourceDish.name);
+    }
+    await this.orderDishesPage.settleByCredit();
+
+    await this.homePage.clickRecall();
+    await this.recallPage.openUnpaidOrders();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.refundPaymentRecordAmount(1, 100);
+    await this.homePage.open(homeUrl);
+
+    await this.homePage.clickReport();
+    await this.reportPage.inputPasswordInPopup(validEmployeePassword);
+    await this.reportPage.enterTotalReport();
+    const unpaidAfterRefund = await this.reportPage.readHomepageUnpaid();
+
+    return {
+      unpaidAfterRefund,
+      unpaidBeforeRefund,
     };
   }
 

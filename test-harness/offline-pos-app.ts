@@ -547,6 +547,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <button data-testid="recall-call-order">Call Order</button>
       <button data-testid="recall-call-off">Call Off</button>
       <button data-testid="recall-payment-type-cash">Cash Filter</button>
+      <button data-testid="recall-unpaid-filter">Unpaid Filter</button>
       <div data-testid="recall-payment-type-order-number"></div>
       <button data-testid="recall-void-paid-order">Void Paid Order</button>
       <label>
@@ -660,6 +661,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       </select>
       <div data-testid="report-overview-net-sales">$0.00</div>
       <div data-testid="report-fee-amount">$0.00</div>
+      <div data-testid="report-homepage-unpaid">$0.00</div>
       <section data-testid="report-right-iframe" hidden>
         <div data-testid="report-start-time"></div>
         <div data-testid="report-end-time"></div>
@@ -1348,6 +1350,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const reportOrderTypeSelect = document.querySelector('[data-testid="report-order-type"]');
       const reportOverviewNetSales = document.querySelector('[data-testid="report-overview-net-sales"]');
       const reportFeeAmount = document.querySelector('[data-testid="report-fee-amount"]');
+      const reportHomepageUnpaid = document.querySelector('[data-testid="report-homepage-unpaid"]');
       const reportRightIframe = document.querySelector('[data-testid="report-right-iframe"]');
       const reportStartTime = document.querySelector('[data-testid="report-start-time"]');
       const reportEndTime = document.querySelector('[data-testid="report-end-time"]');
@@ -2891,14 +2894,25 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
 
       function renderReportOverview() {
         const selectedType = reportOrderTypeSelect.value;
-        const netSales = savedOrders
-          .filter((order) => selectedType === 'ALL' || reportOrderType(order) === selectedType)
+        const reportOrders = savedOrders
+          .filter((order) => selectedType === 'ALL' || reportOrderType(order) === selectedType);
+        const netSales = reportOrders
           .reduce((total, order) => total + Number(order.subtotal || 0), 0);
-        const feeAmount = savedOrders
+        const feeAmount = reportOrders
           .filter((order) => Boolean(order.orderChargeShareTip))
           .reduce((total, order) => total + orderChargeAmount(order, order.items || []), 0);
+        const unpaidAmount = reportOrders.reduce((total, order) => {
+          if (['Paid', 'Void'].includes(order.status || '')) {
+            return total;
+          }
+          const paidAmount = ensurePaymentRecords(order)
+            .filter((record) => Number(record.amount || 0) > 0)
+            .reduce((sum, record) => sum + Number(record.amount || 0), 0);
+          return total + Math.max(0, orderTotal(order) - paidAmount);
+        }, 0);
         reportOverviewNetSales.textContent = '$' + roundMoney(netSales).toFixed(2);
         reportFeeAmount.textContent = '$' + roundMoney(feeAmount).toFixed(2);
+        reportHomepageUnpaid.textContent = '$' + roundMoney(unpaidAmount).toFixed(2);
       }
 
       function localIsoDate(offsetDays) {
@@ -3336,15 +3350,18 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         });
       }
 
-      function refundPaymentRecord(order, recordIndex) {
+      function refundPaymentRecord(order, recordIndex, amountInCents = null) {
         const records = ensurePaymentRecords(order);
         const record = records[recordIndex];
         if (!record || Number(record.amount || 0) <= 0 || record.refunded) {
           return;
         }
+        const refundAmount = amountInCents !== null && Number(amountInCents) > 0
+          ? Math.min(Number(amountInCents) / 100, Number(record.amount || 0))
+          : Number(record.amount || 0);
         record.refunded = true;
         records.push({
-          amount: roundMoney(Number(record.amount) * -1),
+          amount: roundMoney(refundAmount * -1),
           paymentType: record.paymentType,
           refundedFrom: recordIndex + 1,
         });
@@ -3358,15 +3375,18 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           const amount = document.createElement('span');
           amount.dataset.testid = 'recall-payment-record-amount';
           amount.textContent = Number(record.amount || 0).toFixed(2);
+          const refundAmountInput = document.createElement('input');
+          refundAmountInput.dataset.testid = 'recall-payment-record-refund-amount';
           const refundButton = document.createElement('button');
           refundButton.dataset.testid = 'recall-payment-record-refund';
           refundButton.textContent = 'Refund';
           refundButton.disabled = Number(record.amount || 0) <= 0 || Boolean(record.refunded);
           refundButton.addEventListener('click', () => {
-            refundPaymentRecord(order, index);
+            refundPaymentRecord(order, index, refundAmountInput.value ? Number(refundAmountInput.value) : null);
             renderRecallOrderItems();
           });
           row.appendChild(amount);
+          row.appendChild(refundAmountInput);
           row.appendChild(refundButton);
           recallPaymentRecords.appendChild(row);
         });

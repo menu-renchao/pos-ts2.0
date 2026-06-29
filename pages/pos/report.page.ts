@@ -18,6 +18,7 @@ export class ReportPage extends PageObject {
   private readonly liveOrderTypeSelect: Locator;
   private readonly liveOverviewKeyMetrics: Locator;
   private readonly feeAmount: Locator;
+  private readonly homepageUnpaid: Locator;
   private readonly overviewNetSales: Locator;
   private readonly orderTypeSelect: Locator;
   private readonly reportEndTime: Locator;
@@ -46,6 +47,7 @@ export class ReportPage extends PageObject {
     this.liveOrderTypeSelect = this.liveFrame.locator("div[class*='dbPos_topicFilter']").first().locator('ul.tag-list');
     this.liveOverviewKeyMetrics = this.liveFrame.locator('div[class*="dbPos_topicWrapBx1"]');
     this.feeAmount = page.getByTestId('report-fee-amount');
+    this.homepageUnpaid = page.getByTestId('report-homepage-unpaid');
     this.overviewNetSales = page.getByTestId('report-overview-net-sales');
     this.orderTypeSelect = page.getByTestId('report-order-type');
     this.reportEndTime = page.getByTestId('report-end-time');
@@ -209,6 +211,22 @@ export class ReportPage extends PageObject {
       }
       await expect(this.feeAmount).toBeVisible();
       return parseCurrency((await this.feeAmount.textContent()) ?? '0');
+    });
+  }
+
+  async readHomepageUnpaid(): Promise<number> {
+    return step('读取 Report 首页 Unpaid', async () => {
+      if (await this.liveFrameRoot.isVisible().catch(() => false)) {
+        await expect(this.liveOverviewKeyMetrics).toBeVisible({ timeout: 60_000 });
+        const keyMetricsText = (await this.liveOverviewKeyMetrics.innerText()).replace(/\r/g, '');
+        const unpaidMatch = keyMetricsText.match(/Unpaid\s*\n?\s*([-$,\d.]+)/i);
+        if (!unpaidMatch?.[1]) {
+          throw new Error(`Cloud Report Overview 未读取到 Unpaid: ${keyMetricsText}`);
+        }
+        return parseCurrency(unpaidMatch[1]);
+      }
+      await expect(this.homepageUnpaid).toBeVisible();
+      return parseCurrency((await this.homepageUnpaid.textContent()) ?? '0');
     });
   }
 
