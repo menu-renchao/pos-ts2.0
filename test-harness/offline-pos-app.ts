@@ -421,6 +421,16 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <button data-testid="order-charge-10-taxable">Taxable Charge 10%</button>
       <button data-testid="order-charge-5">Charge 5%</button>
       <button data-testid="order-charge-0">Charge 0%</button>
+      <input data-testid="order-custom-charge-value" />
+      <select data-testid="order-custom-charge-rate-type">
+        <option value="amount">amount</option>
+        <option value="percent">percent</option>
+      </select>
+      <select data-testid="order-custom-charge-taxed">
+        <option value="false">false</option>
+        <option value="true">true</option>
+      </select>
+      <button data-testid="order-custom-charge-add">Add Custom Charge</button>
       <button data-testid="order-charge-open">Open Charge</button>
       <section data-testid="order-charge-dialog" hidden>
         <div data-testid="preset-charge-list"></div>
@@ -801,6 +811,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let currentOrderChargeTaxed = false;
       let currentOrderChargeTriggerMode = '';
       let currentOrderChargeShareTip = false;
+      let currentExtraOrderCharges = [];
       let manualCharges = readStoredJson('offlineManualCharges', [
         {
           amount: 10,
@@ -1176,6 +1187,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const orderCharge10TaxableButton = document.querySelector('[data-testid="order-charge-10-taxable"]');
       const orderCharge5Button = document.querySelector('[data-testid="order-charge-5"]');
       const orderChargeZeroButton = document.querySelector('[data-testid="order-charge-0"]');
+      const orderCustomChargeValueInput = document.querySelector('[data-testid="order-custom-charge-value"]');
+      const orderCustomChargeRateTypeSelect = document.querySelector('[data-testid="order-custom-charge-rate-type"]');
+      const orderCustomChargeTaxedSelect = document.querySelector('[data-testid="order-custom-charge-taxed"]');
+      const orderCustomChargeAddButton = document.querySelector('[data-testid="order-custom-charge-add"]');
       const orderChargeOpenButton = document.querySelector('[data-testid="order-charge-open"]');
       const orderChargeDialog = document.querySelector('[data-testid="order-charge-dialog"]');
       const presetChargeList = document.querySelector('[data-testid="preset-charge-list"]');
@@ -2486,6 +2501,44 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         return roundMoney(chargeableSubtotal * currentOrderChargeRate);
       }
 
+      function aggregateChargeSnapshots(charges) {
+        const byLabel = new Map();
+        (charges || []).filter(Boolean).forEach((charge) => {
+          const label = charge.label || 'Charge';
+          const existing = byLabel.get(label) || {
+            amount: 0,
+            label,
+            shareTip: false,
+            taxed: false,
+          };
+          existing.amount = roundMoney(Number(existing.amount || 0) + Number(charge.amount || 0));
+          existing.shareTip = Boolean(existing.shareTip || charge.shareTip);
+          existing.taxed = Boolean(existing.taxed || charge.taxed);
+          byLabel.set(label, existing);
+        });
+        return Array.from(byLabel.values()).filter((charge) => Number(charge.amount || 0) !== 0);
+      }
+
+      function currentChargeSnapshots(subtotal = currentActiveOrderSubtotal()) {
+        const primaryAmount = currentChargeAmount(subtotal);
+        const primaryCharge = primaryAmount
+          ? {
+              amount: primaryAmount,
+              label: currentOrderChargeLabel || 'Charge',
+              shareTip: Boolean(currentOrderChargeShareTip),
+              taxed: Boolean(currentOrderChargeTaxed),
+            }
+          : null;
+        return aggregateChargeSnapshots([
+          primaryCharge,
+          ...currentExtraOrderCharges.map((charge) => ({ ...charge })),
+        ]);
+      }
+
+      function chargeSnapshotTotal(charges) {
+        return roundMoney((charges || []).reduce((total, charge) => total + Number(charge.amount || 0), 0));
+      }
+
       function chargeDisplayValue(charge, subtotal = currentActiveOrderSubtotal()) {
         if (charge?.rateType === 'percent') {
           return 'Add' + Number((charge.rate || 0) * 100).toFixed(0) + '%';
@@ -2616,6 +2669,22 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         currentOrderChargeTriggerMode = 'auto';
       }
 
+      function appendExtraOrderCharge(charge) {
+        const amount = Number(charge.amount || 0);
+        if (!amount) {
+          return;
+        }
+        currentExtraOrderCharges = aggregateChargeSnapshots([
+          ...currentExtraOrderCharges,
+          {
+            amount,
+            label: charge.label || 'Charge',
+            shareTip: Boolean(charge.shareTip),
+            taxed: Boolean(charge.taxed),
+          },
+        ]);
+      }
+
       function renderPresetChargeDialog() {
         presetChargeList.innerHTML = '';
         selectedChargeList.innerHTML = '';
@@ -2625,6 +2694,19 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           button.dataset.chargeName = charge.name;
           button.textContent = charge.name + ' ' + chargeDisplayValue(charge);
           button.addEventListener('click', () => {
+            if (currentOrderChargeTriggerMode === 'auto') {
+              appendExtraOrderCharge({
+                amount: charge.rateType === 'amount'
+                  ? Number(charge.amount || 0)
+                  : roundMoney(currentActiveOrderSubtotal() * Number(charge.rate || 0)),
+                label: charge.name,
+                shareTip: Boolean(charge.shareTip),
+                taxed: Boolean(charge.taxed),
+              });
+              renderPresetChargeDialog();
+              renderOrderAmounts();
+              return;
+            }
             currentOrderChargeRate = Number(charge.rate || 0);
             currentOrderChargeFixedAmount = charge.rateType === 'amount' ? Number(charge.amount || 0) : null;
             currentOrderChargeLabel = charge.name;
@@ -2775,11 +2857,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
 
           return total + 0.6;
         }, 0);
-        if (!currentOrderChargeTaxed) {
-          return itemTax;
-        }
         const taxRate = Number(activeOrderItems().find((item) => item.taxRate !== undefined)?.taxRate ?? 0.0825);
-        return itemTax + currentChargeAmount(currentActiveOrderSubtotal()) * taxRate;
+        const taxedChargeAmount = currentChargeSnapshots(currentActiveOrderSubtotal())
+          .filter((charge) => Boolean(charge.taxed))
+          .reduce((total, charge) => total + Number(charge.amount || 0), 0);
+        return itemTax + taxedChargeAmount * taxRate;
       }
 
       function renderOrderAmounts() {
@@ -2787,7 +2869,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         const subtotal = currentOrderItems
           .filter((item) => item.state !== 'Voided')
           .reduce((total, item) => total + Number(item.price || 0), 0);
-        const chargeAmount = currentChargeAmount(subtotal);
+        const chargeSnapshots = currentChargeSnapshots(subtotal);
+        const chargeAmount = chargeSnapshotTotal(chargeSnapshots);
         const wholeOrderDiscount = currentWholeOrderDiscountAmount(subtotal);
         const rewardDiscount = calculateRewardDiscount({
           subtotal,
@@ -2800,7 +2883,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         orderDiscountAmount.textContent = wholeOrderDiscount ? wholeOrderDiscount.toFixed(2) : '';
         orderPriceDetail.textContent = [
           wholeOrderDiscount ? 'Discount ' + wholeOrderDiscount.toFixed(2) : '',
-          chargeAmount ? (currentOrderChargeLabel || 'Charge') + ' ' + chargeAmount.toFixed(2) : '',
+          ...chargeSnapshots.map((charge) => (charge.label || 'Charge') + ' ' + Number(charge.amount || 0).toFixed(2)),
         ].filter(Boolean).join('\\n');
         orderReward.textContent = formatRewardDiscount(rewardDiscount, currentCrmDiscountRate);
         const settlementAmount = roundMoney(subtotal + wholeOrderDiscount + rewardDiscount + chargeAmount + currentOrderTip);
@@ -3037,6 +3120,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         currentOrderChargeTaxed = false;
         currentOrderChargeTriggerMode = '';
         currentOrderChargeShareTip = false;
+        currentExtraOrderCharges = [];
         currentWholeOrderDiscountRate = 0;
         currentOrderTaxVoided = false;
         currentPaidAmount = 0;
@@ -3143,6 +3227,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
             currentEditingOrder.orderChargeLabel = currentOrderChargeLabel;
             currentEditingOrder.orderChargeTaxed = currentOrderChargeTaxed;
             currentEditingOrder.orderChargeTriggerMode = currentOrderChargeTriggerMode;
+            currentEditingOrder.orderChargeShareTip = currentOrderChargeShareTip;
+            currentEditingOrder.extraOrderCharges = currentExtraOrderCharges.map((charge) => ({ ...charge }));
             currentEditingOrder.taxText = orderTax.textContent || '';
           }
           currentEditingOrder.priceEdited = currentEditingOrder.priceEdited || currentOrderPriceEdited;
@@ -3190,6 +3276,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           orderChargeTaxed: currentOrderChargeTaxed,
           orderChargeTriggerMode: currentOrderChargeTriggerMode,
           orderChargeShareTip: currentOrderChargeShareTip,
+          extraOrderCharges: currentExtraOrderCharges.map((charge) => ({ ...charge })),
           taxText: orderTax.textContent || '',
           inventoryDeductedQuantity: 0,
           paymentRecords: currentPaymentRecords.map((record) => ({ ...record })),
@@ -3230,6 +3317,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         selectedRecallOrder.orderChargeTaxed = currentOrderChargeTaxed;
         selectedRecallOrder.orderChargeTriggerMode = currentOrderChargeTriggerMode;
         selectedRecallOrder.orderChargeShareTip = currentOrderChargeShareTip;
+        selectedRecallOrder.extraOrderCharges = currentExtraOrderCharges.map((charge) => ({ ...charge }));
         selectedRecallOrder.taxText = orderTax.textContent || '';
       }
 
@@ -3298,7 +3386,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           + Number(order?.wholeOrderDiscountAmount || 0)).toFixed(2));
       }
 
-      function orderChargeAmount(order, items, subOrderIndex = null) {
+      function primaryOrderChargeAmount(order, items, subOrderIndex = null) {
         if (Array.isArray(order?.combinedOrderCharges)) {
           return roundMoney(order.combinedOrderCharges.reduce((sum, charge) => sum + Number(charge.amount || 0), 0));
         }
@@ -3323,10 +3411,18 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         return roundMoney(orderItemsSubtotal(items || []) * rate);
       }
 
+      function orderChargeAmount(order, items, subOrderIndex = null) {
+        if (Array.isArray(order?.combinedOrderCharges)) {
+          return roundMoney(order.combinedOrderCharges.reduce((sum, charge) => sum + Number(charge.amount || 0), 0));
+        }
+        return roundMoney(primaryOrderChargeAmount(order, items, subOrderIndex)
+          + (order?.extraOrderCharges || []).reduce((sum, charge) => sum + Number(charge.amount || 0), 0));
+      }
+
       function priceDetailText(order, items, subOrderIndex = null) {
         const lines = ['Subtotal ' + orderItemsSubtotal(items || []).toFixed(2)];
         if (Array.isArray(order?.combinedOrderCharges)) {
-          order.combinedOrderCharges
+          aggregateChargeSnapshots(order.combinedOrderCharges)
             .filter((charge) => Number(charge.amount || 0) !== 0)
             .forEach((charge) => {
               lines.push((charge.label || 'Charge') + ' ' + Number(charge.amount || 0).toFixed(2));
@@ -3334,9 +3430,21 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           return lines.join('\\n');
         }
         const chargeCleared = subOrderIndex !== null && Boolean(order?.subOrderChargeCleared?.[subOrderIndex]);
-        const charge = chargeCleared ? 0 : orderChargeAmount(order, items || [], subOrderIndex);
-        if (charge) {
-          lines.push((order?.orderChargeLabel || 'Charge') + ' ' + charge.toFixed(2));
+        if (!chargeCleared) {
+          const primaryCharge = primaryOrderChargeAmount(order, items || [], subOrderIndex);
+          aggregateChargeSnapshots([
+            primaryCharge
+              ? {
+                  amount: primaryCharge,
+                  label: order?.orderChargeLabel || 'Charge',
+                  shareTip: Boolean(order?.orderChargeShareTip),
+                  taxed: Boolean(order?.orderChargeTaxed),
+                }
+              : null,
+            ...(order?.extraOrderCharges || []),
+          ]).forEach((charge) => {
+            lines.push((charge.label || 'Charge') + ' ' + Number(charge.amount || 0).toFixed(2));
+          });
         }
         return lines.join('\\n');
       }
@@ -3449,17 +3557,19 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         });
       }
 
-      function snapshotOrderCharge(order) {
-        const amount = orderChargeAmount(order, order?.items || []);
-        if (!amount) {
-          return null;
-        }
-        return {
-          amount,
-          label: order.orderChargeLabel || 'Charge',
-          shareTip: Boolean(order.orderChargeShareTip),
-          taxed: Boolean(order.orderChargeTaxed),
-        };
+      function snapshotOrderCharges(order) {
+        const primaryAmount = primaryOrderChargeAmount(order, order?.items || []);
+        return aggregateChargeSnapshots([
+          primaryAmount
+            ? {
+                amount: primaryAmount,
+                label: order.orderChargeLabel || 'Charge',
+                shareTip: Boolean(order.orderChargeShareTip),
+                taxed: Boolean(order.orderChargeTaxed),
+              }
+            : null,
+          ...(order?.extraOrderCharges || []),
+        ]);
       }
 
       function combinedOrderTaxAmount(order) {
@@ -3477,15 +3587,15 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         if (!targetOrder || !sourceOrder) {
           return;
         }
-        const targetCharge = currentCombineRecalculateCharge ? null : snapshotOrderCharge(targetOrder);
-        const sourceCharge = currentCombineRecalculateCharge ? null : snapshotOrderCharge(sourceOrder);
+        const targetCharges = currentCombineRecalculateCharge ? [] : snapshotOrderCharges(targetOrder);
+        const sourceCharges = currentCombineRecalculateCharge ? [] : snapshotOrderCharges(sourceOrder);
         targetOrder.items = [...targetOrder.items, ...sourceOrder.items];
         targetOrder.subtotal = Number((Number(targetOrder.subtotal || 0) + Number(sourceOrder.subtotal || 0)).toFixed(2));
-        targetOrder.combinedOrderCharges = [
+        targetOrder.combinedOrderCharges = aggregateChargeSnapshots([
           ...(targetOrder.combinedOrderCharges || []),
-          targetCharge,
-          sourceCharge,
-        ].filter(Boolean);
+          ...targetCharges,
+          ...sourceCharges,
+        ]);
         if (targetOrder.combinedOrderCharges.length) {
           targetOrder.orderChargeRate = 0;
           targetOrder.orderChargeFixedAmount = null;
@@ -4355,6 +4465,19 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         currentOrderChargeTaxed = false;
         currentOrderChargeTriggerMode = '';
         currentOrderChargeShareTip = false;
+        renderOrderAmounts();
+      });
+      orderCustomChargeAddButton.addEventListener('click', () => {
+        const value = Number(orderCustomChargeValueInput.value || 0);
+        const amount = orderCustomChargeRateTypeSelect.value === 'percent'
+          ? roundMoney(currentActiveOrderSubtotal() * (value / 100))
+          : value;
+        appendExtraOrderCharge({
+          amount,
+          label: 'Charge',
+          shareTip: false,
+          taxed: orderCustomChargeTaxedSelect.value === 'true',
+        });
         renderOrderAmounts();
       });
       orderChargeOpenButton.addEventListener('click', () => {
@@ -5558,6 +5681,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           currentOrderChargeLabel = currentOrderChargeRate || currentOrderChargeFixedAmount !== null ? selectedRecallOrder.orderChargeLabel || 'Charge' : '';
           currentOrderChargeTriggerMode = currentOrderChargeLabel ? selectedRecallOrder.orderChargeTriggerMode || '' : '';
           currentOrderChargeShareTip = Boolean(selectedRecallOrder.orderChargeShareTip);
+          currentExtraOrderCharges = (selectedRecallOrder.extraOrderCharges || []).map((charge) => ({ ...charge }));
           currentOrderType = selectedRecallOrder.orderType || currentOrderType;
           syncCurrentChargeFromAutoConfig();
           if (currentOrderChargeTriggerMode !== 'auto') {

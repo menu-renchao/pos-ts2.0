@@ -300,6 +300,14 @@ export type AutoChargeMinGuestCombineResult = {
   combinedOrderChargeItems: Record<string, string>;
 };
 
+export type MultiChargeCombineResult = {
+  combinedChargeTotal: number;
+  combinedOrderChargeItems: Record<string, string>;
+  firstOrderChargeTotal: number;
+  manualChargeBeforeCombineTotal: number;
+  secondOrderChargeTotal: number;
+};
+
 export type AutoChargeMoveItemResult = {
   movedOrderCharge: Record<string, string>;
   originalOrderCharge: Record<string, string>;
@@ -2458,6 +2466,73 @@ export class OrderEntryFlow {
 
     return {
       combinedOrderChargeItems,
+    };
+  }
+
+  async combineOrdersWithAutoManualAndCustomChargesWithoutRecalculatingCharge(
+    homeUrl: string,
+  ): Promise<MultiChargeCombineResult> {
+    if (!this.adminPage) {
+      throw new Error('POS-32008 requires AdminPage');
+    }
+
+    const [firstDish, secondDish] = splitDiscountDishes;
+    if (!firstDish || !secondDish) {
+      throw new Error('POS-32008 requires two split discount dish test data records');
+    }
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.setupAutoFixedCharge('auto_test1', 10);
+    await this.adminPage.setAutoChargeTaxed('auto_test1', true);
+    await this.adminPage.setAutoChargeOrderTypes('auto_test1', ['dine-in']);
+    await this.adminPage.setupManualPercentChargeAsTip('auto_test2', 10);
+    await this.adminPage.setManualChargeOrderTypes('auto_test2', ['dine-in']);
+    await this.adminPage.setCombineRecalculateCharge(false);
+    await this.homePage.open(homeUrl);
+
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(firstDish.group);
+    await this.orderDishesPage.selectMenuCategory(firstDish.category);
+    await this.orderDishesPage.addMenuItem(firstDish.name);
+    await this.orderDishesPage.applyPresetCharge('auto_test2');
+    await this.orderDishesPage.applyCustomFixedOrderCharge(5, true);
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(secondDish.group);
+    await this.orderDishesPage.selectMenuCategory(secondDish.category);
+    await this.orderDishesPage.addMenuItem(secondDish.name);
+    await this.orderDishesPage.applyPresetCharge('auto_test2');
+    await this.orderDishesPage.applyCustomPercentOrderCharge(10, false);
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    const secondOrderChargeItems = await this.recallPage.readOrderChargeItems();
+    await this.recallPage.openPreviousOrder();
+    const firstOrderChargeItems = await this.recallPage.readOrderChargeItems();
+    await this.recallPage.combineOrder(1);
+    const combinedOrderChargeItems = await this.recallPage.readOrderChargeItems();
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.deleteChargeByName('auto_test1');
+    await this.adminPage.deleteChargeByName('auto_test2');
+    await this.adminPage.setCombineRecalculateCharge(true);
+
+    const chargeTotal = (charges: Record<string, string>): number =>
+      Object.values(charges).reduce((sum, value) => sum + Number(value), 0);
+
+    return {
+      combinedChargeTotal: chargeTotal(combinedOrderChargeItems),
+      combinedOrderChargeItems,
+      firstOrderChargeTotal: chargeTotal(firstOrderChargeItems),
+      manualChargeBeforeCombineTotal: Number(firstOrderChargeItems.auto_test2 ?? 0)
+        + Number(secondOrderChargeItems.auto_test2 ?? 0),
+      secondOrderChargeTotal: chargeTotal(secondOrderChargeItems),
     };
   }
 

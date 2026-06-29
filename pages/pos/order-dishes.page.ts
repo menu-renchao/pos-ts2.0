@@ -98,6 +98,10 @@ export class OrderDishesPage extends PageObject {
   private readonly orderCharge10TaxableButton: Locator;
   private readonly orderCharge5Button: Locator;
   private readonly orderChargeZeroButton: Locator;
+  private readonly customChargeValueInput: Locator;
+  private readonly customChargeRateTypeSelect: Locator;
+  private readonly customChargeTaxedSelect: Locator;
+  private readonly customChargeAddButton: Locator;
   private readonly orderChargeLabel: Locator;
   private readonly orderChargePrice: Locator;
   private readonly pickupButton: Locator;
@@ -296,6 +300,10 @@ export class OrderDishesPage extends PageObject {
     this.orderCharge10TaxableButton = page.getByTestId('order-charge-10-taxable');
     this.orderCharge5Button = page.getByTestId('order-charge-5');
     this.orderChargeZeroButton = page.getByTestId('order-charge-0');
+    this.customChargeValueInput = page.getByTestId('order-custom-charge-value');
+    this.customChargeRateTypeSelect = page.getByTestId('order-custom-charge-rate-type');
+    this.customChargeTaxedSelect = page.getByTestId('order-custom-charge-taxed');
+    this.customChargeAddButton = page.getByTestId('order-custom-charge-add');
     this.orderChargeLabel = page.getByTestId('order-charge-label');
     this.orderChargePrice = page.getByTestId('order-charge-price');
     this.pickupButton = page.getByTestId('order-pickup');
@@ -2286,6 +2294,26 @@ export class OrderDishesPage extends PageObject {
   async applyTaxableOrderCharge(rate: '10%'): Promise<void> {
     await step(`应用计税整单按比例加收 ${rate}`, async () => {
       await this.orderCharge10TaxableButton.click();
+    });
+  }
+
+  async applyCustomFixedOrderCharge(amount: number, taxed: boolean): Promise<void> {
+    await step(`应用自定义固定加收 ${amount} 且计税为 ${taxed ? '开启' : '关闭'}`, async () => {
+      await expect(this.customChargeValueInput).toBeVisible();
+      await this.customChargeValueInput.fill(String(amount));
+      await this.customChargeRateTypeSelect.selectOption('amount');
+      await this.customChargeTaxedSelect.selectOption(taxed ? 'true' : 'false');
+      await this.customChargeAddButton.click();
+    });
+  }
+
+  async applyCustomPercentOrderCharge(percent: number, taxed: boolean): Promise<void> {
+    await step(`应用自定义百分比加收 ${percent}% 且计税为 ${taxed ? '开启' : '关闭'}`, async () => {
+      await expect(this.customChargeValueInput).toBeVisible();
+      await this.customChargeValueInput.fill(String(percent));
+      await this.customChargeRateTypeSelect.selectOption('percent');
+      await this.customChargeTaxedSelect.selectOption(taxed ? 'true' : 'false');
+      await this.customChargeAddButton.click();
     });
   }
 

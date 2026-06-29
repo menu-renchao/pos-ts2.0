@@ -1053,4 +1053,31 @@ test.describe('stage2 order operation migration', () => {
 
     expect(result.combinedOrderChargeItems).toEqual({});
   });
+
+  test('POS-32008 合单重算加收关闭时自动手动自定义加收应分别累加保留', async ({
+    environment,
+    page,
+  }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.combineOrdersWithAutoManualAndCustomChargesWithoutRecalculatingCharge(
+      environment.posHomeUrl,
+    );
+
+    expect(Object.keys(result.combinedOrderChargeItems)).toHaveLength(3);
+    expect(result.combinedOrderChargeItems.auto_test1).toBe('20.00');
+    expect(Number(result.combinedOrderChargeItems.auto_test2)).toBeCloseTo(
+      result.manualChargeBeforeCombineTotal,
+      2,
+    );
+    expect(result.combinedChargeTotal).toBeCloseTo(
+      result.firstOrderChargeTotal + result.secondOrderChargeTotal,
+      2,
+    );
+  });
 });
