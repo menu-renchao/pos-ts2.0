@@ -1,6 +1,7 @@
 import type { PosHomePage } from '../../pages/pos/home.page.js';
 import type { MessageCenterPage } from '../../pages/pos/message-center.page.js';
 import type { SdiOrderMessageSample } from '../../test-data/pos/messages.js';
+import { validEmployeePassword } from '../../test-data/pos/permissions.js';
 
 export class SdiMessageFlow {
   constructor(
@@ -13,6 +14,7 @@ export class SdiMessageFlow {
     messageSample: SdiOrderMessageSample,
   ): Promise<string> {
     await this.homePage.open(homeUrl);
+    await this.homePage.submitEmployeePasswordIfPromptVisible(validEmployeePassword);
     await this.homePage.openMessageCenter();
     await this.messageCenterPage.switchMessageType(messageSample.messageType);
     await this.messageCenterPage.clearAll();

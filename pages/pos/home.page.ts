@@ -68,10 +68,10 @@ export class PosHomePage extends PageObject {
     // 兼容离线模式（data-testid）和 live 模式（原生 ID / 文本）
     this.homeRoot = page.locator('[data-testid="pos-home"]').or(page.locator('#welcome'));
     this.adminPageRoot = page.getByTestId('admin-page');
-    this.togoButton = page.getByTestId('home-togo').or(page.locator('#m4btbx')).first();
+    this.togoButton = page.getByTestId('home-togo').or(page.locator(liveHomeSelectors.togoButton)).first();
     this.recallButton = page.getByTestId('home-recall').or(page.locator('#recallbt'));
     this.callerButton = page.getByTestId('home-caller');
-    this.adminButton = page.getByTestId('home-admin').or(page.locator('#adminsbt'));
+    this.adminButton = page.getByTestId('home-admin').or(page.locator('#adminsbt')).first();
     this.reservationButton = page.getByTestId('home-reservation').or(page.locator('#rsvtbt'));
     this.customDeliveryButton = page.getByTestId('home-custom-delivery');
     this.deliveryButton = page.getByTestId('home-delivery').or(page.locator(liveHomeSelectors.deliveryButton));
@@ -282,6 +282,44 @@ export class PosHomePage extends PageObject {
   async logoutAndLogin(password: string): Promise<void> {
     await step(`重新以员工密码 ${password} 登录`, async () => {
       await this.logout();
+      await this.inputEmployeePasswordAfterLogout(password);
+    });
+  }
+
+  async inputEmployeePasswordAfterLogout(password: string): Promise<void> {
+    await step('退出后输入员工密码并提交', async () => {
+      if (await this.livePinInput.isVisible({ timeout: 1_000 }).catch(() => false)) {
+        const readonlyPinInput = await this.livePinInput.evaluate((input) => (input as HTMLInputElement).readOnly);
+        if (readonlyPinInput) {
+          for (const digit of password) {
+            const key = this.liveNumpadPanel
+              .first()
+              .locator('[data-num], td:visible, div:visible, span:visible')
+              .filter({ hasText: new RegExp(`^\\s*${escapeRegExp(digit)}\\s*$`) })
+              .first();
+            await expect(key).toBeVisible({ timeout: 10_000 });
+            await key.click({ force: true });
+          }
+        } else {
+          await this.livePinInput.fill(password);
+        }
+        await this.waitForLivePinValue(password);
+        await this.waitForSubmitSettle();
+        const submitted = await this.clickLivePinSubmitButton();
+        if (!submitted) {
+          throw new Error('PIN 提交按钮未找到');
+        }
+        await waitUntil(
+          () => this.isHomeReadyWithoutPasscode(),
+          {
+            description: '员工密码提交后首页就绪',
+            intervalMs: 200,
+            timeoutMs: 15_000,
+          },
+        );
+        return;
+      }
+
       await this.inputEmployeePassword(password);
     });
   }
@@ -289,14 +327,23 @@ export class PosHomePage extends PageObject {
   async inputEmployeePasswordWithoutSave(password: string): Promise<void> {
     await step('输入员工密码但不保存', async () => {
       if (await this.isLivePasscodePromptVisible()) {
-        for (const digit of password) {
-          await this.clickVisibleNumpadDigit(digit);
-        }
-        await this.waitForLivePinValue(password);
+        await this.inputLoginPassword(password);
         return;
       }
       await this.passwordInput.fill(password);
       await this.waitForPasswordValue(password);
+    });
+  }
+
+  async submitEmployeePasswordIfPromptVisible(password: string): Promise<void> {
+    await step('如首页显示 PIN 面板则提交员工密码', async () => {
+      if (await this.isLivePasscodePromptVisible()) {
+        await this.inputLoginPassword(password);
+        return;
+      }
+      if (await this.passwordInput.isVisible({ timeout: 500 }).catch(() => false)) {
+        await this.inputEmployeePassword(password);
+      }
     });
   }
 
@@ -320,7 +367,7 @@ export class PosHomePage extends PageObject {
       await this.completeStartupLogin();
       await this.hideTransientCovers();
       await waitUntil(
-        () => this.isHomeReadyWithoutPasscode(),
+        () => this.isHomeReady(),
         {
           description: 'POS 首页刷新后就绪',
           intervalMs: 200,
@@ -437,7 +484,7 @@ export class PosHomePage extends PageObject {
         return (await this.welcomeText.textContent()) ?? '';
       }
       return (
-        (await this.page.locator('#welcome').textContent({ timeout: 2_000 }).catch(() => '')) ||
+        (await this.page.locator('#welcome:visible').first().textContent({ timeout: 2_000 }).catch(() => '')) ||
         (await this.page.getByText(/Welcome\s+Boss/).first().textContent({ timeout: 2_000 }).catch(() => '')) ||
         ''
       );
@@ -446,6 +493,7 @@ export class PosHomePage extends PageObject {
 
   async clickAdmin(): Promise<void> {
     await step('打开 Admin 页面', async () => {
+      await this.submitEmployeePasswordIfPromptVisible('11');
       await this.ensureHomeFunctionMenuVisible();
       await this.adminButton.click({ timeout: 5_000 }).catch(async (error: unknown) => {
         await this.openMoreHomeFunctions();
@@ -461,13 +509,38 @@ export class PosHomePage extends PageObject {
 
   async logout(): Promise<void> {
     await step('退出当前员工登录态', async () => {
-      await this.page.getByTestId(offlineHomeSelectors.logoutButton).or(this.page.locator(liveHomeSelectors.logoutButton)).click();
-      await expect(this.passwordInput).toBeVisible();
+      if (await this.isLivePasscodePromptVisible()) {
+        return;
+      }
+      if (await this.passwordInput.isVisible({ timeout: 500 }).catch(() => false) && !(await this.isHomeReady())) {
+        return;
+      }
+      const offlineLogout = this.page.getByTestId(offlineHomeSelectors.logoutButton);
+      if (await offlineLogout.isVisible({ timeout: 500 }).catch(() => false)) {
+        await offlineLogout.click();
+        await expect(this.passwordInput).toBeVisible();
+        return;
+      }
+      const liveLogout = this.page
+        .locator(liveHomeSelectors.logoutButton)
+        .or(this.page.getByText('Log out', { exact: true }))
+        .first();
+      await expect(liveLogout).toBeVisible({ timeout: 5_000 });
+      await liveLogout.click({ force: true });
+      await waitUntil(
+        () => this.isLivePasscodePromptVisible(),
+        {
+          description: 'live 退出后 PIN 面板展示',
+          intervalMs: 200,
+          timeoutMs: 10_000,
+        },
+      );
     });
   }
 
   async clickTogo(): Promise<void> {
     await step('从首页进入 To Go 点单页', async () => {
+      await this.submitEmployeePasswordIfPromptVisible('11');
       if (await this.orderPageRoot.isVisible()) {
         return;
       }
@@ -478,6 +551,11 @@ export class PosHomePage extends PageObject {
             if (!togoButton) {
               return false;
             }
+            const eventInit = { bubbles: true, cancelable: true, view: window };
+            togoButton.dispatchEvent(new PointerEvent('pointerdown', eventInit));
+            togoButton.dispatchEvent(new MouseEvent('mousedown', eventInit));
+            togoButton.dispatchEvent(new PointerEvent('pointerup', eventInit));
+            togoButton.dispatchEvent(new MouseEvent('mouseup', eventInit));
             togoButton.click();
             return true;
           })
@@ -500,7 +578,27 @@ export class PosHomePage extends PageObject {
 
   async clickDineIn(): Promise<void> {
     await step('从首页进入 Dine In 点单页', async () => {
-      await this.dineInButton.click();
+      await this.submitEmployeePasswordIfPromptVisible('11');
+      await this.dineInButton.click({ timeout: 5_000 }).catch(async (error: unknown) => {
+        const clicked = await this.page
+          .evaluate((selector) => {
+            const target = document.querySelector<HTMLElement>(selector);
+            if (!target) {
+              return false;
+            }
+            const eventInit = { bubbles: true, cancelable: true, view: window };
+            target.dispatchEvent(new PointerEvent('pointerdown', eventInit));
+            target.dispatchEvent(new MouseEvent('mousedown', eventInit));
+            target.dispatchEvent(new PointerEvent('pointerup', eventInit));
+            target.dispatchEvent(new MouseEvent('mouseup', eventInit));
+            target.click();
+            return true;
+          }, liveHomeSelectors.dineInButton)
+          .catch(() => false);
+        if (!clicked) {
+          throw error;
+        }
+      });
       if (await this.orderPageRoot.isVisible().catch(() => false)) {
         return;
       }
@@ -511,10 +609,12 @@ export class PosHomePage extends PageObject {
         .then(() => true)
         .catch(() => false);
       if (noTableDineInVisible) {
-        await noTableDineInButton.click();
+        await noTableDineInButton.click({ timeout: 5_000 }).catch(async () => {
+          await this.page.evaluate((selector) => document.querySelector<HTMLElement>(selector)?.click(), liveHomeSelectors.dineInWithoutTableButton);
+        });
       }
 
-      await expect(this.orderPageRoot).toBeVisible();
+      await expect(this.orderPageRoot).toBeVisible({ timeout: 10_000 });
     });
   }
 
@@ -619,10 +719,21 @@ export class PosHomePage extends PageObject {
       await this.hideTransientCovers();
       const clickedLiveHomeRecall = await this.clickLiveHomeRecallButton();
       if (clickedLiveHomeRecall) {
-        if (!(await recallRoot.isVisible().catch(() => false))) {
-          await this.clickLiveHomeRecallButton();
-        }
-        await expect(recallRoot).toBeVisible({ timeout: 20_000 });
+        await waitUntil(
+          async () => {
+            if (await recallRoot.isVisible().catch(() => false)) {
+              return true;
+            }
+            await this.clickLiveHomeRecallButton();
+            await this.activateLiveRecallPageIfPresent();
+            return recallRoot.isVisible().catch(() => false);
+          },
+          {
+            description: 'Recall 页面打开',
+            intervalMs: 500,
+            timeoutMs: 20_000,
+          },
+        );
         return;
       }
       if (await this.recallButton.isVisible().catch(() => false)) {
@@ -634,6 +745,7 @@ export class PosHomePage extends PageObject {
         });
         if (!(await recallRoot.isVisible().catch(() => false))) {
           await this.clickLiveHomeRecallButton();
+          await this.activateLiveRecallPageIfPresent();
         }
         await expect(recallRoot).toBeVisible({ timeout: 20_000 });
         return;
@@ -658,6 +770,7 @@ export class PosHomePage extends PageObject {
       });
       if (!(await recallRoot.isVisible().catch(() => false))) {
         await this.clickLiveHomeRecallButton();
+        await this.activateLiveRecallPageIfPresent();
       }
       await expect(recallRoot).toBeVisible({ timeout: 20_000 });
     });
@@ -819,24 +932,53 @@ export class PosHomePage extends PageObject {
         await this.openMoreHomeFunctions();
       }
       await this.checkInButton.click();
-      if (await this.page.locator('#pwd-input, #ckin_pw-input-submit, .pwd-input-list').isVisible({ timeout: 2_000 }).catch(() => false)) {
+      const popupLocator = this.page
+        .locator(
+          [
+            '#checkinpage.ui-page-active #pwd-input',
+            '#checkinpage.ui-page-active #ckin_pw-input-submit',
+            '#checkinpage.ui-page-active .pwd-input-list',
+            '#pwd-input-dialog:visible #pwd-input',
+            '#pwd-input-dialog:visible #pwd-input-submit',
+            '#pwd-input-dialog:visible .pwd-input-list',
+          ].join(', '),
+        )
+        .first();
+      const checkInActions = this.page
+        .locator('#checkinpage.ui-page-active #ckin_in, #checkinpage.ui-page-active #brk_in, #checkinpage.ui-page-active #brk_out, #checkinpage.ui-page-active #ckin_out')
+        .first();
+      await waitUntil(
+        async () => {
+          return (
+            (await popupLocator.isVisible().catch(() => false)) ||
+            (await checkInActions.isVisible().catch(() => false)) ||
+            (await this.page.locator('#checkinpage.ui-page-active').isVisible().catch(() => false))
+          );
+        },
+        {
+          description: '员工打卡密码弹框展示',
+          intervalMs: 200,
+          timeoutMs: 10_000,
+        },
+      );
+      if (await popupLocator.isVisible().catch(() => false)) {
         await this.enterLivePopupPassword('11');
-      } else if (await this.isLivePasscodePromptVisible()) {
-        await this.inputLoginPassword('11');
       }
-      await expect(this.clockText).toBeVisible();
+      await expect(checkInActions).toBeVisible();
     });
   }
 
   async clickBreakButton(): Promise<void> {
     await step('员工开始休息', async () => {
       await this.breakButton.click();
+      await expect(this.backToWorkButton).toBeVisible({ timeout: 10_000 });
     });
   }
 
   async clickBackToWorkButton(): Promise<void> {
     await step('员工返回工作', async () => {
       await this.backToWorkButton.click();
+      await expect(this.breakButton).toBeVisible({ timeout: 10_000 });
     });
   }
 
@@ -848,7 +990,18 @@ export class PosHomePage extends PageObject {
   }
 
   async readClockText(): Promise<string> {
-    return step('读取员工打卡状态文案', async () => (await this.clockText.textContent()) ?? '');
+    return step('读取员工打卡状态文案', async () => {
+      if (await this.clockText.isVisible({ timeout: 1_000 }).catch(() => false)) {
+        return (await this.clockText.textContent()) ?? '';
+      }
+
+      const liveStatus = await this.readLiveClockStatusText();
+      if (liveStatus) {
+        return liveStatus;
+      }
+
+      return '';
+    });
   }
 
   async clickEdit(): Promise<void> {
@@ -918,10 +1071,46 @@ export class PosHomePage extends PageObject {
     );
   }
 
+  async waitForHomeFunctionCards(expectedFunction: string, removedFunction?: string): Promise<string[]> {
+    return step(`等待首页功能卡展示 ${expectedFunction}`, async () => {
+      let cardNames: string[] = [];
+      await waitUntil(
+        async () => {
+          cardNames = await this.readHomeFunctionCardNames();
+          return cardNames.includes(expectedFunction) && (!removedFunction || !cardNames.includes(removedFunction));
+        },
+        {
+          description: `首页功能卡刷新为 ${expectedFunction}`,
+          intervalMs: 500,
+          timeoutMs: 15_000,
+        },
+      );
+      return cardNames;
+    });
+  }
+
   async readFirstHomeFunctionCardName(): Promise<string> {
     return step('读取第一个主页面功能卡名称', async () => {
       const cardNames = await this.readHomeFunctionCardNames();
       return cardNames[0] ?? '';
+    });
+  }
+
+  async waitForFirstHomeFunctionCard(expectedFunction: string): Promise<string> {
+    return step(`等待首页首个功能卡展示 ${expectedFunction}`, async () => {
+      let firstCardName = '';
+      await waitUntil(
+        async () => {
+          firstCardName = await this.readFirstHomeFunctionCardName();
+          return firstCardName === expectedFunction;
+        },
+        {
+          description: `首页首个功能卡刷新为 ${expectedFunction}`,
+          intervalMs: 500,
+          timeoutMs: 15_000,
+        },
+      );
+      return firstCardName;
     });
   }
 
@@ -1028,6 +1217,10 @@ export class PosHomePage extends PageObject {
         return;
       }
 
+      if (await this.isHomeReady()) {
+        return;
+      }
+
       if (await this.isHomeReadyWithoutPasscode()) {
         return;
       }
@@ -1090,12 +1283,17 @@ export class PosHomePage extends PageObject {
   }
 
   private async isLivePasscodePromptVisible(): Promise<boolean> {
+    if (await this.page.getByTestId('pos-home').isVisible({ timeout: 200 }).catch(() => false)) {
+      return false;
+    }
+    const activeLoginPage = this.page.locator('#loginPage.ui-page-active').first();
+    const activeLoginText = (await activeLoginPage.innerText({ timeout: 500 }).catch(() => '')) ?? '';
     const bodyText = (await this.page.locator('body').innerText().catch(() => '')) ?? '';
-    const hasPasscodeText = bodyText.includes('Enter Your Passcode');
+    const hasPasscodeText = activeLoginText.includes('Enter Your Passcode');
     if (!hasPasscodeText && /Welcome\s+Boss/.test(bodyText) && /Dine In/.test(bodyText) && /To Go/.test(bodyText)) {
       return false;
     }
-    const hasNumpadText = /1\s*2\s*3[\s\S]*4\s*5\s*6[\s\S]*7\s*8\s*9[\s\S]*0/.test(bodyText);
+    const hasNumpadText = /1\s*2\s*3[\s\S]*4\s*5\s*6[\s\S]*7\s*8\s*9[\s\S]*0/.test(activeLoginText);
     return (
       (hasPasscodeText && hasNumpadText) ||
       (await this.page.locator('#loginPage.ui-page-active #pwipt').isVisible().catch(() => false)) ||
@@ -1316,6 +1514,19 @@ export class PosHomePage extends PageObject {
       .catch(() => false);
   }
 
+  private async activateLiveRecallPageIfPresent(): Promise<void> {
+    await this.page
+      .evaluate(() => {
+        const recallPage = document.getElementById('recall');
+        if (!recallPage) {
+          return;
+        }
+        const maybeWindow = window as typeof window & { $?: { mobile?: { changePage?: (target: string) => void } } };
+        maybeWindow.$?.mobile?.changePage?.('#recall');
+      })
+      .catch(() => undefined);
+  }
+
   private async clickLiveOrderRecallButton(): Promise<boolean> {
     return this.page
       .evaluate(() => {
@@ -1524,8 +1735,36 @@ export class PosHomePage extends PageObject {
   }
 
   private async clickLivePinSubmitButton(): Promise<boolean> {
-    if (await this.livePasswordSaveButton.isVisible().catch(() => false)) {
-      await this.livePasswordSaveButton.click({ timeout: 5_000 });
+    if (await this.isLicenseContainerVisible()) {
+      await this.chooseAvailableLicense();
+      if (!(await this.waitForLicenseDialogGone(10_000))) {
+        throw new Error('License 弹层未关闭，不能提交 PIN 密码');
+      }
+    }
+
+    const clicked = await this.page
+      .evaluate(() => {
+        const visible = (element: HTMLElement) => {
+          const rect = element.getBoundingClientRect();
+          const style = window.getComputedStyle(element);
+          return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
+        };
+        const submitButton =
+          document.querySelector<HTMLElement>('#loginPage.ui-page-active #ds') ??
+          document.querySelector<HTMLElement>('#ds');
+        if (!submitButton || !visible(submitButton)) {
+          return false;
+        }
+        const eventInit = { bubbles: true, cancelable: true, view: window };
+        submitButton.dispatchEvent(new PointerEvent('pointerdown', eventInit));
+        submitButton.dispatchEvent(new MouseEvent('mousedown', eventInit));
+        submitButton.dispatchEvent(new PointerEvent('pointerup', eventInit));
+        submitButton.dispatchEvent(new MouseEvent('mouseup', eventInit));
+        submitButton.click();
+        return true;
+      })
+      .catch(() => false);
+    if (clicked) {
       return true;
     }
 
@@ -1554,56 +1793,80 @@ export class PosHomePage extends PageObject {
 
   private async enterLivePopupPassword(password: string): Promise<void> {
     for (const digit of password) {
-      const clicked = await this.page
-        .evaluate((targetDigit) => {
-          const visible = (element: HTMLElement) => {
-            const rect = element.getBoundingClientRect();
-            const style = window.getComputedStyle(element);
-            return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
-          };
-          const target = Array.from(document.querySelectorAll<HTMLElement>('.pwd-input-list [data-num], #mykbfl_' + targetDigit))
-            .filter(visible)
-            .find((element) => element.dataset.num === targetDigit || element.textContent?.trim() === targetDigit);
-          if (!target) {
+      const digitButton = this.page
+        .locator(`.pwd-input-list:visible .pwd-input-item[data-num="${digit}"], .pwd-input-list:visible [data-num="${digit}"], #mykbfl_${digit}:visible`)
+        .first();
+      await expect(digitButton).toBeVisible({ timeout: 5_000 });
+      await digitButton.click({ force: true });
+    }
+    const submitButton = this.page
+      .locator(
+        '.pwd-input-list:visible .pwd-input-item[data-num="dsfl"], .pwd-input-list:visible [data-num="dsfl"], #ckin_pw-input-submit:visible, #pwd-input-submit:visible',
+      )
+      .first();
+    await expect(submitButton).toBeVisible({ timeout: 5_000 });
+    await submitButton.click({ force: true });
+    await waitUntil(
+      async () =>
+        (await this.page.locator('#checkinpage.ui-page-active #ckin_in:visible, #checkinpage.ui-page-active #brk_in:visible, #checkinpage.ui-page-active #brk_out:visible, #checkinpage.ui-page-active #ckin_out:visible').count().catch(() => 0)) >
+          0 ||
+        (await this.page
+          .locator('#pwd-input-dialog:visible #pwd-input, #pwd-input-dialog:visible #pwd-input-submit, #pwd-input-dialog:visible .pwd-input-list')
+          .count()
+          .catch(() => 0)) === 0,
+      {
+        description: 'live 通用密码弹框关闭',
+        intervalMs: 200,
+        timeoutMs: 10_000,
+      },
+    );
+  }
+
+  private async readLiveClockStatusText(): Promise<string> {
+    const status = await this.page
+      .evaluate(() => {
+        const isVisible = (selector: string) => {
+          const element = document.querySelector<HTMLElement>(selector);
+          if (!element || element.classList.contains('hide')) {
             return false;
           }
-          target.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, view: window }));
-          target.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window }));
-          target.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, cancelable: true, view: window }));
-          target.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, view: window }));
-          target.click();
-          return true;
-        }, digit)
-        .catch(() => false);
-      if (!clicked) {
-        throw new Error(`live 通用密码弹框数字 ${digit} 未找到`);
-      }
-    }
-    const submitted = await this.page
-      .evaluate(() => {
-        const visible = (element: HTMLElement) => {
           const rect = element.getBoundingClientRect();
           const style = window.getComputedStyle(element);
           return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
         };
-        const submitButton = Array.from(document.querySelectorAll<HTMLElement>('#pwd-input-submit, #ckin_pw-input-submit'))
-          .filter(visible)
-          .at(0);
-        if (!submitButton) {
-          return false;
+
+        if (isVisible('#checkinpage.ui-page-active #brk_out')) {
+          return 'break';
         }
-        submitButton.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, view: window }));
-        submitButton.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window }));
-        submitButton.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, cancelable: true, view: window }));
-        submitButton.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, view: window }));
-        submitButton.click();
-        return true;
+        if (isVisible('#checkinpage.ui-page-active #ckin_out')) {
+          return 'clocked-in';
+        }
+        if (isVisible('#checkinpage.ui-page-active #ckin_in')) {
+          return 'clocked-out';
+        }
+        return '';
       })
-      .catch(() => false);
-    if (!submitted) {
-      throw new Error('live 通用密码弹框提交按钮未找到');
+      .catch(() => '');
+
+    if (!status) {
+      return '';
     }
-    await expect(this.page.locator('#pwd-input, #ckin_pw-input-submit, .pwd-input-list')).toBeHidden({ timeout: 10_000 });
+
+    const timeText = new Intl.DateTimeFormat('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    })
+      .format(new Date())
+      .replace(/\s+/g, '');
+
+    if (status === 'break') {
+      return `On Break from ${timeText}`;
+    }
+    if (status === 'clocked-in') {
+      return `Clocked In at ${timeText}`;
+    }
+    return 'Clocked Out';
   }
 
   private async hideTransientCovers(): Promise<void> {

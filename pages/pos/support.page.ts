@@ -6,7 +6,7 @@ import { PageObject } from '../shared/page-object.js';
 
 export type SupportInfo = {
   version: string;
-  patchVersion: string;
+  patchVersion?: string;
 };
 
 export class SupportPage extends PageObject {
@@ -24,10 +24,17 @@ export class SupportPage extends PageObject {
   async readSupportInfo(): Promise<SupportInfo> {
     return step('读取首页支持信息中的版本和补丁版本', async () => {
       await expect(this.supportRoot).toBeVisible();
-      return {
+      const patchVersion = await this.patchVersion
+        .textContent({ timeout: 1_000 })
+        .then((text) => text?.trim())
+        .catch(() => undefined);
+      const supportInfo: SupportInfo = {
         version: ((await this.version.textContent()) ?? '').trim(),
-        patchVersion: ((await this.patchVersion.textContent()) ?? '').trim(),
       };
+      if (patchVersion !== undefined) {
+        supportInfo.patchVersion = patchVersion;
+      }
+      return supportInfo;
     });
   }
 }

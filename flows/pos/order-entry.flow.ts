@@ -300,6 +300,14 @@ export type AutoChargeMinGuestCombineResult = {
   combinedOrderChargeItems: Record<string, string>;
 };
 
+export type RecalculatedServiceChargeCombineResult = {
+  combinedChargeTotal: number;
+  combinedOrderChargeItems: Record<string, string>;
+  combinedSubtotal: number;
+  expectedCharge: number;
+  expectedChargeText: string;
+};
+
 export type MultiChargeCombineResult = {
   combinedChargeTotal: number;
   combinedOrderChargeItems: Record<string, string>;
@@ -540,6 +548,44 @@ export type DecimalCombinedOptionResult = {
   recallTotal: number;
 };
 
+export type OpenFoodChargeDialogResult = {
+  openFoodName: string;
+  chargeDialogItemNames: string[];
+};
+
+export type OrderPageLanguageAddTextResult = {
+  englishBefore: string;
+  chinese: string;
+  englishAfter: string;
+};
+
+export type ThreeDecimalChargeResult = {
+  chargeAmount: number;
+  expectedChargeAmount: number;
+};
+
+export type ChargeAfterTaxResult = {
+  subtotal: number;
+  tax: number;
+  charge: number;
+  expectedCharge: number;
+};
+
+export type RefundByItemResult = {
+  expectedRefundAmount: number;
+  paymentRefundRecordAmount: number;
+  refundAmount: number;
+};
+
+export type MultipleRefundByItemResult = {
+  firstExpectedRefundAmount: number;
+  firstPaymentRefundRecordAmount: number;
+  firstRefundAmount: number;
+  secondExpectedRefundAmount: number;
+  secondPaymentRefundRecordAmount: number;
+  secondRefundAmount: number;
+};
+
 export class OrderEntryFlow {
   constructor(
     private readonly homePage: PosHomePage,
@@ -552,6 +598,10 @@ export class OrderEntryFlow {
 
   private get orderPageData() {
     return orderPageDataFor(testEnvironment.testMode);
+  }
+
+  private parseMoneyText(value: string): number {
+    return Number((value.match(/-?\d+(?:,\d{3})*(?:\.\d+)?/)?.[0] ?? '0').replace(/,/g, ''));
   }
 
   async createTogoOrderAndReadRecall(homeUrl: string, dish: DishSample): Promise<RecalledOrderItem[]> {
@@ -683,6 +733,7 @@ export class OrderEntryFlow {
 
   async payOpenFoodWithoutTax(homeUrl: string): Promise<string> {
     await this.homePage.open(homeUrl);
+    await this.homePage.submitEmployeePasswordIfPromptVisible(validEmployeePassword);
     await this.homePage.clickDineIn();
     await this.orderDishesPage.openFoodWithoutTax('no tax', 100);
     await this.orderDishesPage.settleByCash();
@@ -693,6 +744,7 @@ export class OrderEntryFlow {
 
   async editPreviousPickupGuestNameWithoutAffectingLatest(homeUrl: string): Promise<PickupGuestNameResult> {
     await this.homePage.open(homeUrl);
+    await this.homePage.submitEmployeePasswordIfPromptVisible(validEmployeePassword);
     await this.createPickupOrder();
     await this.createPickupOrder();
     await this.homePage.clickRecallFromHome();
@@ -805,6 +857,7 @@ export class OrderEntryFlow {
   ): Promise<DragSplitPaymentStatusResult> {
     const { groupSwitchDish } = this.orderPageData;
     await this.homePage.open(homeUrl);
+    await this.homePage.submitEmployeePasswordIfPromptVisible(validEmployeePassword);
     await this.homePage.clickDineIn();
     await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
     await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
@@ -1649,6 +1702,7 @@ export class OrderEntryFlow {
     }
 
     await this.homePage.open(homeUrl);
+    await this.homePage.submitEmployeePasswordIfPromptVisible(validEmployeePassword);
     await this.homePage.clickAdmin();
     await this.adminPage.setupAutoFixedCharge('auto_test_fixed', 10);
     await this.homePage.open(homeUrl);
@@ -2466,8 +2520,8 @@ export class OrderEntryFlow {
 
     await this.homePage.open(homeUrl);
     await this.homePage.clickRecall();
-    await this.recallPage.openPreviousOrder();
-    await this.recallPage.combineOrder(1);
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.combineOrder(2);
     const combinedOrderChargeItems = await this.recallPage.readOrderChargeItems();
 
     await this.homePage.clickAdmin();
@@ -2618,6 +2672,518 @@ export class OrderEntryFlow {
       expectedChargeText: expectedCharge.toFixed(2),
       feeAfterCombine,
       feeBeforeCombine,
+    };
+  }
+
+  async combineDeliveryAutoChargeIntoDineInWithoutRecalculatedCharge(
+    homeUrl: string,
+  ): Promise<AutoChargeMinGuestCombineResult> {
+    if (!this.adminPage || !this.deliveryPage) {
+      throw new Error('POS-32017 requires AdminPage and DeliveryPage');
+    }
+
+    const [firstDish, secondDish] = splitDiscountDishes;
+    if (!firstDish || !secondDish) {
+      throw new Error('POS-32017 requires two split discount dish test data records');
+    }
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.setupAutoPercentChargeAsTip('auto_test_perc', 10);
+    await this.adminPage.setAutoChargeOrderTypes('auto_test_perc', ['delivery']);
+    await this.adminPage.setCombineRecalculateCharge(true);
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDelivery();
+    await this.deliveryPage.createDeliveryOrder(deliveryOrderInfoSample);
+    await this.orderDishesPage.selectMenuGroup(firstDish.group);
+    await this.orderDishesPage.selectMenuCategory(firstDish.category);
+    await this.orderDishesPage.addMenuItem(firstDish.name);
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(secondDish.group);
+    await this.orderDishesPage.selectMenuCategory(secondDish.category);
+    await this.orderDishesPage.addMenuItem(secondDish.name);
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.combineOrder(2);
+    const combinedOrderChargeItems = await this.recallPage.readOrderChargeItems();
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.deleteChargeByName('auto_test_perc');
+    await this.adminPage.setCombineRecalculateCharge(true);
+
+    return {
+      combinedOrderChargeItems,
+    };
+  }
+
+  async combineOrdersMeetingServiceChargeGuestCountWithRecalculation(
+    homeUrl: string,
+  ): Promise<RecalculatedServiceChargeCombineResult> {
+    if (!this.adminPage) {
+      throw new Error('POS-32006 recalculation case requires AdminPage');
+    }
+
+    const [firstDish, secondDish] = splitDiscountDishes;
+    if (!firstDish || !secondDish) {
+      throw new Error('POS-32006 recalculation case requires two split discount dish test data records');
+    }
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.setupAutoPercentChargeAsTip('auto_test_perc', 10);
+    await this.adminPage.setAutoChargeMinGuest('auto_test_perc', 6);
+    await this.adminPage.setCombineRecalculateCharge(true);
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.setGuestCount(3);
+    await this.orderDishesPage.selectMenuGroup(firstDish.group);
+    await this.orderDishesPage.selectMenuCategory(firstDish.category);
+    await this.orderDishesPage.addMenuItem(firstDish.name);
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.setGuestCount(4);
+    await this.orderDishesPage.selectMenuGroup(secondDish.group);
+    await this.orderDishesPage.selectMenuCategory(secondDish.category);
+    await this.orderDishesPage.addMenuItem(secondDish.name);
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickRecall();
+    await this.recallPage.openPreviousOrder();
+    await this.recallPage.combineOrder(1);
+    const combinedSubtotal = await this.recallPage.readOrderSubtotal();
+    const combinedOrderChargeItems = await this.recallPage.readOrderChargeItems();
+    const combinedChargeTotal = Object.values(combinedOrderChargeItems)
+      .reduce((sum, value) => sum + Number(value), 0);
+    const expectedCharge = Number((combinedSubtotal * 0.1).toFixed(2));
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.deleteChargeByName('auto_test_perc');
+    await this.adminPage.setCombineRecalculateCharge(true);
+
+    return {
+      combinedChargeTotal,
+      combinedOrderChargeItems,
+      combinedSubtotal,
+      expectedCharge,
+      expectedChargeText: expectedCharge.toFixed(2),
+    };
+  }
+
+  async combineManualShareTipChargeOrderWithRecalculation(
+    homeUrl: string,
+  ): Promise<ManualShareTipChargeCombineResult> {
+    if (!this.adminPage || !this.reportPage) {
+      throw new Error('POS-32023 requires AdminPage and ReportPage');
+    }
+
+    const [firstDish, secondDish] = splitDiscountDishes;
+    if (!firstDish || !secondDish) {
+      throw new Error('POS-32023 requires two split discount dish test data records');
+    }
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.setupManualPercentChargeAsTip('auto_test_perc', 10);
+    await this.adminPage.setCombineRecalculateCharge(true);
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(firstDish.group);
+    await this.orderDishesPage.selectMenuCategory(firstDish.category);
+    await this.orderDishesPage.addMenuItem(firstDish.name);
+    await this.orderDishesPage.applyPresetCharge('auto_test_perc');
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickTogo();
+    await this.orderDishesPage.selectMenuGroup(secondDish.group);
+    await this.orderDishesPage.selectMenuCategory(secondDish.category);
+    await this.orderDishesPage.addMenuItem(secondDish.name);
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickReport();
+    await this.reportPage.inputPasswordInPopup(validEmployeePassword);
+    await this.reportPage.enterTotalReport();
+    const feeBeforeCombine = await this.reportPage.readFeeAmount();
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickRecall();
+    await this.recallPage.openPreviousOrder();
+    const chargeItemsBeforeCombine = await this.recallPage.readOrderChargeItems();
+    const chargeBeforeCombine = chargeItemsBeforeCombine.auto_test_perc ?? '0.00';
+    await this.recallPage.combineOrder(1);
+    const combinedOrderChargeItems = await this.recallPage.readOrderChargeItems();
+    const combinedChargeTotal = Object.values(combinedOrderChargeItems)
+      .reduce((sum, value) => sum + Number(value), 0)
+      .toFixed(2);
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickReport();
+    await this.reportPage.inputPasswordInPopup(validEmployeePassword);
+    await this.reportPage.enterTotalReport();
+    const feeAfterCombine = await this.reportPage.readFeeAmount();
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.deleteChargeByName('auto_test_perc');
+    await this.adminPage.setCombineRecalculateCharge(true);
+
+    return {
+      chargeBeforeCombine,
+      combinedChargeTotal,
+      combinedOrderChargeItems,
+      feeAfterCombine,
+      feeBeforeCombine,
+    };
+  }
+
+  async combineOrdersWithAutoManualAndCustomChargesWithRecalculation(
+    homeUrl: string,
+  ): Promise<MultiChargeCombineResult> {
+    if (!this.adminPage) {
+      throw new Error('POS-32031 requires AdminPage');
+    }
+
+    const [firstDish, secondDish] = splitDiscountDishes;
+    if (!firstDish || !secondDish) {
+      throw new Error('POS-32031 requires two split discount dish test data records');
+    }
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.setupAutoFixedCharge('auto_test1', 10);
+    await this.adminPage.setAutoChargeTaxed('auto_test1', true);
+    await this.adminPage.setAutoChargeOrderTypes('auto_test1', ['dine-in']);
+    await this.adminPage.setupManualPercentChargeAsTip('auto_test2', 10);
+    await this.adminPage.setManualChargeOrderTypes('auto_test2', ['dine-in']);
+    await this.adminPage.setCombineRecalculateCharge(true);
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(firstDish.group);
+    await this.orderDishesPage.selectMenuCategory(firstDish.category);
+    await this.orderDishesPage.addMenuItem(firstDish.name);
+    await this.orderDishesPage.applyPresetCharge('auto_test2');
+    await this.orderDishesPage.applyCustomFixedOrderCharge(5, true);
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(secondDish.group);
+    await this.orderDishesPage.selectMenuCategory(secondDish.category);
+    await this.orderDishesPage.addMenuItem(secondDish.name);
+    await this.orderDishesPage.applyPresetCharge('auto_test2');
+    await this.orderDishesPage.applyCustomPercentOrderCharge(10, false);
+    await this.orderDishesPage.saveOrder();
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    const secondOrderChargeItems = await this.recallPage.readOrderChargeItems();
+    await this.recallPage.openPreviousOrder();
+    const firstOrderChargeItems = await this.recallPage.readOrderChargeItems();
+    await this.recallPage.combineOrder(1);
+    const combinedOrderChargeItems = await this.recallPage.readOrderChargeItems();
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.deleteChargeByName('auto_test1');
+    await this.adminPage.deleteChargeByName('auto_test2');
+    await this.adminPage.setCombineRecalculateCharge(true);
+
+    const chargeTotal = (charges: Record<string, string>): number =>
+      Object.values(charges).reduce((sum, value) => sum + Number(value), 0);
+
+    return {
+      combinedChargeTotal: chargeTotal(combinedOrderChargeItems),
+      combinedOrderChargeItems,
+      firstOrderChargeTotal: chargeTotal(firstOrderChargeItems),
+      manualChargeBeforeCombineTotal: Number(firstOrderChargeItems.auto_test2 ?? 0)
+        + Number(secondOrderChargeItems.auto_test2 ?? 0),
+      secondOrderChargeTotal: chargeTotal(secondOrderChargeItems),
+    };
+  }
+
+  async createOpenFoodAndReadChargeDialogItemNames(homeUrl: string): Promise<OpenFoodChargeDialogResult> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    const openFoodName = 'OpenFoodName中文';
+    await this.orderDishesPage.openFoodWithoutTax(openFoodName, 10);
+    await this.orderDishesPage.openChargeDialog();
+    const chargeDialogItemNames = await this.orderDishesPage.readChargeDialogItemNames();
+    await this.orderDishesPage.confirmChargeDialog();
+
+    return {
+      openFoodName,
+      chargeDialogItemNames,
+    };
+  }
+
+  async switchOrderPageLanguageAndReadAddTexts(homeUrl: string): Promise<OrderPageLanguageAddTextResult> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.switchLanguage(languageOptions.default);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    const englishBefore = await this.orderDishesPage.readAddActionText();
+
+    await this.homePage.switchLanguage(languageOptions.chinese);
+    await this.orderDishesPage.selectMenuCategory(categorySwitchDish.category);
+    await this.orderDishesPage.addMenuItem(categorySwitchDish.name);
+    const chinese = await this.orderDishesPage.readAddActionText();
+
+    await this.homePage.switchLanguage(languageOptions.default);
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    const englishAfter = await this.orderDishesPage.readAddActionText();
+
+    return {
+      chinese,
+      englishAfter,
+      englishBefore,
+    };
+  }
+
+  async applyThreeDecimalChargeAndReadAmount(homeUrl: string): Promise<ThreeDecimalChargeResult> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.changeSelectedItemPrice(100);
+    await this.orderDishesPage.applyCustomPercentOrderCharge(1.015, false);
+    const chargeAmount = this.parseMoneyText(await this.orderDishesPage.readChargePrice());
+
+    return {
+      chargeAmount,
+      expectedChargeAmount: 1.02,
+    };
+  }
+
+  async applyAutoChargeAfterTaxAndReadAmounts(homeUrl: string): Promise<ChargeAfterTaxResult> {
+    if (!this.adminPage) {
+      throw new Error('POS-33063 requires AdminPage');
+    }
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.setOfflineTaxCalculationIncludeCharge(true);
+    await this.adminPage.setupAutoPercentCharge('manu_test_fixed', 10);
+    await this.adminPage.setAutoChargeOrderTypes('manu_test_fixed', ['dine-in']);
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    const subtotal = await this.orderDishesPage.readSubtotal();
+    const tax = await this.orderDishesPage.readTax();
+    const charge = this.parseMoneyText(await this.orderDishesPage.readChargePrice());
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickAdmin();
+    await this.adminPage.deleteChargeByName('manu_test_fixed');
+    await this.adminPage.setOfflineTaxCalculationIncludeCharge(false);
+
+    return {
+      charge,
+      expectedCharge: Number(((subtotal + tax) * 0.1).toFixed(2)),
+      subtotal,
+      tax,
+    };
+  }
+
+  async partiallyPayCashWithChangeAndReadRecallStatus(homeUrl: string): Promise<string> {
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickDineIn();
+    await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
+    await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
+    await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
+    await this.orderDishesPage.changeSelectedItemPrice(20);
+    await this.orderDishesPage.clickSettle();
+    await this.orderDishesPage.modifySettlementPaymentAmount(1000);
+    await this.orderDishesPage.settleCurrentAmountByCash();
+    await this.orderDishesPage.modifySettlementPaymentAmount(2000);
+    await this.orderDishesPage.settleCurrentAmountByCash();
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    return this.recallPage.readOrderStatus();
+  }
+
+  async refundFirstItemAndReadPaymentRecord(
+    homeUrl: string,
+    options: { taxExemptFirstItem: boolean },
+  ): Promise<RefundByItemResult> {
+    const [firstDish, secondDish] = splitDiscountDishes;
+    if (!firstDish || !secondDish) {
+      throw new Error('refund by item requires two split discount dish test data records');
+    }
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickTogo();
+    await this.orderDishesPage.selectMenuGroup(firstDish.group);
+    await this.orderDishesPage.selectMenuCategory(firstDish.category);
+    await this.orderDishesPage.addMenuItem(firstDish.name);
+    if (options.taxExemptFirstItem) {
+      await this.orderDishesPage.voidSelectedItemTax();
+    }
+    const expectedRefundAmount = Number((await this.orderDishesPage.readSubtotal() + await this.orderDishesPage.readTax()).toFixed(2));
+    await this.orderDishesPage.selectMenuGroup(secondDish.group);
+    await this.orderDishesPage.selectMenuCategory(secondDish.category);
+    await this.orderDishesPage.addMenuItem(secondDish.name);
+    await this.orderDishesPage.settleByCash();
+
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    const refundAmount = await this.recallPage.refundByItem(1);
+    const paymentRefundRecordAmount = await this.recallPage.readPaymentRecordAmount(2);
+
+    return {
+      expectedRefundAmount,
+      paymentRefundRecordAmount,
+      refundAmount,
+    };
+  }
+
+  async refundFirstDiscountedItemAndReadPaymentRecord(homeUrl: string): Promise<RefundByItemResult> {
+    const [firstDish, secondDish] = splitDiscountDishes;
+    if (!firstDish || !secondDish) {
+      throw new Error('POS-35142 requires two split discount dish test data records');
+    }
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickTogo();
+    await this.orderDishesPage.selectMenuGroup(firstDish.group);
+    await this.orderDishesPage.selectMenuCategory(firstDish.category);
+    await this.orderDishesPage.addMenuItem(firstDish.name);
+    await this.orderDishesPage.applyWholeOrderDiscountPercent(10);
+    const expectedRefundAmount = Number((await this.orderDishesPage.readSettlementUnpaidAmount()).toFixed(2));
+
+    await this.orderDishesPage.selectMenuGroup(secondDish.group);
+    await this.orderDishesPage.selectMenuCategory(secondDish.category);
+    await this.orderDishesPage.addMenuItem(secondDish.name);
+    await this.orderDishesPage.settleByCash();
+
+    await this.homePage.clickRecall();
+    await this.recallPage.cancelAllCondition();
+    await this.recallPage.openRecentOrder();
+    const refundAmount = await this.recallPage.refundByItem(1);
+    const paymentRefundRecordAmount = await this.recallPage.readPaymentRecordAmount(2);
+
+    return {
+      expectedRefundAmount,
+      paymentRefundRecordAmount,
+      refundAmount,
+    };
+  }
+
+  async refundFirstItemWithRequestedAmountAbovePaidAndReadPaymentRecord(
+    homeUrl: string,
+  ): Promise<RefundByItemResult> {
+    const [firstDish] = splitDiscountDishes;
+    if (!firstDish) {
+      throw new Error('POS-35150 requires a split discount dish test data record');
+    }
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickTogo();
+    await this.orderDishesPage.selectMenuGroup(firstDish.group);
+    await this.orderDishesPage.selectMenuCategory(firstDish.category);
+    await this.orderDishesPage.addMenuItem(firstDish.name);
+    const expectedRefundAmount = Number((await this.orderDishesPage.readSettlementUnpaidAmount()).toFixed(2));
+    await this.orderDishesPage.settleByCash();
+
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    const refundAmount = await this.recallPage.refundByItem(1, expectedRefundAmount + 10);
+    const paymentRefundRecordAmount = await this.recallPage.readPaymentRecordAmount(2);
+
+    return {
+      expectedRefundAmount,
+      paymentRefundRecordAmount,
+      refundAmount,
+    };
+  }
+
+  async refundTwoItemsSequentiallyAndReadPaymentRecords(homeUrl: string): Promise<MultipleRefundByItemResult> {
+    const [firstDish, secondDish] = splitDiscountDishes;
+    if (!firstDish || !secondDish) {
+      throw new Error('POS-35163 requires two split discount dish test data records');
+    }
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickTogo();
+    await this.orderDishesPage.selectMenuGroup(firstDish.group);
+    await this.orderDishesPage.selectMenuCategory(firstDish.category);
+    await this.orderDishesPage.addMenuItem(firstDish.name);
+    const firstExpectedRefundAmount = Number((await this.orderDishesPage.readSettlementUnpaidAmount()).toFixed(2));
+
+    await this.orderDishesPage.selectMenuGroup(secondDish.group);
+    await this.orderDishesPage.selectMenuCategory(secondDish.category);
+    await this.orderDishesPage.addMenuItem(secondDish.name);
+    const total = Number((await this.orderDishesPage.readSettlementUnpaidAmount()).toFixed(2));
+    const secondExpectedRefundAmount = Number((total - firstExpectedRefundAmount).toFixed(2));
+    await this.orderDishesPage.settleByCash();
+
+    await this.homePage.clickRecall();
+    await this.recallPage.cancelAllCondition();
+    await this.recallPage.openRecentOrder();
+    const firstRefundAmount = await this.recallPage.refundByItem(1);
+    const firstPaymentRefundRecordAmount = await this.recallPage.readPaymentRecordAmount(2);
+    const secondRefundAmount = await this.recallPage.refundByItem(1);
+    const secondPaymentRefundRecordAmount = await this.recallPage.readPaymentRecordAmount(3);
+
+    return {
+      firstExpectedRefundAmount,
+      firstPaymentRefundRecordAmount,
+      firstRefundAmount,
+      secondExpectedRefundAmount,
+      secondPaymentRefundRecordAmount,
+      secondRefundAmount,
+    };
+  }
+
+  async refundCashPaymentWithChangeAndReadPaymentRecord(homeUrl: string): Promise<RefundByItemResult> {
+    const [firstDish] = splitDiscountDishes;
+    if (!firstDish) {
+      throw new Error('POS-35166 requires a split discount dish test data record');
+    }
+
+    await this.homePage.open(homeUrl);
+    await this.homePage.clickTogo();
+    await this.orderDishesPage.selectMenuGroup(firstDish.group);
+    await this.orderDishesPage.selectMenuCategory(firstDish.category);
+    await this.orderDishesPage.addMenuItem(firstDish.name);
+    const expectedRefundAmount = Number((await this.orderDishesPage.readSettlementUnpaidAmount()).toFixed(2));
+    await this.orderDishesPage.clickSettle();
+    await this.orderDishesPage.modifySettlementPaymentAmount(Math.round((expectedRefundAmount + 2) * 100));
+    await this.orderDishesPage.settleCurrentAmountByCash();
+
+    await this.homePage.clickRecall();
+    await this.recallPage.openRecentOrder();
+    await this.recallPage.refundPaymentRecord(1);
+    const paymentRefundRecordAmount = await this.recallPage.readPaymentRecordAmount(2);
+
+    return {
+      expectedRefundAmount,
+      paymentRefundRecordAmount,
+      refundAmount: Math.abs(paymentRefundRecordAmount),
     };
   }
 
@@ -3066,6 +3632,7 @@ export class OrderEntryFlow {
 
   async readFirstDragSplitSubOrderDiscountWholePrice(homeUrl: string): Promise<string> {
     await this.homePage.open(homeUrl);
+    await this.homePage.submitEmployeePasswordIfPromptVisible(validEmployeePassword);
     await this.homePage.clickDineIn();
     const firstDish = splitDiscountDishes[0];
     if (!firstDish) {
@@ -3143,6 +3710,7 @@ export class OrderEntryFlow {
     const { groupSwitchDish } = this.orderPageData;
     await this.homePage.open(homeUrl);
     await this.homePage.switchLanguage(languageOptions.default);
+    await this.homePage.submitEmployeePasswordIfPromptVisible(validEmployeePassword);
     await this.homePage.clickDineIn();
     await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
     if (groupSwitchDish.category) {
@@ -3162,6 +3730,7 @@ export class OrderEntryFlow {
       throw new Error('DeliveryPage is required for Delivery order creation');
     }
     await this.homePage.open(homeUrl);
+    await this.homePage.submitEmployeePasswordIfPromptVisible(validEmployeePassword);
     await this.homePage.clickDelivery();
     await this.deliveryPage.createDeliveryOrder(deliveryOrderInfoSample);
     return this.orderDishesPage.readDeliveryInfo();
@@ -3172,6 +3741,7 @@ export class OrderEntryFlow {
       throw new Error('DeliveryPage is required for Delivery order creation');
     }
     await this.homePage.open(homeUrl);
+    await this.homePage.submitEmployeePasswordIfPromptVisible(validEmployeePassword);
     await this.homePage.clickDelivery();
     await this.deliveryPage.createDeliveryOrder(deliveryOrderInfoSample);
     await this.orderDishesPage.exitOrderPage();
@@ -3181,6 +3751,7 @@ export class OrderEntryFlow {
   async reduceComboOptionsAndReadCounts(homeUrl: string): Promise<ComboOptionCountResult> {
     await this.homePage.open(homeUrl);
     await this.homePage.switchLanguage(languageOptions.default);
+    await this.homePage.submitEmployeePasswordIfPromptVisible(validEmployeePassword);
     await this.homePage.clickDineIn();
     await this.orderDishesPage.selectMenuCategory('hn_cate');
     await this.orderDishesPage.addComboWithOptions(4);
@@ -3262,6 +3833,7 @@ export class OrderEntryFlow {
     guestName: string,
   ): Promise<GuestNameRecallResult> {
     await this.homePage.open(homeUrl);
+    await this.homePage.submitEmployeePasswordIfPromptVisible(validEmployeePassword);
     await this.homePage.clickDineIn();
     await this.orderDishesPage.fillGuestName(guestName);
     await this.orderDishesPage.selectMenuGroup(this.orderPageData.groupSwitchDish.group);
@@ -3366,6 +3938,7 @@ export class OrderEntryFlow {
   async addLargeTipBeforeSaveAndReadRecall(homeUrl: string): Promise<LargeTipResult> {
     const { groupSwitchDish } = this.orderPageData;
     await this.homePage.open(homeUrl);
+    await this.homePage.submitEmployeePasswordIfPromptVisible(validEmployeePassword);
     await this.homePage.clickTogo();
     await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
     await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
@@ -3384,6 +3957,7 @@ export class OrderEntryFlow {
   async addLargeTipAfterCreditPaymentAndReadRecall(homeUrl: string): Promise<LargeTipResult> {
     const { groupSwitchDish } = this.orderPageData;
     await this.homePage.open(homeUrl);
+    await this.homePage.submitEmployeePasswordIfPromptVisible(validEmployeePassword);
     await this.homePage.clickTogo();
     await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
     await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
@@ -3439,8 +4013,7 @@ export class OrderEntryFlow {
     await this.homePage.clickAdmin();
     await this.adminPage.setStaffNotePermission(false);
     await this.homePage.open(homeUrl);
-    await this.homePage.logout();
-    await this.homePage.inputEmployeePassword(staffSamples.noNote.password);
+    await this.homePage.logoutAndLogin(staffSamples.noNote.password);
     await this.homePage.clickDineIn();
     await this.orderDishesPage.selectMenuCategory('hn_cate');
     await this.orderDishesPage.addComboWithOptions(4);
@@ -3491,8 +4064,15 @@ export class OrderEntryFlow {
     await this.adminPage.setKdsCategoryDiscountAllowance(false);
     await this.homePage.refresh();
     await this.homePage.clickDineIn();
-    await this.orderDishesPage.selectMenuGroup(this.orderPageData.requiredKdsDish.group);
-    await this.orderDishesPage.selectMenuCategory(this.orderPageData.requiredKdsDish.category);
+    if (testEnvironment.testMode === 'live') {
+      await this.orderDishesPage.selectMenuCategory(this.orderPageData.requiredKdsDish.category).catch(async () => {
+        await this.orderDishesPage.selectMenuGroup(this.orderPageData.requiredKdsDish.group);
+        await this.orderDishesPage.selectMenuCategory(this.orderPageData.requiredKdsDish.category);
+      });
+    } else {
+      await this.orderDishesPage.selectMenuGroup(this.orderPageData.requiredKdsDish.group);
+      await this.orderDishesPage.selectMenuCategory(this.orderPageData.requiredKdsDish.category);
+    }
     await this.orderDishesPage.addMenuItem(this.orderPageData.requiredKdsDish.name);
     await this.orderDishesPage.applyOrderCharge('20%');
     const chargeLabel = await this.orderDishesPage.readChargeLabel();
@@ -3549,6 +4129,7 @@ export class OrderEntryFlow {
   async modifySavedComboSubItemsAndReadRecall(homeUrl: string): Promise<ComboSubItemModificationResult> {
     const { comboMaxModifyDish } = this.orderPageData;
     await this.homePage.open(homeUrl);
+    await this.homePage.submitEmployeePasswordIfPromptVisible(validEmployeePassword);
     await this.homePage.clickDineIn();
     await this.orderDishesPage.selectMenuGroup(comboMaxModifyDish.group);
     await this.orderDishesPage.selectMenuCategory(comboMaxModifyDish.category);
@@ -3580,6 +4161,7 @@ export class OrderEntryFlow {
         : staticComboDish;
     try {
       await this.homePage.open(homeUrl);
+      await this.homePage.submitEmployeePasswordIfPromptVisible(validEmployeePassword);
       await this.homePage.clickDineIn();
       await this.orderDishesPage.selectMenuGroup(comboDish.group);
       await this.orderDishesPage.selectMenuCategory(comboDish.category);
@@ -3852,6 +4434,7 @@ export class OrderEntryFlow {
       throw new Error('DeliveryPage is required for custom Delivery order creation');
     }
     await this.homePage.open(homeUrl);
+    await this.homePage.submitEmployeePasswordIfPromptVisible(validEmployeePassword);
     await this.homePage.clickCustomDelivery();
     await this.deliveryPage.createDeliveryOrder(deliveryOrderInfoSample);
     const kitchenDish = this.orderPageData.categorySwitchDish;
@@ -3868,6 +4451,7 @@ export class OrderEntryFlow {
 
   private async openOrderAndAddDish(homeUrl: string, dish: DishSample): Promise<void> {
     await this.homePage.open(homeUrl);
+    await this.homePage.submitEmployeePasswordIfPromptVisible(validEmployeePassword);
     await this.homePage.switchLanguage(languageOptions.default);
     await this.homePage.clickTogo();
     await this.orderDishesPage.selectMenuGroup(dish.group);
@@ -3879,6 +4463,7 @@ export class OrderEntryFlow {
 
   private async openDineInOrderAndAddDish(homeUrl: string, dish: DishSample): Promise<void> {
     await this.homePage.open(homeUrl);
+    await this.homePage.submitEmployeePasswordIfPromptVisible(validEmployeePassword);
     await this.homePage.switchLanguage(languageOptions.default);
     await this.homePage.clickDineIn();
     await this.orderDishesPage.selectMenuGroup(dish.group);
@@ -3970,6 +4555,7 @@ export class OrderEntryFlow {
   private async openOrderAndAddTwoDishes(homeUrl: string, isDineIn: boolean): Promise<void> {
     const { groupSwitchDish, categorySwitchDish } = this.orderPageData;
     await this.homePage.open(homeUrl);
+    await this.homePage.submitEmployeePasswordIfPromptVisible(validEmployeePassword);
     if (isDineIn) {
       if (testEnvironment.testMode === 'live') {
         await this.homePage.clickDineInWithTable(2);

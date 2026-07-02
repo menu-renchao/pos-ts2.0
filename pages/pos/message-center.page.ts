@@ -38,7 +38,8 @@ export class MessageCenterPage extends PageObject {
         await offlineSelect.selectOption(type);
         return;
       }
-      await this.page.locator('.topicTitle').filter({ hasText: new RegExp(`^\\s*${escapeRegExp(type)}\\s*$`) }).click();
+      const labelPattern = messageTypeLabels(type).map(escapeRegExp).join('|');
+      await this.page.locator('.topicTitle').filter({ hasText: new RegExp(`^\\s*(${labelPattern})\\s*$`) }).click();
     });
   }
 
@@ -76,6 +77,13 @@ export class MessageCenterPage extends PageObject {
   async readCurrentOpenMessageBodyContent(): Promise<string> {
     return step('读取当前打开消息内容', async () => (await this.currentMessageBody.first().textContent()) ?? '');
   }
+}
+
+export function messageTypeLabels(type: string): string[] {
+  if (type === 'Self-dine-in') {
+    return [type, '自助点餐'];
+  }
+  return [type];
 }
 
 function escapeRegExp(value: string): string {

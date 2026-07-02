@@ -123,6 +123,9 @@ export class ReportPage extends PageObject {
   }
 
   private async isLiveReportSurfaceVisible(timeoutMs = 500): Promise<boolean> {
+    if (await this.page.getByTestId('report-page').isVisible({ timeout: 200 }).catch(() => false)) {
+      return false;
+    }
     return (await this.findLiveReportFrame(timeoutMs)) !== null;
   }
 

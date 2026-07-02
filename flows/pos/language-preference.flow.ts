@@ -13,6 +13,7 @@ export class LanguagePreferenceFlow {
 
   async switchChineseAndReadWelcome(homeUrl: string): Promise<string> {
     await this.homePage.open(homeUrl);
+    await this.homePage.submitEmployeePasswordIfPromptVisible(validEmployeePassword);
     await this.homePage.switchLanguage(languageOptions.chinese);
     await this.homePage.refresh();
     const welcomeText = await this.homePage.readWelcomeText();

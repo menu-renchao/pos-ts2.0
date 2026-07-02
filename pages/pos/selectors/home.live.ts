@@ -11,6 +11,7 @@ export const liveHomeSelectors = {
   languageOptionEnglish: '#SqlBtBox #lan_en',
   languageOptionChinese: '#SqlBtBox #lan_zh-cn',
   logoutButton: '//div[@id="unsave" and not (@style="display: none;")]',
+  togoButton: '#togobt',
   pickupButton: '#pickupbt',
   pickupOrderButton: '#dlvpOdbx',
   reportButton: '#reportbt',

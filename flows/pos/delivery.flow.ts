@@ -5,6 +5,7 @@ import type {
 } from '../../pages/pos/delivery.page.js';
 import type { PosHomePage } from '../../pages/pos/home.page.js';
 import { deliveryCustomerSample } from '../../test-data/pos/delivery.js';
+import { validEmployeePassword } from '../../test-data/pos/permissions.js';
 
 export type DeliveryReselectResult = {
   initialOrderListExists: boolean;
@@ -45,12 +46,14 @@ export class DeliveryFlow {
   async searchHistoricalOrderByAddress(homeUrl: string, address: string): Promise<DeliveryHistoryOrderInfo> {
     await this.openDelivery(homeUrl);
     await this.deliveryPage.seedHistoricalOrderAddress(address);
+    await this.openDelivery(homeUrl);
     await this.deliveryPage.searchAddress(address.slice(0, 3));
     return this.deliveryPage.readHistoryOrderInfo();
   }
 
   private async openDelivery(homeUrl: string): Promise<void> {
     await this.homePage.open(homeUrl);
+    await this.homePage.submitEmployeePasswordIfPromptVisible(validEmployeePassword);
     await this.homePage.clickDelivery();
   }
 }

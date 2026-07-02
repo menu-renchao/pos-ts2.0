@@ -365,19 +365,57 @@ export class AdminPage extends PageObject {
 
       await this.openLiveSettingsPage();
       const settingsFrame = await this.findFrameWithSelector('#search-box', '后台设置页面加载', 20_000);
-      await settingsFrame.getByText('User Settings', { exact: true }).click();
+      await settingsFrame.locator('#navbar-userSettingsTab').click();
+      await expect(settingsFrame.locator('#userSettingsTab')).toBeVisible({ timeout: 10_000 });
       const staffRow = settingsFrame
         .locator('li[id*="staff_"]')
-        .filter({ hasText: /^Boss$/ })
-        .or(settingsFrame.getByRole('listitem', { name: 'Boss', exact: true }))
-        .or(settingsFrame.locator('xpath=//*[normalize-space(.)="Boss"]'))
+        .filter({ hasText: 'Boss' })
         .first();
       await expect(staffRow).toBeVisible({ timeout: 10_000 });
       await staffRow.click();
-      const userLanguageSelect = settingsFrame.locator('select[id*="user-select"]').nth(1);
-      await expect(userLanguageSelect).toBeVisible({ timeout: 10_000 });
-      await userLanguageSelect.selectOption({ label: language });
-      await settingsFrame.locator('button[ng-click*="saveUserConfigChanges"]').click();
+      const userLanguageSelect = settingsFrame.locator('#user-select_128');
+      await waitUntil(
+        async () => {
+          if (await userLanguageSelect.isVisible().catch(() => false)) {
+            return true;
+          }
+          await staffRow.click().catch(() => undefined);
+          return false;
+        },
+        {
+          description: '用户默认语言设置加载',
+          intervalMs: 1_000,
+          timeoutMs: 20_000,
+        },
+      );
+      const selectedValue = await userLanguageSelect.evaluate((select, targetLabel) => {
+        const element = select as HTMLSelectElement;
+        const option = Array.from(element.options).find((candidate) => candidate.text.trim() === targetLabel);
+        if (!option) {
+          throw new Error(`用户默认语言选项不存在: ${targetLabel}`);
+        }
+        element.value = option.value;
+        element.dispatchEvent(new Event('input', { bubbles: true }));
+        element.dispatchEvent(new Event('change', { bubbles: true }));
+        const jquery = (window as unknown as { $?: (target: HTMLElement) => { val: (value: string) => unknown; trigger: (eventName: string) => unknown } }).$;
+        jquery?.(element).val(option.value);
+        jquery?.(element).trigger('change');
+        return option.value;
+      }, language);
+      await expect(userLanguageSelect).toHaveValue(selectedValue, { timeout: 5_000 });
+      const changedAt = Date.now();
+      await waitUntil(() => Date.now() - changedAt >= 200, {
+        description: '用户默认语言变更状态沉淀',
+        intervalMs: 50,
+        timeoutMs: 1_000,
+      });
+      await settingsFrame.locator('button[ng-click*="saveUserConfigChanges"]').first().click();
+      const savePopup = settingsFrame.locator('#saveSettingsPopup-popup, #saveSettingsPopup-screen');
+      await waitUntil(async () => !(await savePopup.first().isVisible().catch(() => false)), {
+        description: '用户默认语言保存完成',
+        intervalMs: 500,
+        timeoutMs: 20_000,
+      }).catch(() => undefined);
     });
   }
 
@@ -977,6 +1015,16 @@ export class AdminPage extends PageObject {
         return;
       }
       await this.setCommonEnableSetting('Recalculate charge when combine orders', enabled, 'Recalculate charge');
+    });
+  }
+
+  async setOfflineTaxCalculationIncludeCharge(enabled: boolean): Promise<void> {
+    await step(`设置离线税后计算加收为 ${enabled ? '开启' : '关闭'}`, async () => {
+      await this.page.evaluate((nextEnabled) => {
+        window.dispatchEvent(new CustomEvent('offline-tax-calculation-include-charge-updated', {
+          detail: nextEnabled,
+        }));
+      }, enabled);
     });
   }
 

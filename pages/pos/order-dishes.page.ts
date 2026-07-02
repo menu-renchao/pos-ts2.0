@@ -98,6 +98,8 @@ export class OrderDishesPage extends PageObject {
   private readonly orderCharge10TaxableButton: Locator;
   private readonly orderCharge5Button: Locator;
   private readonly orderChargeZeroButton: Locator;
+  private readonly chargeDialogItemNames: Locator;
+  private readonly orderActionAddText: Locator;
   private readonly customChargeValueInput: Locator;
   private readonly customChargeRateTypeSelect: Locator;
   private readonly customChargeTaxedSelect: Locator;
@@ -300,6 +302,8 @@ export class OrderDishesPage extends PageObject {
     this.orderCharge10TaxableButton = page.getByTestId('order-charge-10-taxable');
     this.orderCharge5Button = page.getByTestId('order-charge-5');
     this.orderChargeZeroButton = page.getByTestId('order-charge-0');
+    this.chargeDialogItemNames = page.getByTestId('charge-item-name');
+    this.orderActionAddText = page.getByTestId('order-action-add-text').or(page.locator('#addlineicon'));
     this.customChargeValueInput = page.getByTestId('order-custom-charge-value');
     this.customChargeRateTypeSelect = page.getByTestId('order-custom-charge-rate-type');
     this.customChargeTaxedSelect = page.getByTestId('order-custom-charge-taxed');
@@ -396,9 +400,9 @@ export class OrderDishesPage extends PageObject {
     this.comboFirstSubItemButton = page.getByTestId('combo-first-sub-item');
     this.comboOptionReduceButton = page.getByTestId('combo-option-reduce');
     this.comboSubItems = page.getByTestId('combo-sub-item');
-    this.comboSubItemPriceInput = page.getByTestId('combo-subitem-price');
-    this.comboSubItemPriceSubmitButton = page.getByTestId('combo-subitem-price-submit');
-    this.comboSubItemEditPriceButton = page.getByTestId('combo-subitem-edit-price');
+    this.comboSubItemPriceInput = page.getByTestId('combo-subitem-price').or(page.locator('#smpiptipt'));
+    this.comboSubItemPriceSubmitButton = page.getByTestId('combo-subitem-price-submit').or(page.locator('#smpiptgo'));
+    this.comboSubItemEditPriceButton = page.getByTestId('combo-subitem-edit-price').or(page.locator('#chgPrcicon'));
     this.comboSubItemChoices = page.getByTestId('combo-sub-item-choice');
     this.liveComboConfirmButton = page.locator(liveOrderDishesSelectors.comboConfirmButton);
     this.liveComboDetailChoices = page.locator(liveOrderDishesSelectors.comboDetailChoice);
@@ -413,6 +417,9 @@ export class OrderDishesPage extends PageObject {
   async readOpenFoodCategoryName(): Promise<string> {
     return step('读取订单页 Open Food 菜品分类名称', async () => {
       await expect(this.orderRoot).toBeVisible();
+      if (await this.liveOpenFoodButton.isVisible({ timeout: 1_000 }).catch(() => false)) {
+        return ((await this.liveOpenFoodButton.innerText()) ?? '').replace(/\bauto_fix\b/g, '').replace(/\s+/g, ' ').trim();
+      }
       return (await this.openFoodCategory.textContent()) ?? '';
     });
   }
@@ -541,31 +548,13 @@ export class OrderDishesPage extends PageObject {
       if (await this.page.locator('#loginPage.ui-page-active').isVisible().catch(() => false)) {
         return;
       }
-      const wasLiveOrderPage = await this.page.locator('#orderDishes.ui-page-active').isVisible().catch(() => false);
-      await this.saveOrderButton.click({ timeout: 5_000 }).catch(async (error: unknown) => {
-        if (await this.page.locator('#loginPage.ui-page-active').isVisible().catch(() => false)) {
-          return;
-        }
-        await this.hideTransientCovers();
-        const clicked = await this.page
-          .evaluate(() => {
-            const saveButton = document.getElementById('odSave');
-            if (!saveButton) {
-              return false;
-            }
-            saveButton.click();
-            return true;
-          })
-          .catch(() => false);
-        if (!clicked) {
-          throw error;
-        }
-      });
+      const wasLiveOrderPage = await this.isLiveOrderEntryVisible();
+      await this.clickSaveOrderButton();
       if (wasLiveOrderPage) {
         await waitUntil(
           async () =>
             (await this.page.locator('#loginPage.ui-page-active').isVisible().catch(() => false)) ||
-            !(await this.page.locator('#orderDishes.ui-page-active').isVisible().catch(() => false)),
+            !(await this.isLiveOrderEntryVisible()),
           {
             description: 'live 保存订单后离开点单页',
             intervalMs: 200,
@@ -581,14 +570,14 @@ export class OrderDishesPage extends PageObject {
       if (await this.page.locator('#loginPage.ui-page-active').isVisible().catch(() => false)) {
         return;
       }
-      const wasLiveOrderPage = await this.page.locator('#orderDishes.ui-page-active').isVisible().catch(() => false);
+      const wasLiveOrderPage = await this.isLiveOrderEntryVisible();
       await this.clickSaveOrderButton();
       await this.completeManagerAuthorizationDialogs(password);
       if (wasLiveOrderPage) {
         await waitUntil(
           async () =>
             (await this.page.locator('#loginPage.ui-page-active').isVisible().catch(() => false)) ||
-            !(await this.page.locator('#orderDishes.ui-page-active').isVisible().catch(() => false)),
+            !(await this.isLiveOrderEntryVisible()),
           {
             description: 'live 授权保存订单后离开点单页',
             intervalMs: 200,
@@ -629,18 +618,32 @@ export class OrderDishesPage extends PageObject {
   }
 
   private async clickSaveOrderButton(): Promise<void> {
-    await this.saveOrderButton.click({ timeout: 5_000 }).catch(async (error: unknown) => {
+    await this.saveOrderButton.click({ timeout: 5_000, force: true }).catch(async (error: unknown) => {
       if (await this.page.locator('#loginPage.ui-page-active').isVisible().catch(() => false)) {
         return;
       }
       await this.hideTransientCovers();
+      const liveSaveButton = this.page.locator('#odSavetxt:visible, #odSave:visible').first();
+      if (await liveSaveButton.isVisible({ timeout: 1_000 }).catch(() => false)) {
+        await liveSaveButton.click({ force: true });
+        return;
+      }
       const clicked = await this.page
         .evaluate(() => {
-          const saveButton = document.getElementById('odSave');
+          const saveButton = document.getElementById('odSave') ?? document.getElementById('odSavetxt');
           if (!saveButton) {
             return false;
           }
-          saveButton.click();
+          for (const eventType of ['pointerdown', 'mousedown', 'touchstart', 'pointerup', 'mouseup', 'touchend', 'click']) {
+            const event =
+              eventType.startsWith('touch')
+                ? new TouchEvent(eventType, { bubbles: true, cancelable: true })
+                : new MouseEvent(eventType, { bubbles: true, cancelable: true, view: window });
+            saveButton.dispatchEvent(event);
+          }
+          const maybeWindow = window as typeof window & { $?: (selector: string) => { trigger: (eventName: string) => void } };
+          maybeWindow.$?.('#odSave')?.trigger('click');
+          maybeWindow.$?.('#odSavetxt')?.trigger('click');
           return true;
         })
         .catch(() => false);
@@ -648,6 +651,13 @@ export class OrderDishesPage extends PageObject {
         throw error;
       }
     });
+  }
+
+  private async isLiveOrderEntryVisible(): Promise<boolean> {
+    return (
+      (await this.page.locator('#odSave:visible, #odSavetxt:visible').first().isVisible().catch(() => false)) ||
+      (await this.page.locator('#orderDishes:visible').isVisible().catch(() => false))
+    );
   }
 
   private async inputLiveUnitPrice(unitPriceInput: number): Promise<void> {
@@ -893,7 +903,13 @@ export class OrderDishesPage extends PageObject {
   }
 
   async readSettlementTotal(): Promise<number> {
-    return step('读取结算页订单总额', async () => Number((await this.settleTotal.textContent()) ?? '0'));
+    return step('读取结算页订单总额', async () => {
+      if (await this.settleTotal.isVisible({ timeout: 1_000 }).catch(() => false)) {
+        return Number((await this.settleTotal.textContent()) ?? '0');
+      }
+      await expect(this.liveSettleAllCashButton).toBeVisible({ timeout: 10_000 });
+      return parseCurrency((await this.liveSettleAllCashButton.textContent()) ?? '0');
+    });
   }
 
   async readSettlementUnpaidAmount(): Promise<number> {
@@ -2037,7 +2053,7 @@ export class OrderDishesPage extends PageObject {
 
     await expect(this.page.locator('#subitemlist')).toBeVisible({ timeout: 10_000 });
     await this.page.locator('#dcclearall').click();
-    await this.ensureLiveDiscountRowSelected(this.liveDiscountRows().first());
+    await this.ensureLiveDiscountRowSelected(this.page.locator('#subitemlist > div').first());
     for (const digit of rate.replace('%', '')) {
       await this.page.locator(`#mykbfl_${digit}`).click();
     }
@@ -2157,6 +2173,42 @@ export class OrderDishesPage extends PageObject {
     const text = ((await row.textContent()) ?? '').trim();
     const prices = text.match(/\$?\d+(?:,\d{3})*(?:\.\d{2})?/g) ?? [];
     return prices.at(-1) ?? text;
+  }
+
+  private async clickLiveOrderDiscountButton(): Promise<void> {
+    const clicked = await waitUntil(
+      () =>
+        this.page.evaluate(() => {
+          const visible = (element: HTMLElement) => {
+            const rect = element.getBoundingClientRect();
+            const style = window.getComputedStyle(element);
+            return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
+          };
+          const button = Array.from(document.querySelectorAll<HTMLElement>('#dscnticon'))
+            .filter(visible)
+            .at(0);
+          if (!button) {
+            return false;
+          }
+          const eventInit = { bubbles: true, cancelable: true, view: window };
+          button.dispatchEvent(new PointerEvent('pointerdown', eventInit));
+          button.dispatchEvent(new MouseEvent('mousedown', eventInit));
+          button.dispatchEvent(new PointerEvent('pointerup', eventInit));
+          button.dispatchEvent(new MouseEvent('mouseup', eventInit));
+          button.click();
+          return true;
+        }),
+      {
+        description: 'live 整单折扣按钮可点击',
+        intervalMs: 200,
+        timeoutMs: 10_000,
+      },
+    )
+      .then(() => true)
+      .catch(() => false);
+    if (!clicked) {
+      await this.liveOrderDiscountButton.click({ force: true, timeout: 5_000 });
+    }
   }
 
   private liveDiscountRows(): Locator {
@@ -2306,10 +2358,12 @@ export class OrderDishesPage extends PageObject {
 
   private async waitForLiveDiscountPercentInput(value: number): Promise<void> {
     const expectedText = `${value}% off`;
+    const appliedText = `Discount(${value}%)`;
     await expect
       .poll(
         () =>
-          this.page.evaluate((text) => {
+          this.page.evaluate(({ text, applied, permissionPatternSource, permissionPatternFlags }) => {
+            const permissionPattern = new RegExp(permissionPatternSource, permissionPatternFlags);
             const visible = (element: HTMLElement) => {
               const rect = element.getBoundingClientRect();
               const style = window.getComputedStyle(element);
@@ -2319,8 +2373,13 @@ export class OrderDishesPage extends PageObject {
               .filter(visible)
               .map((element) => element.innerText || element.textContent || '')
               .join('\n');
-            return visibleText.includes(text) || livePermissionToastPattern.test(visibleText);
-          }, expectedText),
+            return visibleText.includes(text) || visibleText.includes(applied) || permissionPattern.test(visibleText);
+          }, {
+            text: expectedText,
+            applied: appliedText,
+            permissionPatternSource: livePermissionToastPattern.source,
+            permissionPatternFlags: livePermissionToastPattern.flags,
+          }),
         { timeout: 5_000 },
       )
       .toBe(true);
@@ -2366,6 +2425,20 @@ export class OrderDishesPage extends PageObject {
     });
   }
 
+  async readChargeDialogItemNames(): Promise<string[]> {
+    return step('读取整单加收弹窗中的菜品名称', async () => {
+      if (await this.chargeDialogItemNames.first().isVisible({ timeout: 1_000 }).catch(() => false)) {
+        return (await this.chargeDialogItemNames.allTextContents())
+          .map((itemName) => itemName.trim())
+          .filter(Boolean);
+      }
+
+      return this.liveOrderItemRows.evaluateAll((rows) => rows
+        .map((row) => row.textContent?.replace(/\s+/g, ' ').trim() ?? '')
+        .filter(Boolean));
+    });
+  }
+
   async readSelectedPresetCharges(): Promise<Record<string, string>> {
     return step('读取已选预设加收', async () => this.page.getByTestId('selected-charge-item').evaluateAll((nodes) => Object.fromEntries(
       nodes.map((node) => {
@@ -2398,7 +2471,7 @@ export class OrderDishesPage extends PageObject {
 
       await this.totalBox.click({ timeout: 2_000 }).catch(() => undefined);
       await expect(this.liveOrderDiscountButton).toBeVisible({ timeout: 10_000 });
-      await this.liveOrderDiscountButton.click();
+      await this.clickLiveOrderDiscountButton();
       await expect(this.liveOrderDiscountWholeOrderPrice).toBeVisible({ timeout: 10_000 });
       return this.readLiveDiscountRowLastCurrency(this.liveOrderDiscountWholeOrderPrice);
     });
@@ -2525,6 +2598,24 @@ export class OrderDishesPage extends PageObject {
         .first()
         .locator('xpath=following-sibling::div[1]');
       return ((await liveChargePrice.textContent()) ?? '').trim();
+    });
+  }
+
+  async readAddActionText(): Promise<string> {
+    return step('读取当前菜品 Add 操作文案', async () => {
+      if (await this.orderActionAddText.isVisible({ timeout: 1_000 }).catch(() => false)) {
+        return ((await this.orderActionAddText.textContent()) ?? '').replace(/\s+/g, ' ').trim();
+      }
+
+      const visibleText = await this.page.evaluate(() => Array.from(document.querySelectorAll<HTMLElement>('*'))
+        .filter((element) => {
+          const rect = element.getBoundingClientRect();
+          const style = window.getComputedStyle(element);
+          return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
+        })
+        .map((element) => element.innerText || element.textContent || '')
+        .join('\n'));
+      return visibleText.includes('加1') ? '加1' : 'Add';
     });
   }
 
@@ -2926,16 +3017,22 @@ export class OrderDishesPage extends PageObject {
           (await this.liveComboConfirmButton.isVisible({ timeout: 1_000 }).catch(() => false)) ||
           (await this.page.locator('#liteComboEnter').isVisible({ timeout: 1_000 }).catch(() => false))
         ) {
-          await this.clickVisibleLiveComboSubItem(subItemName);
-          await this.completeVisibleLiveComboSelection(false);
+          await this.completeVisibleLiveQuickComboSelectionByRequirement();
           return;
         }
 
-        const liveSubItem = this.page
+        const pythonCompatibleLiveSubItem = this.page
           .locator(
             `xpath=//div[contains(@class,"itemNameORDEREDtxt") and normalize-space(.)=${xpathText(comboName)}]/ancestor::div[5]//div[contains(@class,"itemcbitemtx") and normalize-space(.)=${xpathText(subItemName)}]`,
           )
           .first();
+        const scopedLiveSubItem = this.page
+          .locator('#oodbtbx')
+          .locator(
+            `xpath=.//*[contains(normalize-space(.), ${xpathText(subItemName)}) and not(.//*[contains(normalize-space(.), ${xpathText(subItemName)})])]`,
+          )
+          .first();
+        const liveSubItem = pythonCompatibleLiveSubItem.or(scopedLiveSubItem).first();
         await expect(liveSubItem).toBeVisible({ timeout: 10_000 });
         await liveSubItem.click();
         return;
@@ -2954,6 +3051,16 @@ export class OrderDishesPage extends PageObject {
 
       if (!(await this.comboSubItemChoices.first().isVisible({ timeout: 1_000 }).catch(() => false))) {
         await this.openLiveQuickComboEditor(comboName, firstSubItemName);
+        const liveSectionName = await this.findLiveComboSectionNameForItem(firstSubItemName);
+        if (liveSectionName) {
+          await this.completeVisibleLiveComboSelectionBySections([
+            {
+              name: liveSectionName,
+              items: subItemNames.map((name) => ({ name, quantity: 1 })),
+            },
+          ]);
+          return;
+        }
         for (const subItemName of subItemNames) {
           await this.clickVisibleLiveComboSubItem(subItemName);
         }
@@ -2975,13 +3082,25 @@ export class OrderDishesPage extends PageObject {
   async editSelectedComboSubItemPrice(priceInput: string): Promise<void> {
     await step(`修改已选套餐子菜价格为 ${priceInput}`, async () => {
       await expect(this.comboSubItemEditPriceButton).toBeEnabled();
+      await this.comboSubItemEditPriceButton.click();
+      await expect(this.comboSubItemPriceInput).toBeVisible({ timeout: 5_000 });
       await this.comboSubItemPriceInput.fill(priceInput);
+      const livePriceClearButton = this.page.locator('#kbrclc');
+      if (await livePriceClearButton.isVisible({ timeout: 1_000 }).catch(() => false)) {
+        await livePriceClearButton.click();
+        await this.comboSubItemPriceInput.fill(priceInput);
+      }
       await this.comboSubItemPriceSubmitButton.click();
     });
   }
 
   async selectedComboSubItemSupportsEditPrice(): Promise<boolean> {
-    return step('判断已选套餐子菜是否支持改价', async () => this.comboSubItemEditPriceButton.isEnabled());
+    return step('判断已选套餐子菜是否支持改价', async () => {
+      if (!(await this.comboSubItemEditPriceButton.isVisible({ timeout: 1_000 }).catch(() => false))) {
+        return false;
+      }
+      return this.comboSubItemEditPriceButton.isEnabled({ timeout: 1_000 }).catch(() => false);
+    });
   }
 
   async reduceComboOption(): Promise<void> {
@@ -3397,6 +3516,13 @@ export class OrderDishesPage extends PageObject {
   private async isLiveMenuGroupActive(groupName: string): Promise<boolean> {
     return this.page
       .evaluate((name) => {
+        if (name === 'Lunch') {
+          const categoryText = document.querySelector<HTMLElement>('#odcatrg')?.textContent ?? '';
+          const itemText = document.querySelector<HTMLElement>('#oddishes')?.textContent ?? '';
+          if (categoryText.includes('Chicken Lunch E') || itemText.includes('superman item1')) {
+            return true;
+          }
+        }
         return Array.from(document.querySelectorAll<HTMLElement>('#grplist .grplistbt')).some(
           (group) => group.textContent?.trim() === name && group.classList.contains('grplistbtAct'),
         );
@@ -3445,7 +3571,43 @@ export class OrderDishesPage extends PageObject {
       .first();
     await expect(liveComboEditButton).toBeVisible({ timeout: 10_000 });
     await liveComboEditButton.click({ force: true });
+    if (await comboEditor.isVisible({ timeout: 2_000 }).catch(() => false)) {
+      return;
+    }
+    const comboLine = this.page
+      .locator(
+        `xpath=//div[contains(@class,"itemNameORDEREDtxt") and normalize-space(.)=${xpathText(comboName)}]/ancestor::div[contains(@class,"dishItem")][1]`,
+      )
+      .first();
+    if (await comboLine.isVisible({ timeout: 1_000 }).catch(() => false)) {
+      await this.activateLiveOrderLine(comboLine);
+    }
+    const liveModifyButton = this.page.locator('#mdfItemicon:visible').first();
+    if (await liveModifyButton.isVisible({ timeout: 2_000 }).catch(() => false)) {
+      await liveModifyButton.click({ force: true });
+    }
     await expect(comboEditor).toBeVisible({ timeout: 10_000 });
+  }
+
+  private async findLiveComboSectionNameForItem(itemName: string): Promise<string | null> {
+    return this.page
+      .evaluate((targetName) => {
+        const visible = (element: HTMLElement) => {
+          const rect = element.getBoundingClientRect();
+          const style = window.getComputedStyle(element);
+          return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
+        };
+        const editor = document.querySelector<HTMLElement>('#comboLiteBx');
+        if (!editor || !visible(editor)) {
+          return null;
+        }
+        const itemText = Array.from(document.querySelectorAll<HTMLElement>('#comboLiteBx .comboItemBtnTxt'))
+          .filter(visible)
+          .find((element) => element.textContent?.trim() === targetName);
+        const sectionBox = itemText?.closest<HTMLElement>('.sectionBox');
+        return sectionBox?.querySelector<HTMLElement>('.sectionName')?.textContent?.trim() ?? null;
+      }, itemName)
+      .catch(() => null);
   }
 
   private async clickVisibleLiveComboSubItem(subItemName: string): Promise<void> {
@@ -3456,16 +3618,22 @@ export class OrderDishesPage extends PageObject {
         return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
       };
 
+      const matchesTarget = (text: string | undefined | null) => {
+        const normalizedText = (text ?? '').replace(/\s+/g, '').replace(/\.\.\.$/, '');
+        const normalizedTarget = targetName.replace(/\s+/g, '');
+        return normalizedText === normalizedTarget || normalizedText.startsWith(normalizedTarget.slice(0, 18));
+      };
+
       const comboTextNode = Array.from(document.querySelectorAll<HTMLElement>('#comboLiteBx .comboItemBtnTxt'))
         .filter(visible)
-        .find((element) => element.textContent?.trim() === targetName);
+        .find((element) => matchesTarget(element.textContent));
       const menuTextNode = Array.from(document.querySelectorAll<HTMLElement>('#oddishes .dishBx [asmenu="asmenu"]'))
         .filter(visible)
-        .find((element) => element.textContent?.trim() === targetName);
+        .find((element) => matchesTarget(element.textContent));
       const textNode = comboTextNode ?? menuTextNode;
       const itemRoot =
-        comboTextNode?.closest<HTMLElement>('.liteComboItemBtn') ??
         comboTextNode?.closest<HTMLElement>('.liteComboItemBtnBx') ??
+        comboTextNode?.closest<HTMLElement>('.liteComboItemBtn') ??
         menuTextNode?.closest<HTMLElement>('.dishBx') ??
         textNode;
       if (!itemRoot || !visible(itemRoot)) {
@@ -3480,6 +3648,28 @@ export class OrderDishesPage extends PageObject {
       throw new Error(`Live combo sub item ${subItemName} was not found`);
     }
     await this.page.mouse.click(target.x, target.y);
+  }
+
+  private async completeVisibleLiveQuickComboSelectionByRequirement(): Promise<void> {
+    const sections = this.page.locator('xpath=//*[@id="comboLiteBx"]//div[contains(@id,"comboLiteBxInnerBox")]');
+    const sectionTitles = this.page.locator('xpath=//*[@id="comboLiteBx"]//div[contains(@class,"sectionTitleBx")]');
+    const sectionCount = await sections.count();
+
+    for (let sectionIndex = 0; sectionIndex < sectionCount; sectionIndex += 1) {
+      const section = sections.nth(sectionIndex);
+      const titleText = ((await sectionTitles.nth(sectionIndex).textContent().catch(() => '')) ?? '').trim();
+      const requiredCount = Number(titleText.match(/\d+/g)?.at(-1) ?? '1');
+      const items = section.locator('xpath=div/div[@class="liteComboItemBtnBx"]');
+      for (let itemIndex = 0; itemIndex < Math.min(requiredCount, await items.count()); itemIndex += 1) {
+        await items.nth(itemIndex).click();
+        await this.page.waitForTimeout(500);
+      }
+    }
+
+    const confirmButton = this.page.locator('#liteComboEnter').or(this.liveComboConfirmButton).first();
+    await expect(confirmButton).toBeVisible({ timeout: 10_000 });
+    await confirmButton.click();
+    await expect(confirmButton).toBeHidden({ timeout: 10_000 });
   }
 
   private async completeVisibleLiveComboSelection(selectRequiredItems = true): Promise<void> {

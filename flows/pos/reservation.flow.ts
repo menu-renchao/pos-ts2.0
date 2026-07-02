@@ -1,5 +1,6 @@
 import type { PosHomePage } from '../../pages/pos/home.page.js';
 import type { ReservationHistoryRow, ReservationPage } from '../../pages/pos/reservation.page.js';
+import { validEmployeePassword } from '../../test-data/pos/permissions.js';
 import { reservationStatuses } from '../../test-data/pos/reservations.js';
 import { numericPhone, uniqueName } from '../../utils/random.js';
 
@@ -44,6 +45,7 @@ export class ReservationFlow {
 
   private async openReservation(homeUrl: string): Promise<void> {
     await this.homePage.open(homeUrl);
+    await this.homePage.submitEmployeePasswordIfPromptVisible(validEmployeePassword);
     await this.homePage.clickReservation();
   }
 }

@@ -132,6 +132,10 @@ export class RecallPage extends PageObject {
   private readonly recallGuestAddress: Locator;
   private readonly recallGuestPhone: Locator;
   private readonly recallRefundPaidOrderButton: Locator;
+  private readonly refundItemAmount: Locator;
+  private readonly refundItemButton: Locator;
+  private readonly refundItemIndexInput: Locator;
+  private readonly refundItemRequestedAmountInput: Locator;
   private readonly recallSendKitchenButton: Locator;
   private readonly saveEditButton: Locator;
   private readonly saveSplitAmountButton: Locator;
@@ -173,7 +177,14 @@ export class RecallPage extends PageObject {
     this.recalledOptions = page.getByTestId('recall-item-option');
     this.recalledComboSubItems = page.getByTestId('recall-combo-sub-item');
     this.recallItems = page.getByTestId('recall-order-item');
-    this.recallRoot = page.getByTestId('recall-page').or(page.locator('#recall.ui-page-active')).or(page.locator('#recall .recall')).first();
+    this.recallRoot = page
+      .getByTestId('recall-page')
+      .or(page.locator('#recall.ui-page-active'))
+      .or(page.locator('#recall .recall'))
+      .or(page.locator('.recall'))
+      .or(page.locator('#recallodlist:visible, #recallorderlist:visible, #odlist:visible, #odsmrylst:visible'))
+      .or(page.locator('#set_UNPAID'))
+      .first();
     this.discountAmountInput = page.getByTestId('recall-order-discount-amount');
     this.discountAmountSubmitButton = page.getByTestId('recall-order-discount-submit');
     this.discountButton = page.getByTestId('recall-order-discount').or(page.locator('#odDiscount'));
@@ -275,6 +286,10 @@ export class RecallPage extends PageObject {
     this.recallGuestAddress = page.getByTestId('recall-guest-address');
     this.recallGuestPhone = page.getByTestId('recall-guest-phone');
     this.recallRefundPaidOrderButton = page.getByTestId('recall-refund-paid-order');
+    this.refundItemAmount = page.getByTestId('recall-refund-item-amount');
+    this.refundItemButton = page.getByTestId('recall-refund-by-item');
+    this.refundItemIndexInput = page.getByTestId('recall-refund-item-index');
+    this.refundItemRequestedAmountInput = page.getByTestId('recall-refund-item-requested-amount');
     this.recallSendKitchenButton = page.getByTestId('recall-send-kitchen');
     this.saveEditButton = page.getByTestId('recall-save-edit');
     this.saveSplitAmountButton = page.getByTestId('split-save-amount');
@@ -850,7 +865,9 @@ export class RecallPage extends PageObject {
         await expect(livePaymentTipButton).toBeVisible({ timeout: 10_000 });
         await livePaymentTipButton.click();
 
-        const liveTipInput = this.page.getByRole('textbox', { name: /^Tips$/ }).last();
+        const liveTipInput = this.page
+          .locator('#tipsonly:visible, input[placeholder="Tips"]:visible, input[aria-label="Tips"]:visible')
+          .last();
         await expect(liveTipInput).toBeVisible({ timeout: 10_000 });
         await liveTipInput.fill((amount / 100).toFixed(2));
         if (method === 'cash') {
@@ -869,7 +886,11 @@ export class RecallPage extends PageObject {
             await liveCashTipMethod.click();
           }
         }
-        const liveTipOkButton = this.page.locator('#refundByAmountConfirm:visible, #smpiptgo:visible').last();
+        const liveKeyboardHide = this.page.locator('#kbrhide:visible').first();
+        if (await liveKeyboardHide.isVisible({ timeout: 1_000 }).catch(() => false)) {
+          await liveKeyboardHide.click();
+        }
+        const liveTipOkButton = this.page.locator('#smpiptgo:visible, #refundByAmountConfirm:visible').last();
         if (await liveTipOkButton.isVisible({ timeout: 2_000 }).catch(() => false)) {
           await liveTipOkButton.click({ timeout: 5_000 }).catch(async () => {
             await liveTipOkButton.evaluate((element) => (element as HTMLElement).click());
@@ -1333,6 +1354,21 @@ export class RecallPage extends PageObject {
     });
   }
 
+  async refundByItem(itemIndex: number, requestedAmount?: number): Promise<number> {
+    return step(`Recall 按菜退款第 ${itemIndex} 个菜`, async () => {
+      if (await this.refundItemButton.isVisible({ timeout: 1_000 }).catch(() => false)) {
+        await this.refundItemIndexInput.fill(String(itemIndex));
+        if (requestedAmount !== undefined) {
+          await this.refundItemRequestedAmountInput.fill(String(requestedAmount));
+        }
+        await this.refundItemButton.click();
+        return parseCurrency((await this.refundItemAmount.textContent()) ?? '0');
+      }
+
+      throw new Error('Live refund-by-item is not wired yet; keep this row as a live gap until selectors are confirmed.');
+    });
+  }
+
   async refundPaymentRecord(index: number): Promise<void> {
     await step(`Recall 退款第 ${index} 条付款记录`, async () => {
       await this.paymentRecordRefundButton(index).click();
@@ -1388,6 +1424,9 @@ export class RecallPage extends PageObject {
   async clickEdit(): Promise<void> {
     await step('点击 Recall 编辑订单', async () => {
       await this.editButton.click();
+      await expect(this.page.locator('#orderDishes.ui-page-active, [data-testid="order-dishes-page"]').first()).toBeVisible({
+        timeout: 10_000,
+      });
     });
   }
 
@@ -1896,10 +1935,17 @@ export class RecallPage extends PageObject {
   }
 
   private async clickLiveOrderCard(index: number): Promise<void> {
-    const orderCard = this.page
-      .locator('xpath=(//div[contains(@class, "ReactVirtualized__Grid__innerScrollContainer")]/div/div/div)')
-      .nth(index)
-      .or(this.liveOrderCards.nth(index))
+    const gridCell = this.liveOrderCards.nth(index);
+    const pythonOrderCard = this.page.locator('xpath=//*[@id="reordersmylst"]/div[2]/div/child::div').nth(index);
+    const orderCard = pythonOrderCard
+      .or(gridCell.locator(':scope > div').first())
+      .or(gridCell)
+      .first();
+    const fallbackOrderCard = gridCell
+      .locator(':scope > div')
+      .first()
+      .or(gridCell)
+      .or(this.page.locator('xpath=(//div[contains(@class, "ReactVirtualized__Grid__innerScrollContainer")]/div/div/div)').nth(index))
       .first();
     await expect(orderCard).toBeVisible({ timeout: 10_000 });
     const cardBox = await orderCard.boundingBox();
@@ -1907,6 +1953,13 @@ export class RecallPage extends PageObject {
       await this.page.mouse.click(cardBox.x + cardBox.width / 2, cardBox.y + cardBox.height / 2);
     } else {
       await orderCard.click();
+    }
+    if (await fallbackOrderCard.isVisible({ timeout: 500 }).catch(() => false)) {
+      await fallbackOrderCard.evaluate((element) => {
+        const target = element as HTMLElement;
+        target.click();
+        target.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
+      });
     }
     await waitUntil(
       async () =>

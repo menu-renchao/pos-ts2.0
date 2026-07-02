@@ -1105,4 +1105,300 @@ test.describe('stage2 order operation migration', () => {
       2,
     );
   });
+
+  test('POS-32017 合单重算加收开启时 Delivery 加收合入 Dine In 后不应保留', async ({
+    environment,
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+      new DeliveryPage(page),
+    );
+
+    const result = await orderEntryFlow.combineDeliveryAutoChargeIntoDineInWithoutRecalculatedCharge(
+      environment.posHomeUrl,
+    );
+
+    expect(result.combinedOrderChargeItems).toEqual({});
+  });
+
+  test('POS-32006 合单重算加收开启时满足人数应自动生成 Service 加收', async ({
+    environment,
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.combineOrdersMeetingServiceChargeGuestCountWithRecalculation(
+      environment.posHomeUrl,
+    );
+
+    expect(result.combinedOrderChargeItems.auto_test_perc).toBe(result.expectedChargeText);
+    expect(result.combinedChargeTotal).toBeCloseTo(result.expectedCharge, 2);
+  });
+
+  test('POS-32023 合单重算加收开启时手动小费加收应保留且 Report Fee 不变', async ({
+    environment,
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+      undefined,
+      new ReportPage(page),
+    );
+
+    const result = await orderEntryFlow.combineManualShareTipChargeOrderWithRecalculation(
+      environment.posHomeUrl,
+    );
+
+    expect(result.combinedOrderChargeItems.auto_test_perc).toBe(result.chargeBeforeCombine);
+    expect(result.combinedChargeTotal).toBe(result.chargeBeforeCombine);
+    expect(result.feeAfterCombine).toBeCloseTo(result.feeBeforeCombine, 2);
+  });
+
+  test('POS-32031 合单重算加收开启时自动手动自定义加收应显示三条并正确聚合', async ({
+    environment,
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.combineOrdersWithAutoManualAndCustomChargesWithRecalculation(
+      environment.posHomeUrl,
+    );
+
+    expect(Object.keys(result.combinedOrderChargeItems)).toHaveLength(3);
+    expect(result.combinedOrderChargeItems.auto_test1).toBe('10.00');
+    expect(Number(result.combinedOrderChargeItems.auto_test2)).toBeCloseTo(
+      result.manualChargeBeforeCombineTotal,
+      2,
+    );
+    expect(result.combinedChargeTotal).toBeCloseTo(
+      result.firstOrderChargeTotal + result.secondOrderChargeTotal - 10,
+      2,
+    );
+  });
+
+  test('POS-32955 OpenFood 自定义名称应在加收页正常展示', async ({
+    environment,
+    page,
+  }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.createOpenFoodAndReadChargeDialogItemNames(
+      environment.posHomeUrl,
+    );
+
+    expect(result.chargeDialogItemNames).toContain(result.openFoodName);
+  });
+
+  test('POS-32934 点单页切换中英文后选项 Add 文案应同步切换', async ({
+    environment,
+    page,
+  }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.switchOrderPageLanguageAndReadAddTexts(
+      environment.posHomeUrl,
+    );
+
+    expect(result.englishBefore).toBe('Add');
+    expect(result.chinese).toBe('加1');
+    expect(result.englishAfter).toBe('Add');
+  });
+
+  test('POS-32963 加收三位小数时订单加收金额应四舍五入到两位', async ({
+    environment,
+    page,
+  }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.applyThreeDecimalChargeAndReadAmount(
+      environment.posHomeUrl,
+    );
+
+    expect(result.chargeAmount).toBe(result.expectedChargeAmount);
+  });
+
+  test('POS-33063 税后计算自动加收时订单加收金额应包含税额基数', async ({
+    environment,
+    page,
+  }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+      new AdminPage(page),
+    );
+
+    const result = await orderEntryFlow.applyAutoChargeAfterTaxAndReadAmounts(
+      environment.posHomeUrl,
+    );
+
+    expect(result.charge).toBeCloseTo(result.expectedCharge, 2);
+  });
+
+  test('POS-34555 分两次现金付款且第二次存在找零时订单应支付成功', async ({
+    environment,
+    page,
+  }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const status = await orderEntryFlow.partiallyPayCashWithChangeAndReadRecallStatus(
+      environment.posHomeUrl,
+    );
+
+    expect(status).toBe('Paid');
+  });
+
+  test('POS-35134 按菜退款计税菜时退款金额应等于菜品金额加税额', async ({
+    environment,
+    page,
+  }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.refundFirstItemAndReadPaymentRecord(
+      environment.posHomeUrl,
+      { taxExemptFirstItem: false },
+    );
+
+    expect(result.refundAmount).toBeCloseTo(result.expectedRefundAmount, 2);
+    expect(result.paymentRefundRecordAmount).toBeCloseTo(result.expectedRefundAmount * -1, 2);
+  });
+
+  test('POS-35135 按菜退款免税菜时退款金额应等于菜品金额', async ({
+    environment,
+    page,
+  }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.refundFirstItemAndReadPaymentRecord(
+      environment.posHomeUrl,
+      { taxExemptFirstItem: true },
+    );
+
+    expect(result.refundAmount).toBeCloseTo(result.expectedRefundAmount, 2);
+    expect(result.paymentRefundRecordAmount).toBeCloseTo(result.expectedRefundAmount * -1, 2);
+  });
+
+  test('POS-35142 百分比整单折扣后按菜退款应按折扣后金额和税额退款', async ({
+    environment,
+    page,
+  }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.refundFirstDiscountedItemAndReadPaymentRecord(
+      environment.posHomeUrl,
+    );
+
+    expect(result.refundAmount).toBeCloseTo(result.expectedRefundAmount, 2);
+    expect(result.paymentRefundRecordAmount).toBeCloseTo(result.expectedRefundAmount * -1, 2);
+  });
+
+  test('POS-35150 按菜退款输入金额超过实付时退款金额应按实付封顶', async ({
+    environment,
+    page,
+  }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.refundFirstItemWithRequestedAmountAbovePaidAndReadPaymentRecord(
+      environment.posHomeUrl,
+    );
+
+    expect(result.refundAmount).toBeCloseTo(result.expectedRefundAmount, 2);
+    expect(result.paymentRefundRecordAmount).toBeCloseTo(result.expectedRefundAmount * -1, 2);
+  });
+
+  test('POS-35163 现金订单多次按菜退款时第二次应退款剩余可退菜品金额', async ({
+    environment,
+    page,
+  }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.refundTwoItemsSequentiallyAndReadPaymentRecords(
+      environment.posHomeUrl,
+    );
+
+    expect(result.firstRefundAmount).toBeCloseTo(result.firstExpectedRefundAmount, 2);
+    expect(result.firstPaymentRefundRecordAmount).toBeCloseTo(
+      result.firstExpectedRefundAmount * -1,
+      2,
+    );
+    expect(result.secondRefundAmount).toBeCloseTo(result.secondExpectedRefundAmount, 2);
+    expect(result.secondPaymentRefundRecordAmount).toBeCloseTo(
+      result.secondExpectedRefundAmount * -1,
+      2,
+    );
+  });
+
+  test('POS-35166 现金付款存在找零时按金额退款默认应退实际支付金额', async ({
+    environment,
+    page,
+  }) => {
+    const orderEntryFlow = new OrderEntryFlow(
+      new PosHomePage(page),
+      new OrderDishesPage(page),
+      new RecallPage(page),
+    );
+
+    const result = await orderEntryFlow.refundCashPaymentWithChangeAndReadPaymentRecord(
+      environment.posHomeUrl,
+    );
+
+    expect(result.paymentRefundRecordAmount).toBeCloseTo(result.expectedRefundAmount * -1, 2);
+  });
 });

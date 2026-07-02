@@ -433,12 +433,14 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       <button data-testid="order-custom-charge-add">Add Custom Charge</button>
       <button data-testid="order-charge-open">Open Charge</button>
       <section data-testid="order-charge-dialog" hidden>
+        <div data-testid="charge-item-list"></div>
         <div data-testid="preset-charge-list"></div>
         <div data-testid="selected-charge-list"></div>
         <button data-testid="order-charge-ok">OK Charge</button>
       </section>
       <div data-testid="order-charge-label"></div>
       <div data-testid="order-charge-price"></div>
+      <button data-testid="order-action-add-text">Add</button>
       <button data-testid="order-tax-exempt">Void Item Tax</button>
       <button data-testid="split-even">Split Even</button>
       <button data-testid="split-combine">Combine Split</button>
@@ -577,6 +579,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         <div data-testid="recall-void-reasons"></div>
       </section>
       <button data-testid="recall-refund-paid-order">Refund Paid Order</button>
+      <input data-testid="recall-refund-item-index" />
+      <input data-testid="recall-refund-item-requested-amount" />
+      <button data-testid="recall-refund-by-item">Refund By Item</button>
+      <div data-testid="recall-refund-item-amount"></div>
       <div data-testid="recall-payment-records"></div>
       <button data-testid="recall-cancel-condition">Cancel Condition</button>
       <button data-testid="recall-move-order">Move Order</button>
@@ -926,6 +932,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       let draftMainFunctions = [...mainFunctions];
       let draftHiddenFunctions = [...hiddenFunctions];
       let selectedFunction = null;
+      let currentTaxCalculationIncludeCharge = localStorage.getItem('currentTaxCalculationIncludeCharge') === 'true';
 
       const mainList = document.querySelector('[data-testid="home-function-cards"]');
       const hiddenList = document.querySelector('[data-testid="hidden-function-cards"]');
@@ -1193,11 +1200,13 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const orderCustomChargeAddButton = document.querySelector('[data-testid="order-custom-charge-add"]');
       const orderChargeOpenButton = document.querySelector('[data-testid="order-charge-open"]');
       const orderChargeDialog = document.querySelector('[data-testid="order-charge-dialog"]');
+      const chargeItemList = document.querySelector('[data-testid="charge-item-list"]');
       const presetChargeList = document.querySelector('[data-testid="preset-charge-list"]');
       const selectedChargeList = document.querySelector('[data-testid="selected-charge-list"]');
       const orderChargeOkButton = document.querySelector('[data-testid="order-charge-ok"]');
       const orderChargeLabel = document.querySelector('[data-testid="order-charge-label"]');
       const orderChargePrice = document.querySelector('[data-testid="order-charge-price"]');
+      const orderActionAddText = document.querySelector('[data-testid="order-action-add-text"]');
       const orderTaxExemptButton = document.querySelector('[data-testid="order-tax-exempt"]');
       const splitEvenButton = document.querySelector('[data-testid="split-even"]');
       const orderOpenFoodButton = document.querySelector('[data-testid="order-open-food"]');
@@ -1306,6 +1315,10 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       const recallVoidReasonPanel = document.querySelector('[data-testid="recall-void-reason-panel"]');
       const recallVoidReasons = document.querySelector('[data-testid="recall-void-reasons"]');
       const recallRefundPaidOrderButton = document.querySelector('[data-testid="recall-refund-paid-order"]');
+      const recallRefundItemIndexInput = document.querySelector('[data-testid="recall-refund-item-index"]');
+      const recallRefundItemRequestedAmountInput = document.querySelector('[data-testid="recall-refund-item-requested-amount"]');
+      const recallRefundByItemButton = document.querySelector('[data-testid="recall-refund-by-item"]');
+      const recallRefundItemAmount = document.querySelector('[data-testid="recall-refund-item-amount"]');
       const recallPaymentRecords = document.querySelector('[data-testid="recall-payment-records"]');
       const recallCancelConditionButton = document.querySelector('[data-testid="recall-cancel-condition"]');
       const recallMoveOrderButton = document.querySelector('[data-testid="recall-move-order"]');
@@ -2077,6 +2090,12 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         currentTakeoutTaxExempt = Boolean(event.detail);
       });
 
+      window.addEventListener('offline-tax-calculation-include-charge-updated', (event) => {
+        currentTaxCalculationIncludeCharge = Boolean(event.detail);
+        localStorage.setItem('currentTaxCalculationIncludeCharge', String(currentTaxCalculationIncludeCharge));
+        renderOrderAmounts();
+      });
+
       function currentEmployeeShiftPlan() {
         const staffId = shiftStaffIdForPassword(currentEmployeePassword);
         return currentShiftPlans.find((plan) => Number(plan.staffId) === staffId) || null;
@@ -2493,11 +2512,15 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         if (!currentOrderChargeRate) {
           return 0;
         }
-        const chargeableSubtotal = currentKdsCategoryDiscountAllowance
-          ? activeOrderItems()
-            .filter((item) => item.category !== 'KDS')
-            .reduce((total, item) => total + Number(item.price || 0), 0)
+        const baseSubtotal = currentTaxCalculationIncludeCharge
+          ? Number(subtotal || 0) + currentItemTaxAmount()
           : Number(subtotal || 0);
+        const kdsChargeableSubtotal = activeOrderItems()
+            .filter((item) => item.category !== 'KDS')
+            .reduce((total, item) => total + Number(item.price || 0), 0);
+        const chargeableSubtotal = currentKdsCategoryDiscountAllowance
+          ? (currentTaxCalculationIncludeCharge ? kdsChargeableSubtotal + currentItemTaxAmount() : kdsChargeableSubtotal)
+          : baseSubtotal;
         return roundMoney(chargeableSubtotal * currentOrderChargeRate);
       }
 
@@ -2686,6 +2709,13 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       }
 
       function renderPresetChargeDialog() {
+        chargeItemList.innerHTML = '';
+        activeOrderItems().forEach((item) => {
+          const itemName = document.createElement('div');
+          itemName.dataset.testid = 'charge-item-name';
+          itemName.textContent = displayItemName(item);
+          chargeItemList.appendChild(itemName);
+        });
         presetChargeList.innerHTML = '';
         selectedChargeList.innerHTML = '';
         manualCharges.filter(chargeAppliesToCurrentOrderType).forEach((charge) => {
@@ -2849,14 +2879,18 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         return Number((cents / 100).toFixed(2));
       }
 
-      function currentOrderTaxAmount() {
-        const itemTax = activeOrderItems().reduce((total, item) => {
+      function currentItemTaxAmount() {
+        return activeOrderItems().reduce((total, item) => {
           if (item.taxRate !== undefined) {
             return total + Number(item.price || 0) * Number(item.taxRate || 0);
           }
 
           return total + 0.6;
         }, 0);
+      }
+
+      function currentOrderTaxAmount() {
+        const itemTax = currentItemTaxAmount();
         const taxRate = Number(activeOrderItems().find((item) => item.taxRate !== undefined)?.taxRate ?? 0.0825);
         const taxedChargeAmount = currentChargeSnapshots(currentActiveOrderSubtotal())
           .filter((charge) => Boolean(charge.taxed))
@@ -3075,6 +3109,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       function renderOptionControls() {
         orderOptions.innerHTML = '';
         orderOptions.hidden = false;
+        orderActionAddText.textContent = effectiveLanguage() === 'Chinese' ? '加1' : 'Add';
         ['Pork', 'Seafood'].forEach((optionName) => {
           orderOptions.appendChild(createButton('order-option', optionName, () => {}));
         });
@@ -3221,6 +3256,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           currentEditingOrder.crmFixedRewardAmount = currentCrmFixedRewardAmount;
           currentEditingOrder.crmPointDeduction = currentCrmPointDeduction;
           currentEditingOrder.hasRedeemItem = currentHasRedeemItem;
+          currentEditingOrder.wholeOrderDiscountAmount = currentWholeOrderDiscountAmount(currentActiveOrderSubtotal());
+          currentEditingOrder.wholeOrderDiscountRate = currentWholeOrderDiscountRate;
           if (selectedSubOrderIndex === null) {
             currentEditingOrder.orderChargeRate = currentOrderChargeRate;
             currentEditingOrder.orderChargeFixedAmount = currentOrderChargeFixedAmount;
@@ -3262,6 +3299,8 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           orderType: currentOrderType,
           partialPaid: currentSemiPayMode,
           rewardDiscount: 0,
+          wholeOrderDiscountAmount: currentWholeOrderDiscountAmount(Number(orderSubtotal.textContent || '0')),
+          wholeOrderDiscountRate: currentWholeOrderDiscountRate,
           guestPhone: currentDeliveryInfoRows[0] || '',
           guestAddress: currentDeliveryInfoRows[2] || '',
           serverName: currentServerName,
@@ -3489,6 +3528,69 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         });
       }
 
+      function orderItemDiscountShare(order, item) {
+        const discountAmount = Math.abs(Number(order?.wholeOrderDiscountAmount || 0));
+        const subtotal = orderItemsSubtotal(order?.items || []);
+        if (!discountAmount || !subtotal || !item) {
+          return 0;
+        }
+        return roundMoney(discountAmount * (Number(item.price || 0) / subtotal));
+      }
+
+      function orderItemTaxAmount(order, item, discountedItemPrice = Number(item?.price || 0)) {
+        if (!item || item.refunded) {
+          return 0;
+        }
+        if (item.taxRate !== undefined) {
+          return roundMoney(Number(discountedItemPrice || 0) * Number(item.taxRate || 0));
+        }
+        return 0.6;
+      }
+
+      function remainingPaidAmount(order) {
+        return roundMoney(ensurePaymentRecords(order)
+          .reduce((total, record) => total + Number(record.amount || 0), 0));
+      }
+
+      function refundOrderItem(order, oneBasedItemIndex, requestedAmount = null) {
+        const itemIndex = Math.max(0, Number(oneBasedItemIndex || 1) - 1);
+        const item = (order?.items || [])[itemIndex];
+        if (!order || !item || item.refunded) {
+          return 0;
+        }
+        const discountShare = orderItemDiscountShare(order, item);
+        const discountedItemPrice = roundMoney(Math.max(0, Number(item.price || 0) - discountShare));
+        const itemRefundAmount = roundMoney(discountedItemPrice + orderItemTaxAmount(order, item, discountedItemPrice));
+        const requestedRefundAmount = requestedAmount !== null && Number(requestedAmount) > 0
+          ? Number(requestedAmount)
+          : itemRefundAmount;
+        const refundAmount = roundMoney(Math.min(requestedRefundAmount, itemRefundAmount, Math.max(0, remainingPaidAmount(order))));
+        if (!refundAmount) {
+          return 0;
+        }
+        item.refunded = true;
+        item.state = 'Refunded';
+        ensurePaymentRecords(order).push({
+          amount: refundAmount * -1,
+          paymentType: 'cash',
+          refundedItemIndex: itemIndex + 1,
+        });
+        persistSavedOrders();
+        return refundAmount;
+      }
+
+      function refundAvailableOrderItem(order, oneBasedAvailableIndex, requestedAmount = null) {
+        const availableItems = (order?.items || [])
+          .map((item, index) => ({ item, index }))
+          .filter(({ item }) => !item.refunded);
+        const availableIndex = Math.max(0, Number(oneBasedAvailableIndex || 1) - 1);
+        const target = availableItems[availableIndex];
+        if (!target) {
+          return 0;
+        }
+        return refundOrderItem(order, target.index + 1, requestedAmount);
+      }
+
       function renderPaymentRecords(order) {
         recallPaymentRecords.innerHTML = '';
         ensurePaymentRecords(order).forEach((record, index) => {
@@ -3572,6 +3674,16 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         ]);
       }
 
+      function preservedChargesForRecalculatedCombine(order) {
+        const manualPrimaryCharge = order?.orderChargeTriggerMode === 'manual'
+          ? snapshotOrderCharges({ ...order, extraOrderCharges: [] })
+          : [];
+        return aggregateChargeSnapshots([
+          ...manualPrimaryCharge,
+          ...(order?.extraOrderCharges || []),
+        ]);
+      }
+
       function recalculatedCombinedOrderCharges(order) {
         const subtotal = orderItemsSubtotal(order?.items || []);
         const charge = autoCharges.find((candidate) =>
@@ -3613,12 +3725,21 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         if (!targetOrder || !sourceOrder) {
           return;
         }
-        const targetCharges = currentCombineRecalculateCharge ? [] : snapshotOrderCharges(targetOrder);
-        const sourceCharges = currentCombineRecalculateCharge ? [] : snapshotOrderCharges(sourceOrder);
+        const targetCharges = currentCombineRecalculateCharge
+          ? preservedChargesForRecalculatedCombine(targetOrder)
+          : snapshotOrderCharges(targetOrder);
+        const sourceCharges = currentCombineRecalculateCharge
+          ? preservedChargesForRecalculatedCombine(sourceOrder)
+          : snapshotOrderCharges(sourceOrder);
         targetOrder.items = [...targetOrder.items, ...sourceOrder.items];
         targetOrder.subtotal = Number((Number(targetOrder.subtotal || 0) + Number(sourceOrder.subtotal || 0)).toFixed(2));
+        targetOrder.guestCount = Number(targetOrder.guestCount || 1) + Number(sourceOrder.guestCount || 1);
         targetOrder.combinedOrderCharges = currentCombineRecalculateCharge
-          ? recalculatedCombinedOrderCharges(targetOrder)
+          ? aggregateChargeSnapshots([
+              ...recalculatedCombinedOrderCharges(targetOrder),
+              ...targetCharges,
+              ...sourceCharges,
+            ])
           : aggregateChargeSnapshots([
               ...(targetOrder.combinedOrderCharges || []),
               ...targetCharges,
@@ -3790,6 +3911,7 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           row.dataset.price = String(item.price);
           row.dataset.quantity = String(item.quantity ?? 1);
           row.dataset.state = item.state || '';
+          row.dataset.refunded = String(Boolean(item.refunded));
           row.textContent = item.name + ' x' + String(item.quantity ?? 1) + ' $' + item.price.toFixed(2);
           recallOrderItems.appendChild(row);
           (item.subItems || []).forEach((subItem) => {
@@ -3987,11 +4109,15 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         currentLanguage = 'Chinese';
         localStorage.setItem('currentLanguage', currentLanguage);
         renderLanguage();
+        renderOrderMenu();
+        renderOrderAmounts();
       });
       switchDefaultButton.addEventListener('click', () => {
         currentLanguage = 'Default';
         localStorage.setItem('currentLanguage', currentLanguage);
         renderLanguage();
+        renderOrderMenu();
+        renderOrderAmounts();
       });
       logoutButton.addEventListener('click', () => {
         document.body.dataset.employeeContext = 'logged-out';
@@ -4498,8 +4624,11 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       });
       orderCustomChargeAddButton.addEventListener('click', () => {
         const value = Number(orderCustomChargeValueInput.value || 0);
+        const chargeBase = currentTaxCalculationIncludeCharge
+          ? currentActiveOrderSubtotal() + currentItemTaxAmount()
+          : currentActiveOrderSubtotal();
         const amount = orderCustomChargeRateTypeSelect.value === 'percent'
-          ? roundMoney(currentActiveOrderSubtotal() * (value / 100))
+          ? roundMoney(chargeBase * (value / 100))
           : value;
         appendExtraOrderCharge({
           amount,
@@ -4791,7 +4920,12 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
         localStorage.setItem('offlineAutoCharges', JSON.stringify(autoCharges));
       });
       orderTaxExemptButton.addEventListener('click', () => {
-        currentOrderTaxVoided = true;
+        const targetIndex = selectedOrderItemIndex >= 0 ? selectedOrderItemIndex : currentOrderItems.length - 1;
+        if (currentOrderItems[targetIndex]) {
+          currentOrderItems[targetIndex].taxRate = 0;
+        } else {
+          currentOrderTaxVoided = true;
+        }
         renderOrderAmounts();
       });
       orderExitButton.addEventListener('click', () => {
@@ -4877,7 +5011,9 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
       function settleCurrentOrder(paymentType) {
         const unpaidAmount = Number(settleUnpaidAmount.textContent || '0');
         const requestedPaymentAmount = Number(settlePayAmountInput.value || '0') / 100;
-        const paymentAmount = requestedPaymentAmount > 0 ? requestedPaymentAmount : unpaidAmount;
+        const paymentAmount = requestedPaymentAmount > 0
+          ? Math.min(requestedPaymentAmount, unpaidAmount)
+          : unpaidAmount;
         if (currentSemiPayMode) {
           const total = Number(settleTotal.textContent || '0');
           const splitPaymentAmount = currentPaymentRecords.length === 0
@@ -5690,6 +5826,15 @@ export function renderOfflinePosHome(_state: OfflinePosState): string {
           selectedRecallOrder.status = 'Refunded';
           renderRecallOrderItems();
         }
+      });
+      recallRefundByItemButton.addEventListener('click', () => {
+        const refundAmount = refundAvailableOrderItem(
+          selectedRecallOrder,
+          recallRefundItemIndexInput.value || 1,
+          recallRefundItemRequestedAmountInput.value ? Number(recallRefundItemRequestedAmountInput.value) : null,
+        );
+        recallRefundItemAmount.textContent = refundAmount.toFixed(2);
+        renderRecallOrderItems();
       });
       recallCancelConditionButton.addEventListener('click', () => {});
       recallEditButton.addEventListener('click', () => {

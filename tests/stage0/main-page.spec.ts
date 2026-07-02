@@ -20,7 +20,7 @@ import { homeFunctions, sessionMoveError } from '../../test-data/pos/home-functi
 import { deliveryAddressSample } from '../../test-data/pos/delivery.js';
 import { languageOptions } from '../../test-data/pos/languages.js';
 import { sdiOrderMessageSample } from '../../test-data/pos/messages.js';
-import { expectedPatchInfo } from '../../test-data/pos/support-info.js';
+import { supportInfoFor } from '../../test-data/pos/support-info.js';
 import { invalidEmployeePassword, validEmployeePassword } from '../../test-data/pos/permissions.js';
 import { jiraIssue } from '../../utils/jira.js';
 
@@ -197,9 +197,12 @@ test.describe('POS 首页', () => {
     const supportInfoFlow = new SupportInfoFlow(new PosHomePage(page), new SupportPage(page));
 
     const supportInfo = await supportInfoFlow.readPatchInfo(environment.posHomeUrl);
+    const expectedSupportInfo = supportInfoFor(environment.testMode);
 
-    expect(supportInfo.version).toBe(expectedPatchInfo.version);
-    expect(supportInfo.patchVersion).toBe(expectedPatchInfo.patchVersion);
+    expect(supportInfo.version).toBe(expectedSupportInfo.version);
+    if (expectedSupportInfo.patchVersion !== undefined) {
+      expect(supportInfo.patchVersion).toBe(expectedSupportInfo.patchVersion);
+    }
   });
 
   test('Delivery 删除电话和姓名后应从历史订单切回用户列表', {

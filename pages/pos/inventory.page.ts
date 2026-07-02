@@ -93,6 +93,7 @@ export class InventoryPage extends PageObject {
           input.dispatchEvent(new Event('input', { bubbles: true }));
           input.dispatchEvent(new Event('change', { bubbles: true }));
         }, String(quantity));
+        await this.selectLiveApplyToChannelStockStatus('POS', 'Shared Limited Stock');
       }
     });
   }
@@ -202,6 +203,28 @@ export class InventoryPage extends PageObject {
         throw error;
       }
     });
+  }
+
+  private async selectLiveApplyToChannelStockStatus(channelName: string, status: string): Promise<void> {
+    const channelRow = this.page
+      .locator(
+        `xpath=//div[@id="inventory-dialog"]//tr[contains(concat(" ", normalize-space(@class), " "), " linebodybx ") and .//td[contains(normalize-space(.), ${JSON.stringify(channelName)})]]`,
+      )
+      .first();
+    if (!(await channelRow.isVisible({ timeout: 1_000 }).catch(() => false))) {
+      return;
+    }
+
+    const stockSelect = channelRow.locator('.stockSelectbx .reason-select').first();
+    await expect(stockSelect).toBeVisible({ timeout: 5_000 });
+    if (((await stockSelect.textContent()) ?? '').includes(status)) {
+      return;
+    }
+
+    await stockSelect.click();
+    const option = this.page.locator('#inventory-dialog').getByText(status, { exact: true }).last();
+    await expect(option).toBeVisible({ timeout: 5_000 });
+    await option.click();
   }
 
   private async hideBlockingOverlays(): Promise<void> {
