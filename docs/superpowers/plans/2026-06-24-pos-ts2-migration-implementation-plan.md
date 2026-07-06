@@ -41,6 +41,10 @@ This section is required guidance for follow-up session `019ef862-cf7a-73f0-a996
 - Offline permission overrides, localStorage shims, stub routes, and harness-only selectors must stay inside offline fixtures/harness utilities. Live flows must not rely on those values as the source of truth.
 - Live selectors must reflect the real live DOM contract or the migrated Python page logic. Do not make offline selectors broader to cover live, and do not add live fallback selectors into offline harness markup just to make a test pass.
 - When a bug is live-only, first read the corresponding Python regression logic under `pos-regression-test/` and copy the real business sequence into TypeScript page/flow boundaries. Only update offline behavior if the same business contract is genuinely shared.
+- Never use offline seeds, stub clients, localStorage shims, or offline harness shortcuts to fake live behavior. Live-mode validation must use the real live UI path, API, DB adapter, device, or external-system entrypoint required by the source business flow.
+- If a live-mode blocker is caused by missing live data, API access, DB access, external-system URL, device setup, or another environment dependency, mark it as an explicit live gap and ask for the concrete missing input. Do not replace the missing dependency with offline data.
+- Live selector and flow issues should be repaired to the real DOM contract and source Python operation sequence. If the Python source and live UI disagree, record the concrete discrepancy before changing architecture or expectations.
+- Live Playwright debugging should normally run one case at a time with a command shaped like `npx playwright test <spec> -g "<用例名>" --reporter=line --timeout=90000`; these runs require browser/network permission.
 - When deleting offline mode after migration, removing `test-harness/`, offline fixture data, and stub clients should not require changing live client setup, live flow data generation, or live selector definitions.
 - Before handing off live-mode fixes, explicitly state whether each changed datum is `offline-only`, `live-only`, or shared domain metadata.
 

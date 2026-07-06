@@ -11,3 +11,5 @@ test-results/
 /tmp*
 /.trace-*
 /pos-ts2.0/tmp*
+/allure-report
+/allure-results
