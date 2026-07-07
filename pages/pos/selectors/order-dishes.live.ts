@@ -5,6 +5,7 @@ export const liveOrderDishesSelectors = {
   customerSubmitButton: '#customer-dialog:visible #customer-submit',
   itemDiscountTrigger: '#chgPrcicon',
   itemPrice: '.itemttPrc',
+  itemPriceDiscountPanel: '#disDiscountPanelBx',
   itemPriceInput: '#smpiptipt',
   itemPriceSubmitButton: '#smpiptgo',
   itemPriceClearButton: '#kbrclc',

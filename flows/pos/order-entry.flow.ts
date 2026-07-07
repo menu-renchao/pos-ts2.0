@@ -1,5 +1,6 @@
 import type { PosHomePage } from '../../pages/pos/home.page.js';
 import type { AdminPage } from '../../pages/pos/admin.page.js';
+import type { AdminStaffClient } from '../../clients/pos-api/admin-staff.client.js';
 import type { MenuClient } from '../../clients/pos-api/menu.client.js';
 import type { DeliveryPage } from '../../pages/pos/delivery.page.js';
 import type { OrderDishesPage } from '../../pages/pos/order-dishes.page.js';
@@ -613,6 +614,7 @@ export class OrderEntryFlow {
     await this.homePage.open(homeUrl);
     await this.homePage.switchLanguage(languageOptions.default);
     await this.homePage.clickTogo();
+    await this.homePage.switchLanguage(languageOptions.default);
     await this.orderDishesPage.selectMenuGroup(dish.group);
     if (dish.category) {
       await this.orderDishesPage.selectMenuCategory(dish.category);
@@ -765,10 +767,10 @@ export class OrderEntryFlow {
     optionOrder: OptionOrderSample,
   ): Promise<OptionOrderRecallResult> {
     await this.homePage.open(homeUrl);
-    if (optionOrder.language === 'Chinese') {
-      await this.homePage.switchLanguage(languageOptions.chinese);
-    }
+    const language = optionOrder.language === 'Chinese' ? languageOptions.chinese : languageOptions.default;
+    await this.homePage.switchLanguage(language);
     await this.homePage.clickTogo();
+    await this.homePage.switchLanguage(language);
     await this.orderDishesPage.selectMenuGroup(optionOrder.group);
     await this.orderDishesPage.selectMenuCategory(optionOrder.category);
     await this.orderDishesPage.addMenuItem(optionOrder.name);
@@ -858,7 +860,9 @@ export class OrderEntryFlow {
     const { groupSwitchDish } = this.orderPageData;
     await this.homePage.open(homeUrl);
     await this.homePage.submitEmployeePasswordIfPromptVisible(validEmployeePassword);
+    await this.homePage.switchLanguage(languageOptions.default);
     await this.homePage.clickDineIn();
+    await this.homePage.switchLanguage(languageOptions.default);
     await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
     await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
     await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
@@ -3633,7 +3637,9 @@ export class OrderEntryFlow {
   async readFirstDragSplitSubOrderDiscountWholePrice(homeUrl: string): Promise<string> {
     await this.homePage.open(homeUrl);
     await this.homePage.submitEmployeePasswordIfPromptVisible(validEmployeePassword);
+    await this.homePage.switchLanguage(languageOptions.default);
     await this.homePage.clickDineIn();
+    await this.homePage.switchLanguage(languageOptions.default);
     const firstDish = splitDiscountDishes[0];
     if (!firstDish) {
       throw new Error('splitDiscountDishes must contain at least one source dish');
@@ -3672,9 +3678,12 @@ export class OrderEntryFlow {
     await this.reportPage.selectOrderType(orderType);
     const netSalesBefore = await this.reportPage.readOverviewNetSales();
     await this.homePage.open(homeUrl);
+    await this.homePage.submitEmployeePasswordIfPromptVisible(validEmployeePassword);
+    await this.homePage.switchLanguage(languageOptions.default);
 
     await this.homePage.clickCustomDelivery();
     await this.deliveryPage.createDeliveryOrder(deliveryOrderInfoSample);
+    await this.homePage.switchLanguage(languageOptions.default);
     await this.orderDishesPage.selectMenuGroup(dish.group);
     await this.orderDishesPage.selectMenuCategory(dish.category);
     await this.orderDishesPage.addMenuItem(dish.name);
@@ -3712,6 +3721,7 @@ export class OrderEntryFlow {
     await this.homePage.switchLanguage(languageOptions.default);
     await this.homePage.submitEmployeePasswordIfPromptVisible(validEmployeePassword);
     await this.homePage.clickDineIn();
+    await this.homePage.switchLanguage(languageOptions.default);
     await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
     if (groupSwitchDish.category) {
       await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
@@ -3731,6 +3741,7 @@ export class OrderEntryFlow {
     }
     await this.homePage.open(homeUrl);
     await this.homePage.submitEmployeePasswordIfPromptVisible(validEmployeePassword);
+    await this.homePage.switchLanguage(languageOptions.default);
     await this.homePage.clickDelivery();
     await this.deliveryPage.createDeliveryOrder(deliveryOrderInfoSample);
     return this.orderDishesPage.readDeliveryInfo();
@@ -3745,6 +3756,7 @@ export class OrderEntryFlow {
     await this.homePage.clickDelivery();
     await this.deliveryPage.createDeliveryOrder(deliveryOrderInfoSample);
     await this.orderDishesPage.exitOrderPage();
+    await this.homePage.switchLanguage(languageOptions.default);
     return this.homePage.readWelcomeText();
   }
 
@@ -3753,6 +3765,7 @@ export class OrderEntryFlow {
     await this.homePage.switchLanguage(languageOptions.default);
     await this.homePage.submitEmployeePasswordIfPromptVisible(validEmployeePassword);
     await this.homePage.clickDineIn();
+    await this.homePage.switchLanguage(languageOptions.default);
     await this.orderDishesPage.selectMenuCategory('hn_cate');
     await this.orderDishesPage.addComboWithOptions(4);
     const beforeCount = await this.orderDishesPage.readComboOptionCount();
@@ -3834,7 +3847,9 @@ export class OrderEntryFlow {
   ): Promise<GuestNameRecallResult> {
     await this.homePage.open(homeUrl);
     await this.homePage.submitEmployeePasswordIfPromptVisible(validEmployeePassword);
+    await this.homePage.switchLanguage(languageOptions.default);
     await this.homePage.clickDineIn();
+    await this.homePage.switchLanguage(languageOptions.default);
     await this.orderDishesPage.fillGuestName(guestName);
     await this.orderDishesPage.selectMenuGroup(this.orderPageData.groupSwitchDish.group);
     await this.orderDishesPage.selectMenuCategory(this.orderPageData.groupSwitchDish.category);
@@ -3856,14 +3871,18 @@ export class OrderEntryFlow {
     await this.homePage.clickAdmin();
     await this.adminPage.setSearchMenu(false);
     await this.homePage.open(homeUrl);
+    await this.homePage.switchLanguage(languageOptions.default);
     await this.homePage.clickDineIn();
+    await this.homePage.switchLanguage(languageOptions.default);
     const searchClassWhenDisabled = await this.orderDishesPage.readSearchClass();
     await this.orderDishesPage.exitOrderPage();
 
     await this.homePage.clickAdmin();
     await this.adminPage.setSearchMenu(true);
     await this.homePage.open(homeUrl);
+    await this.homePage.switchLanguage(languageOptions.default);
     await this.homePage.clickDineIn();
+    await this.homePage.switchLanguage(languageOptions.default);
     await waitUntil(async () => (await this.orderDishesPage.readSearchClass()) === 'iptgrp', {
       description: 'Search Menu 开启后搜索框展示',
       intervalMs: 300,
@@ -3919,7 +3938,9 @@ export class OrderEntryFlow {
   async createOrderWithIntegerItemCountAndReadRecall(homeUrl: string): Promise<ItemCountRecallResult> {
     const { groupSwitchDish, categorySwitchDish } = this.orderPageData;
     await this.homePage.open(homeUrl);
+    await this.homePage.switchLanguage(languageOptions.default);
     await this.homePage.clickTogo();
+    await this.homePage.switchLanguage(languageOptions.default);
     await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
     await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
     await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
@@ -3939,7 +3960,9 @@ export class OrderEntryFlow {
     const { groupSwitchDish } = this.orderPageData;
     await this.homePage.open(homeUrl);
     await this.homePage.submitEmployeePasswordIfPromptVisible(validEmployeePassword);
+    await this.homePage.switchLanguage(languageOptions.default);
     await this.homePage.clickTogo();
+    await this.homePage.switchLanguage(languageOptions.default);
     await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
     await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
     await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
@@ -3958,7 +3981,9 @@ export class OrderEntryFlow {
     const { groupSwitchDish } = this.orderPageData;
     await this.homePage.open(homeUrl);
     await this.homePage.submitEmployeePasswordIfPromptVisible(validEmployeePassword);
+    await this.homePage.switchLanguage(languageOptions.default);
     await this.homePage.clickTogo();
+    await this.homePage.switchLanguage(languageOptions.default);
     await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
     await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
     await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
@@ -3973,48 +3998,66 @@ export class OrderEntryFlow {
     return { tipToast, expectedTip, recallTip };
   }
 
-  async deleteHeldPrintedItemWithManagerPassword(homeUrl: string): Promise<VoidPrintedItemPermissionResult> {
-    await this.openDineInOrderAsNoVoidPrintedStaff(homeUrl);
+  async deleteHeldPrintedItemWithManagerPassword(
+    homeUrl: string,
+    adminStaffClient?: AdminStaffClient,
+  ): Promise<VoidPrintedItemPermissionResult> {
+    await this.openDineInOrderAsNoVoidPrintedStaff(homeUrl, adminStaffClient);
     await this.orderDishesPage.semiSendHoldPrint();
     await this.homePage.clickRecall();
     await this.recallPage.openRecentOrder();
     await this.recallPage.clickEdit();
+    await this.orderDishesPage.selectFirstPrintedOrderLine();
     const permissionToast = await this.orderDishesPage.voidSelectedItemAndReadToast();
     await this.orderDishesPage.submitManagerPassword(validEmployeePassword);
-    await this.orderDishesPage.saveOrder();
+    await this.orderDishesPage.saveOrderWithManagerAuthorization(validEmployeePassword);
     await this.homePage.clickRecallFromHome();
     await this.recallPage.openRecentOrder();
     await this.recallPage.clickEdit();
-    const itemLineCountAfterDelete = await this.orderDishesPage.readOrderLineCount();
+    const itemLineCountAfterDelete = await this.orderDishesPage.readActiveOrderLineCount();
     return { permissionToast, itemLineCountAfterDelete };
   }
 
-  async deleteDelayedPrintedItemWithManagerPassword(homeUrl: string): Promise<VoidPrintedItemPermissionResult> {
-    await this.openDineInOrderAsNoVoidPrintedStaff(homeUrl);
+  async deleteDelayedPrintedItemWithManagerPassword(
+    homeUrl: string,
+    adminStaffClient?: AdminStaffClient,
+  ): Promise<VoidPrintedItemPermissionResult> {
+    await this.openDineInOrderAsNoVoidPrintedStaff(homeUrl, adminStaffClient);
     await this.orderDishesPage.semiSendDelayPrint();
     await this.homePage.clickRecall();
     await this.recallPage.openRecentOrder();
     await this.recallPage.clickEdit();
+    await this.orderDishesPage.selectFirstPrintedOrderLine();
     const permissionToast = await this.orderDishesPage.changeSelectedItemQuantityAndReadToast(0);
     await this.orderDishesPage.submitManagerPassword(validEmployeePassword);
-    await this.orderDishesPage.saveOrder();
+    await this.orderDishesPage.saveOrderWithManagerAuthorization(validEmployeePassword);
     await this.homePage.clickRecallFromHome();
     await this.recallPage.openRecentOrder();
     await this.recallPage.clickEdit();
-    const itemLineCountAfterDelete = await this.orderDishesPage.readOrderLineCount();
+    const itemLineCountAfterDelete = await this.orderDishesPage.readActiveOrderLineCount();
     return { permissionToast, itemLineCountAfterDelete };
   }
 
-  async addComboSubItemNoteWithManagerAuthorization(homeUrl: string): Promise<ComboSubItemNotePermissionResult> {
+  async addComboSubItemNoteWithManagerAuthorization(
+    homeUrl: string,
+    adminStaffClient?: AdminStaffClient,
+  ): Promise<ComboSubItemNotePermissionResult> {
     if (!this.adminPage) {
       throw new Error('AdminPage is required for staff NOTE permission setup');
     }
-    await this.homePage.open(homeUrl);
-    await this.homePage.clickAdmin();
-    await this.adminPage.setStaffNotePermission(false);
+    const useLiveStaffClient = testEnvironment.testMode === 'live' && adminStaffClient !== undefined;
+    if (useLiveStaffClient) {
+      await adminStaffClient.editStaffRemoveFunctions(staffSamples.noNote.id, ['NOTE']);
+    } else {
+      await this.homePage.open(homeUrl);
+      await this.homePage.clickAdmin();
+      await this.adminPage.setStaffNotePermission(false);
+    }
     await this.homePage.open(homeUrl);
     await this.homePage.logoutAndLogin(staffSamples.noNote.password);
+    await this.homePage.switchLanguage(languageOptions.default);
     await this.homePage.clickDineIn();
+    await this.homePage.switchLanguage(languageOptions.default);
     await this.orderDishesPage.selectMenuCategory('hn_cate');
     await this.orderDishesPage.addComboWithOptions(4);
     await this.orderDishesPage.openFirstComboSubItem();
@@ -4023,8 +4066,12 @@ export class OrderEntryFlow {
     await this.orderDishesPage.inputComboSubItemNote('子菜的备注信息');
     const noteText = await this.orderDishesPage.readComboSubItemNote();
     await this.orderDishesPage.exitOrderPage();
-    await this.homePage.clickAdmin();
-    await this.adminPage.setStaffNotePermission(true);
+    if (useLiveStaffClient) {
+      await adminStaffClient.editStaffAddFunctions(staffSamples.noNote.id, ['NOTE']);
+    } else {
+      await this.homePage.clickAdmin();
+      await this.adminPage.setStaffNotePermission(true);
+    }
     await this.homePage.open(homeUrl);
     return { permissionToast, noteText };
   }
@@ -4037,7 +4084,9 @@ export class OrderEntryFlow {
     await this.homePage.clickAdmin();
     await this.adminPage.setKdsCategoryRequired(true);
     await this.homePage.refresh();
+    await this.homePage.switchLanguage(languageOptions.default);
     await this.homePage.clickDineIn();
+    await this.homePage.switchLanguage(languageOptions.default);
     await this.orderDishesPage.selectMenuGroup(this.orderPageData.groupSwitchDish.group);
     await this.orderDishesPage.selectMenuCategory(this.orderPageData.groupSwitchDish.category);
     await this.orderDishesPage.addMenuItem(this.orderPageData.groupSwitchDish.name);
@@ -4063,7 +4112,9 @@ export class OrderEntryFlow {
     await this.homePage.clickAdmin();
     await this.adminPage.setKdsCategoryDiscountAllowance(false);
     await this.homePage.refresh();
+    await this.homePage.switchLanguage(languageOptions.default);
     await this.homePage.clickDineIn();
+    await this.homePage.switchLanguage(languageOptions.default);
     if (testEnvironment.testMode === 'live') {
       await this.orderDishesPage.selectMenuCategory(this.orderPageData.requiredKdsDish.category).catch(async () => {
         await this.orderDishesPage.selectMenuGroup(this.orderPageData.requiredKdsDish.group);
@@ -4093,7 +4144,9 @@ export class OrderEntryFlow {
     await this.homePage.clickAdmin();
     await this.adminPage.setKdsItemPosName(posNameDisplayDish.name, posNameDisplayValue);
     await this.homePage.refresh();
+    await this.homePage.switchLanguage(languageOptions.default);
     await this.homePage.clickDineIn();
+    await this.homePage.switchLanguage(languageOptions.default);
     await this.orderDishesPage.selectMenuGroup(posNameDisplayDish.group);
     await this.orderDishesPage.selectMenuCategory(posNameDisplayDish.category);
     const posNameVisible = await this.orderDishesPage.isMenuItemVisible(posNameDisplayValue);
@@ -4109,7 +4162,9 @@ export class OrderEntryFlow {
   async editQuickComboSubItemPriceAndReadSubtotal(homeUrl: string): Promise<ComboSubItemEditPriceResult> {
     const { editableComboDish } = this.orderPageData;
     await this.homePage.open(homeUrl);
+    await this.homePage.switchLanguage(languageOptions.default);
     await this.homePage.clickDineIn();
+    await this.homePage.switchLanguage(languageOptions.default);
     await this.orderDishesPage.selectMenuGroup(editableComboDish.group);
     await this.orderDishesPage.selectMenuCategory(editableComboDish.category);
     await this.orderDishesPage.addQuickCombo(editableComboDish.name, editableComboDish.sections);
@@ -4130,7 +4185,8 @@ export class OrderEntryFlow {
     const { comboMaxModifyDish } = this.orderPageData;
     await this.homePage.open(homeUrl);
     await this.homePage.submitEmployeePasswordIfPromptVisible(validEmployeePassword);
-    await this.homePage.clickDineIn();
+    await this.homePage.switchLanguage(languageOptions.default);
+    await this.homePage.clickTogo();
     await this.orderDishesPage.selectMenuGroup(comboMaxModifyDish.group);
     await this.orderDishesPage.selectMenuCategory(comboMaxModifyDish.category);
     await this.orderDishesPage.addQuickCombo(comboMaxModifyDish.name, comboMaxModifyDish.initialSections);
@@ -4161,10 +4217,21 @@ export class OrderEntryFlow {
         : staticComboDish;
     try {
       await this.homePage.open(homeUrl);
+      if (testEnvironment.testMode === 'live') {
+        await this.homePage.refresh();
+      }
       await this.homePage.submitEmployeePasswordIfPromptVisible(validEmployeePassword);
+      await this.homePage.switchLanguage(languageOptions.default);
       await this.homePage.clickDineIn();
+      await this.homePage.switchLanguage(languageOptions.default);
       await this.orderDishesPage.selectMenuGroup(comboDish.group);
       await this.orderDishesPage.selectMenuCategory(comboDish.category);
+      if (testEnvironment.testMode === 'live' && !(await this.orderDishesPage.isMenuItemVisible(comboDish.comboName))) {
+        await this.orderDishesPage.searchMenuItem(comboDish.comboName);
+      }
+      if (testEnvironment.testMode === 'live' && !(await this.orderDishesPage.isMenuItemVisible(comboDish.comboName))) {
+        throw new Error(`live 前台菜单未展示动态 Combo ${comboDish.comboName}`);
+      }
       await this.orderDishesPage.addMenuItem(comboDish.comboName);
       await this.orderDishesPage.selectOrderedComboSubItem(
         comboDish.comboName,
@@ -4193,7 +4260,9 @@ export class OrderEntryFlow {
   async createThreeSameItemsWithoutAutoCombine(homeUrl: string): Promise<SameItemCombineResult> {
     await this.configureSameItemCombine(homeUrl, combineSameItemModes.dontCombine);
     await this.homePage.open(homeUrl);
+    await this.homePage.switchLanguage(languageOptions.default);
     await this.homePage.clickDineIn();
+    await this.homePage.switchLanguage(languageOptions.default);
     await this.addSameDishTimes(3);
     const itemLineCount = await this.orderDishesPage.readOrderLineCount();
     await this.orderDishesPage.saveOrder();
@@ -4204,7 +4273,9 @@ export class OrderEntryFlow {
   async addSameItemAfterKitchenWithSameStatusCombine(homeUrl: string): Promise<SameItemCombineResult> {
     await this.configureSameItemCombine(homeUrl, combineSameItemModes.autoSameStatus);
     await this.homePage.open(homeUrl);
+    await this.homePage.switchLanguage(languageOptions.default);
     await this.homePage.clickDineIn();
+    await this.homePage.switchLanguage(languageOptions.default);
     await this.addSameDishTimes(1);
     await this.orderDishesPage.sendAllToKitchen();
     await this.homePage.clickRecall();
@@ -4220,7 +4291,9 @@ export class OrderEntryFlow {
   async addSameItemAfterKitchenWithIncludeKitchenCombine(homeUrl: string): Promise<SameItemCombineResult> {
     await this.configureSameItemCombine(homeUrl, combineSameItemModes.includeKitchen);
     await this.homePage.open(homeUrl);
+    await this.homePage.switchLanguage(languageOptions.default);
     await this.homePage.clickDineIn();
+    await this.homePage.switchLanguage(languageOptions.default);
     await this.addSameDishTimes(1);
     await this.orderDishesPage.sendAllToKitchen();
     await this.homePage.clickRecall();
@@ -4253,7 +4326,9 @@ export class OrderEntryFlow {
     await this.homePage.clickAdmin();
     await this.adminPage.setAutomaticallyRedirectAfterReduceItems(false);
     await this.homePage.open(homeUrl);
+    await this.homePage.switchLanguage(languageOptions.default);
     await this.homePage.clickDineIn();
+    await this.homePage.switchLanguage(languageOptions.default);
     await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
     await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
     await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
@@ -4278,7 +4353,9 @@ export class OrderEntryFlow {
     await this.homePage.clickAdmin();
     await this.adminPage.setCountCanBeDecimal(true);
     await this.homePage.open(homeUrl);
+    await this.homePage.switchLanguage(languageOptions.default);
     await this.homePage.clickTogo();
+    await this.homePage.switchLanguage(languageOptions.default);
     const { groupSwitchDish } = this.orderPageData;
     await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
     await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
@@ -4338,8 +4415,12 @@ export class OrderEntryFlow {
     await this.homePage.clickRecall();
     await this.recallPage.cancelAllCondition();
     if (testEnvironment.testMode === 'live') {
-      await this.recallPage.openOrderByIndex(2);
-      await this.recallPage.combineOrder(1);
+      const [latestOrderIndex, previousOrderIndex] = await this.recallPage.readRecentLiveOrderCardIndexes(2);
+      if (latestOrderIndex === undefined || previousOrderIndex === undefined) {
+        throw new Error('live Recall must show the latest two orders before combining decimal orders');
+      }
+      await this.recallPage.openLiveOrderCardByIndex(latestOrderIndex);
+      await this.recallPage.combineWithLiveOrderCardIndex(previousOrderIndex);
     } else {
       await this.recallPage.openRecentOrder();
       await this.recallPage.combineOrder(2);
@@ -4386,6 +4467,7 @@ export class OrderEntryFlow {
     await this.homePage.clickAdmin();
     await this.adminPage.setCountCanBeDecimal(false);
     await this.homePage.open(homeUrl);
+    await this.homePage.switchLanguage(languageOptions.default);
     await this.homePage.clickTogo();
     const { groupSwitchDish } = this.orderPageData;
     await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
@@ -4400,7 +4482,9 @@ export class OrderEntryFlow {
     await this.homePage.clickAdmin();
     await this.adminPage?.setCombineSameItem(combineSameItemModes.autoSameStatus, false);
     await this.homePage.open(homeUrl);
+    await this.homePage.switchLanguage(languageOptions.default);
     await this.homePage.clickTogo();
+    await this.homePage.switchLanguage(languageOptions.default);
     const { groupSwitchDish } = this.orderPageData;
     await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
     await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
@@ -4437,10 +4521,9 @@ export class OrderEntryFlow {
     await this.homePage.submitEmployeePasswordIfPromptVisible(validEmployeePassword);
     await this.homePage.clickCustomDelivery();
     await this.deliveryPage.createDeliveryOrder(deliveryOrderInfoSample);
+    await this.homePage.switchLanguage(languageOptions.default);
     const kitchenDish = this.orderPageData.categorySwitchDish;
-    if (testEnvironment.testMode !== 'live') {
-      await this.orderDishesPage.selectMenuGroup(kitchenDish.group);
-    }
+    await this.orderDishesPage.selectMenuGroup(kitchenDish.group);
     await this.orderDishesPage.selectMenuCategory(kitchenDish.category);
     await this.orderDishesPage.addMenuItem(kitchenDish.name);
     await this.orderDishesPage.saveOrder();
@@ -4479,10 +4562,9 @@ export class OrderEntryFlow {
     }
 
     await this.homePage.open(homeUrl);
+    await this.homePage.switchLanguage(languageOptions.default);
     await this.homePage.clickAdmin();
-    await this.adminPage.setCommonEnableSetting('Confirm customer details before payment', enabled, 'payment');
-    await this.adminPage.setCommonEnableSetting('Customer Name required', enabled, 'payment');
-    await this.adminPage.setCommonEnableSetting('Customer Phone required', enabled, 'payment');
+    await this.adminPage.setCustomerInfoPaymentRequirements(enabled);
   }
 
   private async enableDecimalCount(homeUrl: string): Promise<void> {
@@ -4493,6 +4575,7 @@ export class OrderEntryFlow {
     await this.homePage.clickAdmin();
     await this.adminPage.setCountCanBeDecimal(true);
     await this.homePage.open(homeUrl);
+    await this.homePage.switchLanguage(languageOptions.default);
   }
 
   private decimalSpecialPriceDish(dish: DecimalSpecialPriceDishKey): DishSample | OptionOrderSample {
@@ -4505,17 +4588,23 @@ export class OrderEntryFlow {
     return dishes[dish];
   }
 
-  private async openDineInOrderAsNoVoidPrintedStaff(homeUrl: string): Promise<void> {
+  private async openDineInOrderAsNoVoidPrintedStaff(homeUrl: string, adminStaffClient?: AdminStaffClient): Promise<void> {
     if (!this.adminPage) {
       throw new Error('AdminPage is required for staff permission setup');
     }
-    await this.homePage.open(homeUrl);
-    await this.homePage.clickAdmin();
-    await this.adminPage.setStaffVoidPrintedItemPermission(false);
+    if (testEnvironment.testMode === 'live' && adminStaffClient !== undefined) {
+      await adminStaffClient.editStaffRemoveFunctions(staffSamples.noVoidPrintedItem.id, ['VOID_PRINTED_ITEM']);
+    } else {
+      await this.homePage.open(homeUrl);
+      await this.homePage.clickAdmin();
+      await this.adminPage.setStaffVoidPrintedItemPermission(false);
+    }
     await this.homePage.open(homeUrl);
     await this.homePage.logout();
     await this.homePage.inputEmployeePassword(staffSamples.noVoidPrintedItem.password);
+    await this.homePage.switchLanguage(languageOptions.default);
     await this.homePage.clickDineIn();
+    await this.homePage.switchLanguage(languageOptions.default);
     const { groupSwitchDish, categorySwitchDish } = this.orderPageData;
     await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
     await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
@@ -4556,6 +4645,7 @@ export class OrderEntryFlow {
     const { groupSwitchDish, categorySwitchDish } = this.orderPageData;
     await this.homePage.open(homeUrl);
     await this.homePage.submitEmployeePasswordIfPromptVisible(validEmployeePassword);
+    await this.homePage.switchLanguage(languageOptions.default);
     if (isDineIn) {
       if (testEnvironment.testMode === 'live') {
         await this.homePage.clickDineInWithTable(2);
@@ -4565,6 +4655,7 @@ export class OrderEntryFlow {
     } else {
       await this.homePage.clickTogo();
     }
+    await this.homePage.switchLanguage(languageOptions.default);
     await this.orderDishesPage.selectMenuGroup(groupSwitchDish.group);
     await this.orderDishesPage.selectMenuCategory(groupSwitchDish.category);
     await this.orderDishesPage.addMenuItem(groupSwitchDish.name);
@@ -4581,7 +4672,9 @@ export class OrderEntryFlow {
 
   private async createPickupOrder(): Promise<void> {
     const { groupSwitchDish } = this.orderPageData;
+    await this.homePage.switchLanguage(languageOptions.default);
     await this.homePage.clickPickup();
+    await this.homePage.switchLanguage(languageOptions.default);
     if (testEnvironment.testMode === 'offline') {
       await this.orderDishesPage.startPickupOrder();
     }

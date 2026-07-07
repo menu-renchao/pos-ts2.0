@@ -289,6 +289,16 @@ export class PosHomePage extends PageObject {
   async inputEmployeePasswordAfterLogout(password: string): Promise<void> {
     await step('退出后输入员工密码并提交', async () => {
       if (await this.livePinInput.isVisible({ timeout: 1_000 }).catch(() => false)) {
+        await this.inputLoginPassword(password);
+        await waitUntil(
+          () => this.isHomeReadyWithoutPasscode(),
+          {
+            description: '员工密码提交后首页就绪',
+            intervalMs: 200,
+            timeoutMs: 15_000,
+          },
+        );
+        return;
         const readonlyPinInput = await this.livePinInput.evaluate((input) => (input as HTMLInputElement).readOnly);
         if (readonlyPinInput) {
           for (const digit of password) {
@@ -337,6 +347,9 @@ export class PosHomePage extends PageObject {
 
   async submitEmployeePasswordIfPromptVisible(password: string): Promise<void> {
     await step('如首页显示 PIN 面板则提交员工密码', async () => {
+      if (await this.isLicenseContainerVisible()) {
+        await this.chooseAvailableLicense();
+      }
       if (await this.isLivePasscodePromptVisible()) {
         await this.inputLoginPassword(password);
         return;
@@ -466,7 +479,21 @@ export class PosHomePage extends PageObject {
         await new Promise((resolve) => setTimeout(resolve, 500));
       }
       await expect(option).toBeVisible({ timeout: 10_000 });
-      await option.click();
+      await option.click({ timeout: 2_000 }).catch(async (error: unknown) => {
+        const clicked = await this.page
+          .evaluate((selector) => {
+            const optionElement = document.querySelector<HTMLElement>(selector);
+            if (!optionElement) {
+              return false;
+            }
+            optionElement.click();
+            return true;
+          }, targetLanguage === 'chinese' ? liveHomeSelectors.languageOptionChinese : liveHomeSelectors.languageOptionEnglish)
+          .catch(() => false);
+        if (!clicked) {
+          throw error;
+        }
+      });
       await waitUntil(
         () => this.isLiveLanguageActive(targetLanguage),
         {
@@ -1285,6 +1312,16 @@ export class PosHomePage extends PageObject {
   private async isLivePasscodePromptVisible(): Promise<boolean> {
     if (await this.page.getByTestId('pos-home').isVisible({ timeout: 200 }).catch(() => false)) {
       return false;
+    }
+    const visiblePasscodeText = await this.page
+      .locator('#iptpwtx:visible, #pwd-input-title:visible, #ckin_pw-input-title:visible')
+      .filter({ hasText: /^Enter Your Passcode$/ })
+      .first()
+      .isVisible({ timeout: 200 })
+      .catch(() => false);
+    const visiblePinInput = await this.page.locator('#pwipt:visible').first().isVisible({ timeout: 200 }).catch(() => false);
+    if (visiblePasscodeText && (visiblePinInput || (await this.liveNumpadPanel.isVisible({ timeout: 200 }).catch(() => false)))) {
+      return true;
     }
     const activeLoginPage = this.page.locator('#loginPage.ui-page-active').first();
     const activeLoginText = (await activeLoginPage.innerText({ timeout: 500 }).catch(() => '')) ?? '';

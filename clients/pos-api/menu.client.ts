@@ -183,7 +183,7 @@ export class LiveMenuClient implements MenuClient {
   async setProductLineInventoryLimit(): Promise<void> {}
 
   async createComboNoOptionThenOptionFixture(groupName: string, categoryName: string): Promise<ComboNoOptionThenOptionFixture> {
-    const menu = await this.fetchJson<LiveMenuResponse>('/kpos/webapp/menu/menu?product=POS');
+    const menu = await this.fetchJson<LiveMenuResponse>('/kpos/webapp/menu/menu?product=SELF_DINE_IN');
     const { group, category } = this.findGroupAndCategory(menu, groupName, categoryName);
     const suffix = `${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     const noOptionSubItem = `ts43823_no_${suffix}`;

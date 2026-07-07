@@ -221,7 +221,7 @@ export class AdminPage extends PageObject {
     );
     this.liveGlobalSaveButton = this.liveInnerFrame
       .locator(
-        'xpath=//button[normalize-space()="Save" and not(ancestor::*[contains(@style,"display: none") or contains(@style,"display:none")])]',
+        'xpath=//button[(normalize-space()="Save" or normalize-space()="保存") and not(ancestor::*[contains(@style,"display: none") or contains(@style,"display:none")])]',
       )
       .last();
     this.liveMenuModeSelect = this.liveInnerFrame.locator('xpath=//h3[contains(text(),"Menu Mode")]/..//select');
@@ -231,17 +231,19 @@ export class AdminPage extends PageObject {
     this.liveSettingsCloseButton = page.locator('#pageclsbt');
     this.liveSettingsButton = page.locator('#admstSettings');
     this.liveOtherSettingsTab = this.liveInnerFrame.locator('#category_Other');
-    this.liveSearchMenuToggle = this.liveInnerFrame.locator('xpath=//h3[contains(text(),"Search Menu")]/../div/label');
+    this.liveSearchMenuToggle = this.liveInnerFrame.locator(
+      'xpath=//h3[contains(normalize-space(.),"Search Menu") or contains(normalize-space(.),"搜索菜单")]/../div/label',
+    );
     this.liveCombineSameItemSelect = this.liveInnerFrame.locator('xpath=//h3[contains(text(),"Combine the same dishes")]/..//select');
     this.liveSeparateSameItemToggle = this.liveInnerFrame.locator('xpath=//h3[contains(text(),"Seperate the same dishes")]/../div/input');
     this.liveAutoRedirectAfterReduceToggle = this.liveInnerFrame.locator(
-      'xpath=//h3[contains(text(),"Automatically redirect after reduce items")]/../div/input',
+      'xpath=//h3[contains(normalize-space(.),"Automatically redirect after reduce items") or contains(normalize-space(.),"减菜后自动重定向")]/../div/input',
     );
     this.liveClickSettleAutoSendToggle = this.liveInnerFrame.locator(
       'xpath=//h3[contains(text(),\'Send to kitchen when click "Settle"\')]/../div/input',
     );
     this.liveCountCanBeDecimalToggle = this.liveInnerFrame.locator(
-      'xpath=//h3[contains(text(),"Order Count Can be Decimal")]/../div/input',
+      'xpath=//h3[contains(normalize-space(.),"Order Count Can be Decimal") or contains(normalize-space(.),"订单数量支持小数")]/../div/input',
     );
     this.menuSourceProductLineInput = page.getByTestId('admin-menu-source-product-line');
     this.menuTargetProductLineInput = page.getByTestId('admin-menu-target-product-line');
@@ -438,6 +440,24 @@ export class AdminPage extends PageObject {
     });
   }
 
+  async setCustomerInfoPaymentRequirements(enabled: boolean): Promise<void> {
+    await step(`设置付款前客户信息必填为 ${enabled ? '开启' : '关闭'}`, async () => {
+      await expect(this.adminRoot).toBeVisible();
+      if (await this.saveSettingsButton.isVisible().catch(() => false)) {
+        throw new Error('Offline AdminPage does not expose customer info payment requirements');
+      }
+
+      await this.openLiveSettingsPage();
+      const settingsFrame = await this.findFrameWithSelector('#search-box', '后台设置搜索框加载', 20_000);
+      await this.updateLiveSystemBooleanConfigurations(settingsFrame, [
+        'IS_PAYMENT_CONFIRM_REQUIRED',
+        'IS_NAME_REQUIRED',
+        'IS_PHONE_REQUIRED',
+      ], enabled);
+      await this.closeLiveSettingsAndReturnHome();
+    });
+  }
+
   private async trySetCommonEnableSettingInFrame(
     settingsFrame: Frame,
     settingName: string,
@@ -459,8 +479,9 @@ export class AdminPage extends PageObject {
         await searchBox.fill('');
         await waitUntil(
           async () =>
-            (await settingsFrame.getByText('Payment', { exact: true }).isVisible().catch(() => false)) ||
-            (await settingsFrame.getByText('Page Layout', { exact: true }).isVisible().catch(() => false)),
+            (await searchBox.isEnabled().catch(() => false)) &&
+            ((await settingsFrame.locator('nav li, [role="tab"], [role="listitem"]').first().isVisible().catch(() => false)) ||
+              ((await settingsFrame.locator('body').innerText().catch(() => '')).trim().length > 0)),
           {
             description: '后台设置分类列表完成加载',
             intervalMs: 300,
@@ -516,6 +537,120 @@ export class AdminPage extends PageObject {
       frameErrors.push(`${frameUrl}: ${message}`);
       return false;
     }
+  }
+
+  private async updateLiveSystemBooleanConfigurations(
+    settingsFrame: Frame,
+    names: readonly string[],
+    enabled: boolean,
+  ): Promise<void> {
+    await this.updateLiveSystemConfigurations(
+      settingsFrame,
+      Object.fromEntries(names.map((name) => [name, String(enabled)])),
+    );
+  }
+
+  private async updateLiveSystemConfigurations(settingsFrame: Frame, valuesByName: Readonly<Record<string, string>>): Promise<void> {
+    await settingsFrame.evaluate(
+      async ({ targetValuesByName }: { targetValuesByName: Record<string, string> }) => {
+        type JsonRecord = Record<string, unknown>;
+        type SoapType = { getXML: () => string };
+        type LiveSettingsWindow = Window & {
+          SystemConfigurationType?: new (
+            id: unknown,
+            name: string,
+            value: string,
+            dataType: string,
+            adminReadable?: unknown,
+          ) => SoapType;
+          UpdateSystemConfigurationsType?: new (configurations: SoapType[], userAuth?: SoapType) => SoapType;
+          UserAuthenticationType?: new (userId?: unknown) => SoapType;
+          callWebService?: (soapType: SoapType, responseHandler: (response: unknown) => void) => void;
+          biscuit?: { u?: () => JsonRecord };
+        };
+
+        const isRecord = (value: unknown): value is JsonRecord => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+        const readString = (record: JsonRecord, key: string) => {
+          const value = record[key];
+          return typeof value === 'string' ? value : value == null ? '' : String(value);
+        };
+        const readNumber = (record: JsonRecord, key: string) => {
+          const value = record[key];
+          return typeof value === 'number' || typeof value === 'string' ? value : undefined;
+        };
+
+        const liveWindow = window as LiveSettingsWindow;
+        const SystemConfigurationType = liveWindow.SystemConfigurationType;
+        const UpdateSystemConfigurationsType = liveWindow.UpdateSystemConfigurationsType;
+        const UserAuthenticationType = liveWindow.UserAuthenticationType;
+        const callWebService = liveWindow.callWebService;
+        if (!SystemConfigurationType || !UpdateSystemConfigurationsType || !callWebService) {
+          throw new Error('Live settings SOAP client is not loaded');
+        }
+
+        const response = await fetch('/kpos/webapp/system/listSystemConfigurations', { credentials: 'same-origin' });
+        if (!response.ok) {
+          throw new Error(`GET system configurations failed: ${response.status} ${await response.text()}`);
+        }
+        const json = (await response.json()) as { systemConfiguration?: unknown };
+        const configurations: JsonRecord[] = Array.isArray(json.systemConfiguration) ? json.systemConfiguration.filter(isRecord) : [];
+        const updates = Object.entries(targetValuesByName).map(([name, targetValue]) => {
+          const configuration = configurations.find((candidate) => candidate.name === name);
+          if (!configuration) {
+            throw new Error(`Live system configuration ${name} was not found`);
+          }
+          return new SystemConfigurationType(
+            readNumber(configuration, 'id'),
+            name,
+            targetValue,
+            readString(configuration, 'dataType') || 'Boolean',
+            configuration.adminReadable,
+          );
+        });
+        const currentUserId = liveWindow.biscuit?.u?.().userid;
+        const userAuth = currentUserId === 'wisdomount' || !UserAuthenticationType ? undefined : new UserAuthenticationType(currentUserId);
+        const updateSoap = new UpdateSystemConfigurationsType(updates, userAuth);
+        await new Promise<void>((resolve, reject) => {
+          const timeoutId = window.setTimeout(() => reject(new Error('Update system configurations timed out')), 20_000);
+          callWebService(updateSoap, (updateResponse) => {
+            window.clearTimeout(timeoutId);
+            if (!isRecord(updateResponse)) {
+              reject(new Error('Update system configurations returned invalid response'));
+              return;
+            }
+            const responseBody =
+              updateResponse.updatesystemconfigurationresponsetype ??
+              updateResponse.updatesystemconfigurationsresponsetype ??
+              updateResponse.result ??
+              updateResponse;
+            const result = isRecord(responseBody) && isRecord(responseBody.result) ? responseBody.result : responseBody;
+            const successful = isRecord(result) ? result.successful : undefined;
+            if (successful === false || successful === 'false') {
+              reject(new Error(`Update system configurations failed: ${JSON.stringify(updateResponse)}`));
+              return;
+            }
+            resolve();
+          });
+        });
+
+        const verifyResponse = await fetch('/kpos/webapp/system/listSystemConfigurations', { credentials: 'same-origin' });
+        if (!verifyResponse.ok) {
+          throw new Error(`Verify system configurations failed: ${verifyResponse.status} ${await verifyResponse.text()}`);
+        }
+        const verifyJson = (await verifyResponse.json()) as { systemConfiguration?: unknown };
+        const verifiedConfigurations: JsonRecord[] = Array.isArray(verifyJson.systemConfiguration)
+          ? verifyJson.systemConfiguration.filter(isRecord)
+          : [];
+        const notUpdated = Object.entries(targetValuesByName).filter(([name, targetValue]) => {
+          const configuration = verifiedConfigurations.find((candidate) => candidate.name === name);
+          return readString(configuration ?? {}, 'value') !== targetValue;
+        }).map(([name]) => name);
+        if (notUpdated.length > 0) {
+          throw new Error(`Live system configurations were not updated: ${notUpdated.join(', ')}`);
+        }
+      },
+      { targetValuesByName: valuesByName },
+    );
   }
 
   private async openLiveSettingsPage(): Promise<void> {
@@ -1613,23 +1748,156 @@ export class AdminPage extends PageObject {
 
   private async setLiveDefaultKeyboard(keyboard: string): Promise<void> {
     await this.openLiveSettingsPage();
-    await expect(this.liveOrderSettingsTab).toBeVisible({ timeout: 30_000 });
-    await this.liveOrderSettingsTab.click();
-    await expect(this.liveDefaultKeyboardSelect).toBeVisible({ timeout: 30_000 });
-    await this.liveDefaultKeyboardSelect.selectOption({ label: keyboard });
-    await this.liveGlobalSaveButton.click();
-    await this.waitForLiveAdminSaveSettled();
+    const settingsFrame = await this.findFrameWithSelector('#search-box', '后台设置搜索框加载', 20_000);
+    const shouldSave = await this.selectLiveDefaultKeyboard(settingsFrame, keyboard);
+    if (shouldSave) {
+      const saveButton = settingsFrame
+        .locator(
+          'xpath=//button[(normalize-space()="Save" or normalize-space()="保存") and not(ancestor::*[contains(@style,"display: none") or contains(@style,"display:none")])]',
+        )
+        .last();
+      await expect(saveButton).toBeVisible({ timeout: 10_000 });
+      await saveButton.click();
+      await this.waitForLiveAdminSaveSettled();
+    }
     await this.closeLiveSettingsAndReturnHome();
+  }
+
+  private async selectLiveDefaultKeyboard(settingsFrame: Frame, keyboard: string): Promise<boolean> {
+    const searchBox = settingsFrame.locator('#search-box');
+    const keyboardHeading = settingsFrame
+      .locator(
+        'xpath=//*[self::h3 or self::h4][contains(normalize-space(.),"Default keyboard type") or contains(normalize-space(.),"默认键盘")]',
+      )
+      .first();
+    const keyboardSelect = keyboardHeading.locator('xpath=..//select').first();
+
+    if (await keyboardSelect.isVisible({ timeout: 1_000 }).catch(() => false)) {
+      await keyboardSelect.selectOption({ label: keyboard });
+      return true;
+    }
+
+    for (const searchText of ['keyboard', '键盘']) {
+      await searchBox.fill('');
+      await searchBox.fill(searchText);
+      const matched = await waitUntil(async () => (await keyboardHeading.isVisible().catch(() => false)), {
+        description: `后台默认键盘设置搜索结果 ${searchText}`,
+        intervalMs: 300,
+        timeoutMs: 10_000,
+      })
+        .then(() => true)
+        .catch(() => false);
+      if (!matched) {
+        continue;
+      }
+      if (await keyboardSelect.isVisible({ timeout: 1_000 }).catch(() => false)) {
+        await keyboardSelect.selectOption({ label: keyboard });
+        return true;
+      }
+      const selectedKeyboardText = settingsFrame.locator(`xpath=//*[normalize-space(.)=${xpathText(keyboard)} and not(self::option)]`).first();
+      if (await selectedKeyboardText.isVisible({ timeout: 1_000 }).catch(() => false)) {
+        return false;
+      }
+      const selectedHiddenKeyboard = await settingsFrame.evaluate((keyboardLabel) => {
+        const selects = Array.from(document.querySelectorAll<HTMLSelectElement>('select'));
+        const select = selects.find((candidate) =>
+          Array.from(candidate.options).some((option) => option.textContent?.trim() === keyboardLabel),
+        );
+        const option = Array.from(select?.options ?? []).find((candidate) => candidate.textContent?.trim() === keyboardLabel);
+        if (!select || !option) {
+          return 'missing';
+        }
+        if (select.value === option.value) {
+          return 'unchanged';
+        }
+        select.value = option.value;
+        option.selected = true;
+        select.dispatchEvent(new Event('input', { bubbles: true }));
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+        return 'updated';
+      }, keyboard);
+      if (selectedHiddenKeyboard === 'unchanged') {
+        return false;
+      }
+      if (selectedHiddenKeyboard === 'updated') {
+        await keyboardHeading.click();
+        return true;
+      }
+      await keyboardHeading.click();
+      const keyboardOption = settingsFrame.getByText(keyboard, { exact: true }).last();
+      await expect(keyboardOption).toBeVisible({ timeout: 10_000 });
+      await keyboardOption.click();
+      return true;
+    }
+
+    throw new Error('后台设置未找到默认键盘类型下拉框');
   }
 
   private async setLivePosMenuMode(menuMode: MenuMode): Promise<void> {
     await this.openLiveSettingsPage();
-    await expect(this.liveOtherSettingsTab).toBeVisible({ timeout: 30_000 });
-    await this.liveOtherSettingsTab.click();
-    await expect(this.liveMenuModeSelect).toBeVisible({ timeout: 30_000 });
-    await this.liveMenuModeSelect.selectOption({ label: menuMode });
-    await this.liveGlobalSaveButton.click();
-    await this.waitForLiveAdminSaveSettled();
+    const settingsFrame = await this.findFrameWithSelector('#search-box', '后台设置搜索框加载', 20_000);
+    const clickedOtherSettingsTab = await settingsFrame.evaluate((targetText) => {
+      const visible = (element: HTMLElement) => {
+        const rect = element.getBoundingClientRect();
+        const style = window.getComputedStyle(element);
+        return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
+      };
+      const candidates = Array.from(document.querySelectorAll<HTMLElement>('li, div, span, a'))
+        .filter(visible)
+        .filter((element) => (element.textContent ?? '').replace(/\s+/g, ' ').trim() === targetText);
+      const target = candidates[0]?.closest<HTMLElement>('li') ?? candidates[0];
+      target?.click();
+      return Boolean(target);
+    }, '\u5176\u4ed6');
+    const otherSettingsTab = settingsFrame.getByText('\u5176\u4ed6', { exact: true }).first();
+    if (!clickedOtherSettingsTab && (await otherSettingsTab.isVisible({ timeout: 5_000 }).catch(() => false))) {
+      await otherSettingsTab.click();
+    } else if (!clickedOtherSettingsTab && (await this.liveOtherSettingsTab.isVisible({ timeout: 5_000 }).catch(() => false))) {
+      await this.liveOtherSettingsTab.click();
+    }
+    await waitUntil(
+      () =>
+        settingsFrame.evaluate(() =>
+          Array.from(document.querySelectorAll<HTMLSelectElement>('select')).some((select) => {
+            const labels = Array.from(select.options).map((option) => option.textContent?.trim() ?? '');
+            return labels.includes('POS') && labels.includes('EMENU');
+          }),
+        ),
+      {
+        description: '后台菜单模式下拉框加载',
+        intervalMs: 300,
+        timeoutMs: 20_000,
+      },
+    );
+    const menuModeChanged = await settingsFrame.evaluate((targetMode) => {
+      const selects = Array.from(document.querySelectorAll<HTMLSelectElement>('select'));
+      const select = selects.find((candidate) => {
+        const labels = Array.from(candidate.options).map((option) => option.textContent?.trim() ?? '');
+        return labels.includes('POS') && labels.includes('EMENU');
+      });
+      const option = Array.from(select?.options ?? []).find((candidate) => candidate.textContent?.trim() === targetMode);
+      if (!select || !option) {
+        throw new Error(`Live menu mode ${targetMode} was not found`);
+      }
+      if (select.value === option.value) {
+        return false;
+      }
+      select.value = option.value;
+      option.selected = true;
+      select.dispatchEvent(new Event('input', { bubbles: true }));
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+      return true;
+    }, menuMode);
+    if (menuModeChanged) {
+      const saveButton = settingsFrame
+        .locator(
+          'xpath=//button[(normalize-space()="Save" or normalize-space()="保存") and not(ancestor::*[contains(@style,"display: none") or contains(@style,"display:none")])]',
+        )
+        .last();
+      await expect(saveButton).toBeVisible({ timeout: 10_000 });
+      await saveButton.click();
+      await this.waitForLiveAdminSaveSettled();
+    }
     await this.closeLiveSettingsAndReturnHome();
   }
 
@@ -1667,28 +1935,61 @@ export class AdminPage extends PageObject {
 
   private async setLiveCombineSameItem(mode: CombineSameItemMode, separateSameItem: boolean): Promise<void> {
     await this.openLiveSettingsPage();
-    await expect(this.liveOrderSettingsTab).toBeVisible({ timeout: 30_000 });
-    await this.liveOrderSettingsTab.click();
-    await expect(this.liveCombineSameItemSelect).toBeVisible({ timeout: 30_000 });
+    const settingsFrame = await this.findFrameWithSelector('#search-box', '后台设置搜索框加载', 20_000);
     const combineSameItemValueByMode: Record<CombineSameItemMode, string> = {
       [combineSameItemModes.dontCombine]: '0',
       [combineSameItemModes.autoSameStatus]: '1',
       [combineSameItemModes.includeKitchen]: '2',
     };
-    const targetCombineSameItemValue = combineSameItemValueByMode[mode];
-    await this.liveCombineSameItemSelect.selectOption(targetCombineSameItemValue);
-    await expect(this.liveCombineSameItemSelect).toHaveValue(targetCombineSameItemValue, { timeout: 5_000 });
+    await this.updateLiveSystemConfigurations(settingsFrame, {
+      COMBINE_THE_SAME_DISHES: combineSameItemValueByMode[mode],
+      BREAK_OR_COMBIN_SAME_DISHES: String(separateSameItem),
+    });
+    await this.closeLiveSettingsAndReturnHome();
+  }
 
-    const separateLabel = this.liveInnerFrame.locator('xpath=//h3[contains(text(),"Seperate the same dishes")]/../div/label');
-    const separateClass = (await separateLabel.getAttribute('class')) ?? '';
-    const separateChecked = separateClass.includes('ui-checkbox-on') || (await this.liveSeparateSameItemToggle.isChecked());
-    if (separateChecked !== separateSameItem) {
-      await separateLabel.click();
+  private async findLiveCombineSameItemSelect(settingsFrame: Frame): Promise<Locator> {
+    const searchBox = settingsFrame.locator('#search-box');
+    const combineSameItemHeadingText = '\u76f8\u540c\u83dc\u5408\u5e76\u663e\u793a';
+    const combineSameItemSelect = settingsFrame
+      .locator(
+        `xpath=//*[self::h3 or self::h4][contains(normalize-space(.),"Combine the same dishes") or normalize-space(.)=${xpathText(
+          combineSameItemHeadingText,
+        )}]/following::select[1]`,
+      )
+      .first();
+    if (await combineSameItemSelect.isVisible({ timeout: 1_000 }).catch(() => false)) {
+      return combineSameItemSelect;
     }
 
-    await this.liveGlobalSaveButton.click();
-    await this.waitForLiveAdminSaveSettled();
-    await this.closeLiveSettingsAndReturnHome();
+    const combineSameItemHeading = settingsFrame
+      .locator(
+        `xpath=//*[self::h3 or self::h4][contains(normalize-space(.),"Combine the same dishes") or normalize-space(.)=${xpathText(
+          combineSameItemHeadingText,
+        )}]`,
+      )
+      .first();
+
+    for (const searchText of ['Combine the same dishes', '\u5408\u5e76']) {
+      await searchBox.fill('');
+      await searchBox.fill(searchText);
+      const matched = await waitUntil(async () => (await combineSameItemHeading.isVisible().catch(() => false)), {
+        description: `后台相同菜合并设置搜索结果 ${searchText}`,
+        intervalMs: 300,
+        timeoutMs: 10_000,
+      })
+        .then(() => true)
+        .catch(() => false);
+      if (!matched) {
+        continue;
+      }
+      await combineSameItemHeading.click();
+      if (await combineSameItemSelect.isVisible({ timeout: 5_000 }).catch(() => false)) {
+        return combineSameItemSelect;
+      }
+    }
+
+    throw new Error('后台设置未找到相同菜合并模式下拉框');
   }
 
   private async setLiveOrderCheckbox(toggle: Locator, enabled: boolean): Promise<void> {
@@ -1728,7 +2029,10 @@ export class AdminPage extends PageObject {
     await expect(posMenuExpand).toBeVisible({ timeout: 30_000 });
     await posMenuExpand.click();
 
-    const groupLink = this.liveInnerFrame.locator(`xpath=//a[normalize-space(.)=${xpathText(group)}]`).first();
+    const groupLabel = group === 'Lunch' ? '午餐菜单' : group;
+    const groupLink = this.liveInnerFrame
+      .locator(`xpath=//a[normalize-space(.)=${xpathText(group)} or normalize-space(.)=${xpathText(groupLabel)}]`)
+      .first();
     await expect(groupLink).toBeVisible({ timeout: 30_000 });
     await groupLink.click();
 
@@ -1737,7 +2041,12 @@ export class AdminPage extends PageObject {
     await categoryLink.click();
 
     const itemLink = this.liveInnerFrame.locator(`xpath=//a[normalize-space(.)=${xpathText(itemName)}]`).first();
-    await expect(itemLink).toBeVisible({ timeout: 30_000 });
+    const configuredItemLink = this.liveInnerFrame.locator(`xpath=//a[normalize-space(.)=${xpathText(chineseName)}]`).first();
+    if (!(await itemLink.isVisible({ timeout: 30_000 }).catch(() => false))) {
+      await expect(configuredItemLink).toBeVisible({ timeout: 5_000 });
+      await this.closeLiveSettingsAndReturnHome();
+      return;
+    }
     await itemLink.click();
 
     const chineseNameInput = this.liveInnerFrame.locator('xpath=(//input[contains(@class,"mdc-text-field__input")])[2]').first();
@@ -3229,8 +3538,27 @@ export class AdminPage extends PageObject {
   }
 
   private async clickVisibleLiveAdminText(text: string): Promise<void> {
+    const aliases: Record<string, string[]> = {
+      Language: ['Language', '多语言'],
+      Menu: ['Menu', '菜单编辑'],
+      Staff: ['Staff', '员工'],
+    };
+    for (const candidate of aliases[text] ?? [text]) {
+      const frameText = this.liveInnerFrame.getByText(candidate, { exact: true }).first();
+      if (await frameText.isVisible({ timeout: 500 }).catch(() => false)) {
+        await frameText.click();
+        return;
+      }
+    }
+
     const clicked = await this.page
       .evaluate((targetText) => {
+        const aliases: Record<string, string[]> = {
+          Language: ['Language', '多语言'],
+          Menu: ['Menu', '菜单编辑'],
+          Staff: ['Staff', '员工'],
+        };
+        const targetTexts = aliases[targetText] ?? [targetText];
         const visible = (element: HTMLElement) => {
           const rect = element.getBoundingClientRect();
           const style = window.getComputedStyle(element);
@@ -3239,7 +3567,7 @@ export class AdminPage extends PageObject {
         const candidates = Array.from(document.querySelectorAll<HTMLElement>('*'))
           .filter((element) => {
             const text = element.textContent?.replace(/\s+/g, ' ').trim() ?? '';
-            return visible(element) && (text === targetText || text.endsWith(` ${targetText}`));
+            return visible(element) && targetTexts.some((candidate) => text === candidate || text.endsWith(` ${candidate}`));
           })
           .sort((left, right) => {
             const leftText = left.textContent?.replace(/\s+/g, ' ').trim() ?? '';

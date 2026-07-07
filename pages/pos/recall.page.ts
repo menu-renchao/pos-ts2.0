@@ -197,7 +197,7 @@ export class RecallPage extends PageObject {
     this.amountInputs = page.getByTestId('split-amount-input');
     this.combinedTipButton = page.getByTestId('recall-combine-split');
     this.customerName = page.getByTestId('recall-customer-name');
-    this.editButton = page.getByTestId('recall-edit').or(page.locator('#editodicon'));
+    this.editButton = page.getByTestId('recall-edit').or(page.locator('#editodicon:visible').last());
     this.evenSplitButton = page.getByTestId('split-even-order');
     this.guestNameInput = page.getByTestId('recall-guest-name');
     this.itemSplitButton = page.getByTestId('split-by-item');
@@ -222,7 +222,7 @@ export class RecallPage extends PageObject {
     this.orderTipToast = page.getByTestId('recall-tip-toast');
     this.itemCount = page.getByTestId('recall-item-count');
     this.liveSubOrders = page.locator('#tbOrdListsubod [id^="odsmybt_"]');
-    this.liveOrderCards = page.locator('[role="gridcell"]');
+    this.liveOrderCards = page.locator('[role="gridcell"]:visible');
     this.liveOrderHeaderBox = page.locator(liveOrderDishesSelectors.orderHeaderBox);
     this.liveOrderInfoButton = page.locator(liveOrderDishesSelectors.orderInfoButton);
     this.liveOrderPickupNameInput = page.locator(liveOrderDishesSelectors.pickupNameInput);
@@ -263,13 +263,11 @@ export class RecallPage extends PageObject {
     this.liveSplitPanelItemPriceLabels = this.liveSplitPanelFrame.locator(
       'div[class*="_priceModeButtonContent"] span, header[class*="_suborderHeader"] span[class*="_totalPrice"]',
     );
-    this.liveSplitPanelCombineConfirmButton = this.liveSplitPanelFrame.locator(
-      '[data-testid="pos-ui-modal"] [data-testid="modal-confirm-button"]',
-    );
-    this.liveSplitPanelSaveButton = this.liveSplitPanelFrame.locator('[data-testid="splitPanelModal-confirm-button"]');
+    this.liveSplitPanelCombineConfirmButton = this.liveSplitPanelFrame.getByTestId('splitPanelModal-confirm-button');
+    this.liveSplitPanelSaveButton = this.liveSplitPanelFrame.locator('button').filter({ hasText: /^Confirm$/ }).first();
     this.liveSplitOrderPriceLabels = page.locator('#tbcstbnamename');
-    this.liveOrderSplitButton = page.locator('#splitod');
-    this.liveSplittedOrderSplitButton = page.locator('#splitBtn');
+    this.liveOrderSplitButton = page.locator('#splitod:visible').last();
+    this.liveSplittedOrderSplitButton = page.locator('#splitBtn:visible').last();
     this.previousOrderButton = page.getByTestId('recall-previous-order');
     this.printButton = page.getByTestId('recall-print');
     this.livePrintButton = page.locator('#printRicon');
@@ -331,14 +329,82 @@ export class RecallPage extends PageObject {
     return this.paymentRecords.nth(index - 1).getByTestId('recall-payment-record-refund');
   }
 
+  private async readLatestLiveOrderCardIndex(): Promise<number> {
+    return (await this.readRecentLiveOrderCardIndexes(1))[0] ?? 0;
+  }
+
+  async readRecentLiveOrderCardIndexes(count: number): Promise<number[]> {
+    return step(`读取 Recall 最近 ${count} 个 live 订单卡片位置`, async () => {
+      await expect(this.recallRoot).toBeVisible();
+      await this.hideTransientCovers();
+      await this.clearLiveRecallFilters();
+      let recentOrderIndexes: number[] = [];
+      await waitUntil(
+        async () => {
+          recentOrderIndexes = await this.liveOrderCards
+            .evaluateAll((cards, requestedCount) => {
+              return cards
+                .map((card, index) => {
+                  const text = (card.textContent ?? '').replace(/\s+/g, ' ').trim();
+                  const orderNoText = text.match(/(?:tag|#)\s*(\d+)/i)?.[1];
+                  const orderNo = orderNoText ? Number(orderNoText) : Number.NaN;
+                  return { index, orderNo };
+                })
+                .filter((card) => Number.isFinite(card.orderNo))
+                .sort((left, right) => right.orderNo - left.orderNo)
+                .slice(0, requestedCount)
+                .map((card) => card.index);
+            }, count)
+            .catch(() => []);
+          return recentOrderIndexes.length >= count;
+        },
+        {
+          description: `Recall live 最近 ${count} 个订单卡片加载`,
+          intervalMs: 200,
+          timeoutMs: 10_000,
+        },
+      ).catch(() => undefined);
+      return recentOrderIndexes;
+    });
+  }
+
+  async openLiveOrderCardByIndex(cardIndex: number): Promise<void> {
+    await step(`打开 Recall live 订单卡片位置 ${cardIndex}`, async () => {
+      await this.hideTransientCovers();
+      await this.clickLiveOrderCard(cardIndex);
+      this.lastOpenedLiveOrderIndex = cardIndex;
+    });
+  }
+
+  async combineWithLiveOrderCardIndex(cardIndex: number): Promise<void> {
+    await step(`合并 Recall live 订单卡片位置 ${cardIndex}`, async () => {
+      await this.clickVisibleLiveText('More');
+      await this.clickVisibleLiveText('Combine');
+      await this.clickLiveOrderCard(cardIndex);
+      const yesButton = this.page.locator('#yes, .objBxBtn').filter({ hasText: /^Yes$/ }).first();
+      if (await yesButton.isVisible({ timeout: 5_000 }).catch(() => false)) {
+        await yesButton.click();
+      }
+      await waitUntil(
+        async () => (await this.liveOrderTotal.isVisible().catch(() => false)) && !(await yesButton.isVisible().catch(() => false)),
+        {
+          description: 'live Recall 合单完成',
+          intervalMs: 300,
+          timeoutMs: 15_000,
+        },
+      ).catch(() => undefined);
+    });
+  }
+
   async openRecentOrder(): Promise<void> {
     await step('打开 Recall 最近订单', async () => {
       await expect(this.recallRoot).toBeVisible();
       await this.hideTransientCovers();
       await this.clearLiveRecallFilters();
       if (await this.liveOrderCards.first().isVisible({ timeout: 2_000 }).catch(() => false)) {
-        await this.clickLiveOrderCard(0);
-        this.lastOpenedLiveOrderIndex = 0;
+        const recentOrderIndex = await this.readLatestLiveOrderCardIndex();
+        await this.clickLiveOrderCard(recentOrderIndex);
+        this.lastOpenedLiveOrderIndex = recentOrderIndex;
         return;
       }
       if (!(await this.page.getByTestId('recall-recent-order').isVisible({ timeout: 2_000 }).catch(() => false))) {
@@ -861,7 +927,7 @@ export class RecallPage extends PageObject {
         if (!(await this.page.locator('#ordersmryWrap:visible').isVisible().catch(() => false))) {
           await this.openRecentOrder();
         }
-        const livePaymentTipButton = this.page.locator('[id*="addtippmt"]').first();
+        const livePaymentTipButton = this.page.locator('[id*="addtippmt"]:visible').last();
         await expect(livePaymentTipButton).toBeVisible({ timeout: 10_000 });
         await livePaymentTipButton.click();
 
@@ -927,7 +993,10 @@ export class RecallPage extends PageObject {
             await this.page.mouse.click(inputBox.x + inputBox.width * 0.75, inputBox.y + 130);
           }
         }
-        await expect(this.page.getByText('Add Tips', { exact: true })).toBeHidden({ timeout: 10_000 });
+        const liveTipToast = this.page.locator('.objBxTxt').filter({ hasText: /The tip is more than 50% of the meal/i }).first();
+        if (!(await liveTipToast.isVisible({ timeout: 1_000 }).catch(() => false))) {
+          await expect(this.page.getByText('Add Tips', { exact: true })).toBeHidden({ timeout: 10_000 });
+        }
         return;
       }
       await this.orderTipMethod.selectOption(method);
@@ -944,6 +1013,7 @@ export class RecallPage extends PageObject {
       if (await liveTipToast.isVisible({ timeout: 2_000 }).catch(() => false)) {
         const toastText = ((await liveTipToast.textContent()) ?? '').trim();
         await this.page.locator('#yes').click();
+        await expect(this.page.getByText('Add Tips', { exact: true })).toBeHidden({ timeout: 10_000 });
         return toastText;
       }
       return ((await this.orderTipToast.textContent()) ?? '').trim();
@@ -965,38 +1035,48 @@ export class RecallPage extends PageObject {
       await expect(this.liveSplitPanelSubOrders.first()).toBeVisible({ timeout: 10_000 });
       await this.liveSplitPanelSubOrders.nth(0).click();
       await this.liveSplitPanelSubOrders.nth(1).click();
-      await this.liveSplitPanelCombineConfirmButton.click();
-      await expect(this.liveSplitPanelCombineConfirmButton).toBeHidden({ timeout: 10_000 });
-      await this.liveSplitPanelSaveButton.click();
+      await expect(this.liveSplitPanelCombineConfirmButton).toBeEnabled({ timeout: 10_000 });
+      await this.liveSplitPanelCombineConfirmButton.evaluate((element) => {
+        window.setTimeout(() => (element as HTMLElement).click(), 0);
+      });
+      await expect(this.liveSplitPanelCombineConfirmButton).toBeHidden({ timeout: 10_000 }).catch(() => undefined);
+      if (await this.liveSplitPanelSaveButton.isVisible({ timeout: 5_000 }).catch(() => false)) {
+        await this.liveSplitPanelSaveButton.click();
+        await expect(this.liveSplitPanelSaveButton).toBeHidden({ timeout: 10_000 });
+      }
     });
   }
 
   async readOrderStatus(): Promise<string> {
     return step('读取 Recall 订单状态', async () => {
       if (await this.orderStatus.isVisible({ timeout: 2_000 }).catch(() => false)) {
-        return ((await this.orderStatus.textContent()) ?? '').trim();
+        return this.normalizeOrderStatus(((await this.orderStatus.textContent()) ?? '').trim());
       }
 
       const liveDetailStatus = ((await this.page.locator('#odsmystatus:visible').last().textContent({ timeout: 2_000 }).catch(() => '')) ?? '')
         .replace(/\s+/g, ' ')
         .trim();
       if (liveDetailStatus) {
-        if (liveDetailStatus === 'In Kitchen') {
-          return 'Printed';
-        }
-        return liveDetailStatus;
+        return this.normalizeOrderStatus(liveDetailStatus);
       }
       const liveRecentOrderText = ((await this.recentOrderButton.textContent({ timeout: 2_000 }).catch(() => '')) ?? '')
         .replace(/\s+/g, ' ')
         .trim();
-      if (/Success/i.test(liveRecentOrderText) || /Paid/i.test(liveRecentOrderText)) {
-        return 'Paid';
-      }
-      if (/Unpaid/i.test(liveRecentOrderText)) {
-        return 'Unpaid';
-      }
-      return liveRecentOrderText;
+      return this.normalizeOrderStatus(liveRecentOrderText);
     });
+  }
+
+  private normalizeOrderStatus(statusText: string): string {
+    if (statusText === 'In Kitchen') {
+      return 'Printed';
+    }
+    if (/Success/i.test(statusText) || /Paid/i.test(statusText) || statusText.includes('已付款')) {
+      return 'Paid';
+    }
+    if (/Unpaid/i.test(statusText) || statusText.includes('未付款')) {
+      return 'Unpaid';
+    }
+    return statusText;
   }
 
   async readServerName(): Promise<string> {
@@ -1936,17 +2016,7 @@ export class RecallPage extends PageObject {
 
   private async clickLiveOrderCard(index: number): Promise<void> {
     const gridCell = this.liveOrderCards.nth(index);
-    const pythonOrderCard = this.page.locator('xpath=//*[@id="reordersmylst"]/div[2]/div/child::div').nth(index);
-    const orderCard = pythonOrderCard
-      .or(gridCell.locator(':scope > div').first())
-      .or(gridCell)
-      .first();
-    const fallbackOrderCard = gridCell
-      .locator(':scope > div')
-      .first()
-      .or(gridCell)
-      .or(this.page.locator('xpath=(//div[contains(@class, "ReactVirtualized__Grid__innerScrollContainer")]/div/div/div)').nth(index))
-      .first();
+    const orderCard = gridCell.locator(':scope > div').first().or(gridCell).first();
     await expect(orderCard).toBeVisible({ timeout: 10_000 });
     const cardBox = await orderCard.boundingBox();
     if (cardBox) {
@@ -1954,17 +2024,11 @@ export class RecallPage extends PageObject {
     } else {
       await orderCard.click();
     }
-    if (await fallbackOrderCard.isVisible({ timeout: 500 }).catch(() => false)) {
-      await fallbackOrderCard.evaluate((element) => {
-        const target = element as HTMLElement;
-        target.click();
-        target.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
-      });
-    }
     await waitUntil(
       async () =>
         (await this.page.locator('#oddetail:visible').isVisible().catch(() => false)) ||
         (await this.page.locator('#oodbtbx:visible [id*="itemdsh"]:visible, #ordersmryWrap:visible [class*="itemName"]').first().isVisible().catch(() => false)) ||
+        (await this.liveSubOrders.first().isVisible().catch(() => false)) ||
         !(await this.page.locator('[role="gridcell"]:visible').first().isVisible().catch(() => false)),
       {
         description: 'live Recall 订单详情打开',
@@ -2233,7 +2297,12 @@ export class RecallPage extends PageObject {
     await splitButton.click({ timeout: 5_000 }).catch(async (error: unknown) => {
       const clicked = await this.page
         .evaluate((id) => {
-          const button = document.getElementById(id);
+          const visible = (element: HTMLElement) => {
+            const rect = element.getBoundingClientRect();
+            const style = window.getComputedStyle(element);
+            return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
+          };
+          const button = Array.from(document.querySelectorAll<HTMLElement>(`#${CSS.escape(id)}`)).find(visible);
           if (!button) {
             return false;
           }

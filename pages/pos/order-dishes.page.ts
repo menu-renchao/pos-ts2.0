@@ -32,6 +32,7 @@ export class OrderDishesPage extends PageObject {
   private readonly itemDiscountClearSelectedButton: Locator;
   private readonly itemDiscountSubmitButton: Locator;
   private readonly itemPrice: Locator;
+  private readonly liveItemPriceDiscountPanel: Locator;
   private readonly itemPriceInput: Locator;
   private readonly itemPriceSubmitButton: Locator;
   private readonly itemQuantityButton: Locator;
@@ -224,6 +225,7 @@ export class OrderDishesPage extends PageObject {
     this.itemDiscountClearSelectedButton = page.getByTestId('item-discount-clear-selected');
     this.itemDiscountSubmitButton = page.getByTestId('item-discount-submit');
     this.itemPrice = page.getByTestId(offlineOrderDishesSelectors.itemPrice).or(page.locator(liveOrderDishesSelectors.itemPrice).last());
+    this.liveItemPriceDiscountPanel = page.locator(liveOrderDishesSelectors.itemPriceDiscountPanel);
     this.itemPriceInput = page.getByTestId(offlineOrderDishesSelectors.itemPriceInput).or(page.locator(liveOrderDishesSelectors.itemPriceInput));
     this.itemPriceSubmitButton = page.getByTestId(offlineOrderDishesSelectors.itemPriceSubmitButton).or(page.locator(liveOrderDishesSelectors.itemPriceSubmitButton));
     this.itemQuantityButton = page
@@ -315,7 +317,7 @@ export class OrderDishesPage extends PageObject {
     this.openFoodCategory = page.getByTestId('open-food-category');
     this.orderRoot = page.getByTestId('order-page').or(page.locator('#orderDishes'));
     this.currentCategoryName = page.getByTestId('current-category-name');
-    this.saveOrderButton = page.getByTestId('order-save').or(page.locator('#odSave'));
+    this.saveOrderButton = page.getByTestId('order-save').or(page.locator(liveOrderDishesSelectors.orderSaveButton));
     this.saveOrderAlert = page.getByTestId('order-save-alert').or(page.locator('#myalerttxt')).or(page.locator('.myalertBxBox'));
     this.liveSplitButton = page.locator('#splitOdBtn');
     this.liveSplitPrompt = page.locator('.objBx').filter({ hasText: /This order has charges, discounts, or tips/i });
@@ -573,6 +575,8 @@ export class OrderDishesPage extends PageObject {
       const wasLiveOrderPage = await this.isLiveOrderEntryVisible();
       await this.clickSaveOrderButton();
       await this.completeManagerAuthorizationDialogs(password);
+      await this.confirmVoidDialogIfVisible(5_000);
+      await this.confirmNotifyKitchenVoidIfVisible(5_000);
       if (wasLiveOrderPage) {
         await waitUntil(
           async () =>
@@ -630,7 +634,7 @@ export class OrderDishesPage extends PageObject {
       }
       const clicked = await this.page
         .evaluate(() => {
-          const saveButton = document.getElementById('odSave') ?? document.getElementById('odSavetxt');
+          const saveButton = document.getElementById('odSavetxt') ?? document.getElementById('odSave');
           if (!saveButton) {
             return false;
           }
@@ -1094,6 +1098,29 @@ export class OrderDishesPage extends PageObject {
       await this.clickVoidItemButton();
       await this.confirmVoidDialogIfVisible(5_000);
       return this.readLiveOrOfflinePermissionToast();
+    });
+  }
+
+  async selectFirstPrintedOrderLine(): Promise<void> {
+    await step('选择第一个已打印订单菜品行', async () => {
+      const livePrintedLine = this.liveOrderItemRows
+        .filter({
+          has: this.page.locator(
+            '.itemNameSENT_TO_KITCHENtxt, .itemNamePARTIALLY_SENT_TO_KITCHENtxt, .itemNameIN_KITCHENtxt',
+          ),
+        })
+        .first();
+      if (await livePrintedLine.isVisible({ timeout: 2_000 }).catch(() => false)) {
+        await this.activateLiveOrderLine(livePrintedLine);
+        return;
+      }
+
+      if (await this.liveOrderItemRows.first().isVisible({ timeout: 1_000 }).catch(() => false)) {
+        await this.activateLiveOrderLine(this.liveOrderItemRows.first());
+        return;
+      }
+
+      await this.orderLineItems.first().click();
     });
   }
 
@@ -1624,6 +1651,24 @@ export class OrderDishesPage extends PageObject {
         timeoutMs: 10_000,
       },
     );
+    return true;
+  }
+
+  private async confirmNotifyKitchenVoidIfVisible(timeout = 2_000): Promise<boolean> {
+    const notifyDialog = this.page
+      .locator('.modal.in:visible, [role="dialog"]:visible, .objBx:visible')
+      .filter({ hasText: /notify your kitchen about the void dishes/i })
+      .last();
+    const visible = await notifyDialog
+      .waitFor({ state: 'visible', timeout })
+      .then(() => true)
+      .catch(() => false);
+    if (!visible) {
+      return false;
+    }
+    const yesButton = notifyDialog.getByText('Yes', { exact: true }).or(notifyDialog.locator('.btn-main').filter({ hasText: /^Yes$/ })).last();
+    await yesButton.click();
+    await expect(notifyDialog).toBeHidden({ timeout: 10_000 }).catch(() => undefined);
     return true;
   }
 
@@ -2175,6 +2220,70 @@ export class OrderDishesPage extends PageObject {
     return prices.at(-1) ?? text;
   }
 
+  private async readLiveDiscountWholeOrderPrice(): Promise<string> {
+    let liveWholeOrderPrice = '';
+    await waitUntil(
+      async () => {
+        liveWholeOrderPrice = await this.page.evaluate(() => {
+          const visible = (element: HTMLElement) => {
+            const rect = element.getBoundingClientRect();
+            const style = window.getComputedStyle(element);
+            return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
+          };
+          const elements = Array.from(document.querySelectorAll<HTMLElement>('*')).filter(visible);
+          const wholeOrderLabel = elements
+            .map((element) => {
+              const text = (element.innerText || element.textContent || '').replace(/\s+/g, ' ').trim();
+              const rect = element.getBoundingClientRect();
+              return { rect, text };
+            })
+            .filter((entry) => entry.text === 'Whole Order')
+            .sort((left, right) => left.rect.width * left.rect.height - right.rect.width * right.rect.height)[0];
+          if (wholeOrderLabel) {
+            const labelCenterY = wholeOrderLabel.rect.top + wholeOrderLabel.rect.height / 2;
+            const rowPrices = elements
+              .map((element) => {
+                const text = (element.innerText || element.textContent || '').replace(/\s+/g, ' ').trim();
+                const rect = element.getBoundingClientRect();
+                return { rect, text };
+              })
+              .filter((entry) => /\$?\d+(?:,\d{3})*(?:\.\d{2})/.test(entry.text))
+              .filter((entry) => Math.abs(entry.rect.top + entry.rect.height / 2 - labelCenterY) < 20)
+              .filter((entry) => entry.rect.left > wholeOrderLabel.rect.left)
+              .sort((left, right) => left.rect.left - right.rect.left);
+            const rowPriceText = rowPrices.at(-1)?.text ?? '';
+            const rowPricesOnly = rowPriceText.match(/\$?\d+(?:,\d{3})*(?:\.\d{2})/g) ?? [];
+            if (rowPricesOnly.at(-1)) {
+              return rowPricesOnly.at(-1) ?? '';
+            }
+          }
+          const wholeOrderRow = elements
+            .filter(visible)
+            .map((element) => {
+              const text = (element.innerText || element.textContent || '').replace(/\s+/g, ' ').trim();
+              const rect = element.getBoundingClientRect();
+              return { area: rect.width * rect.height, text };
+            })
+            .filter((row) => row.text.includes('Whole Order') && !row.text.includes('superman item1') && /\$\d/.test(row.text))
+            .sort((left, right) => left.area - right.area)[0];
+          const prices = wholeOrderRow?.text.match(/\$?\d+(?:,\d{3})*(?:\.\d{2})?/g) ?? [];
+          return prices.at(-1) ?? '';
+        });
+        return Boolean(liveWholeOrderPrice);
+      },
+      {
+        description: 'live 折扣 Whole Order 行金额加载',
+        intervalMs: 200,
+        timeoutMs: 10_000,
+      },
+    ).catch(() => '');
+    if (liveWholeOrderPrice) {
+      return liveWholeOrderPrice;
+    }
+    await expect(this.liveOrderDiscountWholeOrderPrice).toBeVisible({ timeout: 10_000 });
+    return this.readLiveDiscountRowLastCurrency(this.liveOrderDiscountWholeOrderPrice);
+  }
+
   private async clickLiveOrderDiscountButton(): Promise<void> {
     const clicked = await waitUntil(
       () =>
@@ -2470,10 +2579,16 @@ export class OrderDishesPage extends PageObject {
       }
 
       await this.totalBox.click({ timeout: 2_000 }).catch(() => undefined);
-      await expect(this.liveOrderDiscountButton).toBeVisible({ timeout: 10_000 });
-      await this.clickLiveOrderDiscountButton();
-      await expect(this.liveOrderDiscountWholeOrderPrice).toBeVisible({ timeout: 10_000 });
-      return this.readLiveDiscountRowLastCurrency(this.liveOrderDiscountWholeOrderPrice);
+      if (await this.liveOrderDiscountButton.isVisible({ timeout: 2_000 }).catch(() => false)) {
+        await this.clickLiveOrderDiscountButton();
+        return this.readLiveDiscountWholeOrderPrice();
+      }
+
+      await this.selectOrderLineBeforeAction(this.liveItemDiscountTrigger);
+      await this.liveItemDiscountTrigger.click();
+      await expect(this.liveItemPriceDiscountPanel).toBeVisible({ timeout: 10_000 });
+      const livePriceValue = await this.itemPriceInput.inputValue();
+      return parseCurrency(livePriceValue).toFixed(2);
     });
   }
 
@@ -2643,6 +2758,18 @@ export class OrderDishesPage extends PageObject {
       }
 
       return this.orderLineItems.count();
+    });
+  }
+
+  async readActiveOrderLineCount(): Promise<number> {
+    return step('读取未 Void 的订单菜品行数', async () => {
+      if (await this.liveOrderItemRows.first().isVisible({ timeout: 1_000 }).catch(() => false)) {
+        const texts = await this.liveOrderItemRows.allTextContents();
+        return texts.filter((text) => !/Voided/i.test(text)).length;
+      }
+
+      const texts = await this.orderLineItems.allTextContents();
+      return texts.filter((text) => !/Voided/i.test(text)).length;
     });
   }
 
@@ -2847,6 +2974,7 @@ export class OrderDishesPage extends PageObject {
       await this.splitPanelKeypadConfirmButton.click();
       await expect(this.splitPanelKeypadConfirmButton).toBeHidden({ timeout: 10_000 });
       await this.splitPanelSaveButton.click();
+      await expect(this.splitPanelSaveButton).toBeHidden({ timeout: 10_000 });
     });
   }
 
@@ -3050,7 +3178,21 @@ export class OrderDishesPage extends PageObject {
       }
 
       if (!(await this.comboSubItemChoices.first().isVisible({ timeout: 1_000 }).catch(() => false))) {
-        await this.openLiveQuickComboEditor(comboName, firstSubItemName);
+        const openedComboEditor = await this.openLiveQuickComboEditor(comboName, firstSubItemName)
+          .then(() => true)
+          .catch(async (error: unknown) => {
+            const replacementItemsVisible = await this.areLiveMenuItemsVisible(subItemNames);
+            if (replacementItemsVisible) {
+              return false;
+            }
+            throw error;
+          });
+        if (!openedComboEditor) {
+          for (const subItemName of subItemNames) {
+            await this.addMenuItem(subItemName);
+          }
+          return;
+        }
         const liveSectionName = await this.findLiveComboSectionNameForItem(firstSubItemName);
         if (liveSectionName) {
           await this.completeVisibleLiveComboSelectionBySections([
@@ -3077,6 +3219,16 @@ export class OrderDishesPage extends PageObject {
         await this.comboSubItemChoices.filter({ hasText: exactText(subItemName) }).click();
       }
     });
+  }
+
+  private async areLiveMenuItemsVisible(itemNames: readonly string[]): Promise<boolean> {
+    for (const itemName of itemNames) {
+      const item = this.menuItems.filter({ hasText: exactText(itemName) }).first();
+      if (!(await item.isVisible({ timeout: 1_000 }).catch(() => false))) {
+        return false;
+      }
+    }
+    return true;
   }
 
   async editSelectedComboSubItemPrice(priceInput: string): Promise<void> {
@@ -3569,19 +3721,18 @@ export class OrderDishesPage extends PageObject {
         `xpath=//div[contains(@class,"itemNameORDEREDtxt") and normalize-space(.)=${xpathText(comboName)}]/ancestor::div[5]/div[4]/div[1]`,
       )
       .first();
-    await expect(liveComboEditButton).toBeVisible({ timeout: 10_000 });
-    await liveComboEditButton.click({ force: true });
-    if (await comboEditor.isVisible({ timeout: 2_000 }).catch(() => false)) {
-      return;
+    if (await liveComboEditButton.isVisible({ timeout: 2_000 }).catch(() => false)) {
+      await liveComboEditButton.click({ force: true });
+      if (await comboEditor.isVisible({ timeout: 2_000 }).catch(() => false)) {
+        return;
+      }
     }
     const comboLine = this.page
-      .locator(
-        `xpath=//div[contains(@class,"itemNameORDEREDtxt") and normalize-space(.)=${xpathText(comboName)}]/ancestor::div[contains(@class,"dishItem")][1]`,
-      )
+      .locator('#oodbx .dishItem:visible')
+      .filter({ hasText: comboName })
       .first();
-    if (await comboLine.isVisible({ timeout: 1_000 }).catch(() => false)) {
-      await this.activateLiveOrderLine(comboLine);
-    }
+    await expect(comboLine).toBeVisible({ timeout: 10_000 });
+    await this.activateLiveOrderLine(comboLine);
     const liveModifyButton = this.page.locator('#mdfItemicon:visible').first();
     if (await liveModifyButton.isVisible({ timeout: 2_000 }).catch(() => false)) {
       await liveModifyButton.click({ force: true });
@@ -3661,14 +3812,13 @@ export class OrderDishesPage extends PageObject {
       const requiredCount = Number(titleText.match(/\d+/g)?.at(-1) ?? '1');
       const items = section.locator('xpath=div/div[@class="liteComboItemBtnBx"]');
       for (let itemIndex = 0; itemIndex < Math.min(requiredCount, await items.count()); itemIndex += 1) {
-        await items.nth(itemIndex).click();
-        await this.page.waitForTimeout(500);
+        await this.clickLiveComboItemButton(items.nth(itemIndex));
       }
     }
 
     const confirmButton = this.page.locator('#liteComboEnter').or(this.liveComboConfirmButton).first();
     await expect(confirmButton).toBeVisible({ timeout: 10_000 });
-    await confirmButton.click();
+    await this.clickLiveComboConfirmButton(confirmButton);
     await expect(confirmButton).toBeHidden({ timeout: 10_000 });
   }
 
@@ -3822,6 +3972,22 @@ export class OrderDishesPage extends PageObject {
   }
 
   private async clickLiveComboItemButton(button: Locator): Promise<void> {
+    const itemRoot = button
+      .locator(
+        'xpath=ancestor::div[contains(@class,"liteComboItemBtn") or contains(@class,"liteComboItemBtnBx") or contains(@class,"comboItem")][1]',
+      )
+      .first();
+    const addButton = itemRoot
+      .locator('xpath=.//*[contains(@class,"addComboItem") or contains(@class,"comboItemAdd") or normalize-space(.)="+"]')
+      .last();
+    if (await addButton.isVisible({ timeout: 500 }).catch(() => false)) {
+      const addBox = await addButton.boundingBox();
+      if (addBox) {
+        await this.page.mouse.click(addBox.x + addBox.width / 2, addBox.y + addBox.height / 2);
+        return;
+      }
+    }
+
     const box = await button.boundingBox();
     if (box) {
       await this.page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);

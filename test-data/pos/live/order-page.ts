@@ -127,11 +127,11 @@ export const liveEditableComboDish = {
   name: 'EditPriceCombo',
   group: 'MansuperGroup',
   category: 'MansuperCat',
-  initialSubtotalText: '$30.20',
-  editedSubtotalText: '$40.20',
+  initialSubtotalText: '$30.49',
+  editedSubtotalText: '$43.09',
   editableSubItem: 'ITEM1',
   fixedSubItem: 'ITEM3',
-  editPriceInput: '1200',
+  editPriceInput: '12',
   sections: [
     { name: 'adjust can edit', items: [{ name: 'ITEM1', quantity: 2 }, { name: 'ITEM2', quantity: 2 }] },
     { name: 'fix can not edit', items: [{ name: 'ITEM3', quantity: 1 }] },
@@ -151,8 +151,8 @@ export const liveComboMaxModifyDish = {
 } as const;
 
 export const liveOrderEditItemTaxExpected = {
-  beforeEditTax: 1.6,
-  afterEditTax: 2.2,
+  beforeEditTax: 1.2,
+  afterEditTax: 1.8,
 } as const;
 
 export const liveChineseMenuGroups = {

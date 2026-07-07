@@ -1,8 +1,8 @@
 export const staffSamples = {
   manager: { id: 'staff-manager', password: '11', permissions: ['all'] },
   noVoidItem: { id: 'staff-no-void', password: '22', permissions: ['order:create'] },
-  noVoidPrintedItem: { id: 'staff-1', password: '123', permissions: ['order:create'] },
-  noNote: { id: 'staff-1', password: '123', permissions: ['order:create'] },
+  noVoidPrintedItem: { id: '1', password: '123', permissions: ['order:create'] },
+  noNote: { id: '1', password: '123', permissions: ['order:create'] },
   noAnalysis: { id: '1', password: '123', removedPermission: 'ANALYSIS' },
   personalReportOnly: {
     id: '1',

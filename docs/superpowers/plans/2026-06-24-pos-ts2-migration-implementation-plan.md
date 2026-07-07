@@ -522,7 +522,7 @@ export default defineConfig({
   retries: 0,
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
-    baseURL: process.env.POS_BASE_URL ?? 'http://192.168.0.72:22080',
+    baseURL: process.env.POS_BASE_URL ?? 'http://192.168.1.169:22080',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
@@ -1064,7 +1064,7 @@ export type TestEnvironment = {
 };
 
 export const testEnvironment: TestEnvironment = {
-  posHomeUrl: process.env.POS_HOME_URL ?? 'http://192.168.0.72:22080/kpos/front2/myhome.html',
+  posHomeUrl: process.env.POS_HOME_URL ?? 'http://192.168.1.169:22080/kpos/front2/myhome.html',
   clientMode: (process.env.CLIENT_MODE as 'stub' | 'live' | undefined) ?? 'stub',
 };
 ```

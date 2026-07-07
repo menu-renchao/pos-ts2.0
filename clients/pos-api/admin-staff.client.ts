@@ -10,7 +10,9 @@ export type StaffPermissionName =
   | 'PERSONAL_REPORT'
   | 'DINE_IN'
   | 'ADMIN'
-  | 'ADMIN_STAFF';
+  | 'ADMIN_STAFF'
+  | 'NOTE'
+  | 'VOID_PRINTED_ITEM';
 
 export type StaffRoleDiscountLimit = {
   role: StaffRoleName;

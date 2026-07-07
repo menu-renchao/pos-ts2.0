@@ -624,7 +624,7 @@ test.describe('POS 点单页面', () => {
 
   test('POS-34873 无 Void Printed Item 权限时删除 Hold 打印菜需经理密码且删除成功', {
     annotation: [jiraIssue('POS-34873')],
-  }, async ({ environment, page }) => {
+  }, async ({ adminStaffClient, environment, page }) => {
     test.setTimeout(90_000);
     const orderEntryFlow = new OrderEntryFlow(
       new PosHomePage(page),
@@ -633,7 +633,7 @@ test.describe('POS 点单页面', () => {
       new AdminPage(page),
     );
 
-    const result = await orderEntryFlow.deleteHeldPrintedItemWithManagerPassword(environment.posHomeUrl);
+    const result = await orderEntryFlow.deleteHeldPrintedItemWithManagerPassword(environment.posHomeUrl, adminStaffClient);
 
     expect(result.permissionToast).toContain('You do not have permission to delete printed dish, please enter the password');
     expect(result.itemLineCountAfterDelete).toBe(1);
@@ -641,7 +641,7 @@ test.describe('POS 点单页面', () => {
 
   test('POS-35325 无 Void Printed Item 权限时减少 Delay 打印菜到 0 需经理密码且删除成功', {
     annotation: [jiraIssue('POS-35325')],
-  }, async ({ environment, page }) => {
+  }, async ({ adminStaffClient, environment, page }) => {
     test.setTimeout(90_000);
     const orderEntryFlow = new OrderEntryFlow(
       new PosHomePage(page),
@@ -650,7 +650,7 @@ test.describe('POS 点单页面', () => {
       new AdminPage(page),
     );
 
-    const result = await orderEntryFlow.deleteDelayedPrintedItemWithManagerPassword(environment.posHomeUrl);
+    const result = await orderEntryFlow.deleteDelayedPrintedItemWithManagerPassword(environment.posHomeUrl, adminStaffClient);
 
     expect(result.permissionToast).toContain('You do not have permission to delete printed dish, please enter the password');
     expect(result.itemLineCountAfterDelete).toBe(1);
@@ -961,7 +961,7 @@ test.describe('POS 点单页面', () => {
 
   test('POS-37804 无 NOTE 权限员工给 Combo 子菜加 Note 时应提示并可经理授权录入', {
     annotation: [jiraIssue('POS-37804')],
-  }, async ({ environment, page }) => {
+  }, async ({ adminStaffClient, environment, page }) => {
     test.setTimeout(90_000);
     const orderEntryFlow = new OrderEntryFlow(
       new PosHomePage(page),
@@ -970,7 +970,7 @@ test.describe('POS 点单页面', () => {
       new AdminPage(page),
     );
 
-    const result = await orderEntryFlow.addComboSubItemNoteWithManagerAuthorization(environment.posHomeUrl);
+    const result = await orderEntryFlow.addComboSubItemNoteWithManagerAuthorization(environment.posHomeUrl, adminStaffClient);
 
     expect(result.permissionToast).toContain('You do not have permission NOTE, please enter the password!');
     expect(result.noteText).toBe('子菜的备注信息');
@@ -1036,9 +1036,10 @@ test.describe('POS 点单页面', () => {
     );
 
     const result = await orderEntryFlow.editQuickComboSubItemPriceAndReadSubtotal(environment.posHomeUrl);
+    const editableComboDish = orderPageDataFor(environment.testMode).editableComboDish;
 
-    expect(result.subtotalBeforeEdit).toBe('$30.20');
-    expect(result.subtotalAfterAdjustableEdit).toBe('$40.20');
+    expect(result.subtotalBeforeEdit).toBe(editableComboDish.initialSubtotalText);
+    expect(result.subtotalAfterAdjustableEdit).toBe(editableComboDish.editedSubtotalText);
     expect(result.fixedSubItemSupportsEditPrice).toBe(false);
   });
 });

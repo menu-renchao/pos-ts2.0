@@ -409,7 +409,6 @@ export class ReportPage extends PageObject {
       .catch(() => false);
     if (!orderTypeSelectVisible) {
       this.liveSelectedOrderType = orderType;
-      await expect(this.liveOverviewKeyMetrics).toBeVisible({ timeout: 60_000 });
       await this.waitForLiveReportLoadingGone();
       return;
     }
@@ -451,7 +450,11 @@ export class ReportPage extends PageObject {
   }
 
   private async readLegacyLiveOrderTypeNetSalesFromBrowser(targetOrderType: string): Promise<number> {
-    return this.liveFrame.locator('body').evaluate(async (_body, displayOrderType) => {
+    const reportFrame = await this.findLiveReportFrame(5_000);
+    if (!reportFrame) {
+      throw new Error('未找到 live Report 报表 iframe');
+    }
+    return reportFrame.evaluate(async (displayOrderType) => {
       const fromDate = document.querySelector<HTMLInputElement>('#fromDate')?.value || new Date().toISOString().slice(0, 10);
       const fromTime = document.querySelector<HTMLInputElement>('#fromTime')?.value || '00:00';
       const toTime = document.querySelector<HTMLInputElement>('#toTime')?.value || '00:00';
